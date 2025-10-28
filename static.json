@@ -9,8 +9,7 @@
     "/contact": "/contact.html",
     "/privacy": "/privacy.html", 
     "/terms": "/terms.html",
-    "/stories": "/stories.html",
-    "/achievements": "/achievements.html"
+    "/record":"/record.html"
   },
   "headers": {
     "/*.html": {
