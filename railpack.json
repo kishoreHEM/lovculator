@@ -1,11 +1,8 @@
 {
   "build": {
-    "type": "static",
-    "output": "./"
+    "builder": "static"
   },
-  "deploy": {
-    "static": {
-      "spa": false
-    }
+  "routes": {
+    "/**": "index.html"
   }
 }
