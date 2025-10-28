@@ -48,8 +48,41 @@ class LoveCalculator {
         
         const percentage = this.calculateLove(name1, name2, gender1, gender2);
         const message = this.generateMessage(percentage, gender1, gender2);
-        
-        this.displayResult(name1, name2, percentage, message);
+        const calculation = window.dataManager.addLoveCalculation(
+        [name1, name2],
+        percentage,
+        [gender1, gender2],
+        message
+    );
+        window.dataManager.updateUserStats({ calculations: 1 });
+        this.displayResult(name1, name2, percentage, message, calculation.id);
+        this.checkCalculationAchievements();
+    }
+        // Add achievement checking
+checkCalculationAchievements() {
+    const stats = window.dataManager.getCalculationStats();
+    
+    // First calculation achievement
+    if (stats.total === 1) {
+        window.dataManager.unlockAchievement({
+            name: 'First Calculation!',
+            description: 'Performed your first love calculation',
+            icon: '🔮',
+            points: 10,
+            category: 'calculations'
+        });
+    }
+    
+    // 10 calculations achievement
+    if (stats.total === 10) {
+        window.dataManager.unlockAchievement({
+            name: 'Love Detective',
+            description: 'Performed 10 love calculations',
+            icon: '🕵️',
+            points: 50,
+            category: 'calculations'
+        });
+    }
     }
     
     calculateLove(name1, name2, gender1, gender2) {

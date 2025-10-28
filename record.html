@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Records - Lovculator</title>
+    <meta name="description" content="View your love calculation records and history">
+    <meta name="theme-color" content="#ff4b8d">
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <header class="header">
+        <nav class="navbar">
+            <div class="nav-brand">
+                <a href="index.html" class="logo">💖 Lovculator</a>
+            </div>
+            <ul class="nav-menu">
+                <li class="nav-item"><a href="index.html" class="nav-link">🏠</a></li>
+                <li class="nav-item"><a href="records.html" class="nav-link active">📊</a></li>
+                <li class="nav-item"><a href="about.html" class="nav-link">ℹ️</a></li>
+            </ul>
+        </nav>
+    </header>
+
+    <div class="container">
+        <main class="main-content">
+            <div class="calculator-post">
+                <div class="calculator-header">
+                    <div class="post-user">
+                        <div class="post-avatar">📊</div>
+                        <div class="post-username">My Records</div>
+                    </div>
+                </div>
+                
+                <div class="calculator-content">
+                    <!-- Stats Overview -->
+                    <div class="stats-overview" id="statsOverview">
+                        <div class="stat-card">
+                            <div class="stat-icon">🔮</div>
+                            <div class="stat-info">
+                                <div class="stat-number" id="totalCalculations">0</div>
+                                <div class="stat-label">Calculations</div>
+                            </div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon">💕</div>
+                            <div class="stat-info">
+                                <div class="stat-number" id="averagePercentage">0%</div>
+                                <div class="stat-label">Average</div>
+                            </div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon">📖</div>
+                            <div class="stat-info">
+                                <div class="stat-number" id="totalStories">0</div>
+                                <div class="stat-label">Stories</div>
+                            </div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon">🏆</div>
+                            <div class="stat-info">
+                                <div class="stat-number" id="totalAchievements">0</div>
+                                <div class="stat-label">Achievements</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Recent Calculations -->
+                    <div class="records-section">
+                        <h3>Recent Calculations</h3>
+                        <div class="records-list" id="calculationsList">
+                            <!-- Calculations will be loaded here -->
+                        </div>
+                    </div>
+
+                    <!-- Export/Import -->
+                    <div class="data-actions">
+                        <button class="action-btn" onclick="exportData()">📤 Export Data</button>
+                        <button class="action-btn" onclick="importData()">📥 Import Data</button>
+                        <button class="action-btn clear" onclick="clearCalculations()">🗑️ Clear History</button>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script src="js/data-manager.js"></script>
+    <script src="js/records.js"></script>
+</body>
+</html>
