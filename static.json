@@ -1,17 +1,24 @@
 {
   "root": "./",
-  "clean_urls": true,
+  "clean_urls": false,
   "routes": {
     "/**": "index.html"
   },
+  "redirects": {
+    "/about": "/about.html", 
+    "/achievements": "/record.html",
+    "/contact": "/contact.html",
+    "/privacy": "/privacy.html",
+    "/terms": "/terms.html"
+  },
   "headers": {
-    "/**": {
+    "/*.html": {
       "Cache-Control": "no-cache, no-store, must-revalidate"
     },
-    "/css/**": {
+    "/css/*": {
       "Cache-Control": "public, max-age=31536000"
     },
-    "/js/**": {
+    "/js/*": {
       "Cache-Control": "public, max-age=31536000"
     }
   }
