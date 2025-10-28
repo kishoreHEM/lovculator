@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Contact - Lovculator</title>
+    <meta name="description" content="Get in touch with Lovculator - We'd love to hear from you!">
+    <meta name="theme-color" content="#ff4b8d">
+    
+    <!-- PWA Meta Tags -->
+    <link rel="manifest" href="manifest.json">
+    <link rel="icon" type="image/png" href="images/icon-192x192.png">
+    <link rel="apple-touch-icon" href="images/icon-192x192.png">
+    
+    <!-- CSS -->
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <!-- Instagram Style Header -->
+    <header class="header">
+        <nav class="navbar">
+            <div class="nav-brand">
+                <a href="love-calculator-by-name.html" class="logo">
+                    💖 Lovculator
+                </a>
+            </div>
+            
+            <div class="nav-search">
+                <input type="text" placeholder="Search">
+            </div>
+            
+            <ul class="nav-menu">
+                <li class="nav-item">
+                    <a href="love-calculator-by-name.html" class="nav-link">🏠</a>
+                </li>
+                <li class="nav-item">
+                    <a href="about.html" class="nav-link">ℹ️</a>
+                </li>
+                <li class="nav-item">
+                    <a href="contact.html" class="nav-link active">📞</a>
+                </li>
+            </ul>
+        </nav>
+    </header>
+
+    <div class="container">
+        <main class="main-content">
+            <!-- Contact Post -->
+            <div class="contact-post">
+                <div class="contact-header">
+                    <div class="post-user">
+                        <div class="post-avatar">LC</div>
+                        <div class="post-username">Love Calculator</div>
+                    </div>
+                </div>
+                
+                <div class="contact-content">
+                    <div class="contact-hero">
+                        <h1>Get in Touch 💌</h1>
+                        <p class="hero-subtitle">We love hearing from our Lovculator community!</p>
+                    </div>
+
+                    <!-- Contact Cards -->
+                    <div class="contact-cards">
+                        <div class="contact-card">
+                            <div class="card-icon">📧</div>
+                            <h3>Email Us</h3>
+                            <p class="card-main">hello@lovculator.com</p>
+                            <p class="card-desc">We typically respond within 24 hours</p>
+                        </div>
+
+                        <div class="contact-card">
+                            <div class="card-icon">💬</div>
+                            <h3>Share Feedback</h3>
+                            <p class="card-main">Tell us your story</p>
+                            <p class="card-desc">We love hearing about your experiences</p>
+                        </div>
+
+                        <div class="contact-card">
+                            <div class="card-icon">🚀</div>
+                            <h3>Suggestions</h3>
+                            <p class="card-main">Help us improve</p>
+                            <p class="card-desc">Your ideas make Lovculator better</p>
+                        </div>
+                    </div>
+
+                    <!-- Contact Form -->
+                    <div class="contact-form-container">
+                        <h2 class="form-title">Send us a Message</h2>
+                        <form class="contact-form" id="contactForm">
+                            <div class="form-grid">
+                                <div class="form-group">
+                                    <label for="name">Your Name</label>
+                                    <input type="text" id="name" name="name" placeholder="Enter your full name" required>
+                                </div>
+                                <div class="form-group">
+                                    <label for="email">Email Address</label>
+                                    <input type="email" id="email" name="email" placeholder="Enter your email" required>
+                                </div>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="subject">What can we help you with?</label>
+                                <select id="subject" name="subject" required>
+                                    <option value="">Choose a topic</option>
+                                    <option value="feedback">General Feedback</option>
+                                    <option value="suggestion">Feature Suggestion</option>
+                                    <option value="bug">Report a Bug</option>
+                                    <option value="partnership">Partnership Inquiry</option>
+                                    <option value="other">Something Else</option>
+                                </select>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="message">Your Message</label>
+                                <textarea id="message" name="message" rows="5" placeholder="Tell us what's on your mind... We're all ears! 👂" required></textarea>
+                            </div>
+                            
+                            <button type="submit" class="submit-btn">
+                                <span class="btn-icon">✉️</span>
+                                Send Message
+                            </button>
+                        </form>
+                    </div>
+
+                    <!-- Quick Help Section -->
+                    <div class="quick-help">
+                        <h2>Quick Help</h2>
+                        <div class="help-grid">
+                            <div class="help-item">
+                                <div class="help-icon">❓</div>
+                                <div class="help-content">
+                                    <h4>How accurate is Lovculator?</h4>
+                                    <p>Lovculator is designed for entertainment and fun. While we use sophisticated algorithms, results should be taken lightly and enjoyed!</p>
+                                </div>
+                            </div>
+                            
+                            <div class="help-item">
+                                <div class="help-icon">🔄</div>
+                                <div class="help-content">
+                                    <h4>Can I use it multiple times?</h4>
+                                    <p>Absolutely! Try different name combinations and have fun with friends. It's completely free and unlimited.</p>
+                                </div>
+                            </div>
+                            
+                            <div class="help-item">
+                                <div class="help-icon">🔒</div>
+                                <div class="help-content">
+                                    <h4>Is my data safe?</h4>
+                                    <p>Yes! We don't store any personal information. All calculations happen locally in your browser for maximum privacy.</p>
+                                </div>
+                            </div>
+                            
+                            <div class="help-item">
+                                <div class="help-icon">💡</div>
+                                <div class="help-content">
+                                    <h4>Have a feature idea?</h4>
+                                    <p>We'd love to hear it! Use the form above to share your suggestions and help us make Lovculator even better.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <!-- Footer -->
+        <footer class="footer">
+            <div class="footer-content">
+                <p>&copy; 2025 Lovculator • For entertainment purposes only</p>
+                <p>Spread love and positivity 💖</p>
+                <div class="footer-links">
+                    <a href="about.html">About</a>
+                    <a href="contact.html">Contact</a>
+                    <a href="privacy.html">Privacy</a>
+                    <a href="terms.html">Terms</a>
+                </div>
+            </div>
+        </footer>
+    </div>
+
+    <script src="js/navigation.js"></script>
+    <script src="js/contact.js"></script>
+</body>
+</html> 

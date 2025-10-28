@@ -1,0 +1,19 @@
+{
+    "liveServer.settings.port": 5500,
+    "liveServer.settings.root": "/",
+    "liveServer.settings.CustomBrowser": "chrome",
+    "liveServer.settings.https": {
+        "enable": false,
+        "cert": "",
+        "key": "",
+        "passphrase": ""
+    },
+    "liveServer.settings.ignoreFiles": [
+        "**.scss",
+        "**.ts"
+    ],
+    "liveServer.settings.donotVerifyTags": true,
+    
+    // Add this line to specify your HTML file:
+    "liveServer.settings.file": "love-calculator-by-name.html"
+}
