@@ -1,0 +1,11 @@
+{
+  "build": {
+    "type": "static",
+    "output": "./"
+  },
+  "deploy": {
+    "static": {
+      "spa": false
+    }
+  }
+}
