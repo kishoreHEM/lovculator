@@ -1,7 +1,7 @@
 const CACHE_NAME = 'lovculator-v1.1.0';
 const urlsToCache = [
   '/',
-  '/love-calculator-by-name.html',
+  '/index.html',
   '/about.html',
   '/contact.html',
   '/privacy.html',

@@ -48,41 +48,52 @@ class LoveCalculator {
         
         const percentage = this.calculateLove(name1, name2, gender1, gender2);
         const message = this.generateMessage(percentage, gender1, gender2);
-        const calculation = window.dataManager.addLoveCalculation(
-        [name1, name2],
-        percentage,
-        [gender1, gender2],
-        message
-    );
-        window.dataManager.updateUserStats({ calculations: 1 });
-        this.displayResult(name1, name2, percentage, message, calculation.id);
-        this.checkCalculationAchievements();
-    }
-        // Add achievement checking
-checkCalculationAchievements() {
-    const stats = window.dataManager.getCalculationStats();
-    
-    // First calculation achievement
-    if (stats.total === 1) {
-        window.dataManager.unlockAchievement({
-            name: 'First Calculation!',
-            description: 'Performed your first love calculation',
-            icon: '🔮',
-            points: 10,
-            category: 'calculations'
-        });
+        
+        // Check if dataManager exists before using it
+        if (window.dataManager) {
+            const calculation = window.dataManager.addLoveCalculation(
+                [name1, name2],
+                percentage,
+                [gender1, gender2],
+                message
+            );
+            window.dataManager.updateUserStats({ calculations: 1 });
+            this.displayResult(name1, name2, percentage, message, calculation.id);
+            this.checkCalculationAchievements();
+        } else {
+            // Fallback if dataManager is not available
+            this.displayResult(name1, name2, percentage, message);
+        }
     }
     
-    // 10 calculations achievement
-    if (stats.total === 10) {
-        window.dataManager.unlockAchievement({
-            name: 'Love Detective',
-            description: 'Performed 10 love calculations',
-            icon: '🕵️',
-            points: 50,
-            category: 'calculations'
-        });
-    }
+    // Add achievement checking
+    checkCalculationAchievements() {
+        // Check if dataManager exists
+        if (!window.dataManager) return;
+        
+        const stats = window.dataManager.getCalculationStats();
+        
+        // First calculation achievement
+        if (stats.total === 1) {
+            window.dataManager.unlockAchievement({
+                name: 'First Calculation!',
+                description: 'Performed your first love calculation',
+                icon: '🔮',
+                points: 10,
+                category: 'calculations'
+            });
+        }
+        
+        // 10 calculations achievement
+        if (stats.total === 10) {
+            window.dataManager.unlockAchievement({
+                name: 'Love Detective',
+                description: 'Performed 10 love calculations',
+                icon: '🕵️',
+                points: 50,
+                category: 'calculations'
+            });
+        }
     }
     
     calculateLove(name1, name2, gender1, gender2) {
@@ -161,7 +172,7 @@ checkCalculationAchievements() {
         }
     }
     
-    displayResult(name1, name2, percentage, message) {
+    displayResult(name1, name2, percentage, message, calculationId) {
         this.displayName1.textContent = this.capitalize(name1);
         this.displayName2.textContent = this.capitalize(name2);
         

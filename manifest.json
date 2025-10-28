@@ -2,7 +2,7 @@
   "name": "Lovculator • Love Calculator",
   "short_name": "Lovculator",
   "description": "Calculate love compatibility based on name analysis",
-  "start_url": "/love-calculator-by-name.html",
+  "start_url": "/index.html",
   "display": "standalone",
   "background_color": "#ffffff",
   "theme_color": "#ff4b8d",

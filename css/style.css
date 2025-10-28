@@ -3327,8 +3327,9 @@ body {
     .like-animation {
         animation: none;
     }
+}
 
-    /* Records Page Styles */
+/* Records Page Styles */
 .stats-overview {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
@@ -3471,6 +3472,4 @@ body {
     .action-btn {
         flex: none;
     }
-}
-    
 }
