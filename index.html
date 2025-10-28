@@ -58,6 +58,276 @@
     <!-- CSS -->
     <link rel="stylesheet" href="css/style.css">
     <style>
+        /* Mobile Responsive Menu Styles */
+        .menu-toggle {
+            display: none;
+            flex-direction: column;
+            justify-content: space-between;
+            width: 24px;
+            height: 18px;
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: 0;
+            z-index: 1001;
+        }
+
+        .menu-toggle span {
+            display: block;
+            height: 2px;
+            width: 100%;
+            background: #262626;
+            border-radius: 2px;
+            transition: all 0.3s ease;
+        }
+
+        .menu-toggle.active span:nth-child(1) {
+            transform: rotate(45deg) translate(6px, 6px);
+        }
+
+        .menu-toggle.active span:nth-child(2) {
+            opacity: 0;
+        }
+
+        .menu-toggle.active span:nth-child(3) {
+            transform: rotate(-45deg) translate(6px, -6px);
+        }
+
+        .mobile-menu-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 998;
+        }
+
+        .mobile-menu-overlay.active {
+            display: block;
+        }
+
+        .mobile-menu-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 20px 0;
+            border-bottom: 1px solid #f0f0f0;
+            margin-bottom: 20px;
+            width: 100%;
+        }
+
+        .mobile-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #ff4b8d, #ff6b6b);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 16px;
+            font-weight: bold;
+        }
+
+        .mobile-user-info h4 {
+            font-size: 16px;
+            font-weight: 600;
+            color: #262626;
+            margin-bottom: 2px;
+        }
+
+        .mobile-user-info p {
+            font-size: 12px;
+            color: #8e8e8e;
+        }
+
+        .mobile-menu-footer {
+            margin-top: auto;
+            padding-top: 20px;
+            border-top: 1px solid #f0f0f0;
+            width: 100%;
+        }
+
+        /* Mobile Responsive Styles */
+        @media (max-width: 768px) {
+            .navbar {
+                padding: 0 15px;
+            }
+
+            .menu-toggle {
+                display: flex;
+            }
+
+            .nav-menu {
+                position: fixed;
+                top: 0;
+                right: -100%;
+                width: 280px;
+                height: 100vh;
+                background: white;
+                flex-direction: column;
+                justify-content: flex-start;
+                align-items: flex-start;
+                padding: 80px 30px 30px;
+                gap: 0;
+                transition: right 0.3s ease;
+                box-shadow: -2px 0 10px rgba(0, 0, 0, 0.1);
+                z-index: 999;
+            }
+
+            .nav-menu.active {
+                right: 0;
+            }
+
+            .nav-item {
+                width: 100%;
+                border-bottom: 1px solid #f0f0f0;
+            }
+
+            .nav-item:last-child {
+                border-bottom: none;
+            }
+
+            .nav-link {
+                font-size: 18px;
+                padding: 18px 0;
+                width: 100%;
+                display: flex;
+                align-items: center;
+                gap: 12px;
+                color: #262626;
+                transition: all 0.3s ease;
+            }
+
+            .nav-link:hover {
+                color: #ff4b8d;
+                background: #fff5f7;
+                padding-left: 10px;
+            }
+
+            .nav-link.active {
+                color: #ff4b8d;
+                font-weight: 600;
+            }
+
+            .nav-profile {
+                width: 20px;
+                height: 20px;
+                font-size: 10px;
+            }
+
+            .mobile-menu-footer .nav-link {
+                font-size: 16px;
+                color: #666;
+            }
+
+            .mobile-menu-footer .nav-link:hover {
+                color: #ff4b8d;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .navbar {
+                padding: 0 10px;
+            }
+
+            .nav-brand .logo {
+                font-size: 1.3rem;
+            }
+
+            .nav-menu {
+                width: 100%;
+                right: -100%;
+            }
+
+            .nav-menu.active {
+                right: 0;
+            }
+
+            .nav-link {
+                font-size: 16px;
+                padding: 16px 0;
+            }
+
+            .mobile-avatar {
+                width: 36px;
+                height: 36px;
+                font-size: 14px;
+            }
+
+            .mobile-user-info h4 {
+                font-size: 15px;
+            }
+
+            .mobile-user-info p {
+                font-size: 11px;
+            }
+        }
+
+        /* Dark Mode Support for Mobile Menu */
+        @media (prefers-color-scheme: dark) {
+            .header {
+                background: #000;
+                border-bottom-color: #262626;
+            }
+
+            .nav-brand .logo {
+                color: #f5f5f5;
+            }
+
+            .menu-toggle span {
+                background: #f5f5f5;
+            }
+
+            .nav-menu {
+                background: #000;
+            }
+
+            .nav-link {
+                color: #f5f5f5;
+            }
+
+            .nav-link:hover {
+                color: #ff4b8d;
+                background: #1a1a1a;
+            }
+
+            .nav-link.active {
+                color: #ff4b8d;
+            }
+
+            .nav-item {
+                border-bottom-color: #262626;
+            }
+
+            .mobile-menu-header {
+                border-bottom-color: #262626;
+            }
+
+            .mobile-user-info h4 {
+                color: #f5f5f5;
+            }
+
+            .mobile-user-info p {
+                color: #b0b0b0;
+            }
+
+            .mobile-menu-footer {
+                border-top-color: #262626;
+            }
+
+            .mobile-menu-footer .nav-link {
+                color: #b0b0b0;
+            }
+
+            .mobile-menu-footer .nav-link:hover {
+                color: #ff4b8d;
+            }
+        }
+
+        /* Rest of your existing styles... */
         .name-analysis-section {
             background: white;
             border: 1px solid #dbdbdb;
@@ -924,42 +1194,28 @@
     <header class="header">
         <nav class="navbar">
             <div class="nav-brand">
-                <a href="lovculator.com" class="logo" aria-label="Lovculator Home">
+                <a href="/" class="logo" aria-label="Lovculator Home">
                     💖 Lovculator
                 </a>
             </div>
             
-            <div class="nav-search">
-                <input type="text" placeholder="Search" aria-label="Search">
-            </div>
-            
-            <!-- In your header navigation -->
-<ul class="nav-menu">
-    <li class="nav-item">
-        <a href="lovculator.com" class="nav-link active" aria-label="Home">
-            <span aria-hidden="true">🏠</span>
-            <span class="sr-only">Home</span>
-        </a>
-    </li>
-    <li class="nav-item">
-        <a href="terms" class="nav-link" aria-label="Love Stories">
-            <span aria-hidden="true">📖</span>
-            <span class="sr-only">Terms</span>
-        </a>
-    </li>
-    <li class="nav-item">
-        <a href="cantact" class="nav-link" aria-label="Achievements">
-            <span aria-hidden="true">📞</span>
-            <span class="sr-only">Achievements</span>
-        </a>
-    </li>
-    <li class="nav-item">
-        <a href="about" class="nav-link" aria-label="About">
-            <span aria-hidden="true">ℹ️</span>
-            <span class="sr-only">About</span>
-        </a>
-    </li>
-</ul>
+            <button class="menu-toggle" aria-label="Toggle menu">
+                <span></span>
+                <span></span>
+                <span></span>
+            </button>
+
+            <div class="mobile-menu-overlay"></div>
+
+            <ul class="nav-menu">
+                <li class="nav-item mobile-menu-header">
+                </li>
+                
+                <li class="nav-item"><a href="/" class="nav-link">🏠</a></li>
+                <li class="nav-item"><a href="record" class="nav-link">📊</a></li>
+                <li class="nav-item"><a href="about" class="nav-link">ℹ️</a></li>
+                <li class="nav-item"><a href="contact" class="nav-link">📞</a></li>
+            </ul>
         </nav>
     </header>
 
@@ -967,6 +1223,7 @@
         <main class="main-content">
             <!-- Visible H1 for better SEO -->
             <h1 class="sr-only">Lovculator • Love Calculator by Name - Name Compatibility Analysis</h1>
+            
             <!-- Main Calculator Post -->
             <article class="calculator-post">
                 <div class="calculator-header">
@@ -1042,23 +1299,22 @@
                                 Calculate Again
                             </button>
                             
-                            <!-- Add this inside your result div, after the "Calculate Again" button -->
+                            <!-- Share Buttons -->
                             <div class="share-buttons">
-                            <div class="share-section-title">🎉 Share Your Love Score!</div>
-                            <button class="share-btn facebook" onclick="shareOnFacebook()">
-                              <span>📘</span> Share on Facebook
-                             </button>
-                            <button class="share-btn twitter" onclick="shareOnTwitter()">
-                           <span>🐦</span> Tweet Result
-                            </button>
-                         <button class="share-btn whatsapp" onclick="shareOnWhatsApp()">
-                         <span>💬</span> Share on WhatsApp
-                         </button>
-                         <button class="share-btn instagram" onclick="shareOnInstagram()">
-                         <span>📷</span> Share on Instagram
-                         </button>
-                        </div>
-
+                                <div class="share-section-title">🎉 Share Your Love Score!</div>
+                                <button class="share-btn facebook" onclick="shareOnFacebook()">
+                                    <span>📘</span> Share on Facebook
+                                </button>
+                                <button class="share-btn twitter" onclick="shareOnTwitter()">
+                                    <span>🐦</span> Tweet Result
+                                </button>
+                                <button class="share-btn whatsapp" onclick="shareOnWhatsApp()">
+                                    <span>💬</span> Share on WhatsApp
+                                </button>
+                                <button class="share-btn instagram" onclick="shareOnInstagram()">
+                                    <span>📷</span> Share on Instagram
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>

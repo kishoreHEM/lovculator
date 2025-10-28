@@ -36,6 +36,7 @@ body {
     height: 60px;
 }
 
+
 .navbar {
     display: flex;
     justify-content: space-between;
@@ -44,6 +45,7 @@ body {
     margin: 0 auto;
     padding: 0 20px;
     height: 60px;
+    position: relative;
 }
 
 .nav-brand .logo {
@@ -60,7 +62,42 @@ body {
     display: none;
 }
 
-/* Navigation Menu */
+/* Mobile Menu Toggle */
+.menu-toggle {
+    display: none;
+    flex-direction: column;
+    justify-content: space-between;
+    width: 24px;
+    height: 18px;
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 0;
+    z-index: 1001;
+}
+
+.menu-toggle span {
+    display: block;
+    height: 2px;
+    width: 100%;
+    background: #262626;
+    border-radius: 2px;
+    transition: all 0.3s ease;
+}
+
+.menu-toggle.active span:nth-child(1) {
+    transform: rotate(45deg) translate(6px, 6px);
+}
+
+.menu-toggle.active span:nth-child(2) {
+    opacity: 0;
+}
+
+.menu-toggle.active span:nth-child(3) {
+    transform: rotate(-45deg) translate(6px, -6px);
+}
+
+/* Navigation Menu - Updated for Mobile */
 .nav-menu {
     display: flex;
     list-style: none;
@@ -77,6 +114,7 @@ body {
     transition: color 0.3s ease;
     display: flex;
     align-items: center;
+    position: relative;
 }
 
 .nav-link:hover {
@@ -100,6 +138,243 @@ body {
     font-weight: bold;
 }
 
+/* Mobile Menu Overlay */
+.mobile-menu-overlay {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 998;
+}
+
+.mobile-menu-overlay.active {
+    display: block;
+}
+
+/* Mobile Responsive Styles */
+@media (max-width: 768px) {
+    .navbar {
+        padding: 0 15px;
+    }
+
+    .menu-toggle {
+        display: flex;
+    }
+
+    .nav-menu {
+        position: fixed;
+        top: 0;
+        right: -100%;
+        width: 280px;
+        height: 100vh;
+        background: white;
+        flex-direction: column;
+        justify-content: flex-start;
+        align-items: flex-start;
+        padding: 80px 30px 30px;
+        gap: 0;
+        transition: right 0.3s ease;
+        box-shadow: -2px 0 10px rgba(0, 0, 0, 0.1);
+        z-index: 999;
+    }
+
+    .nav-menu.active {
+        right: 0;
+    }
+
+    .nav-item {
+        width: 100%;
+        border-bottom: 1px solid #f0f0f0;
+    }
+
+    .nav-item:last-child {
+        border-bottom: none;
+    }
+
+    .nav-link {
+        font-size: 18px;
+        padding: 18px 0;
+        width: 100%;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        color: #262626;
+        transition: all 0.3s ease;
+    }
+
+    .nav-link:hover {
+        color: #ff4b8d;
+        background: #fff5f7;
+        padding-left: 10px;
+    }
+
+    .nav-link.active {
+        color: #ff4b8d;
+        font-weight: 600;
+    }
+
+    .nav-profile {
+        width: 20px;
+        height: 20px;
+        font-size: 10px;
+    }
+
+    /* Mobile Menu Header */
+    .mobile-menu-header {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 20px 0;
+        border-bottom: 1px solid #f0f0f0;
+        margin-bottom: 20px;
+        width: 100%;
+    }
+
+    .mobile-avatar {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, #ff4b8d, #ff6b6b);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-size: 16px;
+        font-weight: bold;
+    }
+
+    .mobile-user-info h4 {
+        font-size: 16px;
+        font-weight: 600;
+        color: #262626;
+        margin-bottom: 2px;
+    }
+
+    .mobile-user-info p {
+        font-size: 12px;
+        color: #8e8e8e;
+    }
+
+    /* Mobile Menu Footer */
+    .mobile-menu-footer {
+        margin-top: auto;
+        padding-top: 20px;
+        border-top: 1px solid #f0f0f0;
+        width: 100%;
+    }
+
+    .mobile-menu-footer .nav-link {
+        font-size: 16px;
+        color: #666;
+    }
+
+    .mobile-menu-footer .nav-link:hover {
+        color: #ff4b8d;
+    }
+}
+
+@media (max-width: 480px) {
+    .navbar {
+        padding: 0 10px;
+    }
+
+    .nav-brand .logo {
+        font-size: 1.3rem;
+    }
+
+    .nav-menu {
+        width: 100%;
+        right: -100%;
+    }
+
+    .nav-menu.active {
+        right: 0;
+    }
+
+    .nav-link {
+        font-size: 16px;
+        padding: 16px 0;
+    }
+
+    .mobile-avatar {
+        width: 36px;
+        height: 36px;
+        font-size: 14px;
+    }
+
+    .mobile-user-info h4 {
+        font-size: 15px;
+    }
+
+    .mobile-user-info p {
+        font-size: 11px;
+    }
+}
+
+/* Dark Mode Support for Mobile Menu */
+@media (prefers-color-scheme: dark) {
+    .header {
+        background: #000;
+        border-bottom-color: #262626;
+    }
+
+    .nav-brand .logo {
+        color: #f5f5f5;
+    }
+
+    .menu-toggle span {
+        background: #f5f5f5;
+    }
+
+    .nav-menu {
+        background: #000;
+    }
+
+    .nav-link {
+        color: #f5f5f5;
+    }
+
+    .nav-link:hover {
+        color: #ff4b8d;
+        background: #1a1a1a;
+    }
+
+    .nav-link.active {
+        color: #ff4b8d;
+    }
+
+    .nav-item {
+        border-bottom-color: #262626;
+    }
+
+    .mobile-menu-header {
+        border-bottom-color: #262626;
+    }
+
+    .mobile-user-info h4 {
+        color: #f5f5f5;
+    }
+
+    .mobile-user-info p {
+        color: #b0b0b0;
+    }
+
+    .mobile-menu-footer {
+        border-top-color: #262626;
+    }
+
+    .mobile-menu-footer .nav-link {
+        color: #b0b0b0;
+    }
+
+    .mobile-menu-footer .nav-link:hover {
+        color: #ff4b8d;
+    }
+}
+
 /* Main Content */
 .main-content {
     flex: 1;
@@ -108,6 +383,9 @@ body {
     align-items: stretch;
     padding: 20px;
     gap: 30px;
+    margin: 0 auto;
+    max-width: 600px;
+    width: 100%;
 }
 
 /* Calculator Post */
@@ -877,8 +1155,9 @@ body {
     border: 1px solid #dbdbdb;
     border-radius: 12px;
     padding: 30px;
-    margin: 20px auto;
+    margin: 0 auto;
     max-width: 600px;
+    width: 100%;
 }
 
 .stories-header {
