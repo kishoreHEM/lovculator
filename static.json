@@ -5,11 +5,13 @@
     "/**": "index.html"
   },
   "redirects": {
+    "/": "/index.html",
+    "/home": "/index.html",
     "/about": "/about.html",
     "/contact": "/contact.html",
     "/privacy": "/privacy.html", 
     "/terms": "/terms.html",
-    "/record":"/record.html"
+    "/record": "/record.html"
   },
   "headers": {
     "/*.html": {

@@ -19,24 +19,24 @@
     <header class="header">
         <nav class="navbar">
             <div class="nav-brand">
-                <a href="/" class="logo">
+                <a href="/" class="logo" aria-label="Lovculator Home">
                     💖 Lovculator
                 </a>
             </div>
             
-            <div class="nav-search">
-                <input type="text" placeholder="Search">
-            </div>
-            
+            <button class="menu-toggle" aria-label="Toggle menu">
+                <span></span>
+                <span></span>
+                <span></span>
+            </button>
+            <div class="mobile-menu-overlay"></div>
             <ul class="nav-menu">
-                <li class="nav-item">
-                    <a href="/" class="nav-link">🏠</a>
+                <li class="nav-item mobile-menu-header">
                 </li>
-                <li class="nav-item">
-                    <a href="about.html" class="nav-link active">ℹ️</a>
-                    <li class="nav-item">
-                    <a href="contact.html" class="nav-link active">📞</a>
-                </li>
+                <li class="nav-item"><a href="/" class="nav-link">🏠</a></li>
+                <li class="nav-item"><a href="record" class="nav-link">📊</a></li>
+                <li class="nav-item"><a href="about" class="nav-link">ℹ️</a></li>
+                <li class="nav-item"><a href="contact" class="nav-link">📞</a></li>
             </ul>
         </nav>
     </header>
@@ -166,6 +166,6 @@
         </footer>
     </div> <!-- End of container -->
 
-    <script src="js/navigation.js"></script>
+    <script src="./js/navigation.js"></script>
 </body>
 </html>

@@ -1,45 +1,141 @@
-// Instagram Style Navigation
+// Complete Navigation with Mobile Menu
 class Navigation {
     constructor() {
+        this.menuToggle = document.querySelector('.menu-toggle');
+        this.mobileOverlay = document.querySelector('.mobile-menu-overlay');
+        this.navMenu = document.querySelector('.nav-menu');
         this.navLinks = document.querySelectorAll('.nav-link');
         this.currentPage = this.getCurrentPage();
         this.init();
     }
 
     init() {
+        console.log('🚀 Initializing navigation...');
+        
         // Update active link based on current page
         this.updateActiveLink();
 
-        // Add click handlers for navigation
+        // Setup mobile menu functionality
+        this.setupMobileMenu();
+
+        // Setup regular navigation
+        this.setupNavigation();
+
+        console.log('💖 Navigation & Mobile Menu initialized - Current page:', this.currentPage);
+    }
+
+    // Mobile Menu Methods
+    setupMobileMenu() {
+        console.log('📱 Setting up mobile menu...');
+        
+        if (this.menuToggle && this.mobileOverlay && this.navMenu) {
+            console.log('✅ Mobile menu elements found');
+            
+            // Menu toggle button
+            this.menuToggle.addEventListener('click', (e) => {
+                e.stopPropagation();
+                this.toggleMenu();
+            });
+
+            // Overlay click to close
+            this.mobileOverlay.addEventListener('click', (e) => {
+                e.stopPropagation();
+                this.closeMenu();
+            });
+
+            // Close menu when clicking nav links (mobile)
+            this.navLinks.forEach(link => {
+                link.addEventListener('click', () => {
+                    if (window.innerWidth <= 768) {
+                        this.closeMenu();
+                    }
+                });
+            });
+
+            // Close menu on escape key
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape') {
+                    this.closeMenu();
+                }
+            });
+
+            // Close menu when clicking outside on mobile
+            document.addEventListener('click', (e) => {
+                if (window.innerWidth <= 768 && 
+                    this.navMenu.classList.contains('active') &&
+                    !this.navMenu.contains(e.target) &&
+                    !this.menuToggle.contains(e.target)) {
+                    this.closeMenu();
+                }
+            });
+
+        } else {
+            console.log('❌ Mobile menu elements missing:', {
+                menuToggle: !!this.menuToggle,
+                mobileOverlay: !!this.mobileOverlay,
+                navMenu: !!this.navMenu
+            });
+        }
+    }
+
+    toggleMenu() {
+        console.log('🍔 Toggling mobile menu');
+        const isOpen = this.menuToggle.classList.contains('active');
+        
+        if (isOpen) {
+            this.closeMenu();
+        } else {
+            this.openMenu();
+        }
+    }
+
+    openMenu() {
+        console.log('📖 Opening mobile menu');
+        this.menuToggle.classList.add('active');
+        this.mobileOverlay.classList.add('active');
+        this.navMenu.classList.add('active');
+        document.body.style.overflow = 'hidden';
+        
+        // Update ARIA attributes
+        this.menuToggle.setAttribute('aria-expanded', 'true');
+        this.navMenu.setAttribute('aria-hidden', 'false');
+    }
+
+    closeMenu() {
+        console.log('📕 Closing mobile menu');
+        this.menuToggle.classList.remove('active');
+        this.mobileOverlay.classList.remove('active');
+        this.navMenu.classList.remove('active');
+        document.body.style.overflow = '';
+        
+        // Update ARIA attributes
+        this.menuToggle.setAttribute('aria-expanded', 'false');
+        this.navMenu.setAttribute('aria-hidden', 'true');
+    }
+
+    // Regular Navigation Methods
+    setupNavigation() {
         this.navLinks.forEach(link => {
             link.addEventListener('click', (e) => {
-                // Don't prevent default - let the link work normally
                 this.handleLinkClick(e.currentTarget);
             });
         });
-
-        // Handle mobile menu
-        this.handleMobileMenu();
-
-        console.log('💖 Navigation initialized - Current page:', this.currentPage);
     }
 
     getCurrentPage() {
         const path = window.location.pathname;
-        // Handle different URL formats
-        if (path === '/' || path === '' || path.endsWith('index.html')) {
-            return 'index.html';
-        }
-        // Extract filename from path
-        return path.split('/').pop() || 'index.html';
+        console.log('📍 Current path:', path);
+        
+        if (path === '/' || path === '' || path.includes('index')) return 'home';
+        if (path.includes('about')) return 'about';
+        if (path.includes('contact')) return 'contact';
+        if (path.includes('record')) return 'record';
+        return 'home';
     }
 
     handleLinkClick(clickedLink) {
-        // Update active state immediately for better UX
+        console.log('🔗 Link clicked:', clickedLink.getAttribute('href'));
         this.setActiveLink(clickedLink);
-        
-        // Optional: Add smooth transition effect
-        this.addClickFeedback(clickedLink);
     }
 
     setActiveLink(activeLink) {
@@ -52,102 +148,54 @@ class Navigation {
     updateActiveLink() {
         this.navLinks.forEach(link => {
             const linkHref = link.getAttribute('href');
+            const cleanHref = this.cleanHref(linkHref);
+            const cleanCurrent = this.currentPage;
             
-            // Handle different link formats
-            if (this.isLinkActive(linkHref)) {
+            if (this.isLinkActive(cleanHref, cleanCurrent)) {
                 link.classList.add('active');
-            } else {
-                link.classList.remove('active');
+                console.log('🎯 Active link:', linkHref);
             }
         });
     }
 
-    isLinkActive(linkHref) {
-        // Handle exact matches
-        if (linkHref === this.currentPage) {
+    cleanHref(href) {
+        return href.replace('/', '').replace('.html', '').replace('./', '') || 'home';
+    }
+
+    isLinkActive(linkHref, currentPage) {
+        // Home page special case
+        if (currentPage === 'home' && (linkHref === 'home' || linkHref === '' || linkHref === 'index')) {
             return true;
         }
-
-        // Handle index.html variations
-        if ((this.currentPage === 'index.html' || this.currentPage === '/') && 
-            (linkHref === 'index.html' || linkHref === './' || linkHref === '/')) {
-            return true;
-        }
-
-        // Handle about.html, contact.html, etc.
-        if (this.currentPage === linkHref) {
-            return true;
-        }
-
-        return false;
-    }
-
-    addClickFeedback(link) {
-        // Add temporary active state for better UX
-        link.style.transform = 'scale(0.95)';
-        setTimeout(() => {
-            link.style.transform = 'scale(1)';
-        }, 150);
-    }
-
-    handleMobileMenu() {
-        // Add mobile menu toggle if needed in the future
-        if (window.innerWidth <= 768) {
-            // Mobile-specific enhancements can go here
-            this.addMobileEnhancements();
-        }
-    }
-
-    addMobileEnhancements() {
-        // Example: Add touch feedback for mobile
-        this.navLinks.forEach(link => {
-            link.style.transition = 'all 0.2s ease';
-        });
-    }
-
-    // Method to manually update navigation (useful for SPAs)
-    updateForPage(pageName) {
-        this.currentPage = pageName;
-        this.updateActiveLink();
+        
+        // Other pages
+        return linkHref === currentPage;
     }
 }
 
-// Enhanced initialization with error handling
+// Initialize with error handling
 function initializeNavigation() {
     try {
+        console.log('🚀 Starting navigation initialization...');
         window.appNavigation = new Navigation();
-        
-        // Export for global access if needed
-        window.updateNavigation = (page) => {
-            if (window.appNavigation) {
-                window.appNavigation.updateForPage(page);
-            }
-        };
-        
     } catch (error) {
         console.error('❌ Navigation initialization failed:', error);
         
-        // Fallback: Simple active link highlighting
-        const currentPage = window.location.pathname.split('/').pop() || 'index.html';
+        // Fallback: Simple active state
+        const path = window.location.pathname;
         document.querySelectorAll('.nav-link').forEach(link => {
-            if (link.getAttribute('href') === currentPage) {
+            const href = link.getAttribute('href');
+            if ((path === '/' && (href === '/' || href === 'index.html')) ||
+                (path.includes(href) && href !== '/')) {
                 link.classList.add('active');
             }
         });
     }
 }
 
-// Initialize when DOM is ready
+// Wait for DOM to be ready
 if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', initializeNavigation);
 } else {
     initializeNavigation();
 }
-
-// Handle page transitions (useful for SPAs)
-window.addEventListener('popstate', () => {
-    if (window.appNavigation) {
-        window.appNavigation.currentPage = window.appNavigation.getCurrentPage();
-        window.appNavigation.updateActiveLink();
-    }
-});
