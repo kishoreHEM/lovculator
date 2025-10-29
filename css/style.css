@@ -2985,6 +2985,7 @@ body {
     color: white;
     transform: translateY(-2px);
 }
+
 }
 
 /* Install Prompt */
@@ -3018,7 +3019,7 @@ body {
 }
 
 .install-btn {
-    background: #0095f6;
+    background: #ff4b8d;
     color: white;
     border: none;
     padding: 10px 20px;

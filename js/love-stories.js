@@ -614,6 +614,242 @@ class StoryModal {
         });
     }
 
+    renderStoriesWithEnhancedUI() {
+    console.log('🎨 Rendering stories with enhanced UI');
+    
+    const container = document.getElementById('storiesContainer');
+    if (!container) {
+        console.error('❌ Stories container not found');
+        return;
+    }
+
+    // Clear existing content
+    container.innerHTML = '';
+
+    if (this.stories.length === 0) {
+        this.renderEmptyState(container);
+        return;
+    }
+
+    // Create stories grid
+    const storiesGrid = document.createElement('div');
+    storiesGrid.className = 'stories-grid';
+
+    this.stories.forEach((story, index) => {
+        const storyCard = this.createStoryCard(story, index);
+        storiesGrid.appendChild(storyCard);
+    });
+
+    container.appendChild(storiesGrid);
+    this.attachStoryInteractions();
+}
+
+// Add these helper methods too:
+createStoryCard(story, index) {
+    const storyCard = document.createElement('div');
+    storyCard.className = `story-card ${story.mood || 'romantic'}`;
+    storyCard.setAttribute('data-story-id', story.id);
+    
+    storyCard.innerHTML = `
+        <div class="story-card-header">
+            <div class="story-avatar">${this.getAvatarEmoji(story.mood)}</div>
+            <div class="story-author">
+                <div class="author-name">${story.anonymousPost ? 'Anonymous' : story.coupleNames}</div>
+                <div class="story-meta">
+                    <span class="story-category">${this.getCategoryIcon(story.category)} ${this.formatCategory(story.category)}</span>
+                    <span class="story-date">${this.formatDate(story.timestamp)}</span>
+                </div>
+            </div>
+        </div>
+        
+        <div class="story-card-body">
+            <h4 class="story-title">${story.storyTitle}</h4>
+            <p class="story-excerpt">${this.getExcerpt(story.loveStory)}</p>
+            
+            <div class="story-stats">
+                <span class="stat likes">❤️ ${story.likes?.length || 0}</span>
+                <span class="stat comments">💬 ${story.comments?.length || 0}</span>
+                <span class="stat mood">${this.getMoodEmoji(story.mood)}</span>
+            </div>
+        </div>
+        
+        <div class="story-card-actions">
+            <button class="action-btn like-btn" data-story-id="${story.id}">
+                ❤️ Like
+            </button>
+            <button class="action-btn comment-btn" data-story-id="${story.id}">
+                💬 Comment
+            </button>
+            <button class="action-btn share-btn" data-story-id="${story.id}">
+                📤 Share
+            </button>
+        </div>
+    `;
+    
+    return storyCard;
+}
+
+// Helper methods for the enhanced UI
+getAvatarEmoji(mood) {
+    const moodEmojis = {
+        romantic: '💖',
+        emotional: '🥰',
+        funny: '😂',
+        inspiring: '✨',
+        dramatic: '🎭'
+    };
+    return moodEmojis[mood] || '💕';
+}
+
+getCategoryIcon(category) {
+    const categoryIcons = {
+        romantic: '💖',
+        proposal: '💍',
+        journey: '🛤️',
+        challenge: '🛡️',
+        special: '🌟',
+        longdistance: '✈️',
+        secondchance: '🔁'
+    };
+    return categoryIcons[category] || '📖';
+}
+
+getMoodEmoji(mood) {
+    const moodEmojis = {
+        romantic: '😊',
+        emotional: '🥰',
+        funny: '😂',
+        inspiring: '🤩',
+        dramatic: '🎭'
+    };
+    return moodEmojis[mood] || '😊';
+}
+
+getExcerpt(content, maxLength = 150) {
+    if (!content) return 'No content';
+    if (content.length <= maxLength) return content;
+    return content.substring(0, maxLength) + '...';
+}
+
+formatDate(timestamp) {
+    if (!timestamp) return 'Recently';
+    return new Date(timestamp).toLocaleDateString();
+}
+
+renderEmptyState(container) {
+    container.innerHTML = `
+        <div class="empty-state">
+            <div class="empty-icon">💌</div>
+            <h3>No love stories yet</h3>
+            <p>Be the first to share your beautiful love story!</p>
+            <button class="fab-button" id="emptyStateFab">
+                <span class="fab-icon">+</span>
+                Share Your Story
+            </button>
+        </div>
+    `;
+    
+    // Add event listener for empty state button
+    const emptyFab = document.getElementById('emptyStateFab');
+    if (emptyFab) {
+        emptyFab.addEventListener('click', () => {
+            document.getElementById('storyFab')?.click();
+        });
+    }
+}
+
+attachStoryInteractions() {
+    // Like button functionality
+    document.querySelectorAll('.like-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            const storyId = e.target.dataset.storyId;
+            this.toggleLike(storyId);
+        });
+    });
+    
+    // Comment button functionality
+    document.querySelectorAll('.comment-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            const storyId = e.target.dataset.storyId;
+            this.toggleComments(storyId);
+        });
+    });
+    
+    // Share button functionality
+    document.querySelectorAll('.share-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            const storyId = e.target.dataset.storyId;
+            this.handleShare(storyId);
+        });
+    });
+}
+
+toggleComments(storyId) {
+    const story = this.stories.find(s => s.id === storyId);
+    if (!story) return;
+
+    let commentsSection = document.getElementById(`comments-${storyId}`);
+    
+    if (!commentsSection) {
+        // Create comments section if it doesn't exist
+        const storyCard = document.querySelector(`[data-story-id="${storyId}"]`);
+        commentsSection = document.createElement('div');
+        commentsSection.id = `comments-${storyId}`;
+        commentsSection.className = 'comments-section';
+        commentsSection.innerHTML = this.getCommentsHTML(story);
+        storyCard.appendChild(commentsSection);
+    }
+    
+    commentsSection.classList.toggle('hidden');
+}
+
+getCommentsHTML(story) {
+    return `
+        <div class="comment-form">
+            <input type="text" class="comment-input" placeholder="Add a comment..." 
+                   data-story-id="${story.id}">
+            <button class="comment-submit" data-story-id="${story.id}">Post</button>
+        </div>
+        <div class="comments-list" id="comments-list-${story.id}">
+            ${story.comments?.map(comment => `
+                <div class="comment" data-comment-id="${comment.id}">
+                    <div class="comment-header">
+                        <span class="comment-author">${comment.author}</span>
+                        <span class="comment-time">${this.formatTime(comment.timestamp)}</span>
+                    </div>
+                    <div class="comment-text">${this.escapeHtml(comment.text)}</div>
+                    <div class="comment-actions">
+                        <button class="comment-like ${comment.likes?.some(like => like.userId === this.currentUser) ? 'liked' : ''}" 
+                                data-story-id="${story.id}" data-comment-id="${comment.id}">
+                            ❤️ <span>${comment.likes?.length || 0}</span>
+                        </button>
+                    </div>
+                </div>
+            `).join('') || ''}
+        </div>
+    `;
+}
+
+handleShare(storyId) {
+    const story = this.stories.find(s => s.id === storyId);
+    if (story) {
+        const shareText = `Check out this beautiful love story: "${story.storyTitle}" by ${story.anonymousPost ? 'Anonymous' : story.coupleNames}`;
+        
+        if (navigator.share) {
+            navigator.share({
+                title: story.storyTitle,
+                text: shareText,
+                url: window.location.href
+            });
+        } else {
+            // Fallback: copy to clipboard
+            navigator.clipboard.writeText(shareText).then(() => {
+                this.showNotification('Story link copied to clipboard! 📋');
+            });
+        }
+    }
+}
+
     openModal() {
         this.storyModal.classList.remove('hidden');
         this.storyModal.setAttribute('aria-hidden', 'false');
