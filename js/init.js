@@ -1,4 +1,4 @@
-// SAFE Application Initialization - NO ERRORS
+// SAFE Application Initialization - FIXED FOR SIMPLE NAVIGATION
 class AppInitializer {
     constructor() {
         this.init();
@@ -49,17 +49,9 @@ class AppInitializer {
             console.log('ℹ️ Love Calculator not found (might not be on this page)');
         }
 
-        // Navigation - check if it exists
-        if (typeof Navigation !== 'undefined') {
-            try {
-                new Navigation();
-                console.log('✅ Navigation initialized');
-            } catch (error) {
-                console.warn('⚠️ Navigation failed to initialize:', error);
-            }
-        } else {
-            console.log('ℹ️ Navigation not found (using simple navigation)');
-        }
+        // FIXED: Navigation is handled by simple function in navigation.js
+        // Don't try to initialize Navigation class - it doesn't exist
+        console.log('ℹ️ Navigation handled by simple function in navigation.js');
 
         // Social Share - check if it exists
         if (typeof SocialShare !== 'undefined') {
@@ -113,6 +105,16 @@ class AppInitializer {
                 console.log('✅ Social Challenges initialized');
             } catch (error) {
                 console.warn('⚠️ Social Challenges failed to initialize:', error);
+            }
+        }
+
+        // FAQ Manager - only if it exists
+        if (typeof FAQManager !== 'undefined') {
+            try {
+                window.faqManager = new FAQManager();
+                console.log('✅ FAQ Manager initialized');
+            } catch (error) {
+                console.warn('⚠️ FAQ Manager failed to initialize:', error);
             }
         }
 
