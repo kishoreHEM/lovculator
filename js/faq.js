@@ -1,4 +1,4 @@
-// FAQ functionality
+// FAQ functionality - FIXED VERSION
 class FAQManager {
     constructor() {
         this.faqItems = document.querySelectorAll('.faq-item');
@@ -45,19 +45,16 @@ class FAQManager {
         
         if (!isExpanded) {
             // Open
-            answer.style.display = 'block';
-            item.classList.add('active');
-            icon.style.transform = 'rotate(180deg)';
-            
-            // Smooth height animation
-            this.slideDown(answer);
+            this.slideDown(answer, () => {
+                item.classList.add('active');
+                icon.style.transform = 'rotate(180deg)';
+            });
         } else {
             // Close
             this.slideUp(answer, () => {
-                answer.style.display = 'none';
+                item.classList.remove('active');
+                icon.style.transform = 'rotate(0deg)';
             });
-            item.classList.remove('active');
-            icon.style.transform = 'rotate(0deg)';
         }
     }
 
@@ -70,26 +67,33 @@ class FAQManager {
             if (otherQuestion.getAttribute('aria-expanded') === 'true') {
                 otherQuestion.setAttribute('aria-expanded', 'false');
                 this.slideUp(otherAnswer, () => {
-                    otherAnswer.style.display = 'none';
+                    otherItem.classList.remove('active');
+                    otherIcon.style.transform = 'rotate(0deg)';
                 });
-                otherItem.classList.remove('active');
-                otherIcon.style.transform = 'rotate(0deg)';
             }
         });
     }
 
-    slideDown(element) {
-        element.style.height = 'auto';
-        const height = element.offsetHeight;
+    slideDown(element, callback) {
+        // First show the element but make it invisible
+        element.style.display = 'block';
         element.style.height = '0px';
-        element.offsetHeight; // Trigger reflow
+        element.style.overflow = 'hidden';
         
+        // Get the natural height
+        const height = element.scrollHeight;
+        
+        // Use requestAnimationFrame for smooth animation
         requestAnimationFrame(() => {
+            element.style.transition = 'height 0.3s ease';
             element.style.height = height + 'px';
             
             const onTransitionEnd = () => {
                 element.style.height = 'auto';
+                element.style.overflow = 'visible';
+                element.style.transition = '';
                 element.removeEventListener('transitionend', onTransitionEnd);
+                if (callback) callback();
             };
             
             element.addEventListener('transitionend', onTransitionEnd);
@@ -97,16 +101,25 @@ class FAQManager {
     }
 
     slideUp(element, callback) {
-        const height = element.offsetHeight;
-        element.style.height = height + 'px';
-        element.offsetHeight; // Trigger reflow
+        // Get current height
+        const height = element.scrollHeight;
         
+        // Set fixed height before animation
+        element.style.height = height + 'px';
+        element.style.overflow = 'hidden';
+        
+        // Use requestAnimationFrame for smooth animation
         requestAnimationFrame(() => {
+            element.style.transition = 'height 0.3s ease';
             element.style.height = '0px';
             
             const onTransitionEnd = () => {
-                if (callback) callback();
+                element.style.display = 'none';
+                element.style.height = '';
+                element.style.overflow = '';
+                element.style.transition = '';
                 element.removeEventListener('transitionend', onTransitionEnd);
+                if (callback) callback();
             };
             
             element.addEventListener('transitionend', onTransitionEnd);
