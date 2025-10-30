@@ -3,7 +3,7 @@ class AchievementSystem {
     constructor() {
         this.achievements = JSON.parse(localStorage.getItem('userAchievements')) || [];
         this.userStats = JSON.parse(localStorage.getItem('userStats')) || this.initializeStats();
-        this.init();
+        this.isInitialized = false;
     }
 
     initializeStats() {
@@ -20,59 +20,101 @@ class AchievementSystem {
     }
 
     init() {
+        if (this.isInitialized) return;
+        
+        console.log('🏆 AchievementSystem initializing...');
         this.checkDailyLogin();
         this.setupAchievementListeners();
         this.displayAchievements();
+        this.isInitialized = true;
+        
+        console.log('🏆 AchievementSystem ready. Stats:', this.userStats);
     }
 
     setupAchievementListeners() {
         // Listen for love calculations
         document.addEventListener('loveCalculated', (e) => {
+            console.log('🏆 Love calculation recorded');
             this.recordCalculation();
         });
 
         // Listen for story sharing
         document.addEventListener('storyShared', (e) => {
+            console.log('🏆 Story shared recorded');
             this.recordStoryShared();
         });
 
         // Listen for comments
         document.addEventListener('commentPosted', (e) => {
+            console.log('🏆 Comment posted recorded');
             this.recordComment();
         });
 
         // Listen for likes
         document.addEventListener('likeGiven', (e) => {
+            console.log('🏆 Like given recorded');
             this.recordLike();
         });
+
+        // Listen for page changes to refresh display
+        document.addEventListener('pageChanged', () => {
+            setTimeout(() => this.displayAchievements(), 100);
+        });
+    }
+
+    // Public methods to record achievements directly (alternative to events)
+    recordCalculationDirect() {
+        this.recordCalculation();
+    }
+
+    recordStorySharedDirect() {
+        this.recordStoryShared();
+    }
+
+    recordCommentDirect() {
+        this.recordComment();
+    }
+
+    recordLikeDirect() {
+        this.recordLike();
     }
 
     recordCalculation() {
         this.userStats.calculationsDone++;
+        console.log(`🏆 Calculations: ${this.userStats.calculationsDone}`);
         this.checkCalculationAchievements();
         this.saveStats();
+        this.displayAchievements();
     }
 
     recordStoryShared() {
         this.userStats.storiesShared++;
+        console.log(`🏆 Stories shared: ${this.userStats.storiesShared}`);
         this.checkStoryAchievements();
         this.saveStats();
+        this.displayAchievements();
     }
 
     recordComment() {
         this.userStats.commentsPosted++;
+        console.log(`🏆 Comments: ${this.userStats.commentsPosted}`);
         this.checkCommentAchievements();
         this.saveStats();
+        this.displayAchievements();
     }
 
     recordLike() {
         this.userStats.likesGiven++;
+        console.log(`🏆 Likes: ${this.userStats.likesGiven}`);
         this.checkLikeAchievements();
         this.saveStats();
+        this.displayAchievements();
     }
 
     checkDailyLogin() {
         const today = new Date().toDateString();
+        console.log(`🏆 Checking daily login. Last: ${this.userStats.lastActivityDate}, Today: ${today}`);
+        
         if (this.userStats.lastActivityDate !== today) {
             if (this.userStats.lastActivityDate) {
                 const lastDate = new Date(this.userStats.lastActivityDate);
@@ -82,11 +124,14 @@ class AchievementSystem {
                 
                 if (diffDays === 1) {
                     this.userStats.consecutiveDays++;
-                } else {
+                    console.log(`🏆 Consecutive days: ${this.userStats.consecutiveDays}`);
+                } else if (diffDays > 1) {
                     this.userStats.consecutiveDays = 1;
+                    console.log('🏆 Streak broken, starting over');
                 }
             } else {
                 this.userStats.consecutiveDays = 1;
+                console.log('🏆 First login recorded');
             }
             
             this.userStats.lastActivityDate = today;
@@ -185,9 +230,15 @@ class AchievementSystem {
         this.saveAchievements();
         this.showAchievementNotification(achievement);
         this.displayAchievements();
+        
+        console.log(`🏆 Achievement unlocked: ${achievement.name}`);
     }
 
     showAchievementNotification(achievement) {
+        // Remove any existing notifications
+        const existingNotifications = document.querySelectorAll('.achievement-notification');
+        existingNotifications.forEach(notif => notif.remove());
+
         const notification = document.createElement('div');
         notification.className = 'achievement-notification';
         notification.innerHTML = `
@@ -204,19 +255,28 @@ class AchievementSystem {
         
         document.body.appendChild(notification);
         
+        // Trigger animation
         setTimeout(() => {
             notification.classList.add('show');
         }, 100);
         
+        // Auto-remove after delay
         setTimeout(() => {
             notification.classList.remove('show');
-            setTimeout(() => notification.remove(), 500);
+            setTimeout(() => {
+                if (notification.parentNode) {
+                    notification.remove();
+                }
+            }, 500);
         }, 4000);
     }
 
     displayAchievements() {
         const container = document.getElementById('achievementsContainer');
-        if (!container) return;
+        if (!container) {
+            console.log('🏆 Achievements container not found on this page');
+            return;
+        }
 
         const totalPoints = this.achievements.reduce((sum, ach) => sum + ach.points, 0);
         
@@ -232,8 +292,10 @@ class AchievementSystem {
                         <div class="achievement-info">
                             <h4>${achievement.name}</h4>
                             <p>${achievement.description}</p>
-                            <span class="achievement-points">${achievement.points} pts</span>
-                            <span class="achievement-date">${new Date(achievement.unlockedAt).toLocaleDateString()}</span>
+                            <div class="achievement-meta">
+                                <span class="achievement-points">${achievement.points} pts</span>
+                                <span class="achievement-date">${new Date(achievement.unlockedAt).toLocaleDateString()}</span>
+                            </div>
                         </div>
                     </div>
                 `).join('')}
@@ -273,6 +335,38 @@ class AchievementSystem {
                 </div>
             </div>
         `;
+        
+        console.log('🏆 Achievements displayed');
+    }
+
+    // Public method to refresh display
+    refreshDisplay() {
+        this.displayAchievements();
+    }
+
+    // Public method to get current stats
+    getStats() {
+        return { ...this.userStats };
+    }
+
+    // Public method to get achievements
+    getAchievements() {
+        return [...this.achievements];
+    }
+
+    // Public method to get total points
+    getTotalPoints() {
+        return this.achievements.reduce((sum, ach) => sum + ach.points, 0);
+    }
+
+    // Public method to reset everything (for testing)
+    resetAll() {
+        this.achievements = [];
+        this.userStats = this.initializeStats();
+        this.saveAchievements();
+        this.saveStats();
+        this.displayAchievements();
+        console.log('🏆 All achievements and stats reset');
     }
 
     saveStats() {
@@ -282,17 +376,20 @@ class AchievementSystem {
     saveAchievements() {
         localStorage.setItem('userAchievements', JSON.stringify(this.achievements));
     }
-
-    getTotalPoints() {
-        return this.achievements.reduce((sum, ach) => sum + ach.points, 0);
-    }
-
-    getAchievementsByCategory(category) {
-        return this.achievements.filter(ach => ach.category === category);
-    }
 }
 
-// Initialize achievement system
+// Initialize achievement system with better error handling
 document.addEventListener('DOMContentLoaded', () => {
-    window.achievementSystem = new AchievementSystem();
+    try {
+        window.achievementSystem = new AchievementSystem();
+        window.achievementSystem.init();
+        console.log('🏆 AchievementSystem loaded successfully');
+    } catch (error) {
+        console.error('🏆 Failed to initialize AchievementSystem:', error);
+    }
 });
+
+// Export for module systems
+if (typeof module !== 'undefined' && module.exports) {
+    module.exports = AchievementSystem;
+}
