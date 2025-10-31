@@ -84,13 +84,14 @@ body {
     display: none;
     flex-direction: column;
     justify-content: space-between;
-    width: 30px;
-    height: 24px;
+    width: 24px;
+    height: 18px;
     background: none;
     border: none;
     cursor: pointer;
     padding: 0;
     z-index: 1001;
+    position: relative;
 }
 
 .menu-toggle span {
@@ -206,7 +207,6 @@ body {
 
     .nav-menu.active {
         right: 0;
-        -webkit-overflow-scrolling: touch;
     }
 
     .nav-item {
@@ -976,7 +976,7 @@ body {
     background: white;
     border: 1px solid #dbdbdb;
     border-radius: 12px;
-    padding: 30px;
+    padding: 0px;
     margin: 0 auto;
     max-width: 600px;
     width: 100%;
@@ -1225,184 +1225,6 @@ body {
 
 .comment-like.liked {
     color: #ff4b8d;
-}
-
-/* Achievements System */
-.achievement-notification {
-    position: fixed;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    z-index: 2000;
-    opacity: 0;
-    transition: opacity 0.5s ease;
-}
-
-.achievement-notification.show {
-    opacity: 1;
-}
-
-.achievement-popup {
-    background: linear-gradient(135deg, #667eea, #764ba2);
-    color: white;
-    padding: 25px;
-    border-radius: 20px;
-    text-align: center;
-    box-shadow: 0 20px 60px rgba(0,0,0,0.3);
-    border: 3px solid gold;
-    animation: achievementPop 0.6s ease-out;
-}
-
-@keyframes achievementPop {
-    0% { transform: scale(0.5); opacity: 0; }
-    70% { transform: scale(1.1); }
-    100% { transform: scale(1); opacity: 1; }
-}
-
-.achievement-icon {
-    font-size: 4rem;
-    margin-bottom: 15px;
-}
-
-.achievement-content h4 {
-    margin: 0 0 5px 0;
-    font-size: 1.1rem;
-}
-
-.achievement-content h5 {
-    margin: 0 0 10px 0;
-    font-size: 1.4rem;
-    font-weight: bold;
-}
-
-.achievement-content p {
-    margin: 0 0 15px 0;
-    opacity: 0.9;
-}
-
-.achievement-points {
-    background: rgba(255,255,255,0.2);
-    padding: 4px 12px;
-    border-radius: 12px;
-    font-weight: bold;
-}
-
-.achievements-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 25px;
-    padding-bottom: 15px;
-    border-bottom: 2px solid #f0f0f0;
-}
-
-.total-points {
-    background: linear-gradient(135deg, #ff4b8d, #ff6b6b);
-    color: white;
-    padding: 8px 16px;
-    border-radius: 20px;
-    font-weight: bold;
-    font-size: 1.2rem;
-}
-
-.achievements-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-    gap: 20px;
-    margin-bottom: 30px;
-}
-
-.achievement-card {
-    background: white;
-    border: 2px solid #f0f0f0;
-    border-radius: 15px;
-    padding: 20px;
-    display: flex;
-    align-items: center;
-    gap: 15px;
-    transition: all 0.3s ease;
-}
-
-.achievement-card:hover {
-    transform: translateY(-3px);
-    box-shadow: 0 8px 25px rgba(0,0,0,0.1);
-}
-
-.achievement-card.calculations { border-left: 4px solid #ff4b8d; }
-.achievement-card.stories { border-left: 4px solid #667eea; }
-.achievement-card.community { border-left: 4px solid #4CAF50; }
-.achievement-card.engagement { border-left: 4px solid #FF9800; }
-.achievement-card.dedication { border-left: 4px solid #9C27B0; }
-
-.achievement-icon-small {
-    font-size: 2.5rem;
-    flex-shrink: 0;
-}
-
-.achievement-info h4 {
-    margin: 0 0 5px 0;
-    color: #262626;
-}
-
-.achievement-info p {
-    margin: 0 0 8px 0;
-    color: #666;
-    font-size: 0.9rem;
-}
-
-.achievement-points-small, .achievement-date {
-    font-size: 0.8rem;
-    color: #8e8e8e;
-}
-
-.achievement-points-small {
-    font-weight: bold;
-    margin-right: 10px;
-}
-
-.no-achievements {
-    text-align: center;
-    padding: 40px 20px;
-    grid-column: 1 / -1;
-}
-
-.no-achievements-icon {
-    font-size: 4rem;
-    margin-bottom: 15px;
-}
-
-.achievements-progress {
-    background: #f8f9fa;
-    padding: 25px;
-    border-radius: 15px;
-}
-
-.progress-stats {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
-    gap: 15px;
-    margin-top: 15px;
-}
-
-.progress-stat {
-    text-align: center;
-    padding: 15px;
-    background: white;
-    border-radius: 10px;
-    border: 1px solid #e9ecef;
-}
-
-.progress-stat-value {
-    display: block;
-    font-size: 1.8rem;
-    font-weight: bold;
-    color: #ff4b8d;
-    margin-bottom: 5px;
-}
-
-.progress-stat-label {
-    font-size: 0.9rem;
-    color: #666;
 }
 
 /* Floating Action Button */
@@ -1758,7 +1580,7 @@ body {
     background: white;
     border: 1px solid #dbdbdb;
     border-radius: 12px;
-    padding: 30px;
+    padding: 0px;   
     margin: 20px 0;
 }
 
@@ -1895,7 +1717,7 @@ body {
     border-radius: 12px;
     width: 100%;
     max-width: 600px;
-    padding: 25px;
+    padding: 0px;
 }
 
 .guide-header {
@@ -2007,7 +1829,7 @@ body {
     border-radius: 12px;
     width: 100%;
     max-width: 600px;
-    padding: 25px;
+    padding: 0px;
     margin: 0 auto;
 }
 
@@ -2115,12 +1937,12 @@ body {
     border: 1px solid #e0e0e0;
     border-radius: 16px;
     width: 100%;
-    max-width: 800px;
+    max-width: 600px;
     padding: 60px 50px;
     margin: 60px auto;
     box-shadow: 0 8px 30px rgba(0, 0, 0, 0.08);
 }
-
+s
 .faq-header {
     text-align: center;
     margin-bottom: 50px;
@@ -2839,7 +2661,7 @@ body {
 }
 
 .footer-links {
-    display: flex;
+    display: block;
     justify-content: center;
     gap: 1.5rem;
     margin-top: 1.25rem;
@@ -3093,7 +2915,6 @@ body {
 
     .faq-section {
         padding: 40px 24px;
-        margin: 40px 20px;
     }
     
     .faq-header {
