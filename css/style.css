@@ -1250,16 +1250,54 @@ body {
     display: flex;
     align-items: center;
     justify-content: center;
+    position: relative; 
+    animation: gentleFloat 3s ease-in-out infinite;
 }
 
 .fab-button:hover {
     transform: scale(1.1);
     box-shadow: 0 6px 25px rgba(255, 75, 141, 0.6);
+    animation: none;
+}
+
+.fab-button:active {
+    transform: scale(1.05);
 }
 
 .fab-icon {
     line-height: 1;
     margin-bottom: 2px;
+    transition: transform 0.3s ease;
+    
+}
+
+.fab-button:hover .fab-icon {
+    transform: rotate(90deg);
+}
+
+@keyframes gentleFloat {
+    0%, 100% {
+        transform: translateY(0);
+    }
+    50% {
+        transform: translateY(-5px);
+    }
+}
+
+@keyframes fabPulse {
+    0% {
+        transform: scale(1);
+        box-shadow: 0 6px 25px rgba(255, 75, 141, 0.5);
+    }
+    50% {
+        transform: scale(1.05);
+        box-shadow: 0 8px 30px rgba(255, 75, 141, 0.7);
+    }
+    100% {
+        transform: scale(1);
+        box-shadow: 0 6px 25px rgba(255, 75, 141, 0.5);
+    }
+
 }
 
 /* Modal Styles */
@@ -1580,7 +1618,7 @@ body {
     background: white;
     border: 1px solid #dbdbdb;
     border-radius: 12px;
-    padding: 0px;   
+    padding: 10px;   
     margin: 20px 0;
 }
 
@@ -1590,14 +1628,14 @@ body {
 }
 
 .name-analysis-header h2 {
-    font-size: 1.8rem;
+    font-size: 1.5rem;
     font-weight: 600;
     color: #262626;
     margin-bottom: 8px;
 }
 
 .name-analysis-subtitle {
-    color: #8e8e8e;
+    color: #444;
     font-size: 1rem;
 }
 
@@ -1635,7 +1673,7 @@ body {
 }
 
 .factor-icon {
-    font-size: 2.5rem;
+    font-size: 2.0rem;
     margin-bottom: 15px;
     display: block;
 }
@@ -1717,7 +1755,7 @@ body {
     border-radius: 12px;
     width: 100%;
     max-width: 600px;
-    padding: 0px;
+    padding: 10px;
 }
 
 .guide-header {
@@ -1829,7 +1867,7 @@ body {
     border-radius: 12px;
     width: 100%;
     max-width: 600px;
-    padding: 0px;
+    padding: 10px;
     margin: 0 auto;
 }
 
@@ -1939,7 +1977,7 @@ body {
     width: 100%;
     max-width: 600px;
     padding: 60px 50px;
-    margin: 60px auto;
+    margin: 30px auto;
     box-shadow: 0 8px 30px rgba(0, 0, 0, 0.08);
 }
 s
@@ -2186,7 +2224,6 @@ s
     justify-content: space-between;
     padding: 16px;
     border-bottom: 1px solid #dbdbdb;
-    background: #fafafa;
 }
 
 .about-content {
@@ -2853,8 +2890,8 @@ s
     .quick-access-section {
         max-width: 100%;
         border: none;
-        border-bottom: 1px solid #dbdbdb;
-        border-radius: 0;
+        border-bottom: 2px solid #dbdbdb;
+        border-radius: 10px;
     }
 
     .calculator-header {
@@ -2921,7 +2958,7 @@ s
     }
     
     .faq-header h2 {
-        font-size: 1.75rem;
+        font-size: 1.5rem;
     }
     
     .faq-subtitle {
@@ -2955,7 +2992,7 @@ s
     }
     
     .about-post {
-        margin: 10px;
+        margin: 0px;
         max-width: none;
     }
     
