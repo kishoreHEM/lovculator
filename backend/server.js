@@ -5,6 +5,7 @@ import dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
+// Fix for __dirname in ES modules
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
@@ -33,7 +34,6 @@ const initializeDatabaseConnection = async () => {
       ssl: {
         rejectUnauthorized: false
       },
-      // Add connection timeout
       connectionTimeoutMillis: 5000,
       idleTimeoutMillis: 30000,
       max: 20
@@ -53,7 +53,6 @@ const initializeDatabaseConnection = async () => {
   } catch (error) {
     console.error('❌ Database connection failed:', error.message);
     console.log('💡 Please check your DATABASE_URL environment variable');
-    console.log('🔧 DATABASE_URL format: postgresql://user:password@host:port/database');
     return false;
   }
 };
@@ -104,7 +103,115 @@ async function createTables() {
   }
 }
 
-// Your API routes here (same as before)
+// ========================
+// REDIRECTS & STATIC ROUTES
+// ========================
+
+// Specific page routes
+app.get('/', (req, res) => {
+  res.sendFile(path.join(__dirname, '..', 'index.html'));
+});
+
+app.get('/home', (req, res) => {
+  res.redirect('/');
+});
+
+app.get('/about', (req, res) => {
+  res.sendFile(path.join(__dirname, '..', 'about.html'));
+});
+
+app.get('/contact', (req, res) => {
+  res.sendFile(path.join(__dirname, '..', 'contact.html'));
+});
+
+app.get('/privacy', (req, res) => {
+  res.sendFile(path.join(__dirname, '..', 'privacy.html'));
+});
+
+app.get('/terms', (req, res) => {
+  res.sendFile(path.join(__dirname, '..', 'terms.html'));
+});
+
+app.get('/record', (req, res) => {
+  res.sendFile(path.join(__dirname, '..', 'record.html'));
+});
+
+app.get('/love-stories', (req, res) => {
+  res.sendFile(path.join(__dirname, '..', 'love-stories.html'));
+});
+
+// ========================
+// CACHE HEADERS
+// ========================
+
+// HTML files - no cache
+app.use('/*.html', (req, res, next) => {
+  res.set('Cache-Control', 'no-cache, no-store, must-revalidate');
+  next();
+});
+
+// CSS files - long cache
+app.use('/css/*', (req, res, next) => {
+  res.set('Cache-Control', 'public, max-age=31536000');
+  next();
+});
+
+// JS files - long cache  
+app.use('/js/*', (req, res, next) => {
+  res.set('Cache-Control', 'public, max-age=31536000');
+  next();
+});
+
+// Images - long cache
+app.use('/images/*', (req, res, next) => {
+  res.set('Cache-Control', 'public, max-age=31536000');
+  next();
+});
+
+// Service Worker - no cache
+app.use('/sw.js', (req, res, next) => {
+  res.set('Cache-Control', 'no-cache, no-store, must-revalidate');
+  next();
+});
+
+// Manifest - no cache
+app.use('/manifest.json', (req, res, next) => {
+  res.set('Cache-Control', 'no-cache, no-store, must-revalidate');
+  next();
+});
+
+// ========================
+// API ROUTES
+// ========================
+
+// Health check with database status
+app.get('/api/health', async (req, res) => {
+  try {
+    if (pool) {
+      await pool.query('SELECT 1');
+      res.json({ 
+        status: 'OK', 
+        database: 'connected',
+        timestamp: new Date().toISOString()
+      });
+    } else {
+      res.json({ 
+        status: 'OK', 
+        database: 'disconnected',
+        timestamp: new Date().toISOString()
+      });
+    }
+  } catch (error) {
+    res.json({ 
+      status: 'ERROR', 
+      database: 'error',
+      error: error.message,
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
+// Get all stories
 app.get('/api/stories', async (req, res) => {
   try {
     const result = await pool.query(`
@@ -128,6 +235,7 @@ app.get('/api/stories', async (req, res) => {
   }
 });
 
+// Create new story
 app.post('/api/stories', async (req, res) => {
   try {
     const {
@@ -141,6 +249,7 @@ app.post('/api/stories', async (req, res) => {
       anonymousPost = false
     } = req.body;
 
+    // Validate required fields
     if (!coupleNames || !storyTitle || !loveStory || !category || !mood) {
       return res.status(400).json({ error: 'Missing required fields' });
     }
@@ -182,45 +291,113 @@ app.post('/api/stories', async (req, res) => {
   }
 });
 
-// Add other routes...
-
-// Health check with database status
-app.get('/api/health', async (req, res) => {
+// Like a story
+app.post('/api/stories/:id/like', async (req, res) => {
   try {
-    if (pool) {
-      await pool.query('SELECT 1');
-      res.json({ 
-        status: 'OK', 
-        database: 'connected',
-        timestamp: new Date().toISOString()
-      });
+    const storyId = parseInt(req.params.id);
+    const userIP = req.ip || req.connection.remoteAddress;
+
+    // Check if already liked
+    const existingLike = await pool.query(
+      'SELECT id FROM story_likes WHERE story_id = $1 AND user_ip = $2',
+      [storyId, userIP]
+    );
+
+    if (existingLike.rows.length > 0) {
+      // Unlike
+      await pool.query(
+        'DELETE FROM story_likes WHERE story_id = $1 AND user_ip = $2',
+        [storyId, userIP]
+      );
     } else {
-      res.json({ 
-        status: 'OK', 
-        database: 'disconnected',
-        timestamp: new Date().toISOString()
-      });
+      // Like
+      await pool.query(
+        'INSERT INTO story_likes (story_id, user_ip) VALUES ($1, $2)',
+        [storyId, userIP]
+      );
     }
-  } catch (error) {
+
+    // Get updated like count
+    const likeCount = await pool.query(
+      'SELECT COUNT(*) as count FROM story_likes WHERE story_id = $1',
+      [storyId]
+    );
+
     res.json({ 
-      status: 'ERROR', 
-      database: 'error',
-      error: error.message,
-      timestamp: new Date().toISOString()
+      likes_count: parseInt(likeCount.rows[0].count),
+      liked: existingLike.rows.length === 0
     });
+  } catch (error) {
+    console.error('Error toggling like:', error);
+    res.status(500).json({ error: 'Failed to toggle like' });
   }
 });
 
-// Serve frontend
+// Add comment
+app.post('/api/stories/:id/comments', async (req, res) => {
+  try {
+    const storyId = parseInt(req.params.id);
+    const { author = 'Anonymous', text } = req.body;
+
+    if (!text) {
+      return res.status(400).json({ error: 'Comment text is required' });
+    }
+
+    const result = await pool.query(
+      'INSERT INTO story_comments (story_id, author_name, comment_text) VALUES ($1, $2, $3) RETURNING *',
+      [storyId, author, text]
+    );
+
+    // Get updated comment count
+    const commentCount = await pool.query(
+      'SELECT COUNT(*) as count FROM story_comments WHERE story_id = $1',
+      [storyId]
+    );
+
+    res.json({
+      comment: result.rows[0],
+      comments_count: parseInt(commentCount.rows[0].count)
+    });
+  } catch (error) {
+    console.error('Error adding comment:', error);
+    res.status(500).json({ error: 'Failed to add comment' });
+  }
+});
+
+// Get comments for a story
+app.get('/api/stories/:id/comments', async (req, res) => {
+  try {
+    const storyId = parseInt(req.params.id);
+    
+    const result = await pool.query(
+      'SELECT * FROM story_comments WHERE story_id = $1 ORDER BY created_at ASC',
+      [storyId]
+    );
+
+    res.json(result.rows);
+  } catch (error) {
+    console.error('Error fetching comments:', error);
+    res.status(500).json({ error: 'Failed to fetch comments' });
+  }
+});
+
+// ========================
+// CATCH-ALL ROUTE (should be LAST)
+// ========================
+
 app.get('*', (req, res) => {
+  // Don't serve API routes as HTML
   if (req.path.startsWith('/api/')) {
     return res.status(404).json({ error: 'API route not found' });
   }
+  
+  // Serve index.html for any other unknown routes (SPA behavior)
   res.sendFile(path.join(__dirname, '..', 'index.html'));
 });
 
-// Initialize and start server
-const PORT = process.env.PORT || 3001;
+// ========================
+// SERVER INITIALIZATION
+// ========================
 
 const startServer = async () => {
   try {
@@ -235,11 +412,26 @@ const startServer = async () => {
       console.log('⚠️  Starting server without database connection');
     }
     
-    // Start the server
-    app.listen(PORT, () => {
+    const PORT = process.env.PORT || 3001;
+    
+    const server = app.listen(PORT, () => {
       console.log(`🚀 Server running on port ${PORT}`);
       console.log(`🌐 Environment: ${process.env.NODE_ENV}`);
       console.log(`📊 Database: ${dbConnected ? 'Connected' : 'Not connected'}`);
+      console.log(`📱 Frontend: http://localhost:${PORT}`);
+    });
+    
+    // Handle server errors gracefully
+    server.on('error', (error) => {
+      if (error.code === 'EADDRINUSE') {
+        console.log(`❌ Port ${PORT} is already in use`);
+        console.log('💡 Try these solutions:');
+        console.log('   1. Run: kill -9 $(lsof -ti:3001)');
+        console.log('   2. Or change PORT in your .env file to 3002');
+        process.exit(1);
+      } else {
+        throw error;
+      }
     });
     
   } catch (error) {
