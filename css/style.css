@@ -2118,60 +2118,42 @@ s
     letter-spacing: 0.5px;
 }
 
-.records-section {
-    margin: 30px 0;
-}
-
-.records-section h3 {
-    margin-bottom: 15px;
-    color: #262626;
-}
-
-.records-list {
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-}
-
-.calculation-record {
-    background: #fafafa;
-    border: 1px solid #dbdbdb;
+.privacy-notice {
+    background: #fff3f7;
+    border: 1px solid #ffd1e0;
     border-radius: 8px;
     padding: 15px;
-    transition: all 0.3s ease;
+    margin-bottom: 20px;
 }
 
-.calculation-record:hover {
-    border-color: #ff4b8d;
-    transform: translateX(5px);
-}
-
-.calc-names {
-    font-size: 1.1rem;
-    font-weight: 600;
-    margin-bottom: 8px;
-    color: #262626;
-}
-
-.calc-percentage {
-    font-size: 1.3rem;
-    font-weight: bold;
+.privacy-notice strong {
     color: #ff4b8d;
-    margin-bottom: 5px;
 }
 
-.calc-meta {
-    display: flex;
-    gap: 15px;
-    font-size: 0.8rem;
-    color: #8e8e8e;
-    margin-bottom: 8px;
+.activity-message {
+    text-align: center;
+    padding: 20px;
+    background: #f8f9ff;
+    border-radius: 12px;
+    margin: 20px 0;
 }
 
-.calc-message {
+.activity-message h3 {
+    color: #262626;
+    margin-bottom: 10px;
+}
+
+.activity-message p {
+    color: #666;
+    margin: 5px 0;
+    line-height: 1.5;
+}
+
+.last-updated {
+    text-align: center;
+    color: #666;
     font-size: 0.9rem;
-    color: #444;
-    line-height: 1.4;
+    margin: 15px 0;
 }
 
 .data-actions {
@@ -2192,6 +2174,7 @@ s
     transition: all 0.3s ease;
     flex: 1;
     min-width: 120px;
+    font-size: 0.9rem;
 }
 
 .action-btn:hover {
@@ -2981,6 +2964,15 @@ s
 
     .stats-overview {
         grid-template-columns: repeat(2, 1fr);
+        gap: 10px;
+    }
+
+    .stat-card {
+        padding: 15px;
+    }
+
+    .stat-icon {
+        font-size: 1.5rem;
     }
     
     .data-actions {
@@ -2989,6 +2981,12 @@ s
     
     .action-btn {
         flex: none;
+        width: 100%;
+    }
+
+    .activity-message {
+        padding: 15px;
+        margin: 15px 0;
     }
     
     .about-post {
@@ -3096,6 +3094,10 @@ s
     
     .contact-cards {
         grid-template-columns: 1fr;
+    }
+
+    .stat-card {
+        padding: 12px;
     }
 }
 
@@ -3485,10 +3487,10 @@ s
 
 /* Love Stories Page Specific Styles */
 .stories-hero {
-    background: linear-gradient(135deg, #ffffff, #ffffff);
+    background: white;
     color: #ff4b8d;
     padding: 50px 30px;
-    text-align: center;
+    text-align: left;
     border-radius: 16px;
     margin-bottom: 30px;
 }
@@ -3664,7 +3666,7 @@ s
     }
     
     .stories-hero h1 {
-        font-size: 2.2rem;
+        font-size: 1.8rem;
     }
     
     .hero-stats {
@@ -3672,7 +3674,7 @@ s
     }
     
     .stat-number {
-        font-size: 2rem;
+        font-size: 1.5rem;
     }
     
     .stories-filters {
@@ -3720,4 +3722,127 @@ s
         border-color: #363636;
         color: #f5f5f5;
     }
+
+    /* FAB Notification Styles */
+.fab-notification-badge {
+            position: absolute;
+            top: -5px;
+            right: -5px;
+            background: linear-gradient(135deg, #ff6b6b, #ff4b8d);
+            color: white;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            font-weight: bold;
+            animation: fabPulse 2s infinite;
+            box-shadow: 0 2px 8px rgba(255, 75, 141, 0.4);
+            z-index: 1002;
+        }
+        
+        @keyframes fabPulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+            100% { transform: scale(1); }
+        }
+        
+        .fab-notification-toast {
+            position: fixed;
+            bottom: 100px;
+            right: 30px;
+            background: linear-gradient(135deg, #ff4b8d, #ff6b6b);
+            color: white;
+            padding: 15px 20px;
+            border-radius: 25px;
+            box-shadow: 0 8px 25px rgba(255, 75, 141, 0.4);
+            z-index: 1001;
+            animation: slideUpFade 0.5s ease-out;
+            max-width: 280px;
+            font-weight: 600;
+            text-align: center;
+            line-height: 1.4;
+        }
+        
+        @keyframes slideUpFade {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        .fab-button:hover .fab-notification-badge {
+            animation: fabPulse 0.5s ease-in-out infinite;
+        }
+
+        .form-help {
+            display: block;
+            margin-top: 5px;
+            color: #666;
+            font-size: 0.8rem;
+            font-style: italic;
+         }
+
+        .privacy-settings {
+            border: 1px solid #e0e0e0;
+            padding: 15px;
+            border-radius: 8px;
+            background: #f9f9f9;
+        }
+
+        .privacy-settings .privacy-label {
+            display: block;
+            margin-bottom: 10px;
+        }
+
+        .privacy-settings .privacy-label:last-child {
+            margin-bottom: 0;
+        }
+
+        /* Loading States */
+.stat-number.loading {
+    background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+    background-size: 200% 100%;
+    animation: loading 1.5s infinite;
+    color: transparent;
+    border-radius: 4px;
+    min-height: 28px;
+    width: 60px;
+    margin: 0 auto 5px auto;
 }
+
+@keyframes loading {
+    0% { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+}
+
+/* Empty State */
+.empty-state {
+    text-align: center;
+    padding: 40px 20px;
+    color: #666;
+}
+
+.empty-state .icon {
+    font-size: 3rem;
+    margin-bottom: 15px;
+    opacity: 0.5;
+}
+
+.empty-state h3 {
+    color: #444;
+    margin-bottom: 10px;
+}
+
+.empty-state p {
+    color: #666;
+    line-height: 1.5;
+}
+
+    }   

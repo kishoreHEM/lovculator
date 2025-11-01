@@ -10,7 +10,7 @@ class LoveCalculator {
         this.againBtn = document.getElementById('calculateAgain');
         this.calculatorContent = document.querySelector('.calculator-content');
         
-        this.init();
+        this.init();    
     }
     
     init() {
@@ -48,6 +48,9 @@ class LoveCalculator {
         
         const percentage = this.calculateLove(name1, name2, gender1, gender2);
         const message = this.generateMessage(percentage, gender1, gender2);
+        
+        // In your form submission handler, add:
+        window.simpleStats?.trackCalculation();
         
         // Check if dataManager exists before using it
         if (window.dataManager) {

@@ -15,7 +15,15 @@ class LoveStories {
         this.stories.forEach(story => {
             // Migrate likes from number to array
             if (typeof story.likes === 'number') {
-                story.likes = []; // Reset likes when migrating from number to array
+                const likeCount = story.likes;
+                story.likes = []; // Reset to empty array
+                // Add dummy likes to preserve count (for demo)
+                for (let i = 0; i < likeCount; i++) {
+                    story.likes.push({
+                        userId: `user_${i}`,
+                        timestamp: new Date().toISOString()
+                    });
+                }
                 needsMigration = true;
             }
             
@@ -52,7 +60,10 @@ class LoveStories {
 
     init() {
         this.bindEvents();
-        this.renderStories();
+        // Don't render here - let LoveStoriesPage handle rendering if it exists
+        if (!window.loveStoriesPage) {
+            this.renderStories();
+        }
     }
 
     bindEvents() {
@@ -67,9 +78,9 @@ class LoveStories {
             });
         });
 
-        // Load more stories
+        // Load more stories - only bind if LoveStoriesPage doesn't exist
         const loadMoreBtn = document.getElementById('loadMoreStories');
-        if (loadMoreBtn) {
+        if (loadMoreBtn && !window.loveStoriesPage) {
             loadMoreBtn.addEventListener('click', () => this.loadMoreStories());
         }
 
@@ -92,7 +103,15 @@ class LoveStories {
 
         this.stories.unshift(story);
         this.saveToLocalStorage();
-        this.renderStories();
+        // Track story in stats
+        window.simpleStats?.trackStory();
+        
+        // Trigger re-render through LoveStoriesPage if it exists
+        if (window.loveStoriesPage) {
+            window.loveStoriesPage.loadStories();
+        } else {
+            this.renderStories();
+        }
         
         // Show notification
         this.showNotification('Your love story has been shared!');
@@ -108,7 +127,10 @@ class LoveStories {
         const container = document.getElementById('storiesContainer');
         const loadMoreBtn = document.getElementById('loadMoreStories');
         
-        if (!container) return;
+        if (!container) {
+            console.log('⏳ Stories container not ready yet');
+            return;
+        }
         
         if (this.stories.length === 0) {
             container.innerHTML = this.getEmptyStateHTML();
@@ -260,10 +282,17 @@ class LoveStories {
                     userId: currentUser,
                     timestamp: new Date().toISOString()
                 });
+                window.simpleStats?.trackLike();
             }
             
             this.saveToLocalStorage();
-            this.renderStories();
+            
+            // Trigger re-render through LoveStoriesPage if it exists
+            if (window.loveStoriesPage) {
+                window.loveStoriesPage.applyFiltersAndSort();
+            } else {
+                this.renderStories();
+            }
         }
     }
 
@@ -299,7 +328,15 @@ class LoveStories {
                 });
                 
                 this.saveToLocalStorage();
-                this.renderStories();
+                // Track comment in stats
+                window.simpleStats?.trackComment();
+                
+                // Trigger re-render through LoveStoriesPage if it exists
+                if (window.loveStoriesPage) {
+                    window.loveStoriesPage.applyFiltersAndSort();
+                } else {
+                    this.renderStories();
+                }
                 input.value = '';
             }
         }
@@ -386,365 +423,15 @@ class LoveStories {
     bindStoryEvents() {
         // Additional story event bindings if needed
     }
-}
 
-// Enhanced Love Stories with Comments & Likes
-class EnhancedLoveStories extends LoveStories {
-    constructor() {
-        super();
-        this.currentUser = this.getCurrentUser();
-        this.initEnhanced();
-    }
-
-    initEnhanced() {
-        this.bindEnhancedEvents();
-        this.renderStoriesWithEnhancedUI();
-    }
-
-    bindEnhancedEvents() {
-        // Enhanced like functionality with double-tap
-        document.addEventListener('dblclick', (e) => {
-            const storyCard = e.target.closest('.story-card');
-            if (storyCard) {
-                const storyId = storyCard.dataset.storyId;
-                this.handleDoubleTapLike(storyId);
-            }
-        });
-
-        // Comment submission with Enter key
-        document.addEventListener('keypress', (e) => {
-            if (e.key === 'Enter' && e.target.classList.contains('comment-input')) {
-                const storyCard = e.target.closest('.story-card');
-                if (storyCard) {
-                    const storyId = storyCard.dataset.storyId;
-                    this.addComment(storyId);
-                }
-            }
-        });
-
-        // Real-time comment updates
-        this.setupRealTimeUpdates();
-    }
-
-    handleDoubleTapLike(storyId) {
-        const story = this.stories.find(s => s.id === storyId);
-        if (story) {
-            // Add visual feedback
-            this.showLikeAnimation(storyId);
-            
-            // Toggle like
-            this.toggleLike(storyId);
-        }
-    }
-
-    showLikeAnimation(storyId) {
-        const storyCard = document.querySelector(`[data-story-id="${storyId}"]`);
-        if (!storyCard) return;
-        
-        const heart = document.createElement('div');
-        heart.innerHTML = '❤️';
-        heart.style.cssText = `
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            font-size: 4rem;
-            z-index: 1000;
-            animation: heartBeat 0.6s ease-out;
-            pointer-events: none;
-        `;
-        
-        storyCard.style.position = 'relative';
-        storyCard.appendChild(heart);
-        
-        setTimeout(() => {
-            if (heart.parentNode === storyCard) {
-                heart.remove();
-            }
-        }, 600);
-    }
-
-    renderStoriesWithEnhancedUI() {
-        console.log('🎨 Rendering stories with enhanced UI');
-        
-        const container = document.getElementById('storiesContainer');
-        if (!container) {
-            console.error('❌ Stories container not found');
-            return;
-        }
-
-        // Clear existing content
-        container.innerHTML = '';
-
-        if (this.stories.length === 0) {
-            this.renderEmptyState(container);
-            return;
-        }
-
-        // Create stories grid
-        const storiesGrid = document.createElement('div');
-        storiesGrid.className = 'stories-grid';
-
-        this.stories.forEach((story, index) => {
-            const storyCard = this.createStoryCard(story, index);
-            storiesGrid.appendChild(storyCard);
-        });
-
-        container.appendChild(storiesGrid);
-        this.attachStoryInteractions();
-    }
-
-    // Helper methods for the enhanced UI
-    createStoryCard(story, index) {
-        const storyCard = document.createElement('div');
-        storyCard.className = `story-card ${story.mood || 'romantic'}`;
-        storyCard.setAttribute('data-story-id', story.id);
-        
-        // Safe check for likes
-        const likesArray = Array.isArray(story.likes) ? story.likes : [];
-        const isLiked = likesArray.some(like => {
-            if (typeof like === 'object' && like !== null) {
-                return like.userId === this.currentUser;
-            }
-            return false;
-        });
-        
-        storyCard.innerHTML = `
-            <div class="story-card-header">
-                <div class="story-avatar">${this.getAvatarEmoji(story.mood)}</div>
-                <div class="story-author">
-                    <div class="author-name">${story.anonymousPost ? 'Anonymous' : story.coupleNames}</div>
-                    <div class="story-meta">
-                        <span class="story-category">${this.getCategoryIcon(story.category)} ${this.formatCategory(story.category)}</span>
-                        <span class="story-date">${this.formatDate(story.timestamp)}</span>
-                    </div>
-                </div>
-            </div>
-            
-            <div class="story-card-body">
-                <h4 class="story-title">${story.storyTitle}</h4>
-                <p class="story-excerpt">${this.getExcerpt(story.loveStory)}</p>
-                
-                <div class="story-stats">
-                    <span class="stat likes">❤️ ${likesArray.length}</span>
-                    <span class="stat comments">💬 ${Array.isArray(story.comments) ? story.comments.length : 0}</span>
-                    <span class="stat mood">${this.getMoodEmoji(story.mood)}</span>
-                </div>
-            </div>
-            
-            <div class="story-card-actions">
-                <button class="action-btn like-btn ${isLiked ? 'liked' : ''}" data-story-id="${story.id}">
-                    ❤️ ${isLiked ? 'Liked' : 'Like'}
-                </button>
-                <button class="action-btn comment-btn" data-story-id="${story.id}">
-                    💬 Comment
-                </button>
-                <button class="action-btn share-btn" data-story-id="${story.id}">
-                    📤 Share
-                </button>
-            </div>
-        `;
-        
-        return storyCard;
-    }
-
-    getAvatarEmoji(mood) {
-        const moodEmojis = {
-            romantic: '💖',
-            emotional: '🥰',
-            funny: '😂',
-            inspiring: '✨',
-            dramatic: '🎭'
-        };
-        return moodEmojis[mood] || '💕';
-    }
-
-    getCategoryIcon(category) {
-        const categoryIcons = {
-            romantic: '💖',
-            proposal: '💍',
-            journey: '🛤️',
-            challenge: '🛡️',
-            special: '🌟',
-            longdistance: '✈️',
-            secondchance: '🔁'
-        };
-        return categoryIcons[category] || '📖';
-    }
-
-    getMoodEmoji(mood) {
-        const moodEmojis = {
-            romantic: '😊',
-            emotional: '🥰',
-            funny: '😂',
-            inspiring: '🤩',
-            dramatic: '🎭'
-        };
-        return moodEmojis[mood] || '😊';
-    }
-
-    getExcerpt(content, maxLength = 150) {
-        if (!content) return 'No content';
-        if (content.length <= maxLength) return content;
-        return content.substring(0, maxLength) + '...';
-    }
-
-    formatDate(timestamp) {
-        if (!timestamp) return 'Recently';
-        return new Date(timestamp).toLocaleDateString();
-    }
-
-    renderEmptyState(container) {
-        container.innerHTML = `
-            <div class="empty-state">
-                <div class="empty-icon">💌</div>
-                <h3>No love stories yet</h3>
-                <p>Be the first to share your beautiful love story!</p>
-                <button class="fab-button" id="emptyStateFab">
-                    <span class="fab-icon">+</span>
-                    Share Your Story
-                </button>
-            </div>
-        `;
-        
-        // Add event listener for empty state button
-        const emptyFab = document.getElementById('emptyStateFab');
-        if (emptyFab) {
-            emptyFab.addEventListener('click', () => {
-                document.getElementById('storyFab')?.click();
-            });
-        }
-    }
-
-    attachStoryInteractions() {
-        // Like button functionality
-        document.querySelectorAll('.like-btn').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                const storyId = e.target.dataset.storyId;
-                this.toggleLike(storyId);
-            });
-        });
-        
-        // Comment button functionality
-        document.querySelectorAll('.comment-btn').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                const storyId = e.target.dataset.storyId;
-                this.toggleComments(storyId);
-            });
-        });
-        
-        // Share button functionality
-        document.querySelectorAll('.share-btn').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                const storyId = e.target.dataset.storyId;
-                this.handleShare(storyId);
-            });
-        });
-    }
-
-    toggleComments(storyId) {
-        const story = this.stories.find(s => s.id === storyId);
-        if (!story) return;
-
-        let commentsSection = document.getElementById(`comments-${storyId}`);
-        
-        if (!commentsSection) {
-            // Create comments section if it doesn't exist
-            const storyCard = document.querySelector(`[data-story-id="${storyId}"]`);
-            commentsSection = document.createElement('div');
-            commentsSection.id = `comments-${storyId}`;
-            commentsSection.className = 'comments-section';
-            commentsSection.innerHTML = this.getCommentsHTML(story);
-            storyCard.appendChild(commentsSection);
-        }
-        
-        commentsSection.classList.toggle('hidden');
-    }
-
-    getCommentsHTML(story) {
-        return `
-            <div class="comment-form">
-                <input type="text" class="comment-input" placeholder="Add a comment..." 
-                       data-story-id="${story.id}">
-                <button class="comment-submit" data-story-id="${story.id}">Post</button>
-            </div>
-            <div class="comments-list" id="comments-list-${story.id}">
-                ${Array.isArray(story.comments) ? story.comments.map(comment => `
-                    <div class="comment" data-comment-id="${comment.id}">
-                        <div class="comment-header">
-                            <span class="comment-author">${comment.author || 'Anonymous'}</span>
-                            <span class="comment-time">${this.formatTime(comment.timestamp)}</span>
-                        </div>
-                        <div class="comment-text">${this.escapeHtml(comment.text || '')}</div>
-                        <div class="comment-actions">
-                            <button class="comment-like" 
-                                    data-story-id="${story.id}" data-comment-id="${comment.id}">
-                                ❤️ <span>0</span>
-                            </button>
-                        </div>
-                    </div>
-                `).join('') : ''}
-            </div>
-        `;
-    }
-
-    handleShare(storyId) {
-        const story = this.stories.find(s => s.id === storyId);
-        if (story) {
-            const shareText = `Check out this beautiful love story: "${story.storyTitle}" by ${story.anonymousPost ? 'Anonymous' : story.coupleNames}`;
-            
-            if (navigator.share) {
-                navigator.share({
-                    title: story.storyTitle,
-                    text: shareText,
-                    url: window.location.href
-                });
-            } else {
-                // Fallback: copy to clipboard
-                navigator.clipboard.writeText(shareText).then(() => {
-                    this.showNotification('Story link copied to clipboard! 📋');
-                });
-            }
-        }
-    }
-
-    setupRealTimeUpdates() {
-        // Simulate real-time updates (in real app, use WebSockets)
-        setInterval(() => {
-            this.updateStoryMetrics();
-        }, 30000); // Update every 30 seconds
-    }
-
-    updateStoryMetrics() {
-        // Update view counts or other metrics
-        this.stories.forEach(story => {
-            if (!story.views) story.views = 0;
-            story.views += Math.floor(Math.random() * 3); // Simulate new views
-        });
-        this.saveToLocalStorage();
-    }
-
-    formatTime(timestamp) {
-        const now = new Date();
-        const commentTime = new Date(timestamp);
-        const diffMs = now - commentTime;
-        const diffMins = Math.floor(diffMs / 60000);
-        const diffHours = Math.floor(diffMs / 3600000);
-        const diffDays = Math.floor(diffMs / 86400000);
-
-        if (diffMins < 1) return 'just now';
-        if (diffMins < 60) return `${diffMins}m ago`;
-        if (diffHours < 24) return `${diffHours}h ago`;
-        if (diffDays < 7) return `${diffDays}d ago`;
-        return commentTime.toLocaleDateString();
-    }
-
-    escapeHtml(text) {
-        const div = document.createElement('div');
-        div.textContent = text;
-        return div.innerHTML;
+    // Public method for LoveStoriesPage to use
+    getAllStories() {
+        return this.stories;
     }
 }
+
+// Remove EnhancedLoveStories class - it's causing conflicts
+// Use basic LoveStories class for consistency
 
 // Modal functionality
 class StoryModal {
@@ -763,10 +450,14 @@ class StoryModal {
     }
 
     init() {
-        if (!this.storyFab || !this.storyModal) return;
+        if (!this.storyFab || !this.storyModal) {
+            console.log('⏳ Modal elements not ready yet');
+            return;
+        }
 
-        // Open modal
-        this.storyFab.addEventListener('click', () => this.openModal());
+        // Open modal - remove any existing listeners first
+        this.storyFab.removeEventListener('click', this.openModal);
+        this.storyFab.addEventListener('click', (e) => this.openModal(e));
 
         // Close modal
         this.closeModal.addEventListener('click', () => this.closeModalFunc());
@@ -811,14 +502,29 @@ class StoryModal {
         });
     }
 
-    openModal() {
-        this.storyModal.classList.remove('hidden');
+    openModal(e) {
+        if (e) e.preventDefault();
         this.storyModal.setAttribute('aria-hidden', 'false');
+        document.body.style.overflow = 'hidden';
+
+        // Set focus to the first form element for accessibility
+        setTimeout(() => {
+            document.getElementById('coupleNames')?.focus();
+        }, 100);
+
+        this.previousActiveElement = document.activeElement;
     }
 
     closeModalFunc() {
         this.storyModal.classList.add('hidden');
         this.storyModal.setAttribute('aria-hidden', 'true');
+        document.body.style.overflow = '';
+
+        // Return focus to the element that was active before modal opened
+        if (this.previousActiveElement) {
+            this.previousActiveElement.focus();
+        }
+    
     }
 
     updateCharCounter() {
@@ -916,232 +622,44 @@ class StoryModal {
     }
 }
 
-// FAB Notification System - Added without affecting existing functionality
-class FABNotificationSystem {
-    constructor() {
-        this.init();
-    }
+// Global initialization
+let loveStories, storyModal;
 
-    init() {
-        this.setupFABNotifications();
-        this.addFABStyles();
-    }
-
-    setupFABNotifications() {
+function initializeLoveStories() {
+    try {
+        // Check if we're on a page that needs Love Stories
+        const storiesContainer = document.getElementById('storiesContainer');
         const storyFab = document.getElementById('storyFab');
-        const storyModal = document.getElementById('storyModal');
         
+        // Only initialize if we have either stories container or FAB button
+        if (!storiesContainer && !storyFab) {
+            console.log('🚫 Love Stories not needed on this page');
+            return;
+        }
+        
+        // Initialize main components
+        loveStories = new LoveStories(); // Use basic LoveStories, not Enhanced
+        
+        // Only initialize modal if FAB exists
         if (storyFab) {
-            // Add notification badge to FAB
-            const notificationBadge = document.createElement('div');
-            notificationBadge.className = 'fab-notification-badge';
-            notificationBadge.textContent = '!';
-            notificationBadge.style.cssText = `
-                position: absolute;
-                top: -5px;
-                right: -5px;
-                background: linear-gradient(135deg, #ff6b6b, #ff4b8d);
-                color: white;
-                border-radius: 50%;
-                width: 20px;
-                height: 20px;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                font-size: 12px;
-                font-weight: bold;
-                animation: pulse 2s infinite;
-                box-shadow: 0 2px 8px rgba(255, 75, 141, 0.4);
-            `;
-            
-            storyFab.style.position = 'relative';
-            storyFab.appendChild(notificationBadge);
-            
-            // Add tooltip on hover
-            storyFab.setAttribute('title', 'Write your beautiful love story here!');
-            
-            // Add click handler with notification
-            storyFab.addEventListener('click', function(e) {
-                e.preventDefault();
-                
-                // Show notification message
-                this.showFabNotification();
-                
-                // Open modal after a short delay
-                setTimeout(() => {
-                    if (storyModal) {
-                        storyModal.classList.remove('hidden');
-                        document.body.style.overflow = 'hidden';
-                    }
-                }, 800);
-            }.bind(this));
-        }
-    }
-
-    showFabNotification() {
-        // Remove existing notification if any
-        const existingNotification = document.querySelector('.fab-notification-toast');
-        if (existingNotification) {
-            existingNotification.remove();
+            storyModal = new StoryModal(loveStories);
         }
         
-        // Create notification toast
-        const notification = document.createElement('div');
-        notification.className = 'fab-notification-toast';
-        notification.innerHTML = `
-            <div style="display: flex; align-items: center; gap: 10px;">
-                <span style="font-size: 1.2rem;">💖</span>
-                <div>
-                    <strong>Share Your Love Story!</strong>
-                    <div style="font-size: 0.9rem; opacity: 0.9; margin-top: 2px;">
-                        Write your beautiful love story here
-                    </div>
-                </div>
-            </div>
-        `;
+        // Make available globally
+        window.loveStories = loveStories;
         
-        document.body.appendChild(notification);
+        console.log('💖 Love Stories system initialized successfully');
         
-        // Add arrow pointing to FAB
-        const arrow = document.createElement('div');
-        arrow.style.cssText = `
-            position: fixed;
-            bottom: 85px;
-            right: 45px;
-            width: 0;
-            height: 0;
-            border-left: 8px solid transparent;
-            border-right: 8px solid transparent;
-            border-top: 8px solid #ff4b8d;
-            z-index: 1001;
-            animation: slideUpFade 0.5s ease-out;
-        `;
-        document.body.appendChild(arrow);
-        
-        // Remove notification after 3 seconds
-        setTimeout(() => {
-            if (notification.parentNode) {
-                notification.style.opacity = '0';
-                notification.style.transform = 'translateY(10px)';
-                notification.style.transition = 'all 0.3s ease';
-                
-                if (arrow.parentNode) {
-                    arrow.style.opacity = '0';
-                    arrow.style.transition = 'all 0.3s ease';
-                }
-                
-                setTimeout(() => {
-                    notification.remove();
-                    arrow.remove();
-                }, 300);
-            }
-        }, 3000);
+    } catch (error) {
+        console.error('❌ Error initializing Love Stories:', error);
     }
 
-    addFABStyles() {
-        const style = document.createElement('style');
-        style.textContent = `
-            @keyframes fabPulse {
-                0% { transform: scale(1); }
-                50% { transform: scale(1.1); }
-                100% { transform: scale(1); }
-            }
-            
-            .fab-notification-badge {
-                animation: fabPulse 2s ease-in-out infinite;
-            }
-            
-            .fab-notification-toast {
-                position: fixed;
-                bottom: 100px;
-                right: 30px;
-                background: linear-gradient(135deg, #ff4b8d, #ff6b6b);
-                color: white;
-                padding: 15px 20px;
-                border-radius: 25px;
-                box-shadow: 0 8px 25px rgba(255, 75, 141, 0.4);
-                z-index: 1001;
-                animation: slideUpFade 0.5s ease-out;
-                max-width: 280px;
-                font-weight: 600;
-                text-align: center;
-                line-height: 1.4;
-            }
-            
-            @keyframes slideUpFade {
-                from {
-                    opacity: 0;
-                    transform: translateY(20px);
-                }
-                to {
-                    opacity: 1;
-                    transform: translateY(0);
-                }
-            }
-            
-            .fab-button:hover .fab-notification-badge {
-                animation: fabPulse 0.5s ease-in-out infinite;
-            }
-        `;
-        document.head.appendChild(style);
-    }
 
-    setupScrollNotifications() {
-        // Show notification when user scrolls near bottom (indicating they might want to share)
-        window.addEventListener('scroll', function() {
-            const scrollPosition = window.scrollY + window.innerHeight;
-            const documentHeight = document.documentElement.scrollHeight;
-            
-            // If user is near bottom of page and hasn't seen notification recently
-            if (scrollPosition >= documentHeight - 500) {
-                const lastBottomNotification = localStorage.getItem('lastBottomNotification');
-                const now = Date.now();
-                
-                if (!lastBottomNotification || (now - parseInt(lastBottomNotification)) > 300000) { // 5 minutes
-                    this.showFabNotification();
-                    localStorage.setItem('lastBottomNotification', now.toString());
-                }
-            }
-        }.bind(this));
-    }
-
-    setupEnhancedFABEffects() {
-        const storyFab = document.getElementById('storyFab');
-        if (storyFab) {
-            storyFab.addEventListener('mouseenter', function() {
-                this.style.transform = 'scale(1.1)';
-            });
-            
-            storyFab.addEventListener('mouseleave', function() {
-                this.style.transform = 'scale(1)';
-            });
-        }
-    }
 }
 
-// Initialize when DOM is loaded
-document.addEventListener('DOMContentLoaded', () => {
-    // Use EnhancedLoveStories instead of basic LoveStories
-    const loveStories = new EnhancedLoveStories();
-    new StoryModal(loveStories);
-    
-    // Initialize FAB Notification System
-    const fabNotifications = new FABNotificationSystem();
-    
-    // Setup additional FAB notification features
-    fabNotifications.setupScrollNotifications();
-    fabNotifications.setupEnhancedFABEffects();
-    
-    // Show notification on page load after a delay
-    setTimeout(() => {
-        const hasSeenNotification = localStorage.getItem('fabNotificationSeen');
-        if (!hasSeenNotification) {
-            fabNotifications.showFabNotification();
-            localStorage.setItem('fabNotificationSeen', 'true');
-        }
-    }, 2000);
-    
-    // Make loveStories available globally for onclick handlers
-    window.loveStories = loveStories;
-    window.enhancedStories = loveStories;
-});
+// Initialize when DOM is ready
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initializeLoveStories);
+} else {
+    initializeLoveStories();
+}

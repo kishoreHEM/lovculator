@@ -1,3 +1,5 @@
+<!DOCTYPE html>
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -10,24 +12,25 @@
     <meta property="og:description" content="Calculate love compatibility based on name analysis, numerology, and vibrational patterns.">
     <meta property="og:type" content="website">
     <meta property="og:url" content="https://lovculator.com/">
-    <meta property="og:image" content="https://lovculator.com/images/icon-512x512.png">
+    <meta property="og:image" content="https://lovculator.com/images/android-chrome-512x512.png">
     
     <!-- Twitter Card -->
     <meta name="twitter:card" content="summary">
     <meta name="twitter:title" content="Lovculator • Love Calculator by Name">
     <meta name="twitter:description" content="Calculate love compatibility based on name analysis, numerology, and vibrational patterns.">
-    <meta name="twitter:image" content="https://lovculator.com/images/icon-512x512.png">
+    <meta name="twitter:image" content="https://lovculator.com/images/android-chrome-512x512.png">
     
     <!-- Canonical URL -->
     <link rel="canonical" href="https://lovculator.com/">
     
-    <!-- PWA Meta Tags - CORRECTED -->
+    <!-- PWA Meta Tags -->
     <link rel="manifest" href="manifest.json">
     <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
     <meta name="apple-mobile-web-app-title" content="Lovculator">
-    <link rel="apple-touch-icon" href="images/icon-192x192.png">
-    <link rel="icon" type="image/png" href="images/icon-192x192.png">
+    <link rel="apple-touch-icon" href="images/apple-touch-icon.png">
+    <link rel="shortcut icon" href="images/favicon-32x32.png" type="image/png">
     <!-- Schema Markup -->
     <script type="application/ld+json">
     {
@@ -504,107 +507,112 @@
 
     <!-- Love Story Modal -->
     <div class="modal-overlay hidden" id="storyModal" role="dialog" aria-labelledby="modalTitle" aria-modal="true">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h3 id="modalTitle">Share Your Love Story</h3>
-                <button class="close-modal" id="closeModal" aria-label="Close modal">&times;</button>
-            </div>
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2 id="modalTitle">Share Your Love Story</h2>
+            <button class="close-modal" id="closeModal" aria-label="Close modal">&times;</button>
+        </div>
+
             <form class="story-form" id="storyForm">
-                <div class="form-group">
-                    <label for="coupleNames">Your Names</label>
-                    <input type="text" id="coupleNames" placeholder="e.g., John & Jane" required>
-                </div>
-                
-                <div class="form-group">
-                    <label for="storyTitle">Story Title</label>
-                    <input type="text" id="storyTitle" placeholder="Give your story a beautiful title" required>
-                </div>
-                
-                <div class="form-group">
-                    <label for="togetherSince">Together Since (Optional)</label>
-                    <input type="month" id="togetherSince">
-                </div>
-                
-                <div class="form-group">
-                    <label for="loveStory">Your Love Story</label>
-                    <textarea id="loveStory" placeholder="Share your beautiful love story... How did you meet? What makes your love special?" rows="8" required></textarea>
-                    <div class="char-count">
-                        <span id="charCounter">0</span>/1000 characters
-                    </div>
-                </div>
-                
-                <div class="form-group">
-                    <label for="storyCategory">Category</label>
-                    <select id="storyCategory">
-                        <option value="romantic">💖 Romantic Moment</option>
-                        <option value="proposal">💍 Marriage Proposal</option>
-                        <option value="journey">🛤️ Love Journey</option>
-                        <option value="challenge">🛡️ Overcoming Challenges</option>
-                        <option value="special">🌟 Special Memory</option>
-                        <option value="longdistance">✈️ Long Distance Love</option>
-                        <option value="secondchance">🔁 Second Chance</option>
-                    </select>
-                </div>
-                
-                <!-- Mood Selection -->
-                <div class="form-group">
-                    <label>Story Mood</label>
-                    <div class="mood-options">
-                        <div class="mood-option selected" data-mood="romantic">
-                            <span>😊 Romantic</span>
-                        </div>
-                        <div class="mood-option" data-mood="emotional">
-                            <span>🥰 Emotional</span>
-                        </div>
-                        <div class="mood-option" data-mood="funny">
-                            <span>😂 Funny</span>
-                        </div>
-                        <div class="mood-option" data-mood="inspiring">
-                            <span>✨ Inspiring</span>
-                        </div>
-                        <div class="mood-option" data-mood="dramatic">
-                            <span>🎭 Dramatic</span>
-                        </div>
-                    </div>
-                    <input type="hidden" id="selectedMood" value="romantic">
-                </div>
-                
-                <!-- Privacy Settings -->
-                <div class="form-group">
-                    <label class="privacy-label">
-                        <input type="checkbox" id="allowComments" checked>
-                        <span class="checkmark"></span>
-                        Allow comments from community
-                    </label>
-                    
-                    <label class="privacy-label">
-                        <input type="checkbox" id="anonymousPost">
-                        <span class="checkmark"></span>
-                        Post anonymously
-                    </label>
-                </div>
-                
-                <button type="submit" class="submit-story-btn">
-                    <span class="btn-loading hidden">Sharing...</span>
-                    <span class="btn-text">Share Your Story ❤️</span>
-                </button>
-                
-                <p class="privacy-notice">
-                    By sharing your story, you agree to our <a href="terms.html">Terms of Service</a> and <a href="privacy.html">Privacy Policy</a>
-                </p>
-            </form>
+        <div class="form-group">
+            <label for="coupleNames" class="form-label">Your Names *</label>
+            <input type="text" id="coupleNames" placeholder="e.g., John & Jane" required aria-required="true">
+    </div>
+    
+    <div class="form-group">
+        <label for="storyTitle" class="form-label">Story Title *</label>
+        <input type="text" id="storyTitle" placeholder="Give your story a beautiful title" required aria-required="true">
+    </div>
+    
+    <div class="form-group">
+        <label for="togetherSince" class="form-label">Together Since (Optional)</label>
+        <input type="month" id="togetherSince" aria-describedby="togetherSinceHelp">
+        <small id="togetherSinceHelp" class="form-help">Approximate date you started dating</small>
+    </div>
+    
+    <div class="form-group">
+        <label for="loveStory" class="form-label">Your Love Story *</label>
+        <textarea id="loveStory" placeholder="Share your beautiful love story... How did you meet? What makes your love special?" rows="8" required aria-required="true" aria-describedby="charCounter"></textarea>
+        <div class="char-count">
+            <span id="charCounter">0</span>/1000 characters
         </div>
     </div>
+    
+    <div class="form-group">
+        <label for="storyCategory" class="form-label">Category *</label>
+        <select id="storyCategory" required aria-required="true">
+            <option value="">Choose a category...</option>
+            <option value="romantic">💖 Romantic Moment</option>
+            <option value="proposal">💍 Marriage Proposal</option>
+            <option value="journey">🛤️ Love Journey</option>
+            <option value="challenge">🛡️ Overcoming Challenges</option>
+            <option value="special">🌟 Special Memory</option>
+            <option value="longdistance">✈️ Long Distance Love</option>
+            <option value="secondchance">🔁 Second Chance</option>
+        </select>
+    </div>
+    
+    <!-- Mood Selection -->
+    <div class="form-group">
+        <label class="form-label" id="moodLabel">Story Mood *</label>
+        <div class="mood-options" role="radiogroup" aria-labelledby="moodLabel">
+            <div class="mood-option selected" data-mood="romantic" tabindex="0" role="radio" aria-checked="true">
+                <span>😊 Romantic</span>
+            </div>
+            <div class="mood-option" data-mood="emotional" tabindex="0" role="radio" aria-checked="false">
+                <span>🥰 Emotional</span>
+            </div>
+            <div class="mood-option" data-mood="funny" tabindex="0" role="radio" aria-checked="false">
+                <span>😂 Funny</span>
+            </div>
+            <div class="mood-option" data-mood="inspiring" tabindex="0" role="radio" aria-checked="false">
+                <span>✨ Inspiring</span>
+            </div>
+            <div class="mood-option" data-mood="dramatic" tabindex="0" role="radio" aria-checked="false">
+                <span>🎭 Dramatic</span>
+            </div>
+        </div>
+        <input type="hidden" id="selectedMood" value="romantic" required aria-required="true">
+    </div>
+    
+    <!-- Privacy Settings -->
+    <div class="form-group">
+        <div class="privacy-settings">
+            <label class="privacy-label">
+                <input type="checkbox" id="allowComments" checked aria-describedby="commentsHelp">
+                <span class="checkmark"></span>
+                Allow comments from community
+            </label>
+            <small id="commentsHelp" class="form-help">Others can comment on your story</small>
+            
+            <label class="privacy-label">
+                <input type="checkbox" id="anonymousPost" aria-describedby="anonymousHelp">
+                <span class="checkmark"></span>
+                Post anonymously
+            </label>
+            <small id="anonymousHelp" class="form-help">Your name will be hidden</small>
+        </div>
+    </div>
+    
+    <button type="submit" class="submit-story-btn" aria-label="Share your love story">
+        <span class="btn-loading hidden">Sharing...</span>
+        <span class="btn-text">Share Your Story ❤️</span>
+    </button>
+    
+    <p class="privacy-notice">
+        By sharing your story, you agree to our <a href="terms.html">Terms of Service</a> and <a href="privacy.html">Privacy Policy</a>
+    </p>
+</form>
 
     <!-- Success Message -->
-    <div class="success-message hidden" id="successMessage" role="dialog" aria-labelledby="successTitle">
-        <div class="success-content">
-            <span class="success-icon" aria-hidden="true">❤️</span>
-            <h4 id="successTitle">Thank You for Sharing!</h4>
-            <p>Your love story has been submitted successfully.</p>
-            <button class="success-ok-btn" id="successOk">Share Another Story</button>
-        </div>
+<div class="success-message hidden" id="successMessage" role="dialog" aria-labelledby="successTitle" aria-modal="true">
+    <div class="success-content">
+        <span class="success-icon" aria-hidden="true">❤️</span>
+        <h4 id="successTitle">Thank You for Sharing!</h4>
+        <p>Your love story has been submitted successfully.</p>
+        <button class="success-ok-btn" id="successOk" aria-label="Close success message and share another story">Share Another Story</button>
     </div>
+</div>
 
     <!-- Install Prompt -->
     <div id="installPrompt" class="install-prompt hidden" role="dialog" aria-labelledby="installPromptTitle">
@@ -619,6 +627,8 @@
     <script src="./js/navigation.js"></script>
     <script src="js/app.js"></script>
     <script src="js/love-stories.js"></script>
+    <script src="js/simple-stats.js"></script>
+    <script src="js/fab-notifications.js"></script>
     <script src="js/social-share.js"></script>
     <script src="js/faq.js"></script>
     <script src="js/init.js"></script>

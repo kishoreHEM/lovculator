@@ -364,8 +364,7 @@ class LoveStoriesPage {
     }
 }
 
-// Initialize Love Stories Page
-document.addEventListener('DOMContentLoaded', function() {
-    window.loveStoriesPage = new LoveStoriesPage();
-    console.log('📖 Love Stories Page loaded successfully!');
-});
+// Export for use in love-stories.js initialization
+if (typeof module !== 'undefined' && module.exports) {
+    module.exports = LoveStoriesPage;
+}
