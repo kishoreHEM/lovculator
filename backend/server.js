@@ -144,27 +144,27 @@ app.get('/love-stories', (req, res) => {
 // CACHE HEADERS
 // ========================
 
-// HTML files - no cache
+// HTML files - very short cache
 app.use('/*.html', (req, res, next) => {
-  res.set('Cache-Control', 'no-cache, no-store, must-revalidate');
+  res.set('Cache-Control', 'no-cache, max-age=0, must-revalidate');
   next();
 });
 
-// CSS files - long cache
+// CSS files - medium cache (1 hour instead of 1 year)
 app.use('/css/*', (req, res, next) => {
-  res.set('Cache-Control', 'public, max-age=31536000');
+  res.set('Cache-Control', 'public, max-age=3600'); // 1 hour
   next();
 });
 
-// JS files - long cache  
+// JS files - medium cache (1 hour instead of 1 year)  
 app.use('/js/*', (req, res, next) => {
-  res.set('Cache-Control', 'public, max-age=31536000');
+  res.set('Cache-Control', 'public, max-age=3600'); // 1 hour
   next();
 });
 
-// Images - long cache
+// Images - long cache (ok to keep long)
 app.use('/images/*', (req, res, next) => {
-  res.set('Cache-Control', 'public, max-age=31536000');
+  res.set('Cache-Control', 'public, max-age=31536000'); // 1 year
   next();
 });
 

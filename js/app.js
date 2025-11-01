@@ -1,4 +1,4 @@
-// Main Love Calculator Class with Social Features
+// Main Love Calculator Class with Enhanced PWA Features
 class LoveCalculator {
     constructor() {
         this.form = document.getElementById('loveForm');
@@ -10,6 +10,7 @@ class LoveCalculator {
         this.againBtn = document.getElementById('calculateAgain');
         this.calculatorContent = document.querySelector('.calculator-content');
         
+        this.APP_VERSION = '1.2.0'; // Updated version
         this.init();    
     }
     
@@ -20,7 +21,7 @@ class LoveCalculator {
         this.initSocialShare();
         this.setupSocialIntegration();
         
-        console.log('💖 Love Calculator initialized');
+        console.log('💖 Love Calculator initialized v' + this.APP_VERSION);
     }
     
     handleSubmit(e) {
@@ -49,7 +50,7 @@ class LoveCalculator {
         const percentage = this.calculateLove(name1, name2, gender1, gender2);
         const message = this.generateMessage(percentage, gender1, gender2);
         
-        // In your form submission handler, add:
+        // Track in stats
         window.simpleStats?.trackCalculation();
         
         // Check if dataManager exists before using it
@@ -71,7 +72,6 @@ class LoveCalculator {
     
     // Add achievement checking
     checkCalculationAchievements() {
-        // Check if dataManager exists
         if (!window.dataManager) return;
         
         const stats = window.dataManager.getCalculationStats();
@@ -246,6 +246,312 @@ class LoveCalculator {
     
     capitalize(name) {
         return name.charAt(0).toUpperCase() + name.slice(1).toLowerCase();
+    }
+    
+    // Enhanced PWA Methods - UPDATED 2024
+    initPWA() {
+        if ('serviceWorker' in navigator) {
+            this.registerServiceWorker();
+            this.setupServiceWorkerLifecycle();
+        }
+        
+        this.setupInstallPrompt();
+        this.setupPWAFeatures();
+    }
+
+    registerServiceWorker() {
+        const swUrl = this.getCorrectSWPath();
+        
+        if (!swUrl) {
+            console.log('⚠️ Service Worker path not found');
+            return;
+        }
+
+        navigator.serviceWorker.register(swUrl)
+            .then(registration => {
+                console.log('✅ SW registered scope:', registration.scope);
+                
+                // Check for updates every hour
+                setInterval(() => registration.update(), 60 * 60 * 1000);
+                
+                return registration;
+            })
+            .catch(error => {
+                console.error('❌ SW registration failed:', error);
+                
+                // Fallback: Try absolute path
+                if (swUrl.startsWith('./')) {
+                    const absoluteUrl = swUrl.replace('./', '/');
+                    navigator.serviceWorker.register(absoluteUrl)
+                        .then(reg => console.log('✅ SW registered with absolute path'))
+                        .catch(err => console.error('❌ Absolute path also failed:', err));
+                }
+            });
+    }
+
+    getCorrectSWPath() {
+        const path = window.location.pathname;
+        
+        // Handle different deployment environments
+        if (path.includes('/love-stories') || 
+            path.includes('/about') || 
+            path.includes('/contact') ||
+            path.includes('/record')) {
+            return '../sw.js';
+        } else if (path === '/' || path.endsWith('index.html')) {
+            return './sw.js';
+        } else {
+            // For root level or unknown paths
+            return '/sw.js';
+        }
+    }
+
+    setupServiceWorkerLifecycle() {
+        let isRefreshing = false;
+        
+        // Listen for controller change (update installed)
+        navigator.serviceWorker.addEventListener('controllerchange', () => {
+            if (!isRefreshing) {
+                isRefreshing = true;
+                console.log('🔄 New SW activated, reloading...');
+                window.location.reload();
+            }
+        });
+        
+        // Listen for messages from SW
+        navigator.serviceWorker.addEventListener('message', event => {
+            const { type, data } = event.data || {};
+            
+            switch (type) {
+                case 'UPDATE_AVAILABLE':
+                    this.showUpdatePrompt(data?.version);
+                    break;
+                case 'CACHE_UPDATED':
+                    console.log('📦 Cache updated:', data?.cacheName);
+                    break;
+                case 'OFFLINE':
+                    this.showOfflineIndicator();
+                    break;
+                case 'ONLINE':
+                    this.hideOfflineIndicator();
+                    break;
+            }
+        });
+        
+        // Check if update is waiting
+        navigator.serviceWorker.ready.then(registration => {
+            if (registration.waiting) {
+                this.showUpdatePrompt();
+            }
+        });
+    }
+
+    showUpdatePrompt(version) {
+        // Don't show if already refreshing
+        if (document.querySelector('.update-prompt')) return;
+        
+        const prompt = document.createElement('div');
+        prompt.className = 'update-prompt';
+        prompt.innerHTML = `
+            <div class="update-content">
+                <div class="update-icon">🔄</div>
+                <div class="update-text">
+                    <strong>New Update Available!</strong>
+                    ${version ? `Version ${version}` : 'Refresh to get the latest features'}
+                </div>
+                <div class="update-actions">
+                    <button class="update-now">Update Now</button>
+                    <button class="update-later">Later</button>
+                </div>
+            </div>
+        `;
+        
+        document.body.appendChild(prompt);
+        
+        // Add event listeners
+        prompt.querySelector('.update-now').addEventListener('click', () => {
+            // Tell SW to skip waiting and refresh
+            navigator.serviceWorker.ready.then(registration => {
+                if (registration.waiting) {
+                    registration.waiting.postMessage({ type: 'SKIP_WAITING' });
+                } else {
+                    window.location.reload();
+                }
+            });
+            prompt.remove();
+        });
+        
+        prompt.querySelector('.update-later').addEventListener('click', () => {
+            prompt.remove();
+            // Show again in 1 hour
+            setTimeout(() => this.showUpdatePrompt(version), 60 * 60 * 1000);
+        });
+        
+        // Auto-hide after 30 seconds
+        setTimeout(() => {
+            if (prompt.parentElement) {
+                prompt.remove();
+            }
+        }, 30000);
+    }
+
+    setupPWAFeatures() {
+        // Network status detection
+        this.setupNetworkDetection();
+        
+        // Badging API for notifications
+        this.setupAppBadging();
+        
+        // Periodic Sync for background updates
+        this.setupPeriodicSync();
+    }
+
+    setupNetworkDetection() {
+        const updateOnlineStatus = () => {
+            if (!navigator.onLine) {
+                this.showOfflineIndicator();
+            } else {
+                this.hideOfflineIndicator();
+            }
+        };
+        
+        window.addEventListener('online', updateOnlineStatus);
+        window.addEventListener('offline', updateOnlineStatus);
+        updateOnlineStatus(); // Initial check
+    }
+
+    showOfflineIndicator() {
+        let indicator = document.getElementById('offline-indicator');
+        if (!indicator) {
+            indicator = document.createElement('div');
+            indicator.id = 'offline-indicator';
+            indicator.innerHTML = '🔴 You are offline';
+            indicator.style.cssText = `
+                position: fixed;
+                top: 0;
+                left: 0;
+                right: 0;
+                background: #ff6b6b;
+                color: white;
+                padding: 10px;
+                text-align: center;
+                z-index: 10000;
+                font-weight: 600;
+            `;
+            document.body.appendChild(indicator);
+        }
+    }
+
+    hideOfflineIndicator() {
+        const indicator = document.getElementById('offline-indicator');
+        if (indicator) {
+            indicator.remove();
+        }
+    }
+
+    setupAppBadging() {
+        if ('setAppBadge' in navigator) {
+            // Set initial badge (optional)
+            navigator.setAppBadge(0).catch(console.error);
+        }
+    }
+
+    setupPeriodicSync() {
+        if ('periodicSync' in navigator && 'register' in navigator.periodicSync) {
+            navigator.periodicSync.register('update-check', {
+                minInterval: 24 * 60 * 60 * 1000 // 1 day
+            }).then(() => {
+                console.log('✅ Periodic sync registered');
+            }).catch(console.error);
+        }
+    }
+
+    // Enhanced install prompt with better UX
+    setupInstallPrompt() {
+        let deferredPrompt;
+        const installPrompt = document.getElementById('installPrompt');
+        
+        if (!installPrompt) return;
+        
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+            
+            // Show after user engagement
+            const showPrompt = () => {
+                if (deferredPrompt && !this.isAppInstalled() && !this.wasPromptDismissed()) {
+                    installPrompt.classList.remove('hidden');
+                    
+                    // Auto-hide after 15 seconds
+                    setTimeout(() => {
+                        installPrompt.classList.add('hidden');
+                        this.recordPromptDismissal();
+                    }, 15000);
+                }
+            };
+            
+            // Show after 3 interactions or 30 seconds
+            let interactions = 0;
+            const interactionHandler = () => {
+                interactions++;
+                if (interactions >= 3) {
+                    document.removeEventListener('click', interactionHandler);
+                    showPrompt();
+                }
+            };
+            
+            document.addEventListener('click', interactionHandler);
+            setTimeout(showPrompt, 30000);
+        });
+        
+        // Handle install button
+        document.getElementById('installBtn')?.addEventListener('click', async () => {
+            if (deferredPrompt) {
+                installPrompt.classList.add('hidden');
+                deferredPrompt.prompt();
+                
+                const { outcome } = await deferredPrompt.userChoice;
+                this.trackInstallation(outcome);
+                deferredPrompt = null;
+            }
+        });
+        
+        // Handle cancel button
+        document.getElementById('cancelInstall')?.addEventListener('click', () => {
+            installPrompt.classList.add('hidden');
+            this.recordPromptDismissal();
+        });
+    }
+
+    wasPromptDismissed() {
+        const dismissed = localStorage.getItem('installPromptDismissed');
+        if (!dismissed) return false;
+        
+        // Don't show for 7 days after dismissal
+        return (Date.now() - parseInt(dismissed)) < (7 * 24 * 60 * 60 * 1000);
+    }
+
+    recordPromptDismissal() {
+        localStorage.setItem('installPromptDismissed', Date.now().toString());
+    }
+
+    trackInstallation(outcome) {
+        // Track in your analytics
+        console.log(`📊 Install ${outcome}`);
+        
+        if (outcome === 'accepted' && window.userProfiles) {
+            window.userProfiles.addExperience(100); // Bonus for installing
+            window.notificationSystem?.addNotification('achievement', {
+                name: 'App Fan!',
+                message: 'Thanks for installing Lovculator! 🎉'
+            });
+        }
+    }
+
+    isAppInstalled() {
+        return window.matchMedia('(display-mode: standalone)').matches ||
+               window.navigator.standalone ||
+               document.referrer.includes('android-app://');
     }
     
     // Social Integration Methods
@@ -575,69 +881,6 @@ class LoveCalculator {
                 notification.remove();
             }
         }, 3000);
-    }
-    
-    // PWA Methods
-    initPWA() {
-        if ('serviceWorker' in navigator) {
-            window.addEventListener('load', () => {
-                navigator.serviceWorker.register('./sw.js')
-                    .then(registration => {
-                        console.log('✅ SW registered: ', registration);
-                    })
-                    .catch(registrationError => {
-                        console.log('❌ SW registration failed: ', registrationError);
-                    });
-            });
-        }
-        
-        this.setupInstallPrompt();
-    }
-    
-    setupInstallPrompt() {
-        let deferredPrompt;
-        const installPrompt = document.getElementById('installPrompt');
-        const installBtn = document.getElementById('installBtn');
-        const cancelBtn = document.getElementById('cancelInstall');
-        
-        if (!installPrompt || !installBtn || !cancelBtn) return;
-        
-        window.addEventListener('beforeinstallprompt', (e) => {
-            e.preventDefault();
-            deferredPrompt = e;
-            
-            setTimeout(() => {
-                if (deferredPrompt && !this.isAppInstalled()) {
-                    installPrompt.classList.remove('hidden');
-                }
-            }, 5000);
-        });
-        
-        installBtn.addEventListener('click', async () => {
-            if (deferredPrompt) {
-                deferredPrompt.prompt();
-                const { outcome } = await deferredPrompt.userChoice;
-                if (outcome === 'accepted') {
-                    installPrompt.classList.add('hidden');
-                    console.log('✅ User accepted the install prompt');
-                }
-                deferredPrompt = null;
-            }
-        });
-        
-        cancelBtn.addEventListener('click', () => {
-            installPrompt.classList.add('hidden');
-        });
-        
-        window.addEventListener('appinstalled', () => {
-            installPrompt.classList.add('hidden');
-            deferredPrompt = null;
-        });
-    }
-    
-    isAppInstalled() {
-        return window.matchMedia('(display-mode: standalone)').matches || 
-               window.navigator.standalone === true;
     }
 }
 
@@ -1073,7 +1316,7 @@ function shareOnInstagram() {
 
 // Initialize everything when DOM is loaded
 document.addEventListener('DOMContentLoaded', function() {
-    console.log('🚀 DOM loaded, initializing Lovculator...');
+    console.log('🚀 DOM loaded, initializing Lovculator v1.2.0...');
     
     // Initialize main love calculator
     window.loveCalculator = new LoveCalculator();
@@ -1083,95 +1326,3 @@ document.addEventListener('DOMContentLoaded', function() {
     
     console.log('💖 Lovculator fully loaded and ready!');
 });
-
-// Add CSS for new components
-const additionalStyles = `
-.level-up-notification {
-    position: fixed;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    z-index: 2000;
-    opacity: 0;
-    transition: opacity 0.5s ease;
-}
-
-.level-up-notification.show {
-    opacity: 1;
-}
-
-.level-up-content {
-    background: linear-gradient(135deg, #667eea, #764ba2);
-    color: white;
-    padding: 30px;
-    border-radius: 20px;
-    text-align: center;
-    box-shadow: 0 20px 60px rgba(0,0,0,0.3);
-}
-
-.experience-bar {
-    height: 8px;
-    background: #e9ecef;
-    border-radius: 4px;
-    margin: 15px 0;
-    position: relative;
-    overflow: hidden;
-}
-
-.experience-fill {
-    height: 100%;
-    background: linear-gradient(135deg, #ff4b8d, #ff6b6b);
-    border-radius: 4px;
-    transition: width 0.3s ease;
-}
-
-.experience-text {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    font-size: 0.7rem;
-    font-weight: 600;
-    color: #262626;
-}
-
-.badges-section {
-    margin-top: 15px;
-    padding-top: 15px;
-    border-top: 1px solid #f0f0f0;
-}
-
-.badges-list {
-    display: flex;
-    gap: 8px;
-    margin-top: 10px;
-}
-
-.badge {
-    width: 30px;
-    height: 30px;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 0.9rem;
-    background: #f8f9fa;
-    border: 2px solid #e9ecef;
-}
-
-@keyframes slideInRight {
-    from {
-        transform: translateX(100%);
-        opacity: 0;
-    }
-    to {
-        transform: translateX(0);
-        opacity: 1;
-    }
-}
-`;
-
-// Inject additional styles
-const styleSheet = document.createElement('style');
-styleSheet.textContent = additionalStyles;
-document.head.appendChild(styleSheet);
