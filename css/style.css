@@ -320,9 +320,9 @@ body {
 
 .post-username {
     font-weight: 600;
-    font-size: 14px;
+    font-size: 20px;
     color: #262626;
-}
+}   
 
 .post-more {
     display: none;
@@ -587,7 +587,7 @@ body {
 }
 
 .user-bio {
-    color: #666;
+    color: #444;
     margin: 0 0 5px 0;
     font-size: 0.9rem;
 }
@@ -648,7 +648,7 @@ body {
 
 .profile-stat .label {
     font-size: 0.7rem;
-    color: #666;
+    color: #444;
     text-transform: uppercase;
     letter-spacing: 0.5px;
 }
@@ -1085,7 +1085,7 @@ body {
 
 .story-mood {
     font-size: 0.9rem;
-    color: #666;
+    color: #444;
 }
 
 .story-actions {
@@ -1096,7 +1096,7 @@ body {
 .story-action {
     background: none;
     border: none;
-    color: #666;
+    color: #444;
     cursor: pointer;
     font-size: 0.9rem;
     display: flex;
@@ -1209,7 +1209,7 @@ body {
 .comment-like, .comment-reply {
     background: none;
     border: none;
-    color: #666;
+    color: #444;
     cursor: pointer;
     font-size: 0.8rem;
     display: flex;
@@ -1466,7 +1466,7 @@ body {
 }
 
 .success-content p {
-    color: #666;
+    color: #444;
     margin-bottom: 25px;
 }
 
@@ -1648,7 +1648,7 @@ body {
 }
 
 .name-factor-card p {
-    color: #666;
+    color: #444;
     font-size: 0.9rem;
     line-height: 1.5;
     margin: 0;
@@ -1704,7 +1704,7 @@ body {
 }
 
 .quick-access-card p {
-    color: #666;
+    color: #444;
     font-size: 0.8rem;
     margin: 0;
     line-height: 1.4;
@@ -1794,7 +1794,7 @@ body {
 }
 
 .compat-card p {
-    color: #666;
+    color: #444;
     font-size: 0.9rem;
     margin-bottom: 12px;
     line-height: 1.4;
@@ -1807,7 +1807,7 @@ body {
 }
 
 .compat-card li {
-    color: #666;
+    color: #444;
     font-size: 0.85rem;
     padding: 4px 0;
     padding-left: 16px;
@@ -1879,7 +1879,7 @@ body {
 }
 
 .tip-card p {
-    color: #666;
+    color: #444;
     font-size: 0.9rem;
     margin-bottom: 12px;
     line-height: 1.4;
@@ -1892,7 +1892,7 @@ body {
 }
 
 .tip-card li {
-    color: #666;
+    color: #444;
     font-size: 0.85rem;
     padding: 4px 0;
     padding-left: 16px;
@@ -1957,7 +1957,7 @@ s
 }
 
 .faq-subtitle {
-    color: #666;
+    color: #444;
     font-size: 1.125rem;
     line-height: 1.6;
     max-width: 500px;
@@ -2028,7 +2028,7 @@ s
     max-height: 0;
     overflow: hidden;
     transition: all 0.4s ease;
-    color: #666;
+    color: #444;
     line-height: 1.7;
     border-top: 1px solid transparent;
 }
@@ -2075,7 +2075,7 @@ s
 
 .stat-label {
     font-size: 0.8rem;
-    color: #666;
+    color: #444;
     text-transform: uppercase;
     letter-spacing: 0.5px;
 }
@@ -2132,7 +2132,7 @@ s
 
 .calc-message {
     font-size: 0.9rem;
-    color: #666;
+    color: #444;
     line-height: 1.4;
 }
 
@@ -2212,7 +2212,7 @@ s
 }
 
 .hero-subtitle {
-    color: #8e8e8e;
+    color: #000000;
     font-size: 1.1rem;
     line-height: 1.5;
 }
@@ -2253,7 +2253,7 @@ s
 }
 
 .about-section p {
-    color: #666;
+    color: #444;
     line-height: 1.7;
     margin-bottom: 20px;
     font-size: 1rem;
@@ -2297,7 +2297,7 @@ s
 }
 
 .feature-item p {
-    color: #666;
+    color: #444;
     font-size: 0.9rem;
     margin: 0;
     line-height: 1.5;
@@ -2328,7 +2328,7 @@ s
 
 .mission-stat-label {
     font-size: 0.9rem;
-    color: #666;
+    color: #444;
     font-weight: 500;
 }
 
@@ -2356,7 +2356,7 @@ s
 }
 
 .highlight-item p {
-    color: #666;
+    color: #444;
     font-size: 0.9rem;
     margin: 0;
     line-height: 1.5;
@@ -2416,7 +2416,7 @@ s
 }
 
 .contact-hero .hero-subtitle {
-    color: #8e8e8e;
+    color: #000000;
     font-size: 1rem;
     line-height: 1.5;
 }
@@ -2628,7 +2628,7 @@ s
 
 .help-content p {
     font-size: 0.9rem;
-    color: #666;
+    color: #444;
     line-height: 1.5;
     margin: 0;
 }
@@ -2654,7 +2654,6 @@ s
 
 .footer p {
     margin-bottom: 0.75rem;
-    opacity: 0.8;
     font-size: 14px;
     color: #262626;
     line-height: 1.5;
@@ -2689,7 +2688,7 @@ s
     padding-top: 1rem;
     border-top: 1px solid #f0f0f0;
     font-size: 13px;
-    color: #666;
+    color: #444;
 }
 
 /* Social media links */
@@ -3374,7 +3373,7 @@ s
     }
     
     .hero-subtitle {
-        color: #b0b0b0;
+        color: #000000;
     }
     
     .about-section {
@@ -3445,4 +3444,243 @@ s
 
 .faq-question:focus:not(:focus-visible) {
     outline: none;
+}
+
+/* Love Stories Page Specific Styles */
+.stories-hero {
+    background: linear-gradient(135deg, #ffffff, #ffffff);
+    color: #ff4b8d;
+    padding: 50px 30px;
+    text-align: center;
+    border-radius: 16px;
+    margin-bottom: 30px;
+}
+
+.stories-hero h1 {
+    font-size: 3rem;
+    font-weight: 700;
+    margin-bottom: 15px;
+}
+
+.hero-subtitle {
+    font-size: 1.2rem;
+    opacity: 0.9;
+    margin-bottom: 30px;
+    max-width: 600px;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.hero-stats {
+    display: flex;
+    justify-content: center;
+    gap: 40px;
+    flex-wrap: wrap;
+}
+
+.hero-stats .stat {
+    text-align: center;
+}
+
+.stat-number {
+    display: block;
+    font-size: 2.5rem;
+    font-weight: 700;
+    margin-bottom: 5px;
+}
+
+.stat-label {
+    font-size: 0.9rem;
+    opacity: 0.8;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+/* Stories Filters */
+.stories-filters {
+    background: white;
+    border: 1px solid #dbdbdb;
+    border-radius: 12px;
+    padding: 20px;
+    margin-bottom: 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 15px;
+}
+
+.filter-tabs {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.filter-tab {
+    padding: 10px 16px;
+    border: 1px solid #dbdbdb;
+    background: #fafafa;
+    border-radius: 20px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-size: 14px;
+    font-weight: 500;
+}
+
+.filter-tab.active, .filter-tab:hover {
+    background: #ff4b8d;
+    color: white;
+    border-color: #ff4b8d;
+}
+
+.sort-options {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.sort-select {
+    padding: 8px 12px;
+    border: 1px solid #dbdbdb;
+    border-radius: 8px;
+    background: white;
+    font-size: 14px;
+}
+
+/* Loading State */
+.loading-stories {
+    text-align: center;
+    padding: 60px 20px;
+}
+
+.loading-spinner {
+    width: 40px;
+    height: 40px;
+    border: 4px solid #f3f3f3;
+    border-top: 4px solid #ff4b8d;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin: 0 auto 20px;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* Empty State for Stories Page */
+.empty-stories-state {
+    text-align: center;
+    padding: 80px 20px;
+    background: white;
+    border: 1px solid #dbdbdb;
+    border-radius: 16px;
+}
+
+.empty-stories-state .empty-icon {
+    font-size: 4rem;
+    margin-bottom: 20px;
+}
+
+.empty-stories-state h3 {
+    margin: 0 0 10px 0;
+    color: #262626;
+    font-size: 1.5rem;
+}
+
+.empty-stories-state p {
+    color: #8e8e8e;
+    margin-bottom: 15px;
+}
+
+.empty-helper {
+    font-size: 0.9rem;
+    color: #444;
+    margin-bottom: 25px;
+}
+
+.home-link {
+    display: inline-block;
+    background: linear-gradient(135deg, #ff4b8d, #ff6b6b);
+    color: white;
+    padding: 12px 24px;
+    border-radius: 8px;
+    text-decoration: none;
+    font-weight: 600;
+    transition: all 0.3s ease;
+}
+
+.home-link:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(255, 75, 141, 0.4);
+}
+
+/* Enhanced Story Cards for Stories Page */
+.stories-gallery .story-card {
+    margin-bottom: 20px;
+}
+
+/* Mobile Responsive */
+@media (max-width: 768px) {
+    .stories-hero {
+        padding: 30px 20px;
+    }
+    
+    .stories-hero h1 {
+        font-size: 2.2rem;
+    }
+    
+    .hero-stats {
+        gap: 20px;
+    }
+    
+    .stat-number {
+        font-size: 2rem;
+    }
+    
+    .stories-filters {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    
+    .filter-tabs {
+        justify-content: center;
+    }
+    
+    .nav-search {
+        width: 100%;
+        margin-top: 10px;
+    }
+    
+    .search-input {
+        flex: 1;
+    }
+}
+
+/* Dark Mode Support */
+@media (prefers-color-scheme: dark) {
+    .stories-filters,
+    .empty-stories-state {
+        background: #000;
+        border-color: #262626;
+    }
+    
+    .filter-tab {
+        background: #262626;
+        border-color: #363636;
+        color: #f5f5f5;
+    }
+    
+    .sort-select,
+    .search-input {
+        background: #262626;
+        border-color: #363636;
+        color: #f5f5f5;
+    }
+    
+    .search-btn {
+        background: #262626;
+        border-color: #363636;
+        color: #f5f5f5;
+    }
 }
