@@ -103,42 +103,64 @@ async function createTables() {
   }
 }
 
-// ========================
-// REDIRECTS & STATIC ROUTES
-// ========================
+// User Profiles Table
+async function createUserTables() {
+  try {
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS users (
+        id SERIAL PRIMARY KEY,
+        username VARCHAR(50) UNIQUE NOT NULL,
+        email VARCHAR(255) UNIQUE,
+        display_name VARCHAR(100),
+        bio TEXT,
+        location VARCHAR(100),
+        relationship_status VARCHAR(50),
+        avatar_url VARCHAR(500),
+        cover_photo_url VARCHAR(500),
+        is_verified BOOLEAN DEFAULT false,
+        is_public BOOLEAN DEFAULT true,
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
 
-// Specific page routes
-app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, '..', 'index.html'));
-});
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS user_follows (
+        id SERIAL PRIMARY KEY,
+        follower_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+        following_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE(follower_id, following_id)
+      )
+    `);
 
-app.get('/home', (req, res) => {
-  res.redirect('/');
-});
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS friend_requests (
+        id SERIAL PRIMARY KEY,
+        sender_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+        receiver_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+        status VARCHAR(20) DEFAULT 'pending', -- pending, accepted, rejected
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
 
-app.get('/about', (req, res) => {
-  res.sendFile(path.join(__dirname, '..', 'about.html'));
-});
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS direct_messages (
+        id SERIAL PRIMARY KEY,
+        sender_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+        receiver_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+        message_text TEXT NOT NULL,
+        is_read BOOLEAN DEFAULT false,
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
 
-app.get('/contact', (req, res) => {
-  res.sendFile(path.join(__dirname, '..', 'contact.html'));
-});
-
-app.get('/privacy', (req, res) => {
-  res.sendFile(path.join(__dirname, '..', 'privacy.html'));
-});
-
-app.get('/terms', (req, res) => {
-  res.sendFile(path.join(__dirname, '..', 'terms.html'));
-});
-
-app.get('/record', (req, res) => {
-  res.sendFile(path.join(__dirname, '..', 'record.html'));
-});
-
-app.get('/love-stories', (req, res) => {
-  res.sendFile(path.join(__dirname, '..', 'love-stories.html'));
-});
+    console.log('✅ User social tables created/verified');
+  } catch (error) {
+    console.error('❌ Error creating user tables:', error);
+  }
+}
 
 // ========================
 // CACHE HEADERS
@@ -181,6 +203,92 @@ app.use('/manifest.json', (req, res, next) => {
 });
 
 // ========================
+// CLEAN URL ROUTES
+// ========================
+
+// Home route
+app.get('/', (req, res) => {
+  res.sendFile(path.join(__dirname, '..', 'index.html'));
+});
+
+app.get('/home', (req, res) => {
+  res.redirect('/');
+});
+
+// Profile routes
+app.get('/profile', (req, res) => {
+  res.sendFile(path.join(__dirname, '..', 'profile.html'));
+});
+
+app.get('/profile/:username', (req, res) => {
+  res.sendFile(path.join(__dirname, '..', 'profile.html'));
+});
+
+// Clean URL routes
+app.get('/about', (req, res) => {
+  res.sendFile(path.join(__dirname, '..', 'about.html'));
+});
+
+app.get('/contact', (req, res) => {
+  res.sendFile(path.join(__dirname, '..', 'contact.html'));
+});
+
+app.get('/privacy', (req, res) => {
+  res.sendFile(path.join(__dirname, '..', 'privacy.html'));
+});
+
+app.get('/terms', (req, res) => {
+  res.sendFile(path.join(__dirname, '..', 'terms.html'));
+});
+
+app.get('/record', (req, res) => {
+  res.sendFile(path.join(__dirname, '..', 'record.html'));
+});
+
+app.get('/love-stories', (req, res) => {
+  res.sendFile(path.join(__dirname, '..', 'love-stories.html'));
+});
+
+// ========================
+// REDIRECT .html URLs TO CLEAN URLs (ADD THIS SECTION)
+// ========================
+
+// Redirect specific .html pages to clean URLs
+app.get('/about.html', (req, res) => {
+  res.redirect(301, '/about');
+});
+
+app.get('/contact.html', (req, res) => {
+  res.redirect(301, '/contact');
+});
+
+app.get('/privacy.html', (req, res) => {
+  res.redirect(301, '/privacy');
+});
+
+app.get('/terms.html', (req, res) => {
+  res.redirect(301, '/terms');
+});
+
+app.get('/record.html', (req, res) => {
+  res.redirect(301, '/record');
+});
+
+app.get('/love-stories.html', (req, res) => {
+  res.redirect(301, '/love-stories');
+});
+
+app.get('/profile.html', (req, res) => {
+  res.redirect(301, '/profile');
+});
+
+// Generic .html redirect (catch any others)
+app.get('/*.html', (req, res) => {
+  const cleanPath = req.path.replace(/\.html$/, '');
+  res.redirect(301, cleanPath);
+});
+
+// ========================
 // API ROUTES
 // ========================
 
@@ -210,6 +318,141 @@ app.get('/api/health', async (req, res) => {
     });
   }
 });
+
+// ========================
+// PROFILE API ROUTES
+// ========================
+
+// Get current user (temporary mock for demo)
+app.get('/api/user/current', async (req, res) => {
+  try {
+    // For now, return a mock user
+    // In a real app, you'd get this from authentication/session
+    const mockUser = {
+      id: 1,
+      username: 'currentuser',
+      display_name: 'Current User',
+      bio: 'This is my bio! I love sharing love stories.',
+      location: 'New York, USA',
+      relationship_status: 'In a relationship',
+      avatar_url: '/images/default-avatar.png',
+      cover_photo_url: '/images/default-cover.jpg',
+      is_verified: false,
+      is_public: true,
+      created_at: new Date().toISOString(),
+      follower_count: 42,
+      following_count: 37
+    };
+    
+    res.json(mockUser);
+  } catch (error) {
+    console.error('Error fetching current user:', error);
+    res.status(500).json({ error: 'Failed to fetch user data' });
+  }
+});
+
+// Get user profile by username
+app.get('/api/users/:username', async (req, res) => {
+  try {
+    const { username } = req.params;
+    
+    // Mock user data for demo
+    const mockUsers = {
+      'currentuser': {
+        id: 1,
+        username: 'currentuser',
+        display_name: 'Current User',
+        bio: 'This is my bio! I love sharing love stories.',
+        location: 'New York, USA',
+        relationship_status: 'In a relationship',
+        avatar_url: '/images/default-avatar.png',
+        cover_photo_url: '/images/default-cover.jpg',
+        is_verified: false,
+        is_public: true,
+        created_at: new Date().toISOString(),
+        follower_count: 42,
+        following_count: 37
+      },
+      'johndoe': {
+        id: 2,
+        username: 'johndoe',
+        display_name: 'John Doe',
+        bio: 'Romantic at heart ❤️',
+        location: 'California, USA',
+        relationship_status: 'Married',
+        avatar_url: '/images/default-avatar.png',
+        cover_photo_url: '/images/default-cover.jpg',
+        is_verified: true,
+        is_public: true,
+        created_at: new Date().toISOString(),
+        follower_count: 128,
+        following_count: 95
+      }
+    };
+    
+    const user = mockUsers[username];
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+    
+    res.json(user);
+  } catch (error) {
+    console.error('Error fetching user profile:', error);
+    res.status(500).json({ error: 'Failed to fetch user profile' });
+  }
+});
+
+// Get user's love stories
+app.get('/api/users/:username/stories', async (req, res) => {
+  try {
+    const { username } = req.params;
+    
+    // For demo, return some stories
+    const result = await pool.query(`
+      SELECT ls.*, 
+             COUNT(DISTINCT sl.id) as likes_count,
+             COUNT(DISTINCT sc.id) as comments_count
+      FROM love_stories ls
+      LEFT JOIN story_likes sl ON ls.id = sl.story_id
+      LEFT JOIN story_comments sc ON ls.id = sc.story_id
+      WHERE ls.couple_names ILIKE $1 OR $1 = 'currentuser'
+      GROUP BY ls.id
+      ORDER BY ls.created_at DESC
+      LIMIT 20
+    `, [`%${username}%`]);
+    
+    res.json(result.rows);
+  } catch (error) {
+    console.error('Error fetching user stories:', error);
+    res.status(500).json({ error: 'Failed to fetch user stories' });
+  }
+});
+
+// Get user's followers count
+app.get('/api/users/:username/followers/count', async (req, res) => {
+  try {
+    // Mock data for demo
+    res.json({ count: 42 });
+  } catch (error) {
+    console.error('Error fetching followers count:', error);
+    res.status(500).json({ error: 'Failed to fetch followers count' });
+  }
+});
+
+// Get user's following count
+app.get('/api/users/:username/following/count', async (req, res) => {
+  try {
+    // Mock data for demo
+    res.json({ count: 37 });
+  } catch (error) {
+    console.error('Error fetching following count:', error);
+    res.status(500).json({ error: 'Failed to fetch following count' });
+  }
+});
+
+// ========================
+// LOVE STORIES API ROUTES
+// ========================
 
 // Get all stories
 app.get('/api/stories', async (req, res) => {
@@ -407,6 +650,7 @@ const startServer = async () => {
     if (dbConnected) {
       // Then create tables
       await createTables();
+      await createUserTables();
       console.log('✅ Database initialization completed');
     } else {
       console.log('⚠️  Starting server without database connection');
@@ -440,4 +684,4 @@ const startServer = async () => {
   }
 };
 
-startServer();
+startServer();  
