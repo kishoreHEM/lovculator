@@ -68,66 +68,58 @@ class AppInitializer {
     }
 
     initializeFeaturesSafely() {
-        // Love Stories - only if it exists
-        if (typeof LoveStories !== 'undefined') {
-            try {
-                window.loveStories = new LoveStories();
-                console.log('✅ Love Stories initialized');
-            } catch (error) {
-                console.warn('⚠️ Love Stories failed to initialize:', error);
-            }
-        }
+    console.log('🔧 Initializing features safely...');
 
-        // Achievements System - only if it exists
-        if (typeof AchievementSystem !== 'undefined') {
-            try {
-                window.achievementSystem = new AchievementSystem();
-                console.log('✅ Achievement System initialized');
-            } catch (error) {
-                console.warn('⚠️ Achievement System failed to initialize:', error);
-            }
+    // LOVE STORIES - FIXED: Use the initializeLoveStories function
+    if (typeof initializeLoveStories === 'function') {
+        try {
+            initializeLoveStories();
+            console.log('✅ Love Stories system initialized via function');
+        } catch (error) {
+            console.warn('⚠️ Love Stories function failed:', error);
         }
-
-        // Couple of the Week - only if it exists
-        if (typeof CoupleOfWeek !== 'undefined') {
-            try {
-                window.coupleOfWeek = new CoupleOfWeek();
-                console.log('✅ Couple of the Week initialized');
-            } catch (error) {
-                console.warn('⚠️ Couple of the Week failed to initialize:', error);
-            }
+    } else if (typeof LoveStories !== 'undefined') {
+        try {
+            // Fallback: try direct initialization if function not available
+            window.loveStories = new LoveStories();
+            console.log('✅ Love Stories initialized via class (fallback)');
+        } catch (error) {
+            console.warn('⚠️ Love Stories class failed:', error);
         }
+    } else {
+        console.log('ℹ️ Love Stories system not available on this page');
+    }
 
-        // Social Challenges - only if it exists
-        if (typeof SocialChallenges !== 'undefined') {
-            try {
-                window.socialChallenges = new SocialChallenges();
-                console.log('✅ Social Challenges initialized');
-            } catch (error) {
-                console.warn('⚠️ Social Challenges failed to initialize:', error);
-            }
-        }
-
-        // FAQ Manager - only if it exists
-        if (typeof FAQManager !== 'undefined') {
-            try {
-                window.faqManager = new FAQManager();
-                console.log('✅ FAQ Manager initialized');
-            } catch (error) {
-                console.warn('⚠️ FAQ Manager failed to initialize:', error);
-            }
-        }
-
-        // Contact Form - only if on contact page
-        if (typeof ContactForm !== 'undefined' && document.getElementById('contactForm')) {
-            try {
-                new ContactForm();
-                console.log('✅ Contact Form initialized');
-            } catch (error) {
-                console.warn('⚠️ Contact Form failed to initialize:', error);
-            }
+    // FAQ Manager - only if it exists
+    if (typeof FAQManager !== 'undefined') {
+        try {
+            window.faqManager = new FAQManager();
+            console.log('✅ FAQ Manager initialized');
+        } catch (error) {
+            console.warn('⚠️ FAQ Manager failed to initialize:', error);
         }
     }
+
+    // Contact Form - only if on contact page
+    if (typeof ContactForm !== 'undefined' && document.getElementById('contactForm')) {
+        try {
+            new ContactForm();
+            console.log('✅ Contact Form initialized');
+        } catch (error) {
+            console.warn('⚠️ Contact Form failed to initialize:', error);
+        }
+    }
+
+    // Profile System - only if on profile page
+    if (typeof ProfileManager !== 'undefined' && document.getElementById('userProfileContainer')) {
+        try {
+            new ProfileManager();
+            console.log('✅ Profile Manager initialized');
+        } catch (error) {
+            console.warn('⚠️ Profile Manager failed to initialize:', error);
+        }
+    }
+}
 
     setupServiceWorker() {
         if ('serviceWorker' in navigator) {

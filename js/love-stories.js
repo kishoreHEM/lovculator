@@ -73,7 +73,14 @@ class LoveStoriesAPI {
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), this.timeout);
         
-        const anonymousId = this.anonTracker.getAnonId(); 
+        // Safety check for getAnonId - if anonTracker is not available, use fallback
+        let anonymousId;
+        if (this.anonTracker && typeof this.anonTracker.getAnonId === 'function') {
+            anonymousId = this.anonTracker.getAnonId();
+        } else {
+            console.warn('⚠️ anonTracker not available, using fallback anonymous ID');
+            anonymousId = 'anonymous_' + Math.random().toString(36).substr(2, 9);
+        }
         
         try {
             const response = await fetch(`${this.apiBase}${endpoint}`, {
@@ -167,13 +174,22 @@ class LoveStoriesAPI {
 // ==============================================
 class LoveStories {
     constructor(notificationService, anonTracker) {
-        this.api = new LoveStoriesAPI(anonTracker); // Use the API class
+        console.log('🔧 LoveStories constructor called with:', { 
+            notificationService: !!notificationService, 
+            anonTracker: !!anonTracker
+        }); 
+        // Make sure anonTracker is passed correctly
+        this.api = new LoveStoriesAPI(anonTracker);
         this.notifications = notificationService;
         this.stories = [];
         this.currentPage = 1;
         this.storiesPerPage = 10;
         this.storiesContainer = document.getElementById('storiesContainer');
         this.loadMoreBtn = document.getElementById('loadMoreStories');
+        console.log('✅ LoveStories API initialized:', { 
+            api: !!this.api, 
+            apiAnonTracker: !!this.api.anonTracker 
+        });
 
         this.init();
     }
@@ -916,7 +932,7 @@ class LoveStoriesPage {
 
 
 // ==============================================
-// 7. GLOBAL INITIALIZATION
+// 7. GLOBAL INITIALIZATION (CORRECTED)
 // ==============================================
 let loveStories, storyModal, notificationService, anonTracker, loveStoriesPage;
 
@@ -925,21 +941,32 @@ function initializeLoveStories() {
         const storiesContainer = document.getElementById('storiesContainer');
         const storyFab = document.getElementById('storyFab');
         
-        // Core Utilities
+        console.log('🔧 Initializing Love Stories system...');
+        
+        // Core Utilities - Initialize FIRST
         notificationService = new NotificationService();
         anonTracker = new AnonUserTracker(); 
         
-        // Data/State Manager (Must be initialized first)
+        console.log('✅ Utilities initialized:', { 
+            notificationService: !!notificationService, 
+            anonTracker: !!anonTracker 
+        });
+        
+        // Data/State Manager - Pass anonTracker properly
         loveStories = new LoveStories(notificationService, anonTracker); 
+        
+        console.log('✅ LoveStories initialized with anonTracker:', !!loveStories.api.anonTracker);
         
         // UI Components
         if (storiesContainer) {
             loveStoriesPage = new LoveStoriesPage(loveStories); 
             window.loveStoriesPage = loveStoriesPage; 
+            console.log('✅ LoveStoriesPage initialized');
         }
 
         if (storyFab) {
             storyModal = new StoryModal(loveStories, notificationService); 
+            console.log('✅ StoryModal initialized');
         }
         
         window.loveStories = loveStories; 

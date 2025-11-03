@@ -4766,6 +4766,77 @@ body {
     }
 }
 
+    /* --- Social Share Styling --- */
+
+.share-buttons {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding: 20px 0;
+    margin-top: 20px;
+    border-top: 1px solid #eee;
+}
+
+.share-section-title {
+    font-size: 1.1em;
+    font-weight: 600;
+    color: #333;
+    margin-bottom: 8px;
+}
+
+.share-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    padding: 12px;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    font-size: 16px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-weight: 500;
+}
+
+.share-btn:hover {
+    opacity: 0.9;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.share-btn svg {
+    margin-right: 10px;
+    width: 20px;
+    height: 20px;
+    fill: currentColor; /* Ensures the SVG uses the button's text color */
+}
+
+/* Platform-Specific Colors */
+
+.share-btn.facebook {
+    background-color: #1877F2;
+    color: white;
+    border-color: #1877F2;
+}
+
+.share-btn.twitter {
+    background-color: #1DA1F2;
+    color: white;
+    border-color: #1DA1F2;
+}
+
+.share-btn.whatsapp {
+    background-color: #25D366;
+    color: white;
+    border-color: #25D366;
+}
+
+.share-btn.instagram {
+    background-color: #E1306C; /* Instagram's primary color */
+    color: white;
+    border-color: #E1306C;
+}
+
 /* Dark Mode Support */
 @media (prefers-color-scheme: dark) {
     .lovculator-platform-section {
@@ -4855,4 +4926,5 @@ body {
     .cta-btn.secondary:hover {
         background: #464646;
     }
+    
 }

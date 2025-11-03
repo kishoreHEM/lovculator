@@ -1,47 +1,171 @@
-// Profile Page JavaScript
+// js/profile.js - Profile Page JavaScript
 class ProfileManager {
     constructor() {
         this.currentUser = null;
+        this.socialAPI = null;
+        this.authManager = window.authManager; // Assume authManager is loaded globally
+        this.path = window.location.pathname;
         this.init();
     }
 
     async init() {
-        await this.loadCurrentUser();
-        this.setupTabNavigation();
-        this.loadTabContent('stories');
+        // ===============================================
+        // 🚨 SECURITY CRITICAL: AUTHENTICATION CHECK 🚨
+        // ===============================================
+        
+        let userFromSession = await this.authManager.checkSession();
+        let usernameInPath = this.path.startsWith('/profile/') ? this.path.split('/').pop() : null;
+        
+        // 1. If accessing /profile (current user) and NOT logged in, redirect to login.
+        if ((this.path === '/profile' || this.path === '/profile/') && !userFromSession) {
+            console.log("User not logged in. Redirecting to login.");
+            alert("You must be logged in to view your profile.");
+            window.location.href = '/login'; 
+            return; 
+        }
+
+        // 2. Determine which profile to load
+        let usernameToLoad;
+        if (userFromSession && !usernameInPath) {
+             // Logged-in user viewing /profile -> load own profile
+            usernameToLoad = userFromSession.username;
+        } else if (usernameInPath) {
+            // Viewing /profile/:username -> load specified profile (may or may not be self, may or may not be logged in)
+            usernameToLoad = usernameInPath;
+        } else {
+             // Fallback if path is weird and no session exists (shouldn't happen with the redirect above)
+            this.showError('Profile link is invalid.');
+            return;
+        }
+        
+        // Load the full profile data based on username
+        await this.loadUserProfileData(usernameToLoad, userFromSession);
+        
+        // If data loaded successfully, proceed with initialization
+        if (this.currentUser) {
+            await this.initializeSocialAPI();
+            this.setupTabNavigation();
+            this.loadTabContent('stories');
+            this.setupEditButtonVisibility(userFromSession);
+        }
+        // ===============================================
+    }
+    
+    // Check if the current viewer is the owner of the profile being displayed
+    setupEditButtonVisibility(sessionUser) {
+        const editProfileBtn = document.getElementById('editProfileBtn');
+        if (editProfileBtn) {
+            const isOwner = sessionUser && sessionUser.username === this.currentUser.username;
+            editProfileBtn.style.display = isOwner ? 'block' : 'none';
+        }
     }
 
-    async loadCurrentUser() {
+    async loadUserProfileData(username, sessionUser) {
         try {
-            const response = await fetch('/api/user/current');
+            // Decide which endpoint to hit: /api/user/current (fastest, requires session) 
+            // or /api/users/:username (slower, public)
+            const isSelf = sessionUser && sessionUser.username === username;
+            const endpoint = isSelf ? '/api/user/current' : `/api/users/${username}`;
+
+            const response = await fetch(endpoint);
+            
             if (!response.ok) {
-                throw new Error('Failed to load user data');
+                // If fetching current user fails (e.g., session expired), redirect to login
+                if (response.status === 401 && isSelf) {
+                    window.location.href = '/login';
+                    return;
+                }
+                throw new Error(response.status === 404 ? 'User not found' : `Failed to load profile (${response.status})`);
             }
             
             this.currentUser = await response.json();
             this.renderUserProfile();
         } catch (error) {
             console.error('Error loading user profile:', error);
-            this.showError('Failed to load profile data');
+            this.showError(error.message);
         }
     }
 
+
+    // --- Existing methods start here ---
+
+    async initializeSocialAPI() {
+        if (window.socialAPI) {
+            this.socialAPI = window.socialAPI;
+        } else {
+            this.socialAPI = this.createFallbackAPI();
+        }
+    }
+
+    createFallbackAPI() {
+        // Ensures only the current logged-in user can update their profile
+        const currentUserId = this.authManager.isAuthenticated() ? this.authManager.getCurrentUser().id : null;
+        
+        return {
+            async updateUserProfile(userId, profileData) {
+                if (!currentUserId || userId !== currentUserId) {
+                    throw new Error('Unauthorized action. User ID mismatch.');
+                }
+                
+                const response = await fetch(`/api/users/${userId}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(profileData)
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json().catch(() => ({}));
+                    throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
+                }
+
+                return await response.json();
+            },
+
+            async getFollowers(userId) {
+                // NOTE: APIs updated to use username, but keeping userId for compatibility here
+                const response = await fetch(`/api/users/${this.currentUser.username}/followers/count`);
+                if (!response.ok) throw new Error('Failed to fetch followers');
+                return await response.json(); // Returns {count: N}
+            },
+
+            async getFollowing(userId) {
+                const response = await fetch(`/api/users/${this.currentUser.username}/following/count`);
+                if (!response.ok) throw new Error('Failed to fetch following');
+                return await response.json(); // Returns {count: N}
+            }
+        };
+    }
+    
+    // loadCurrentUser method removed, replaced by loadUserProfileData for better path handling
+
     renderUserProfile() {
         const container = document.getElementById('userProfileContainer');
-        const user = this.currentUser;
+        if (!container) {
+            console.error('Profile container not found');
+            return;
+        }
 
+        const user = this.currentUser;
         const avatarUrl = this.getAvatarUrl(user);
 
+        // Check if the current viewer is the owner
+        const isOwner = this.authManager.isAuthenticated() && this.authManager.getCurrentUser().username === user.username;
+        const editButtonHtml = isOwner ? 
+            '<button class="btn btn-outline" id="editProfileBtn">Edit Profile</button>' : 
+            ''; // Placeholder for follow button if not owner
+        
         container.innerHTML = `
             <div class="user-profile-card enhanced">
-                <div class="profile-cover"></div>
+                <div class="profile-cover" style="background-image: url('${user.cover_photo_url || '/images/default-cover.jpg'}');"></div>
                 <div class="avatar-section">
                     <img src="${avatarUrl}" 
                          alt="${user.display_name}'s avatar" 
                          class="profile-avatar"
-                         onerror="this.onerror=null; this.src='images/favicon-32x32.png'">
+                         onerror="this.onerror=null; this.src='/images/favicon-32x32.png'">
                     <div class="profile-actions">
-                        <button class="btn btn-outline" id="editProfileBtn">Edit Profile</button>
+                        ${editButtonHtml}
                         <button class="btn btn-primary" id="shareProfileBtn">Share Profile</button>
                     </div>
                 </div>
@@ -71,12 +195,11 @@ class ProfileManager {
             </div>
         `;
 
-        // Add event listeners after rendering
         this.setupProfileActions();
     }
 
     setupProfileActions() {
-        // Edit Profile Button
+        // Event listener setup for the newly rendered buttons
         const editProfileBtn = document.getElementById('editProfileBtn');
         if (editProfileBtn) {
             editProfileBtn.addEventListener('click', () => {
@@ -84,7 +207,6 @@ class ProfileManager {
             });
         }
 
-        // Share Profile Button
         const shareProfileBtn = document.getElementById('shareProfileBtn');
         if (shareProfileBtn) {
             shareProfileBtn.addEventListener('click', () => {
@@ -94,7 +216,13 @@ class ProfileManager {
     }
 
     openEditProfileModal() {
-        // Create edit profile modal
+        // Ensure only owner can open modal
+        if (!this.authManager.isAuthenticated() || this.authManager.getCurrentUser().username !== this.currentUser.username) {
+            this.showNotification('You can only edit your own profile.', 'error');
+            return;
+        }
+        
+        // ... (rest of openEditProfileModal remains the same)
         const modalHTML = `
             <div class="modal-overlay" id="editProfileModal">
                 <div class="modal-content">
@@ -137,10 +265,7 @@ class ProfileManager {
             </div>
         `;
 
-        // Add modal to page
         document.body.insertAdjacentHTML('beforeend', modalHTML);
-
-        // Add modal event listeners
         this.setupEditModalEvents();
     }
 
@@ -150,29 +275,30 @@ class ProfileManager {
         const cancelBtn = document.getElementById('cancelEdit');
         const saveBtn = document.getElementById('saveProfile');
 
-        // Close modal functions
-        const closeModal = () => {
-            modal.remove();
-        };
+        if (!modal || !closeBtn || !cancelBtn || !saveBtn) return;
 
-        // Close modal events
+        const closeModal = () => modal.remove();
+
         closeBtn.addEventListener('click', closeModal);
         cancelBtn.addEventListener('click', closeModal);
         modal.addEventListener('click', (e) => {
-            if (e.target === modal) {
-                closeModal();
-            }
+            if (e.target === modal) closeModal();
         });
 
-        // Save profile event
         saveBtn.addEventListener('click', async () => {
-            await this.saveProfileChanges();
-            closeModal();
+            const success = await this.saveProfileChanges();
+            if (success) closeModal();
         });
     }
 
     async saveProfileChanges() {
         try {
+            // Ensure owner check is done again before API call
+            if (!this.socialAPI || !this.currentUser || !this.authManager.isAuthenticated() || 
+                this.authManager.getCurrentUser().id !== this.currentUser.id) {
+                throw new Error('Authorization failed: Cannot save profile');
+            }
+
             const formData = {
                 display_name: document.getElementById('displayName').value,
                 bio: document.getElementById('userBio').value,
@@ -180,58 +306,42 @@ class ProfileManager {
                 relationship_status: document.getElementById('relationshipStatus').value
             };
 
-            // Update via API (you'll need to implement this endpoint)
-            const response = await fetch(`/api/users/${this.currentUser.id}`, {
-                method: 'PUT',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify(formData)
-            });
+            const updatedProfileData = await this.socialAPI.updateUserProfile(this.currentUser.id, formData);
 
-            if (response.ok) {
-                // Update local user data
-                this.currentUser = { ...this.currentUser, ...formData };
-                this.renderUserProfile();
-                
-                // Show success message
-                this.showNotification('Profile updated successfully!', 'success');
-            } else {
-                throw new Error('Failed to update profile');
-            }
+            this.currentUser = { 
+                ...this.currentUser, 
+                ...updatedProfileData 
+            };
+            
+            this.renderUserProfile();
+            
+            this.showNotification('Profile updated successfully!', 'success');
+            return true;
+
         } catch (error) {
             console.error('Error updating profile:', error);
-            this.showNotification('Failed to update profile', 'error');
+            this.showNotification(`Failed to update profile: ${error.message}`, 'error');
+            return false;
         }
     }
 
     shareProfile() {
         const profileUrl = window.location.href;
         
-        // Check if Web Share API is available
         if (navigator.share) {
             navigator.share({
                 title: `${this.currentUser.display_name}'s Profile - Lovculator`,
                 text: `Check out ${this.currentUser.display_name}'s profile on Lovculator!`,
                 url: profileUrl
-            })
-            .then(() => console.log('Profile shared successfully'))
-            .catch((error) => console.log('Error sharing profile:', error));
+            });
         } else {
-            // Fallback: copy to clipboard
             navigator.clipboard.writeText(profileUrl)
-                .then(() => {
-                    this.showNotification('Profile link copied to clipboard!', 'success');
-                })
-                .catch(() => {
-                    // Final fallback: show URL in alert
-                    alert(`Share this profile: ${profileUrl}`);
-                });
+                .then(() => this.showNotification('Profile link copied to clipboard!', 'success'))
+                .catch(() => alert(`Share this profile: ${profileUrl}`));
         }
     }
 
     showNotification(message, type = 'info') {
-        // Create notification element
         const notification = document.createElement('div');
         notification.className = `notification notification-${type}`;
         notification.innerHTML = `
@@ -239,7 +349,6 @@ class ProfileManager {
             <button class="close-notification">&times;</button>
         `;
 
-        // Add styles if not already present
         if (!document.querySelector('#notification-styles')) {
             const styles = document.createElement('style');
             styles.id = 'notification-styles';
@@ -276,46 +385,28 @@ class ProfileManager {
             document.head.appendChild(styles);
         }
 
-        // Add to page
         document.body.appendChild(notification);
 
-        // Auto remove after 3 seconds
-        setTimeout(() => {
-            if (notification.parentNode) {
-                notification.remove();
-            }
-        }, 3000);
+        setTimeout(() => notification.remove(), 3000);
 
-        // Close button event
-        notification.querySelector('.close-notification').addEventListener('click', () => {
-            notification.remove();
-        });
+        const closeBtn = notification.querySelector('.close-notification');
+        if (closeBtn) {
+            closeBtn.addEventListener('click', () => notification.remove());
+        }
     }
 
     getAvatarUrl(user) {
-        if (user.avatar_url && user.avatar_url.includes('default-avatar')) {
-            return 'images/apple-touch-icon.png';
-        }
-        
-        const faviconOptions = [
-            'images/apple-touch-icon.png',
-            'images/favicon-32x32.png',
-            'images/favicon-16x16.png'
-        ];
-
-        return faviconOptions[0];
+        // Use user.avatar_url if available, otherwise fallback to the default
+        return user.avatar_url || '/images/apple-touch-icon.png';
     }
 
     setupTabNavigation() {
         const tabButtons = document.querySelectorAll('.tab-btn');
-        
         tabButtons.forEach(button => {
             button.addEventListener('click', () => {
                 tabButtons.forEach(btn => btn.classList.remove('active'));
                 document.querySelectorAll('.tab-pane').forEach(pane => pane.classList.remove('active'));
-                
                 button.classList.add('active');
-                
                 const tabName = button.getAttribute('data-tab');
                 const tabPane = document.getElementById(`${tabName}-tab`);
                 if (tabPane) {
@@ -327,31 +418,27 @@ class ProfileManager {
     }
 
     async loadTabContent(tabName) {
+        // Ensure currentUser is loaded before attempting content load
+        if (!this.currentUser) return; 
+        
         switch (tabName) {
-            case 'stories':
-                await this.loadUserStories();
-                break;
-            case 'followers':
-                await this.loadFollowers();
-                break;
-            case 'following':
-                await this.loadFollowing();
-                break;
-            case 'activity':
-                await this.loadActivity();
-                break;
+            case 'stories': await this.loadUserStories(); break;
+            case 'followers': await this.loadFollowers(); break;
+            case 'following': await this.loadFollowing(); break;
+            case 'activity': await this.loadActivity(); break;
         }
     }
 
     async loadUserStories() {
         try {
             const container = document.getElementById('userStoriesContainer');
+            if (!container) return;
+
             container.innerHTML = '<div class="loading-profile"><div class="loading-spinner"></div><p>Loading stories...</p></div>';
 
+            // Use the username from the loaded profile
             const response = await fetch(`/api/users/${this.currentUser.username}/stories`);
-            if (!response.ok) {
-                throw new Error('Failed to load stories');
-            }
+            if (!response.ok) throw new Error('Failed to load stories');
 
             const stories = await response.json();
             
@@ -360,7 +447,7 @@ class ProfileManager {
                     <div class="empty-state">
                         <h3>No love stories yet</h3>
                         <p>Share your first love story to get started!</p>
-                        <a href="/love-stories" class="btn btn-primary">Share Your Story</a>
+                        <a href="/record" class="btn btn-primary">Share Your Story</a>
                     </div>
                 `;
                 return;
@@ -382,61 +469,72 @@ class ProfileManager {
                 </div>
             `).join('');
 
-            document.getElementById('storiesCount').textContent = stories.length;
+            const storiesCountElement = document.getElementById('storiesCount');
+            if (storiesCountElement) storiesCountElement.textContent = stories.length;
 
         } catch (error) {
             console.error('Error loading user stories:', error);
-            document.getElementById('userStoriesContainer').innerHTML = `
-                <div class="error-state">
-                    <p>Failed to load stories. Please try again.</p>
-                </div>
-            `;
+            const container = document.getElementById('userStoriesContainer');
+            if (container) {
+                container.innerHTML = `<div class="error-state"><p>Failed to load stories. Please try again.</p></div>`;
+            }
         }
     }
 
     async loadFollowers() {
         const container = document.getElementById('followersContainer');
-        container.innerHTML = `
-            <div class="empty-state">
-                <h3>No followers yet</h3>
-                <p>Share love stories and connect with others to get followers!</p>
-            </div>
-        `;
+        if (!container) return;
+        
+        // This relies on the follower_count being fetched in loadUserProfileData
+        const count = this.currentUser.follower_count || 0;
+        
+        container.innerHTML = count > 0 ? 
+            `<div class="info-state"><h3>${count} Followers</h3><p>We need to build the API for listing actual followers!</p></div>` :
+            `<div class="empty-state"><h3>No followers yet</h3><p>Share love stories and connect with others to get followers!</p></div>`;
     }
 
     async loadFollowing() {
         const container = document.getElementById('followingContainer');
-        container.innerHTML = `
-            <div class="empty-state">
-                <h3>Not following anyone yet</h3>
-                <p>Discover and follow other love story enthusiasts!</p>
-            </div>
-        `;
+        if (!container) return;
+        
+        // This relies on the following_count being fetched in loadUserProfileData
+        const count = this.currentUser.following_count || 0;
+
+        container.innerHTML = count > 0 ? 
+            `<div class="info-state"><h3>Following ${count} Users</h3><p>We need to build the API for listing who you follow!</p></div>` :
+            `<div class="empty-state"><h3>Not following anyone yet</h3><p>Discover and follow other love story enthusiasts!</p></div>`;
     }
 
     async loadActivity() {
         const container = document.getElementById('userActivityContainer');
-        container.innerHTML = `
-            <div class="empty-state">
-                <h3>No recent activity</h3>
-                <p>Your activity will appear here when you start sharing and interacting with love stories.</p>
-            </div>
-        `;
+        if (!container) return;
+        container.innerHTML = `<div class="empty-state"><h3>No recent activity</h3><p>Your activity will appear here when you start sharing and interacting with love stories.</p></div>`;
     }
 
     showError(message) {
         const container = document.getElementById('userProfileContainer');
+        if (!container) return;
+
         container.innerHTML = `
             <div class="error-state">
-                <h3>Error</h3>
+                <h3>Error Loading Profile</h3>
                 <p>${message}</p>
-                <button onclick="location.reload()" class="btn btn-primary">Try Again</button>
+                <button onclick="location.href='/'" class="btn btn-primary">Go Home</button>
             </div>
         `;
     }
 }
 
-// Initialize profile manager when page loads
 document.addEventListener('DOMContentLoaded', () => {
+    // Check if AuthManager is loaded before ProfileManager initializes
+    if (typeof authManager === 'undefined') {
+        console.error("AuthManager is required but not found. Ensure js/auth.js is loaded before js/profile.js.");
+        // Redirecting forcefully if the core auth logic is missing
+        if (window.location.pathname === '/profile') {
+             alert("Security Error: Authentication logic missing. Redirecting.");
+             window.location.href = '/login';
+        }
+        return;
+    }
     new ProfileManager();
 });
