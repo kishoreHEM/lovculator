@@ -22,11 +22,12 @@ app.use(express.json({ limit: '10mb' }));
 // 2. SESSION MIDDLEWARE 
 app.use(session({
     // IMPORTANT: Change this value in your .env file
-    secret: process.env.SESSION_SECRET || 'a_default_strong_secret_key_for_dev', 
+    secret: process.env.SESSION_SECRET || '38v7n5Q@k9Lp!zG2x&R4tY0uA1eB6cI$o9mH8jJ0sK7wD6fE5', 
     resave: false,
     saveUninitialized: false,
     cookie: {
-        secure: process.env.NODE_ENV === 'production', 
+        secure: true,
+        sameSite: 'none', 
         httpOnly: true,
         maxAge: 1000 * 60 * 60 * 24 // 24 hours
     }
