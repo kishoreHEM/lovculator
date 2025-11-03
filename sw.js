@@ -333,7 +333,7 @@ self.addEventListener('notificationclick', event => {
 // ========================
 
 self.addEventListener('periodicsync', event => {
-    if (event.tag === 'check-updates') {
+    if (event.tag === 'check-updates') {    
         console.log('📡 Checking for updates...');
         event.waitUntil(
             caches.open(CACHE_NAME).then(cache => {

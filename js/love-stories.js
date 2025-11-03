@@ -1,27 +1,241 @@
-// love-stories.js - UPDATED FOR DATABASE
-class LoveStories {
+// ==============================================
+// 1. UTILITY CLASS: NotificationService
+// ==============================================
+class NotificationService {
+    show(message, type = 'success') {
+        const notification = document.createElement('div');
+        notification.className = `notification ${type}`;
+        notification.textContent = message;
+        
+        // Basic inline styles (recommend moving to CSS)
+        notification.style.cssText = `
+            position: fixed; top: 20px; right: 20px;
+            background: ${type === 'error' ? '#ff6b6b' : '#4CAF50'};
+            color: white; padding: 15px 20px; border-radius: 8px;
+            z-index: 3000; opacity: 0; transition: opacity 0.3s ease-out;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        `;
+        
+        document.body.appendChild(notification);
+        setTimeout(() => notification.style.opacity = '1', 10);
+        setTimeout(() => {
+            notification.style.opacity = '0';
+            setTimeout(() => notification.remove(), 300); 
+        }, 3000);
+    }
+    showError(message) { this.show(message, 'error'); }
+    showSuccess(message) { this.show(message, 'success'); }
+}
+
+
+// ==============================================
+// 2. UTILITY CLASS: AnonUserTracker (For "1 like/comment per device")
+// ==============================================
+class AnonUserTracker {
     constructor() {
-        this.api = new LoveStoriesAPI(); // Use the API class
+        this.STORAGE_KEY = 'lovculator_anon_id';
+    }
+
+    // Generates a simple, unique-enough ID 
+    generateAnonId() {
+        return 'anon-' + Math.random().toString(36).substring(2, 15) + 
+               Math.random().toString(36).substring(2, 15);
+    }
+
+    getAnonId() {
+        let anonId = localStorage.getItem(this.STORAGE_KEY);
+        
+        if (!anonId) {
+            anonId = this.generateAnonId();
+            localStorage.setItem(this.STORAGE_KEY, anonId);
+            console.log('✨ New anonymous ID created.');
+        }
+        
+        return anonId;
+    }
+}
+
+
+// ==============================================
+// 3. DATA LAYER: LoveStoriesAPI Manager (Robust with Anon ID and Timeout)
+// ==============================================
+class LoveStoriesAPI {
+    constructor(anonTracker) {
+        this.apiBase = window.location.hostname === 'localhost' 
+            ? 'http://localhost:3001/api' 
+            : '/api';
+        
+        this.timeout = 10000; // 10 second timeout
+        this.anonTracker = anonTracker;
+    }
+
+    async request(endpoint, options = {}) {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), this.timeout);
+        
+        const anonymousId = this.anonTracker.getAnonId(); 
+        
+        try {
+            const response = await fetch(`${this.apiBase}${endpoint}`, {
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-Anon-ID': anonymousId, // Enforce per-device tracking
+                    ...options.headers
+                },
+                signal: controller.signal,
+                ...options
+            });
+
+            clearTimeout(timeoutId);
+            
+            if (!response.ok) {
+                const errorText = await response.text();
+                
+                // Specific error for already-performed actions
+                if (response.status === 403 || response.status === 409) {
+                    throw new Error(JSON.parse(errorText).message || 'Action not allowed on this device (e.g., already liked/commented).');
+                }
+                
+                throw new Error(`HTTP error! status: ${response.status} - ${errorText}`);
+            }
+
+            return response.status === 204 ? {} : await response.json();
+        } catch (error) {
+            clearTimeout(timeoutId);
+            
+            if (error.name === 'AbortError') {
+                throw new Error('Request timeout - please check your connection');
+            }
+            
+            console.error(`API request failed for ${endpoint}:`, error);
+            throw error;
+        }
+    }
+
+    async getStories() {
+        return this.request('/stories');
+    }
+
+    async createStory(storyData) {
+        const required = ['storyTitle', 'loveStory', 'category', 'mood'];
+        const missing = required.filter(field => !storyData[field]);
+        
+        if (missing.length > 0) {
+            throw new Error(`Missing required fields: ${missing.join(', ')}`);
+        }
+
+        return this.request('/stories', {
+            method: 'POST',
+            body: JSON.stringify(storyData)
+        });
+    }
+
+    async toggleLike(storyId) {
+        if (!storyId || isNaN(storyId)) throw new Error('Invalid story ID');
+        return this.request(`/stories/${storyId}/like`, { method: 'POST' });
+    }
+
+    async addComment(storyId, commentData) {
+        if (!storyId || isNaN(storyId)) throw new Error('Invalid story ID');
+        if (!commentData.text || commentData.text.trim() === '') throw new Error('Comment text is required');
+
+        // Only send the text; backend assigns the author name and tracks the device ID
+        const dataToSend = { text: commentData.text.trim() }; 
+
+        return this.request(`/stories/${storyId}/comments`, {
+            method: 'POST',
+            body: JSON.stringify(dataToSend)
+        });
+    }
+
+    async getComments(storyId) {
+        if (!storyId || isNaN(storyId)) throw new Error('Invalid story ID');
+        return this.request(`/stories/${storyId}/comments`);
+    }
+
+    // New: Corrected syntax for tracking share clicks
+    async trackShareClick(storyId) {
+        if (!storyId || isNaN(storyId)) throw new Error('Invalid story ID');
+        // This endpoint will increment the share count on the server
+        return this.request(`/stories/${storyId}/share`, { method: 'POST' });
+    }
+}
+
+
+// ==============================================
+// 4. CORE CLASS: LoveStories Manager (Handles data/state and rendering logic)
+// ==============================================
+class LoveStories {
+    constructor(notificationService, anonTracker) {
+        this.api = new LoveStoriesAPI(anonTracker); // Use the API class
+        this.notifications = notificationService;
         this.stories = [];
         this.currentPage = 1;
         this.storiesPerPage = 10;
+        this.storiesContainer = document.getElementById('storiesContainer');
+        this.loadMoreBtn = document.getElementById('loadMoreStories');
+
         this.init();
     }
 
     async init() {
         await this.loadStories();
-        this.bindEvents();
+        this.bindEvents(); 
+        this.setupStoryDelegation(); // Binds the critical ONE-TIME event listener
         console.log('💖 Love Stories initialized with database');
+    }
+
+    // NEW/CORRECTED METHOD: Binds the ONE-TIME event delegation listener to the parent container
+    setupStoryDelegation() {
+        if (!this.storiesContainer) return;
+
+        this.storiesContainer.addEventListener('click', (e) => {
+            const storyCard = e.target.closest('.story-card');
+            if (!storyCard) return;
+
+            const storyId = parseInt(storyCard.dataset.storyId);
+            // Target includes buttons and the share button
+            const target = e.target.closest('button'); 
+            
+            if (target) {
+                if (target.classList.contains('read-more')) {
+                    this.toggleReadMore(storyId);
+                } else if (target.classList.contains('like-button')) {
+                    this.toggleLike(storyId);
+                } else if (target.classList.contains('comment-toggle')) {
+                    this.toggleComments(storyId);
+                } else if (target.classList.contains('comment-submit')) {
+                    this.handleAddComment(storyId);
+                } else if (target.classList.contains('share-action-toggle')) { // Native Share Logic
+                    const { shareUrl, shareTitle, shareText } = target.dataset;
+                    this.handleNativeShare(shareUrl, shareTitle, shareText);
+                }
+            }
+        });
+        
+        // Handle enter key in comment input
+        this.storiesContainer.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter' && e.target.classList.contains('comment-input')) {
+                const storyCard = e.target.closest('.story-card');
+                if (storyCard) {
+                    const storyId = parseInt(storyCard.dataset.storyId);
+                    this.handleAddComment(storyId);
+                }
+            }
+        });
     }
 
     async loadStories() {
         try {
             this.stories = await this.api.getStories();
+            document.dispatchEvent(new CustomEvent('storiesLoaded')); 
             this.renderStories();
         } catch (error) {
             console.error('Error loading stories:', error);
             this.stories = [];
+            document.dispatchEvent(new CustomEvent('storiesLoaded')); 
             this.renderStories();
+            this.notifications.showError('Could not load love stories.');
         }
     }
 
@@ -38,9 +252,8 @@ class LoveStories {
         });
 
         // Load more stories
-        const loadMoreBtn = document.getElementById('loadMoreStories');
-        if (loadMoreBtn) {
-            loadMoreBtn.addEventListener('click', () => this.loadMoreStories());
+        if (this.loadMoreBtn) {
+            this.loadMoreBtn.addEventListener('click', () => this.loadMoreStories());
         }
 
         // Empty state FAB
@@ -55,65 +268,61 @@ class LoveStories {
         try {
             const newStory = await this.api.createStory(storyData);
             this.stories.unshift(newStory);
-            this.renderStories();
             
-            // Track story in stats
+            if (window.loveStoriesPage) {
+                window.loveStoriesPage.handleInitialLoad(); 
+            } else {
+                this.renderStories();
+            }
+            
             window.simpleStats?.trackStory();
-            
-            this.showNotification('Your love story has been shared with everyone! 🌍');
-            this.triggerStorySharedEvent();
+            this.notifications.showSuccess('Your love story has been shared with everyone! 🌍');
+            document.dispatchEvent(new CustomEvent('storyShared'));
             
             return newStory;
         } catch (error) {
             console.error('Error creating story:', error);
-            this.showError('Failed to share story. Please try again.');
+            this.notifications.showError('Failed to share story. ' + error.message);
             throw error;
         }
     }
 
-    triggerStorySharedEvent() {
-        const event = new CustomEvent('storyShared');
-        document.dispatchEvent(event);
-    }
-
     renderStories() {
-        const container = document.getElementById('storiesContainer');
-        const loadMoreBtn = document.getElementById('loadMoreStories');
+        if (!this.storiesContainer) return;
         
-        if (!container) {
-            console.log('⏳ Stories container not ready yet');
+        if (window.loveStoriesPage && this.storiesContainer === document.getElementById('storiesContainer')) {
             return;
         }
-        
+
         if (this.stories.length === 0) {
-            container.innerHTML = this.getEmptyStateHTML();
-            if (loadMoreBtn) loadMoreBtn.classList.add('hidden');
+            this.storiesContainer.innerHTML = this.getEmptyStateHTML();
+            if (this.loadMoreBtn) this.loadMoreBtn.classList.add('hidden');
             return;
         }
 
         const storiesToShow = this.stories.slice(0, 
             this.currentPage * this.storiesPerPage);
         
-        container.innerHTML = storiesToShow.map(story => 
+        this.storiesContainer.innerHTML = storiesToShow.map(story => 
             this.getStoryHTML(story)).join('');
 
-        // Show/hide load more button
-        if (loadMoreBtn) {
+        if (this.loadMoreBtn) {
             if (this.stories.length > storiesToShow.length) {
-                loadMoreBtn.classList.remove('hidden');
+                this.loadMoreBtn.classList.remove('hidden');
             } else {
-                loadMoreBtn.classList.add('hidden');
+                this.loadMoreBtn.classList.add('hidden');
             }
         }
-
-        this.bindStoryEvents();
     }
 
     getStoryHTML(story) {
         const date = new Date(story.created_at).toLocaleDateString();
         const isLong = story.love_story.length > 200;
-        const displayText = isLong ? 
-            story.love_story.substring(0, 200) + '...' : story.love_story;
+
+        // Define the URL and text for sharing
+        const shareUrl = `https://lovculator.com/stories/${story.id}`; 
+        const shareTitle = story.story_title;
+        const shareText = `Read this beautiful love story: ${story.story_title}`;
 
         return `
             <div class="story-card" data-story-id="${story.id}">
@@ -131,20 +340,39 @@ class LoveStories {
                 <h3 class="story-title">${story.story_title}</h3>
                 
                 <div class="story-content ${isLong ? '' : 'expanded'}">
-                    ${story.love_story}
+                    ${isLong ? story.love_story.substring(0, 200) + '...' : story.love_story}
                 </div>
                 
-                ${isLong ? `<button class="read-more" onclick="loveStories.toggleReadMore(${story.id})">Read More</button>` : ''}
+                ${isLong ? `<button class="read-more">Read More</button>` : ''}
                 
                 <div class="story-footer">
                     <span class="story-mood">${this.getMoodText(story.mood)}</span>
                     <div class="story-actions">
-                        <button class="story-action ${story.user_liked ? 'liked' : ''}" 
-                                onclick="loveStories.toggleLike(${story.id})">
-                            ❤️ <span class="like-count">${story.likes_count}</span>
+                        
+                        <button class="story-action like-button ${story.user_liked ? 'liked' : ''}">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="${story.user_liked ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="like-icon">
+                                <path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/>
+                            </svg>
+                            <span class="like-count">${story.likes_count}</span>
                         </button>
-                        <button class="story-action" onclick="loveStories.toggleComments(${story.id})">
-                            💬 <span>${story.comments_count}</span>
+                        
+                        <button class="story-action comment-toggle">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="comment-icon">
+                                <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/>
+                            </svg>
+                            <span>${story.comments_count}</span>
+                        </button>
+                        
+                        <button class="story-action share-action-toggle" 
+                                data-share-url="${shareUrl}" 
+                                data-share-title="${shareTitle}"
+                                data-share-text="${shareText}">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="share-icon">
+                                <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"></path>
+                                <polyline points="16 6 12 2 8 6"></polyline>
+                                <line x1="12" y1="2" x2="12" y2="15"></line>
+                            </svg>
+                            <span class="share-count">${story.shares_count || 0}</span>
                         </button>
                     </div>
                 </div>
@@ -154,12 +382,10 @@ class LoveStories {
                         <div class="comment-form">
                             <input type="text" class="comment-input" placeholder="Add a comment..." 
                                    data-story-id="${story.id}">
-                            <button class="comment-submit" 
-                                    onclick="loveStories.handleAddComment(${story.id})">Post</button>
+                            <button class="comment-submit">Post</button>
                         </div>
                         <div class="comments-list" id="comments-list-${story.id}">
-                            <!-- Comments will be loaded when opened -->
-                        </div>
+                            </div>
                     </div>
                 ` : ''}
             </div>
@@ -180,16 +406,21 @@ class LoveStories {
     }
 
     toggleReadMore(storyId) {
-        const story = this.stories.find(s => s.id === storyId);
-        const contentEl = document.querySelector(`[data-story-id="${storyId}"] .story-content`);
-        const buttonEl = document.querySelector(`[data-story-id="${storyId}"] .read-more`);
+        const story = this.stories.find(s => s.id === storyId) || window.loveStoriesPage?.filteredStories.find(s => s.id === storyId);
+        if (!story) return;
+        
+        const storyCard = document.querySelector(`[data-story-id="${storyId}"]`);
+        const contentEl = storyCard?.querySelector('.story-content');
+        const buttonEl = storyCard?.querySelector('.read-more');
 
         if (contentEl && buttonEl) {
             if (contentEl.classList.contains('expanded')) {
                 contentEl.classList.remove('expanded');
+                contentEl.textContent = story.love_story.substring(0, 200) + '...';
                 buttonEl.textContent = 'Read More';
             } else {
                 contentEl.classList.add('expanded');
+                contentEl.textContent = story.love_story;
                 buttonEl.textContent = 'Read Less';
             }
         }
@@ -199,22 +430,25 @@ class LoveStories {
         try {
             const result = await this.api.toggleLike(storyId);
             
-            // Update the story in our local array
+            // Find the story in the main state array
             const storyIndex = this.stories.findIndex(s => s.id === storyId);
             if (storyIndex !== -1) {
                 this.stories[storyIndex].likes_count = result.likes_count;
                 this.stories[storyIndex].user_liked = result.liked;
-                
-                // Update stats if liked
-                if (result.liked) {
-                    window.simpleStats?.trackLike();
-                }
+                if (result.liked) window.simpleStats?.trackLike();
             }
             
-            this.renderStories();
+            // Update the UI
+            if (window.loveStoriesPage) {
+                window.loveStoriesPage.applyFiltersAndSort();
+                window.loveStoriesPage.updateStats();
+            } else {
+                this.renderStories();
+            }
+
         } catch (error) {
             console.error('Error toggling like:', error);
-            this.showError('Failed to update like. Please try again.');
+            this.notifications.showError('Failed to update like: ' + error.message);
         }
     }
 
@@ -223,7 +457,6 @@ class LoveStories {
         if (commentsSection) {
             commentsSection.classList.toggle('hidden');
             
-            // Load comments when opening
             if (!commentsSection.classList.contains('hidden')) {
                 this.loadComments(storyId);
             }
@@ -237,7 +470,7 @@ class LoveStories {
             if (commentsList) {
                 commentsList.innerHTML = comments.map(comment => `
                     <div class="comment">
-                        <div class="comment-author">${comment.author_name}</div>
+                        <div class="comment-author">${comment.author_name || 'Anonymous'}</div>
                         <div class="comment-text">${comment.comment_text}</div>
                         <div class="comment-time">${new Date(comment.created_at).toLocaleDateString()}</div>
                     </div>
@@ -245,43 +478,101 @@ class LoveStories {
             }
         } catch (error) {
             console.error('Error loading comments:', error);
-        }
-    }
-
-    handleCommentKeypress(event, storyId) {
-        if (event.key === 'Enter') {
-            this.handleAddComment(storyId);
+            this.notifications.showError('Failed to load comments.');
         }
     }
 
     async handleAddComment(storyId) {
-        const input = document.querySelector(`[data-story-id="${storyId}"] .comment-input`);
+        const storyCard = document.querySelector(`[data-story-id="${storyId}"]`);
+        if (!storyCard) return;
+
+        const input = storyCard.querySelector('.comment-input');
         const text = input?.value.trim();
         
         if (text) {
             try {
-                const result = await this.api.addComment(storyId, {
-                    text: text,
-                    author: 'You'
-                });
+                const result = await this.api.addComment(storyId, { text: text });
 
-                // Update the story in our local array
                 const storyIndex = this.stories.findIndex(s => s.id === storyId);
                 if (storyIndex !== -1) {
                     this.stories[storyIndex].comments_count = result.comments_count;
                 }
 
-                // Track in stats
                 window.simpleStats?.trackComment();
                 
-                // Reload comments
+                // Reload comments and update stats/counts on screen
                 this.loadComments(storyId);
-                input.value = '';
+                if (window.loveStoriesPage) {
+                    window.loveStoriesPage.updateStats();
+                } else {
+                    this.renderStories();
+                }
                 
-                this.showNotification('Comment added!');
+                input.value = '';
+                this.notifications.showSuccess('Comment added!');
             } catch (error) {
                 console.error('Error adding comment:', error);
-                this.showError('Failed to add comment. Please try again.');
+                this.notifications.showError('Failed to add comment: ' + error.message);
+            }
+        }
+    }
+    
+    // Helper to update the share count element on the page
+    updateShareCountUI(storyId, count) {
+        const storyCard = document.querySelector(`[data-story-id="${storyId}"]`);
+        const countEl = storyCard?.querySelector('.share-count');
+        if (countEl) {
+            countEl.textContent = count;
+        }
+    }
+
+    // New: Handles the native share dialog and tracks the click (intent)
+    async handleNativeShare(url, title, text) {
+        
+        let shareAttempted = false;
+
+        // 1. Attempt to call the native share dialog
+        if (navigator.share) {
+            shareAttempted = true;
+            try {
+                await navigator.share({
+                    title: title,
+                    text: text,
+                    url: url,
+                });
+            } catch (error) {
+                if (error.name !== 'AbortError') {
+                    console.error('Error sharing:', error);
+                    this.notifications.showError('Failed to share story.');
+                    // If a non-abort error occurs, we still try to log the click, but stop here
+                }
+            }
+        } else {
+            // Fallback for desktop browsers that don't support the API
+            this.notifications.showError('Native sharing not supported. Please use a mobile device or copy the URL.');
+        }
+
+        // 2. Track the Share Click (Intent) if the share button was visible/available
+        if (shareAttempted || !navigator.share) { // Always track click unless a fatal error occurred before
+            try {
+                // Extract ID from the URL we passed (assuming last segment is the ID)
+                const storyId = parseInt(url.split('/').pop()); 
+                if (isNaN(storyId)) throw new Error("Could not parse story ID for tracking.");
+                
+                const result = await this.api.trackShareClick(storyId);
+
+                // Update the share count locally
+                const storyIndex = this.stories.findIndex(s => s.id === storyId);
+                if (storyIndex !== -1) {
+                    this.stories[storyIndex].shares_count = result.shares_count;
+                }
+
+                // Update the UI
+                this.updateShareCountUI(storyId, result.shares_count);
+                window.simpleStats?.trackShare();
+
+            } catch (error) {
+                console.error('Error tracking share click:', error);
             }
         }
     }
@@ -290,165 +581,30 @@ class LoveStories {
         this.currentPage++;
         this.renderStories();
     }
-
-    showNotification(message) {
-        const notification = document.createElement('div');
-        notification.className = 'notification';
-        notification.textContent = message;
-        notification.style.cssText = `
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            background: #4CAF50;
-            color: white;
-            padding: 15px 20px;
-            border-radius: 8px;
-            z-index: 3000;
-            animation: slideInRight 0.3s ease-out;
-        `;
-        
-        document.body.appendChild(notification);
-        
-        setTimeout(() => {
-            notification.remove();
-        }, 3000);
-    }
-
-    showError(message) {
-        const notification = document.createElement('div');
-        notification.className = 'notification error';
-        notification.textContent = message;
-        notification.style.cssText = `
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            background: #ff6b6b;
-            color: white;
-            padding: 15px 20px;
-            border-radius: 8px;
-            z-index: 3000;
-            animation: slideInRight 0.3s ease-out;
-        `;
-        
-        document.body.appendChild(notification);
-        
-        setTimeout(() => {
-            notification.remove();
-        }, 3000);
-    }
-
+    
+    // Helper methods for category/mood display
     getCategoryEmoji(category) {
-        const emojis = {
-            romantic: '💖',
-            proposal: '💍',
-            journey: '🛤️',
-            challenge: '🛡️',
-            special: '🌟',
-            longdistance: '✈️',
-            secondchance: '🔁'
-        };
+        const emojis = { romantic: '💖', proposal: '💍', journey: '🛤️', challenge: '🛡️', special: '🌟', longdistance: '✈️', secondchance: '🔁' };
         return emojis[category] || '💕';
     }
-
     formatCategory(category) {
-        const formats = {
-            romantic: 'Romantic Moment',
-            proposal: 'Marriage Proposal',
-            journey: 'Love Journey',
-            challenge: 'Overcoming Challenges',
-            special: 'Special Memory',
-            longdistance: 'Long Distance Love',
-            secondchance: 'Second Chance'
-        };
+        const formats = { romantic: 'Romantic Moment', proposal: 'Marriage Proposal', journey: 'Love Journey', challenge: 'Overcoming Challenges', special: 'Special Memory', longdistance: 'Long Distance Love', secondchance: 'Second Chance' };
         return formats[category] || 'Love Story';
     }
-
     getMoodText(mood) {
-        const texts = {
-            romantic: 'Heartwarming romance',
-            emotional: 'Deep emotions',
-            funny: 'Funny and sweet',
-            inspiring: 'Inspiring journey',
-            dramatic: 'Dramatic love story'
-        };
+        const texts = { romantic: 'Heartwarming romance', emotional: 'Deep emotions', funny: 'Funny and sweet', inspiring: 'Inspiring journey', dramatic: 'Dramatic love story' };
         return texts[mood] || 'Beautiful story';
     }
-
-    bindStoryEvents() {
-        // Additional story event bindings if needed
-    }
-
-    // Public method for LoveStoriesPage to use
-    getAllStories() {
-        return this.stories;
-    }
 }
 
-// Love Stories API Manager
-class LoveStoriesAPI {
-    constructor() {
-        // For production - use relative path since backend serves frontend
-        this.apiBase = '/api';
-    }
 
-    async request(endpoint, options = {}) {
-        try {
-            const response = await fetch(`${this.apiBase}${endpoint}`, {
-                headers: {
-                    'Content-Type': 'application/json',
-                    ...options.headers
-                },
-                ...options
-            });
-
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
-
-            return await response.json();
-        } catch (error) {
-            console.error(`API request failed for ${endpoint}:`, error);
-            throw error;
-        }
-    }
-
-    async getStories() {
-        return this.request('/stories');
-    }
-
-    async createStory(storyData) {
-        return this.request('/stories', {
-            method: 'POST',
-            body: JSON.stringify(storyData)
-        });
-    }
-
-    async toggleLike(storyId) {
-        return this.request(`/stories/${storyId}/like`, {
-            method: 'POST'
-        });
-    }
-
-    async addComment(storyId, commentData) {
-        return this.request(`/stories/${storyId}/comments`, {
-            method: 'POST',
-            body: JSON.stringify(commentData)
-        });
-    }
-
-    async getComments(storyId) {
-        return this.request(`/stories/${storyId}/comments`);
-    }
-
-    async healthCheck() {
-        return this.request('/health');
-    }
-}
-
-// Modal functionality - UPDATED FOR DATABASE
+// ==============================================
+// 5. UI CLASS: StoryModal (Handles the story submission form)
+// ==============================================
 class StoryModal {
-    constructor(loveStoriesInstance) {
+    constructor(loveStoriesInstance, notificationService) {
         this.loveStories = loveStoriesInstance;
+        this.notifications = notificationService;
         this.storyFab = document.getElementById('storyFab');
         this.storyModal = document.getElementById('storyModal');
         this.closeModal = document.getElementById('closeModal');
@@ -462,50 +618,32 @@ class StoryModal {
     }
 
     init() {
-        if (!this.storyFab || !this.storyModal) {
-            console.log('⏳ Modal elements not ready yet');
-            return;
-        }
+        if (!this.storyFab || !this.storyModal) return;
 
-        // Open modal - remove any existing listeners first
-        this.storyFab.removeEventListener('click', this.openModal);
         this.storyFab.addEventListener('click', (e) => this.openModal(e));
-
-        // Close modal
         this.closeModal.addEventListener('click', () => this.closeModalFunc());
-
-        // Close modal when clicking outside
         this.storyModal.addEventListener('click', (e) => {
-            if (e.target === this.storyModal) {
-                this.closeModalFunc();
-            }
+            if (e.target === this.storyModal) this.closeModalFunc();
         });
 
-        // Character counter
         if (this.loveStory && this.charCounter) {
             this.loveStory.addEventListener('input', () => this.updateCharCounter());
         }
 
-        // Form submission
         if (this.storyForm) {
             this.storyForm.addEventListener('submit', (e) => this.handleSubmit(e));
         }
 
-        // Success message close
         if (this.successOk) {
             this.successOk.addEventListener('click', () => this.closeSuccessMessage());
         }
 
-        // Close success message when clicking outside
         if (this.successMessage) {
             this.successMessage.addEventListener('click', (e) => {
-                if (e.target === this.successMessage) {
-                    this.closeSuccessMessage();
-                }
+                if (e.target === this.successMessage) this.closeSuccessMessage();
             });
         }
 
-        // Keyboard shortcuts
         document.addEventListener('keydown', (e) => {
             if (e.key === 'Escape') {
                 this.closeModalFunc();
@@ -516,26 +654,19 @@ class StoryModal {
 
     openModal(e) {
         if (e) e.preventDefault();
+        this.storyModal.classList.remove('hidden');
         this.storyModal.setAttribute('aria-hidden', 'false');
         document.body.style.overflow = 'hidden';
-
-        // Set focus to the first form element for accessibility
-        setTimeout(() => {
-            document.getElementById('coupleNames')?.focus();
-        }, 100);
-
+        setTimeout(() => document.getElementById('coupleNames')?.focus(), 100);
         this.previousActiveElement = document.activeElement;
+        this.resetMoodSelection();
     }
 
     closeModalFunc() {
         this.storyModal.classList.add('hidden');
         this.storyModal.setAttribute('aria-hidden', 'true');
         document.body.style.overflow = '';
-
-        // Return focus to the element that was active before modal opened
-        if (this.previousActiveElement) {
-            this.previousActiveElement.focus();
-        }
+        if (this.previousActiveElement) this.previousActiveElement.focus();
     }
 
     updateCharCounter() {
@@ -562,7 +693,6 @@ class StoryModal {
         const btnText = submitBtn.querySelector('.btn-text');
         const btnLoading = submitBtn.querySelector('.btn-loading');
         
-        // Show loading state
         btnText.classList.add('hidden');
         btnLoading.classList.remove('hidden');
         submitBtn.disabled = true;
@@ -581,22 +711,17 @@ class StoryModal {
         try {
             await this.loveStories.addStory(formData);
             
-            // Hide modal and show success
             this.closeModalFunc();
             this.showSuccessMessage();
             
         } catch (error) {
             console.error('Error submitting story:', error);
-            this.showError('Failed to share story. Please try again.');
+            this.notifications.showError('Failed to share story. ' + error.message);
         } finally {
-            // Reset form and button
             this.resetForm();
             btnText.classList.remove('hidden');
             btnLoading.classList.add('hidden');
             submitBtn.disabled = false;
-            
-            // Reset mood selection
-            this.resetMoodSelection();
         }
     }
 
@@ -614,33 +739,8 @@ class StoryModal {
         }
     }
 
-    showError(message) {
-        const errorDiv = document.createElement('div');
-        errorDiv.className = 'notification error';
-        errorDiv.textContent = message;
-        errorDiv.style.cssText = `
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            background: #ff6b6b;
-            color: white;
-            padding: 15px 20px;
-            border-radius: 8px;
-            z-index: 3000;
-            animation: slideInRight 0.3s ease-out;
-        `;
-        
-        document.body.appendChild(errorDiv);
-        
-        setTimeout(() => {
-            errorDiv.remove();
-        }, 3000);
-    }
-
     resetForm() {
-        if (this.storyForm) {
-            this.storyForm.reset();
-        }
+        if (this.storyForm) this.storyForm.reset();
         if (this.charCounter) {
             this.charCounter.textContent = '0';
             this.charCounter.classList.remove('warning');
@@ -653,41 +753,201 @@ class StoryModal {
         const firstMood = document.querySelector('.mood-option');
         if (firstMood) {
             firstMood.classList.add('selected');
-            document.getElementById('selectedMood').value = 'romantic';
+            document.getElementById('selectedMood').value = firstMood.dataset.mood || 'romantic';
         }
     }
 }
 
-// Global initialization
-let loveStories, storyModal;
 
-async function initializeLoveStories() {
+// ==============================================
+// 6. PAGE CLASS: LoveStoriesPage (Handles list view, filtering, sorting, stats)
+// ==============================================
+class LoveStoriesPage {
+    constructor(loveStoriesInstance) {
+        this.loveStories = loveStoriesInstance; // Data manager instance
+        this.stories = [];
+        this.filteredStories = [];
+        this.currentFilter = 'all';
+        this.currentSort = 'newest';
+        this.currentPage = 1;
+        this.storiesPerPage = 10;
+        this.isLoading = false;
+        
+        this.init();
+    }
+
+    init() {
+        this.bindEvents();
+        
+        // Load stories once the main manager has fetched data from the API
+        document.addEventListener('storiesLoaded', () => this.handleInitialLoad());
+        
+        // If the main manager has already loaded data (async race condition)
+        if (this.loveStories.stories.length > 0) {
+            this.handleInitialLoad();
+        }
+    }
+
+    handleInitialLoad() {
+        this.stories = this.loveStories.stories; // Get raw API data
+        this.applyFiltersAndSort(); 
+        this.updateStats(); 
+    }
+
+    bindEvents() {
+        document.querySelectorAll('.filter-tab').forEach(tab => {
+            tab.addEventListener('click', (e) => this.handleFilterChange(e));
+        });
+
+        document.getElementById('sortStories')?.addEventListener('change', (e) => {
+            this.currentSort = e.target.value;
+            this.applyFiltersAndSort();
+        });
+
+        const searchInput = document.getElementById('storiesSearch');
+        if (searchInput) {
+            searchInput.addEventListener('input', (e) => this.handleSearch(e.target.value));
+        }
+
+        document.getElementById('loadMoreStories')?.addEventListener('click', () => {
+            this.loadMoreStories();
+        });
+    }
+
+    handleFilterChange(e) {
+        document.querySelectorAll('.filter-tab').forEach(tab => tab.classList.remove('active'));
+        e.target.classList.add('active');
+        
+        this.currentFilter = e.target.dataset.filter;
+        this.currentPage = 1;
+        this.applyFiltersAndSort();
+    }
+
+    handleSearch(searchTerm) {
+        this.currentPage = 1;
+        this.applyFiltersAndSort(searchTerm);
+    }
+
+    applyFiltersAndSort(searchTerm = '') {
+        let filtered = this.stories;
+        
+        if (this.currentFilter !== 'all') {
+            filtered = filtered.filter(story => story.category === this.currentFilter);
+        }
+        
+        if (searchTerm) {
+            const term = searchTerm.toLowerCase();
+            filtered = filtered.filter(story => 
+                story.story_title.toLowerCase().includes(term) ||
+                story.love_story.toLowerCase().includes(term) ||
+                (story.couple_names && story.couple_names.toLowerCase().includes(term))
+            );
+        }
+        
+        filtered = this.sortStories(filtered, this.currentSort);
+        
+        this.filteredStories = filtered;
+        this.renderStories();
+    }
+
+    sortStories(stories, sortBy) {
+        switch (sortBy) {
+            case 'newest':
+                return [...stories].sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+            case 'oldest':
+                return [...stories].sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+            case 'popular':
+                return [...stories].sort((a, b) => (b.likes_count || 0) - (a.likes_count || 0));
+            case 'comments':
+                return [...stories].sort((a, b) => (b.comments_count || 0) - (a.comments_count || 0));
+            default:
+                return stories;
+        }
+    }
+
+    renderStories() {
+        const container = document.getElementById('storiesContainer');
+        const loadMoreBtn = document.getElementById('loadMoreStories');
+        const emptyState = document.getElementById('emptyState');
+        
+        if (!container) return;
+
+        if (this.filteredStories.length === 0) {
+            container.classList.add('hidden');
+            emptyState?.classList.remove('hidden');
+            loadMoreBtn?.classList.add('hidden');
+            container.innerHTML = '';
+            return;
+        }
+
+        container.classList.remove('hidden');
+        emptyState?.classList.add('hidden');
+
+        const storiesToShow = this.filteredStories.slice(0, this.currentPage * this.storiesPerPage);
+        
+        container.innerHTML = storiesToShow.map(story => 
+            this.loveStories.getStoryHTML(story)
+        ).join('');
+        
+        if (loadMoreBtn) {
+            if (this.filteredStories.length > storiesToShow.length) {
+                loadMoreBtn.classList.remove('hidden');
+            } else {
+                loadMoreBtn.classList.add('hidden');
+            }
+        }
+    }
+
+    loadMoreStories() {
+        this.currentPage++;
+        this.renderStories();
+    }
+
+    updateStats() {
+        const totalStories = this.stories.length;
+        const totalLikes = this.stories.reduce((sum, story) => sum + (story.likes_count || 0), 0);
+        const totalComments = this.stories.reduce((sum, story) => sum + (story.comments_count || 0), 0);
+
+        document.getElementById('totalStories').textContent = totalStories;
+        document.getElementById('totalLikes').textContent = totalLikes;
+        document.getElementById('totalComments').textContent = totalComments;
+    }
+}
+
+
+// ==============================================
+// 7. GLOBAL INITIALIZATION
+// ==============================================
+let loveStories, storyModal, notificationService, anonTracker, loveStoriesPage;
+
+function initializeLoveStories() {
     try {
-        // Check if we're on a page that needs Love Stories
         const storiesContainer = document.getElementById('storiesContainer');
         const storyFab = document.getElementById('storyFab');
         
-        // Only initialize if we have either stories container or FAB button
-        if (!storiesContainer && !storyFab) {
-            console.log('🚫 Love Stories not needed on this page');
-            return;
+        // Core Utilities
+        notificationService = new NotificationService();
+        anonTracker = new AnonUserTracker(); 
+        
+        // Data/State Manager (Must be initialized first)
+        loveStories = new LoveStories(notificationService, anonTracker); 
+        
+        // UI Components
+        if (storiesContainer) {
+            loveStoriesPage = new LoveStoriesPage(loveStories); 
+            window.loveStoriesPage = loveStoriesPage; 
         }
-        
-        // Initialize main components
-        loveStories = new LoveStories();
-        
-        // Only initialize modal if FAB exists
+
         if (storyFab) {
-            storyModal = new StoryModal(loveStories);
+            storyModal = new StoryModal(loveStories, notificationService); 
         }
         
-        // Make available globally
-        window.loveStories = loveStories;
+        window.loveStories = loveStories; 
         
-        console.log('💖 Love Stories system initialized with database');
+        console.log('🚀 Lovculator system fully initialized and ready!');
         
     } catch (error) {
-        console.error('❌ Error initializing Love Stories:', error);
+        console.error('❌ Error initializing Lovculator system:', error);
     }
 }
 

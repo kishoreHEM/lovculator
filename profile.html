@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>User Profile - Lovculator</title>
+    <meta name="description" content="View user profile on Lovculator - Love stories, connections, and more">
+    <meta name="theme-color" content="#ff4b8d">
+    
+    <!-- Favicon Links -->
+     <link rel="apple-touch-icon" href="/Images/apple-touch-icon.png">
+
+    <link rel="shortcut icon" href="/Images/favicon-32x32.png" type="image/png">
+
+    <link rel="icon" href="/Images/favicon.ico" sizes="any">
+    
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+    <!-- Instagram Style Header -->
+    <header class="header">
+        <nav class="navbar">
+            <div class="nav-brand">
+                <a href="/" class="logo" aria-label="Lovculator Home">
+                    💖 Lovculator
+                </a>
+            </div>
+            
+            <ul class="nav-menu">
+                <li class="nav-item"><a href="/" class="nav-link">🏠 Home</a></li>
+                <li class="nav-item"><a href="love-stories" class="nav-link">📖 Love Stories</a></li>
+                <li class="nav-item"><a href="profile" class="nav-link active">👤 Profile</a></li>
+                <li class="nav-item"><a href="about" class="nav-link">ℹ️ About</a></li>
+                <li class="nav-item"><a href="contact" class="nav-link">📞 Contact</a></li>
+            </ul>
+
+            <button class="menu-toggle" aria-label="Toggle menu">
+                <span></span>
+                <span></span>
+                <span></span>
+            </button>
+            <div class="mobile-menu-overlay"></div>
+        </nav>
+    </header>
+
+    <div class="container">
+        <main class="main-content">
+            <!-- Profile Header Section -->
+            <div class="profile-header-section">
+                <div id="userProfileContainer">
+                    <!-- User profile will be loaded here by JavaScript -->
+                    <div class="loading-profile">
+                        <div class="loading-spinner"></div>
+                        <p>Loading profile...</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Profile Content Tabs -->
+            <div class="profile-content">
+                <div class="profile-tabs">
+                    <button class="tab-btn active" data-tab="stories">💖 Love Stories</button>
+                    <button class="tab-btn" data-tab="followers">👥 Followers</button>
+                    <button class="tab-btn" data-tab="following">🔍 Following</button>
+                    <button class="tab-btn" data-tab="activity">📊 Activity</button>
+                </div>
+
+                <div class="tab-content">
+                    <!-- Stories Tab -->
+                    <div id="stories-tab" class="tab-pane active">
+                        <div class="stories-grid" id="userStoriesContainer">
+                            <!-- User's love stories will be loaded here -->
+                        </div>
+                    </div>
+
+                    <!-- Followers Tab -->
+                    <div id="followers-tab" class="tab-pane">
+                        <div class="users-list" id="followersContainer">
+                            <!-- Followers list will be loaded here -->
+                        </div>
+                    </div>
+
+                    <!-- Following Tab -->
+                    <div id="following-tab" class="tab-pane">
+                        <div class="users-list" id="followingContainer">
+                            <!-- Following list will be loaded here -->
+                        </div>
+                    </div>
+
+                    <!-- Activity Tab -->
+                    <div id="activity-tab" class="tab-pane">
+                        <div class="activity-feed" id="userActivityContainer">
+                            <!-- User activity feed will be loaded here -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <footer class="footer">
+        <div class="footer-content">
+            <p>💖 Lovculator - Connect through love stories</p>
+            <div class="footer-links">
+                <a href="/privacy">Privacy Policy</a>
+                <a href="/terms">Terms of Service</a>
+                <a href="/about">About Us</a>
+                <a href="/contact">Contact</a>
+            </div>
+            <div class="footer-copyright">
+                &copy; 2025 Lovculator. All rights reserved.
+            </div>
+        </div>
+    </footer>
+
+    <!-- Scripts -->
+    <script src="js/navigation.js"></script>
+    <script src="js/social-features.js"></script>
+    <script src="js/profile.js"></script>
+</body>
+</html>
