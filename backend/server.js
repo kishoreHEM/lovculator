@@ -3,7 +3,7 @@ import cors from 'cors';
 import pkg from 'pg';
 import dotenv from 'dotenv';
 import path from 'path';
-import { fileURLToPath } from 'url';
+import { fileURLToPath } from 'url';  
 
 // Fix for __dirname in ES modules
 const __filename = fileURLToPath(import.meta.url);
@@ -13,10 +13,9 @@ dotenv.config();
 const { Pool } = pkg;
 const app = express();
 
-// Middleware
-app.use(cors());
+// 1. INITIAL MIDDLEWARE (MUST BE HERE)
+app.use(cors()); 
 app.use(express.json({ limit: '10mb' }));
-app.use(express.static(path.join(__dirname, '..')));
 
 // Database connection with better error handling
 let pool;
@@ -203,7 +202,7 @@ app.use('/manifest.json', (req, res, next) => {
 });
 
 // ========================
-// CLEAN URL ROUTES
+// CLEAN URL ROUTES (Your original routes)
 // ========================
 
 // Home route
@@ -250,7 +249,7 @@ app.get('/love-stories', (req, res) => {
 });
 
 // ========================
-// REDIRECT .html URLs TO CLEAN URLs (ADD THIS SECTION)
+// REDIRECT .html URLs TO CLEAN URLs (THIS SECTION NOW HAS PRIORITY)
 // ========================
 
 // Redirect specific .html pages to clean URLs
@@ -370,8 +369,8 @@ app.get('/api/users/:username', async (req, res) => {
         is_verified: false,
         is_public: true,
         created_at: new Date().toISOString(),
-        follower_count: 42,
-        following_count: 37
+        follower_count: 0,
+        following_count: 0
       },
       'johndoe': {
         id: 2,
@@ -385,8 +384,8 @@ app.get('/api/users/:username', async (req, res) => {
         is_verified: true,
         is_public: true,
         created_at: new Date().toISOString(),
-        follower_count: 128,
-        following_count: 95
+        follower_count: 0,
+        following_count: 0
       }
     };
     
@@ -624,18 +623,22 @@ app.get('/api/stories/:id/comments', async (req, res) => {
   }
 });
 
+
+app.use(express.static(path.join(__dirname, '..')));
+
 // ========================
 // CATCH-ALL ROUTE (should be LAST)
 // ========================
 
-app.get('*', (req, res) => {
-  // Don't serve API routes as HTML
+app.use((req, res) => {
+  // Check if it's an API route that wasn't matched
   if (req.path.startsWith('/api/')) {
     return res.status(404).json({ error: 'API route not found' });
   }
   
-  // Serve index.html for any other unknown routes (SPA behavior)
-  res.sendFile(path.join(__dirname, '..', 'index.html'));
+  // For all other non-matched routes, send the 404 page
+  res.status(404).sendFile(path.join(__dirname, '..', '404.html')); 
+  // Make sure you have a '404.html' file in your root folder!
 });
 
 // ========================
