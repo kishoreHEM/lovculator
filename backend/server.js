@@ -5,7 +5,8 @@ import dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';  
 import bcrypt from 'bcrypt';         
-import session from 'express-session'; 
+import session from 'express-session';
+import connectPgSimple from 'connect-pg-simple';
 
 // Fix for __dirname in ES modules
 const __filename = fileURLToPath(import.meta.url);
@@ -15,27 +16,15 @@ dotenv.config();
 const { Pool } = pkg;
 const app = express();
 
+// Database connection
+let pool;
+
 // 1. INITIAL MIDDLEWARE
 app.use(cors()); 
 app.use(express.json({ limit: '10mb' }));
 
-// 2. SESSION MIDDLEWARE 
-app.use(session({
-    // IMPORTANT: Change this value in your .env file
-    secret: process.env.SESSION_SECRET || '38v7n5Q@k9Lp!zG2x&R4tY0uA1eB6cI$o9mH8jJ0sK7wD6fE5', 
-    resave: false,
-    saveUninitialized: false,
-    cookie: {
-        secure: true,
-        sameSite: 'none', 
-        httpOnly: true,
-        maxAge: 1000 * 60 * 60 * 24 // 24 hours
-    }
-}));
-
-
-// Database connection
-let pool;
+// NOTE: The session middleware will be defined LATER inside startServer()
+// once the 'pool' variable is successfully initialized.
 
 const initializeDatabaseConnection = async () => {
   try {
@@ -45,6 +34,7 @@ const initializeDatabaseConnection = async () => {
 
     console.log('🔗 Connecting to PostgreSQL database...');
     
+    // Initialize the global pool variable
     pool = new Pool({
       connectionString: process.env.DATABASE_URL,
       ssl: { rejectUnauthorized: false },
@@ -76,7 +66,7 @@ async function createTables() {
         created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP, updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
       )
     `);
-    // ... (story_likes and story_comments creation queries are assumed to be here or handled elsewhere)
+    
     await pool.query(`
       CREATE TABLE IF NOT EXISTS story_likes (
         id SERIAL PRIMARY KEY, story_id INTEGER REFERENCES love_stories(id) ON DELETE CASCADE, user_ip VARCHAR(45),
@@ -581,6 +571,7 @@ app.get('/api/stories/:id/comments', async (req, res) => {
 // STATIC FILE SERVING / CATCH-ALL ROUTES
 // ========================
 
+// This must be placed after API routes but before the 404 handler
 app.use(express.static(path.join(__dirname, '..')));
 
 // New Authentication Routes
@@ -603,7 +594,7 @@ app.get('/love-stories', (req, res) => { res.sendFile(path.join(__dirname, '..',
 app.get('/*.html', (req, res) => { const cleanPath = req.path.replace(/\.html$/, ''); res.redirect(301, cleanPath); });
 
 
-// 404 CATCH-ALL ROUTE 
+// 404 CATCH-ALL ROUTE (Corrected path for 404.html confirmed)
 app.use((req, res) => {
   if (req.path.startsWith('/api/')) {
     return res.status(404).json({ error: 'API route not found' });
@@ -620,6 +611,32 @@ const startServer = async () => {
     const dbConnected = await initializeDatabaseConnection();
     
     if (dbConnected) {
+      
+      // ✅ NEW: Initialize PG SESSION STORE HERE, AFTER 'pool' IS READY
+      const PGStore = connectPgSimple(session);
+      const sessionStore = new PGStore({
+          pool: pool, 
+          tableName: 'session_store',
+          createTableIfMissing: true,
+          ttl: 24 * 60 * 60,
+      });
+
+      // ✅ NEW: THE CORRECT EXPRESS SESSION MIDDLEWARE USING PG STORE
+      app.use(session({
+          store: sessionStore, // <-- Persistent store is now used
+          secret: process.env.SESSION_SECRET || '38v7n5Q@k9Lp!zG2x&R4tY0uA1eB6cI$o9mH8jJ0sK7wD6fE5', 
+          resave: false,
+          saveUninitialized: false,
+          cookie: {
+              // SameSite='none' requires Secure=true. We use NODE_ENV check for safety.
+              secure: process.env.NODE_ENV === 'production' ? true : false,
+              sameSite: 'none', 
+              httpOnly: true,
+              maxAge: 1000 * 60 * 60 * 24 // 24 hours
+          }
+      }));
+      // END PG SESSION FIX
+
       await createTables();
       await createUserTables();
     } else {
