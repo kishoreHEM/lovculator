@@ -7,13 +7,13 @@ import { fileURLToPath } from 'url';
 import bcrypt from 'bcryptjs';         
 import session from 'express-session';
 import connectPgSimple from 'connect-pg-simple';
+import fs from 'fs';
 
 // Fix for __dirname in ES modules
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// NEW: Define the absolute root path once for clarity and robustness
-// This is the directory containing all your HTML files (index.html, 404.html, etc.)
+// Define the absolute root path once for clarity and robustness
 const rootPath = path.resolve(__dirname, '..'); 
 
 dotenv.config();
@@ -182,6 +182,46 @@ const fetchUserWithCounts = async (user, userId) => {
     };
 };
 
+// ========================
+// DEBUG ROUTE - ADD THIS
+// ========================
+
+app.get('/debug/paths', (req, res) => {
+  const filesToCheck = [
+    'index.html', 'about.html', 'contact.html', 'login.html', 
+    'love-stories.html', 'privacy.html', 'profile.html', 
+    'record.html', 'signup.html', 'terms.html', '404.html'
+  ];
+  
+  const results = {};
+  filesToCheck.forEach(file => {
+    const filePath = path.join(rootPath, file);
+    results[file] = {
+      path: filePath,
+      exists: fs.existsSync(filePath),
+      dirExists: fs.existsSync(path.dirname(filePath))
+    };
+  });
+  
+  // List all files in root directory
+  let allFiles = [];
+  try {
+    allFiles = fs.readdirSync(rootPath);
+  } catch (error) {
+    console.error('Error reading root directory:', error);
+  }
+  
+  res.json({
+    rootPath,
+    currentDir: __dirname,
+    fileCheck: results,
+    allFiles: allFiles,
+    env: {
+      NODE_ENV: process.env.NODE_ENV,
+      PORT: process.env.PORT
+    }
+  });
+});
 
 // ========================
 // 🛑 API ROUTES (MUST BE BEFORE STATIC SERVING) 🛑
@@ -196,7 +236,6 @@ app.get('/api/health', async (req, res) => {
     res.json({ status: 'ERROR', database: 'error', error: error.message, timestamp: new Date().toISOString() });
   }
 });
-
 
 // ========================
 // AUTHENTICATION API ROUTES
@@ -315,7 +354,6 @@ app.get('/api/auth/me', async (req, res) => {
     }
 });
 
-
 // ========================
 // USER PROFILE API ROUTES
 // ========================
@@ -395,7 +433,6 @@ app.put('/api/users/:id', isAuthenticated, async (req, res) => {
     }
 });
 
-
 // 8. Get user's love stories
 app.get('/api/users/:username/stories', async (req, res) => {
   try {
@@ -426,7 +463,6 @@ app.get('/api/users/:username/stories', async (req, res) => {
     res.status(500).json({ error: 'Failed to fetch user stories' });
   }
 });
-
 
 // 9. Get user's followers/following counts (Public Route)
 app.get('/api/users/:username/:type/count', async (req, res) => {
@@ -576,10 +612,11 @@ app.get('/api/stories/:id/comments', async (req, res) => {
 // ========================
 
 // 1. PRIMARY STATIC FILE SERVER (Must be placed after API routes)
-// This uses the 'rootPath' defined earlier and handles all static files: 
-// /, /index.html, /about.html, /images/..., /script.js, etc.
-app.use(express.static(rootPath));
-
+console.log('📁 Serving static files from:', rootPath);
+app.use(express.static(rootPath, {
+  index: false,
+  dotfiles: 'allow'
+}));
 
 // 2. CORE APP ROUTES (Only keep routes that need explicit logic/parameters)
 
@@ -587,9 +624,9 @@ app.use(express.static(rootPath));
 app.get('/index', (req, res) => { res.redirect('/'); });
 
 // Keep: Profile with username parameter (requires serving the same HTML file)
-// NOTE: We change res.sendFile to use the robust rootPath
-app.get('/profile/:username', (req, res) => { res.sendFile(path.join(rootPath, 'profile.html')); });
-
+app.get('/profile/:username', (req, res) => { 
+  res.sendFile(path.join(rootPath, 'profile.html')); 
+});
 
 // REDIRECT .html URLs TO CLEAN URLs (Keep this, as it is special logic)
 app.get('/*.html', (req, res) => { 
@@ -598,7 +635,6 @@ app.get('/*.html', (req, res) => {
     if (cleanPath === '') return res.redirect(301, '/'); 
     res.redirect(301, cleanPath); 
 });
-
 
 // 404 CATCH-ALL ROUTE
 app.use((req, res) => {
