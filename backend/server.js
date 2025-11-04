@@ -4,7 +4,7 @@ import pkg from 'pg';
 import dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';  
-import bcrypt from 'bcryptjs';         
+import bcrypt from 'bcrypt';         
 import session from 'express-session';
 import connectPgSimple from 'connect-pg-simple';
 
@@ -178,6 +178,7 @@ const fetchUserWithCounts = async (user, userId) => {
     };
 };
 
+
 // ========================
 // 🛑 API ROUTES (MUST BE BEFORE STATIC SERVING) 🛑
 // ========================
@@ -191,6 +192,7 @@ app.get('/api/health', async (req, res) => {
     res.json({ status: 'ERROR', database: 'error', error: error.message, timestamp: new Date().toISOString() });
   }
 });
+
 
 // ========================
 // AUTHENTICATION API ROUTES
@@ -309,6 +311,7 @@ app.get('/api/auth/me', async (req, res) => {
     }
 });
 
+
 // ========================
 // USER PROFILE API ROUTES
 // ========================
@@ -388,6 +391,7 @@ app.put('/api/users/:id', isAuthenticated, async (req, res) => {
     }
 });
 
+
 // 8. Get user's love stories
 app.get('/api/users/:username/stories', async (req, res) => {
   try {
@@ -418,6 +422,7 @@ app.get('/api/users/:username/stories', async (req, res) => {
     res.status(500).json({ error: 'Failed to fetch user stories' });
   }
 });
+
 
 // 9. Get user's followers/following counts (Public Route)
 app.get('/api/users/:username/:type/count', async (req, res) => {
@@ -563,20 +568,38 @@ app.get('/api/stories/:id/comments', async (req, res) => {
 });
 
 // ========================
-// SIMPLE STATIC FILE SERVING
+// STATIC FILE SERVING / CATCH-ALL ROUTES
 // ========================
 
-// Serve static files from root directory
-app.use(express.static(path.join(__dirname, '..'), {
-  index: 'index.html'
-}));
+// This must be placed after API routes but before the 404 handler
+app.use(express.static(path.join(__dirname, '..')));
 
-// Catch-all for non-API routes - serve index.html for SPA
-app.get('*', (req, res, next) => {
+// New Authentication Routes
+app.get('/signup', (req, res) => { res.sendFile(path.join(__dirname, '..', 'signup.html')); });
+app.get('/login', (req, res) => { res.sendFile(path.join(__dirname, '..', 'login.html')); });
+
+// Core App Routes
+app.get('/', (req, res) => { res.sendFile(path.join(__dirname, '..', 'index.html')); });
+app.get('/index', (req, res) => { res.redirect('/'); });
+app.get('/profile', (req, res) => { res.sendFile(path.join(__dirname, '..', 'profile.html')); });
+app.get('/profile/:username', (req, res) => { res.sendFile(path.join(__dirname, '..', 'profile.html')); });
+app.get('/about', (req, res) => { res.sendFile(path.join(__dirname, '..', 'about.html')); });
+app.get('/contact', (req, res) => { res.sendFile(path.join(__dirname, '..', 'contact.html')); });
+app.get('/privacy', (req, res) => { res.sendFile(path.join(__dirname, '..', 'privacy.html')); });
+app.get('/terms', (req, res) => { res.sendFile(path.join(__dirname, '..', 'terms.html')); });
+app.get('/record', (req, res) => { res.sendFile(path.join(__dirname, '..', 'record.html')); });
+app.get('/love-stories', (req, res) => { res.sendFile(path.join(__dirname, '..', 'love-stories.html')); });
+
+// REDIRECT .html URLs TO CLEAN URLs
+app.get('/*.html', (req, res) => { const cleanPath = req.path.replace(/\.html$/, ''); res.redirect(301, cleanPath); });
+
+
+// 404 CATCH-ALL ROUTE (Corrected path for 404.html confirmed)
+app.use((req, res) => {
   if (req.path.startsWith('/api/')) {
-    return next(); // Let API routes handle 404
+    return res.status(404).json({ error: 'API route not found' });
   }
-  res.sendFile(path.join(__dirname, '..', 'index.html'));
+  res.status(404).sendFile(path.join(__dirname, '..', '404.html')); 
 });
 
 // ========================
@@ -589,7 +612,7 @@ const startServer = async () => {
     
     if (dbConnected) {
       
-      // ✅ PG SESSION STORE INITIALIZATION
+      // ✅ NEW: Initialize PG SESSION STORE HERE, AFTER 'pool' IS READY
       const PGStore = connectPgSimple(session);
       const sessionStore = new PGStore({
           pool: pool, 
@@ -598,20 +621,22 @@ const startServer = async () => {
           ttl: 24 * 60 * 60,
       });
 
-      // ✅ EXPRESS SESSION MIDDLEWARE
+      // ✅ NEW: THE CORRECT EXPRESS SESSION MIDDLEWARE USING PG STORE
       app.use(session({
-          store: sessionStore, 
+          store: sessionStore, // <-- Persistent store is now used
           secret: process.env.SESSION_SECRET || '38v7n5Q@k9Lp!zG2x&R4tY0uA1eB6cI$o9mH8jJ0sK7wD6fE5', 
           resave: false,
           saveUninitialized: false,
           cookie: {
+              // SameSite='none' requires Secure=true. We use NODE_ENV check for safety.
               secure: process.env.NODE_ENV === 'production' ? true : false,
               sameSite: 'none', 
               httpOnly: true,
               maxAge: 1000 * 60 * 60 * 24 // 24 hours
           }
       }));
-      
+      // END PG SESSION FIX
+
       await createTables();
       await createUserTables();
     } else {
