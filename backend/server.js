@@ -4,7 +4,7 @@ import pkg from 'pg';
 import dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';  
-import bcrypt from 'bcrypt';         
+import bcrypt from 'bcryptjs';         
 import session from 'express-session';
 import connectPgSimple from 'connect-pg-simple';
 
