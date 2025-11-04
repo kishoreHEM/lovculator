@@ -1,6 +1,6 @@
 {
   "name": "lovculator",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Love Calculator Web App",
   "main": "index.html",
   "scripts": {
