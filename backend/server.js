@@ -7,14 +7,10 @@ import { fileURLToPath } from 'url';
 import bcrypt from 'bcryptjs';         
 import session from 'express-session';
 import connectPgSimple from 'connect-pg-simple';
-import fs from 'fs';
 
 // Fix for __dirname in ES modules
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-
-// Define the absolute root path once for clarity and robustness
-const rootPath = path.resolve(__dirname, '..'); 
 
 dotenv.config();
 const { Pool } = pkg;
@@ -181,47 +177,6 @@ const fetchUserWithCounts = async (user, userId) => {
         following_count: parseInt(followingCountResult.rows[0].count) || 0,
     };
 };
-
-// ========================
-// DEBUG ROUTE - ADD THIS
-// ========================
-
-app.get('/debug/paths', (req, res) => {
-  const filesToCheck = [
-    'index.html', 'about.html', 'contact.html', 'login.html', 
-    'love-stories.html', 'privacy.html', 'profile.html', 
-    'record.html', 'signup.html', 'terms.html', '404.html'
-  ];
-  
-  const results = {};
-  filesToCheck.forEach(file => {
-    const filePath = path.join(rootPath, file);
-    results[file] = {
-      path: filePath,
-      exists: fs.existsSync(filePath),
-      dirExists: fs.existsSync(path.dirname(filePath))
-    };
-  });
-  
-  // List all files in root directory
-  let allFiles = [];
-  try {
-    allFiles = fs.readdirSync(rootPath);
-  } catch (error) {
-    console.error('Error reading root directory:', error);
-  }
-  
-  res.json({
-    rootPath,
-    currentDir: __dirname,
-    fileCheck: results,
-    allFiles: allFiles,
-    env: {
-      NODE_ENV: process.env.NODE_ENV,
-      PORT: process.env.PORT
-    }
-  });
-});
 
 // ========================
 // 🛑 API ROUTES (MUST BE BEFORE STATIC SERVING) 🛑
@@ -608,34 +563,22 @@ app.get('/api/stories/:id/comments', async (req, res) => {
 });
 
 // ========================
-// STATIC FILE SERVING FOR RAILWAY
+// SIMPLE STATIC FILE SERVING
 // ========================
 
-// Serve static files from the project root
-const staticPath = process.env.NODE_ENV === 'production' ? '/app' : path.join(__dirname, '..');
-console.log('📁 Serving static files from:', staticPath);
-
-app.use(express.static(staticPath, {
-  index: 'index.html',
-  extensions: ['html']
+// Serve static files from root directory
+app.use(express.static(path.join(__dirname, '..'), {
+  index: 'index.html'
 }));
 
-// Handle all non-API routes by serving index.html (for SPA)
+// Catch-all for non-API routes - serve index.html for SPA
 app.get('*', (req, res, next) => {
   if (req.path.startsWith('/api/')) {
-    return next(); // Let API routes handle this
+    return next(); // Let API routes handle 404
   }
-  
-  // Try to serve the requested file, fall back to index.html for SPA routing
-  const filePath = path.join(staticPath, req.path);
-  const fs = require('fs');
-  
-  if (fs.existsSync(filePath) && !req.path.includes('.')) {
-    res.sendFile(filePath);
-  } else {
-    res.sendFile(path.join(staticPath, 'index.html'));
-  }
+  res.sendFile(path.join(__dirname, '..', 'index.html'));
 });
+
 // ========================
 // SERVER INITIALIZATION
 // ========================
