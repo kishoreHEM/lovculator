@@ -608,39 +608,34 @@ app.get('/api/stories/:id/comments', async (req, res) => {
 });
 
 // ========================
-// API ROUTES ONLY - NO HTML SERVING
+// STATIC FILE SERVING FOR RAILWAY
 // ========================
 
-// Health check for root
-app.get('/', (req, res) => {
-  res.json({ 
-    message: 'Lovculator Backend API is running',
-    status: 'healthy',
-    database: 'connected',
-    frontend: 'React app should be deployed separately',
-    api_endpoints: {
-      auth: '/api/auth/*',
-      users: '/api/users/*', 
-      stories: '/api/stories/*',
-      health: '/api/health'
-    }
-  });
-});
+// Serve static files from the project root
+const staticPath = process.env.NODE_ENV === 'production' ? '/app' : path.join(__dirname, '..');
+console.log('📁 Serving static files from:', staticPath);
 
-// API 404 handler
-app.use('/api/*', (req, res) => {
-  res.status(404).json({ error: 'API route not found' });
-});
+app.use(express.static(staticPath, {
+  index: 'index.html',
+  extensions: ['html']
+}));
 
-// Catch-all for non-API routes
-app.use('*', (req, res) => {
-  res.status(404).json({ 
-    error: 'Route not found',
-    message: 'This is an API server. Use /api routes for functionality.',
-    available_routes: ['/api/health', '/api/auth/*', '/api/users/*', '/api/stories/*']
-  });
+// Handle all non-API routes by serving index.html (for SPA)
+app.get('*', (req, res, next) => {
+  if (req.path.startsWith('/api/')) {
+    return next(); // Let API routes handle this
+  }
+  
+  // Try to serve the requested file, fall back to index.html for SPA routing
+  const filePath = path.join(staticPath, req.path);
+  const fs = require('fs');
+  
+  if (fs.existsSync(filePath) && !req.path.includes('.')) {
+    res.sendFile(filePath);
+  } else {
+    res.sendFile(path.join(staticPath, 'index.html'));
+  }
 });
-
 // ========================
 // SERVER INITIALIZATION
 // ========================
