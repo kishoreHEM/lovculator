@@ -4,7 +4,7 @@ import pkg from 'pg';
 import dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';  
-import bcrypt from 'bcrypt'; // ✅ NOW USING NATIVE 'bcrypt' (Ensure package.json is updated!)
+import bcrypt from 'bcryptjs'; // ✅ NOW USING NATIVE 'bcrypt' (Ensure package.json is updated!)
 import session from 'express-session';
 import connectPgSimple from 'connect-pg-simple';
 
