@@ -606,7 +606,7 @@ app.use((req, res) => {
     return res.status(404).json({ error: 'API route not found' });
   }
   // Use rootPath to send the 404.html file
-  res.status(404).sendFile(path.join(rootPath, '404.html')); 
+  res.status(404).sendFile(path.resolve(rootPath, '404.html')); 
 });
 
 // ========================
