@@ -12,6 +12,10 @@ import connectPgSimple from 'connect-pg-simple';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+// NEW: Define the absolute root path once for clarity and robustness
+// This is the directory containing all your HTML files (index.html, 404.html, etc.)
+const rootPath = path.resolve(__dirname, '..'); 
+
 dotenv.config();
 const { Pool } = pkg;
 const app = express();
@@ -571,35 +575,38 @@ app.get('/api/stories/:id/comments', async (req, res) => {
 // STATIC FILE SERVING / CATCH-ALL ROUTES
 // ========================
 
-// This must be placed after API routes but before the 404 handler
-app.use(express.static(path.join(__dirname, '..')));
+// 1. PRIMARY STATIC FILE SERVER (Must be placed after API routes)
+// This uses the 'rootPath' defined earlier and handles all static files: 
+// /, /index.html, /about.html, /images/..., /script.js, etc.
+app.use(express.static(rootPath));
 
-// New Authentication Routes
-app.get('/signup', (req, res) => { res.sendFile(path.join(__dirname, '..', 'signup.html')); });
-app.get('/login', (req, res) => { res.sendFile(path.join(__dirname, '..', 'login.html')); });
 
-// Core App Routes
-app.get('/', (req, res) => { res.sendFile(path.join(__dirname, '..', 'index.html')); });
+// 2. CORE APP ROUTES (Only keep routes that need explicit logic/parameters)
+
+// Keep: Index redirect (e.g., /index redirects to /)
 app.get('/index', (req, res) => { res.redirect('/'); });
-app.get('/profile', (req, res) => { res.sendFile(path.join(__dirname, '..', 'profile.html')); });
-app.get('/profile/:username', (req, res) => { res.sendFile(path.join(__dirname, '..', 'profile.html')); });
-app.get('/about', (req, res) => { res.sendFile(path.join(__dirname, '..', 'about.html')); });
-app.get('/contact', (req, res) => { res.sendFile(path.join(__dirname, '..', 'contact.html')); });
-app.get('/privacy', (req, res) => { res.sendFile(path.join(__dirname, '..', 'privacy.html')); });
-app.get('/terms', (req, res) => { res.sendFile(path.join(__dirname, '..', 'terms.html')); });
-app.get('/record', (req, res) => { res.sendFile(path.join(__dirname, '..', 'record.html')); });
-app.get('/love-stories', (req, res) => { res.sendFile(path.join(__dirname, '..', 'love-stories.html')); });
 
-// REDIRECT .html URLs TO CLEAN URLs
-app.get('/*.html', (req, res) => { const cleanPath = req.path.replace(/\.html$/, ''); res.redirect(301, cleanPath); });
+// Keep: Profile with username parameter (requires serving the same HTML file)
+// NOTE: We change res.sendFile to use the robust rootPath
+app.get('/profile/:username', (req, res) => { res.sendFile(path.join(rootPath, 'profile.html')); });
 
 
-// 404 CATCH-ALL ROUTE (Corrected path for 404.html confirmed)
+// REDIRECT .html URLs TO CLEAN URLs (Keep this, as it is special logic)
+app.get('/*.html', (req, res) => { 
+    const cleanPath = req.path.replace(/\.html$/, ''); 
+    // Do not redirect if the clean path is just '/', as express.static handles that
+    if (cleanPath === '') return res.redirect(301, '/'); 
+    res.redirect(301, cleanPath); 
+});
+
+
+// 404 CATCH-ALL ROUTE
 app.use((req, res) => {
   if (req.path.startsWith('/api/')) {
     return res.status(404).json({ error: 'API route not found' });
   }
-  res.status(404).sendFile(path.join(__dirname, '..', '404.html')); 
+  // Use rootPath to send the 404.html file
+  res.status(404).sendFile(path.join(rootPath, '404.html')); 
 });
 
 // ========================
@@ -612,7 +619,7 @@ const startServer = async () => {
     
     if (dbConnected) {
       
-      // ✅ NEW: Initialize PG SESSION STORE HERE, AFTER 'pool' IS READY
+      // ✅ PG SESSION STORE INITIALIZATION
       const PGStore = connectPgSimple(session);
       const sessionStore = new PGStore({
           pool: pool, 
@@ -621,22 +628,20 @@ const startServer = async () => {
           ttl: 24 * 60 * 60,
       });
 
-      // ✅ NEW: THE CORRECT EXPRESS SESSION MIDDLEWARE USING PG STORE
+      // ✅ EXPRESS SESSION MIDDLEWARE
       app.use(session({
-          store: sessionStore, // <-- Persistent store is now used
+          store: sessionStore, 
           secret: process.env.SESSION_SECRET || '38v7n5Q@k9Lp!zG2x&R4tY0uA1eB6cI$o9mH8jJ0sK7wD6fE5', 
           resave: false,
           saveUninitialized: false,
           cookie: {
-              // SameSite='none' requires Secure=true. We use NODE_ENV check for safety.
               secure: process.env.NODE_ENV === 'production' ? true : false,
               sameSite: 'none', 
               httpOnly: true,
               maxAge: 1000 * 60 * 60 * 24 // 24 hours
           }
       }));
-      // END PG SESSION FIX
-
+      
       await createTables();
       await createUserTables();
     } else {
