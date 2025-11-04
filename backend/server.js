@@ -12,7 +12,13 @@ import connectPgSimple from 'connect-pg-simple';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-dotenv.config();
+// Load .env only in local environment
+if (process.env.NODE_ENV !== 'production') {
+  const envPath = path.resolve(__dirname, '.env');
+  console.log(`🧩 Loading local .env from: ${envPath}`);
+  dotenv.config({ path: envPath });
+}
+
 const { Pool } = pkg;
 const app = express();
 
@@ -28,11 +34,19 @@ app.use(express.json({ limit: '10mb' }));
 
 const initializeDatabaseConnection = async () => {
   try {
-    if (!process.env.DATABASE_URL) {
-      throw new Error('DATABASE_URL environment variable is not set');
-    }
+    const dbURL = process.env.DATABASE_URL || process.env.POSTGRES_URL || process.env.PG_URL;
+
+if (!dbURL) {
+  throw new Error('No database connection URL found in environment variables');
+}
 
     console.log('🔗 Connecting to PostgreSQL database...');
+
+    pool = new Pool({
+  connectionString: dbURL,
+  ssl: { rejectUnauthorized: false },
+});
+
     
     // Initialize the global pool variable
     pool = new Pool({
@@ -566,18 +580,15 @@ app.get('/api/stories/:id/comments', async (req, res) => {
 // SIMPLE STATIC FILE SERVING
 // ========================
 
-// Serve static files from root directory
-app.use(express.static(path.join(__dirname, '..'), {
-  index: 'index.html'
-}));
+/// Serve static frontend files from the parent directory
+app.use(express.static(path.join(__dirname, '..')));
 
-// Catch-all for non-API routes - serve index.html for SPA
+// Handle non-API routes by serving index.html
 app.get('*', (req, res, next) => {
-  if (req.path.startsWith('/api/')) {
-    return next(); // Let API routes handle 404
-  }
+  if (req.path.startsWith('/api/')) return next();
   res.sendFile(path.join(__dirname, '..', 'index.html'));
 });
+
 
 // ========================
 // SERVER INITIALIZATION
