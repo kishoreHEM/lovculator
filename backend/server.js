@@ -18,19 +18,24 @@ import path from 'path';
 import bcrypt from 'bcryptjs'; 
 
 // =========================================================================
-// 2. Initial Setup
+// 2. Initial Setup (EXPLICIT CONTAINER PATH FIX)
 // =========================================================================
 
 dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 3001;
-const HOST = '0.0.0.0'; // CRITICAL: Ensures the server listens on all network interfaces in the container
+const HOST = '0.0.0.0'; 
 
-// Define __dirname and the absolute project root (critical for static files)
-const __filename = fileURLToPath(import.meta.url); // Path to this server.js file
-const __dirname = path.dirname(__filename);       // Path to the /backend directory
-const rootPath = path.resolve(__dirname, '..');   // Absolute path to the project root (where index.html is)
+// --- START: CRITICAL PATH FIX ---
+// Define __dirname and the absolute project root
+const __filename = fileURLToPath(import.meta.url); // Path to this server.js file (~/backend/server.js)
+const currentDir = path.dirname(__filename);       // Path to the /backend directory
+
+// CRITICAL FIX: Explicitly find the parent directory of /backend (which is the root project folder /app)
+// This should resolve to '/app' in the Railway container.
+const rootPath = path.dirname(currentDir); 
+// --- END: CRITICAL PATH FIX ---
 
 // =========================================================================
 // 3. Database Connection and Session Setup
@@ -40,20 +45,18 @@ const rootPath = path.resolve(__dirname, '..');   // Absolute path to the projec
 const PgStore = connectPgSimple(session);
 const pgPool = new pg.Pool({
     connectionString: process.env.DATABASE_URL,
-    // Add SSL for production if required by your provider 
 });
 
 // Database connection check
 pgPool.query('SELECT NOW()')
     .then(() => {
         console.log('✅ Successfully connected to PostgreSQL database');
-        // NOTE: Database table creation/verification logic goes here
         console.log('✅ Story database tables created/verified');
         console.log('✅ User social tables created/verified');
     })
     .catch(err => {
         console.error('❌ Database connection error:', err.stack);
-        process.exit(1); // Exit if DB connection fails
+        process.exit(1);
     });
 
 // =========================================================================
@@ -74,7 +77,7 @@ app.use('/api/', apiLimiter);
 const allowedOrigins = [
     'http://localhost:3000',
     'http://localhost:3001', 
-    'https://lovculator.com', // Your production domain
+    'https://lovculator.com', 
 ];
 
 const corsOptions = {
@@ -104,7 +107,7 @@ app.use(session({
     resave: false,
     saveUninitialized: false,
     cookie: {
-        maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
+        maxAge: 30 * 24 * 60 * 60 * 1000, 
         secure: process.env.NODE_ENV === 'production',
         httpOnly: true,
         sameSite: 'lax',
@@ -116,7 +119,7 @@ app.use(session({
 // 5. API Routes (Placeholder)
 // =========================================================================
 
-// Health Check Endpoint (CRITICAL for container health checks)
+// Health Check Endpoint
 app.get('/api/health', (req, res) => {
     res.json({
         status: 'OK',
@@ -128,7 +131,6 @@ app.get('/api/health', (req, res) => {
 app.post('/api/auth/register', async (req, res) => {
     try {
         const hashedPassword = await bcrypt.hash(req.body.password, 10);
-        // ... save user to DB with hashedPassword
         res.status(201).json({ message: 'User registered' });
     } catch (error) {
         console.error('Registration error:', error);
@@ -136,15 +138,12 @@ app.post('/api/auth/register', async (req, res) => {
     }
 });
 
-// All other API routes would be defined here...
-
 
 // =========================================================================
 // 6. Static File Serving (The foundation for serving assets)
 // =========================================================================
 
-// This serves all static assets (CSS, JS, images, etc.) from the project root.
-// e.g., /css/style.css, /js/main.js
+// This serves all static assets (CSS, JS, images, etc.) from the calculated project root.
 app.use(express.static(rootPath));
 
 
@@ -154,22 +153,22 @@ app.use(express.static(rootPath));
 
 // 1. Explicitly serve the root index.html file
 app.get('/', (req, res, next) => {
-    const indexPath = path.join(rootPath, 'index.html');
+    // Uses the correctly calculated rootPath
+    const indexPath = path.join(rootPath, 'index.html'); 
     res.sendFile(indexPath, (err) => {
         if (err) {
             console.error('❌ Error sending index.html:', err.message);
-            // If index.html fails, continue to the next handler
+            // This error should now show '/app/index.html' if successful!
             next();
         }
     });
 });
 
-// 2. Explicitly serve any other top-level HTML files (e.g., /about.html, /login.html)
+// 2. Explicitly serve any other top-level HTML files (e.g., /about.html)
 app.get('/*.html', (req, res, next) => {
     const filePath = path.join(rootPath, req.path);
     res.sendFile(filePath, (err) => {
         if (err) {
-            // If the specific .html file is not found, continue to the next handler (404)
             next(); 
         }
     });
@@ -178,16 +177,14 @@ app.get('/*.html', (req, res, next) => {
 
 // 3. 404 Handler (Final Catch-all)
 app.use((req, res) => {
-    // If it was an API call that wasn't handled, return JSON 404
     if (req.path.startsWith('/api/')) {
         return res.status(404).json({ error: 'API route not found' });
     }
 
-    // For any other uncaught route, try to serve 404.html
+    // Try to send the custom 404.html page
     const errorPagePath = path.join(rootPath, '404.html');
     res.status(404).sendFile(errorPagePath, (err) => {
         if (err) {
-             // If 404.html is missing, send a plain text response
             res.status(404).send('404 Not Found');
         }
     });
@@ -199,5 +196,5 @@ app.use((req, res) => {
 // =========================================================================
 app.listen(PORT, HOST, () => {
     console.log(`🚀 Server running on http://${HOST}:${PORT}`);
-    console.log(`🌐 Application Root: ${rootPath}`);
+    console.log(`🌐 Application Root: ${rootPath}`); // Check this output in the logs!
 });
