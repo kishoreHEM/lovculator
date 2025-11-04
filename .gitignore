@@ -1,6 +1,4 @@
-# Dependency directories
-/node_modules
-
-# Optional: other common files to ignore
-/dist
+node_modules/
 .env
+.DS_Store
+*.log

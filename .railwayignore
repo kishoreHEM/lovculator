@@ -1,0 +1,6 @@
+# Only ignore these, include everything else
+.git
+.gitignore
+.node_modules
+npm-debug.log
+.DS_Store

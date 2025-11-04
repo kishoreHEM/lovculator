@@ -14,7 +14,7 @@ import rateLimit from 'express-rate-limit';
 import { fileURLToPath } from 'url';
 import path from 'path';
 
-// Using bcryptjs for cloud compatibility (replace with 'bcrypt' if needed, but 'bcryptjs' is safer)
+// Using bcryptjs for cloud compatibility
 import bcrypt from 'bcryptjs'; 
 
 // =========================================================================
@@ -25,6 +25,7 @@ dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 3001;
+const HOST = '0.0.0.0'; // CRITICAL: Ensures the server listens on all network interfaces in the container
 
 // Define __dirname and the absolute project root (critical for static files)
 const __filename = fileURLToPath(import.meta.url); // Path to this server.js file
@@ -39,7 +40,7 @@ const rootPath = path.resolve(__dirname, '..');   // Absolute path to the projec
 const PgStore = connectPgSimple(session);
 const pgPool = new pg.Pool({
     connectionString: process.env.DATABASE_URL,
-    // Add SSL for production if required by your provider (Railway usually handles this via connection string)
+    // Add SSL for production if required by your provider 
 });
 
 // Database connection check
@@ -49,11 +50,6 @@ pgPool.query('SELECT NOW()')
         // NOTE: Database table creation/verification logic goes here
         console.log('✅ Story database tables created/verified');
         console.log('✅ User social tables created/verified');
-
-        // Example: Hash function check (optional but good for debugging bcryptjs)
-        // const hashTest = bcrypt.hashSync('testpassword', 10);
-        // console.log(`bcryptjs hash test successful: ${hashTest.substring(0, 20)}...`);
-
     })
     .catch(err => {
         console.error('❌ Database connection error:', err.stack);
@@ -64,13 +60,11 @@ pgPool.query('SELECT NOW()')
 // 4. Security & Middleware
 // =========================================================================
 
-// Security Headers (Recommended)
 app.use(helmet());
 
-// Rate Limiting (Protects against brute force and abuse)
 const apiLimiter = rateLimit({
-    windowMs: 15 * 60 * 1000, // 15 minutes
-    max: 100, // Limit each IP to 100 requests per windowMs
+    windowMs: 15 * 60 * 1000, 
+    max: 100, 
     standardHeaders: true,
     legacyHeaders: false,
 });
@@ -79,14 +73,12 @@ app.use('/api/', apiLimiter);
 // CORS configuration (Adjust origin as needed for production)
 const allowedOrigins = [
     'http://localhost:3000',
-    'http://localhost:3001', // Allow self-access if needed
+    'http://localhost:3001', 
     'https://lovculator.com', // Your production domain
-    // Add any other development/staging domains
 ];
 
 const corsOptions = {
     origin: (origin, callback) => {
-        // Allow requests with no origin (like mobile apps or curl requests)
         if (!origin) return callback(null, true);
         if (allowedOrigins.indexOf(origin) === -1) {
             const msg = 'The CORS policy for this site does not allow access from the specified Origin.';
@@ -95,11 +87,10 @@ const corsOptions = {
         return callback(null, true);
     },
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
-    credentials: true, // Allow cookies/sessions to be sent
+    credentials: true,
 };
 app.use(cors(corsOptions));
 
-// Body Parsers
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
@@ -107,14 +98,14 @@ app.use(express.urlencoded({ extended: true }));
 app.use(session({
     store: new PgStore({
         pool: pgPool,
-        tableName: 'session', // Make sure this table exists
+        tableName: 'session',
     }),
     secret: process.env.SESSION_SECRET || 'a-very-secret-key-that-should-be-in-.env',
     resave: false,
     saveUninitialized: false,
     cookie: {
         maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
-        secure: process.env.NODE_ENV === 'production', // Use secure cookies in production
+        secure: process.env.NODE_ENV === 'production',
         httpOnly: true,
         sameSite: 'lax',
     }
@@ -125,6 +116,7 @@ app.use(session({
 // 5. API Routes (Placeholder)
 // =========================================================================
 
+// Health Check Endpoint (CRITICAL for container health checks)
 app.get('/api/health', (req, res) => {
     res.json({
         status: 'OK',
@@ -133,7 +125,6 @@ app.get('/api/health', (req, res) => {
     });
 });
 
-// Example Auth route placeholder (where bcryptjs would be used)
 app.post('/api/auth/register', async (req, res) => {
     try {
         const hashedPassword = await bcrypt.hash(req.body.password, 10);
@@ -149,49 +140,50 @@ app.post('/api/auth/register', async (req, res) => {
 
 
 // =========================================================================
-// 6. Static File Serving (The critical fix area)
+// 6. Static File Serving (The foundation for serving assets)
 // =========================================================================
 
-// **CRITICAL FIX 1: Serve static files from the project root**
-// This serves all files (like CSS, JS bundles, images) from the parent directory (lovculator/)
+// This serves all static assets (CSS, JS, images, etc.) from the project root.
+// e.g., /css/style.css, /js/main.js
 app.use(express.static(rootPath));
 
 
 // =========================================================================
-// 7. Fallback Routes
+// 7. Fallback Routes (Custom Static HTML Routing)
 // =========================================================================
 
-// **CRITICAL FIX 2: Send index.html for all non-API GET requests**
-// This is essential for single-page applications (SPAs) like React/Vue/Svelte
-// It ensures that direct navigation (e.g., lovculator.com/login) is handled by the client-side router
-app.get('*', (req, res, next) => {
-    // If the request path is to the API, let the next middleware (404 handler) deal with it
-    if (req.path.startsWith('/api/')) {
-        return next();
-    }
-    
-    // Otherwise, send the main index.html file
+// 1. Explicitly serve the root index.html file
+app.get('/', (req, res, next) => {
     const indexPath = path.join(rootPath, 'index.html');
     res.sendFile(indexPath, (err) => {
         if (err) {
-            // Log an error if index.html itself cannot be found
             console.error('❌ Error sending index.html:', err.message);
-            // Fall back to a simple "Not Found" message if index.html is missing
-            res.status(500).send('Application not ready (index.html not found)');
+            // If index.html fails, continue to the next handler
+            next();
+        }
+    });
+});
+
+// 2. Explicitly serve any other top-level HTML files (e.g., /about.html, /login.html)
+app.get('/*.html', (req, res, next) => {
+    const filePath = path.join(rootPath, req.path);
+    res.sendFile(filePath, (err) => {
+        if (err) {
+            // If the specific .html file is not found, continue to the next handler (404)
+            next(); 
         }
     });
 });
 
 
-// **CRITICAL FIX 3: 404 Handler for API routes and unhandled static files**
-// If a request falls through to here, it means it wasn't a file or an SPA route.
+// 3. 404 Handler (Final Catch-all)
 app.use((req, res) => {
+    // If it was an API call that wasn't handled, return JSON 404
     if (req.path.startsWith('/api/')) {
         return res.status(404).json({ error: 'API route not found' });
     }
 
-    // Fallback for any other unhandled path (e.g., if index.html failed)
-    // We send a 404.html only if the file exists
+    // For any other uncaught route, try to serve 404.html
     const errorPagePath = path.join(rootPath, '404.html');
     res.status(404).sendFile(errorPagePath, (err) => {
         if (err) {
@@ -205,7 +197,7 @@ app.use((req, res) => {
 // =========================================================================
 // 8. Start Server
 // =========================================================================
-app.listen(PORT, () => {
-    console.log(`🚀 Server running on port ${PORT}`);
+app.listen(PORT, HOST, () => {
+    console.log(`🚀 Server running on http://${HOST}:${PORT}`);
     console.log(`🌐 Application Root: ${rootPath}`);
 });
