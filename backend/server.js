@@ -92,18 +92,6 @@ async function createUserTables() {
         UNIQUE(follower_id, following_id)
       )
     `);
-    
-    // Add session store table if it doesn't exist (optional, handled by connect-pg-simple)
-    await pool.query(`
-      CREATE TABLE IF NOT EXISTS session_store (
-        sid varchar NOT NULL COLLATE "default",
-        sess json NOT NULL,
-        expire timestamp(6) with time zone NOT NULL
-      )
-      WITH (OIDS=FALSE);
-      ALTER TABLE session_store ADD CONSTRAINT session_store_pkey PRIMARY KEY (sid) NOT DEFERRABLE INITIALLY IMMEDIATE;
-      CREATE INDEX IF NOT EXISTS "IDX_session_store_expire" ON session_store (expire);
-    `);
 
 
     const userCheck = await pool.query('SELECT id FROM users WHERE id = 1');
