@@ -1,20 +1,26 @@
 {
-  "name": "lovculator-backend",
+  "name": "lovculator",
   "version": "1.0.0",
-  "description": "Backend service for the Lovculator application.",
-  "main": "server.js",
-  "type": "module",
+  "description": "Love Calculator Web App",
+  "main": "index.html",
   "scripts": {
-    "start": "node server.js"
+    "build": "echo 'Static site - no build needed'",
+    "start": "npx serve ."
+  },
+  "keywords": [
+    "love",
+    "calculator",
+    "pwa"
+  ],
+  "author": "Kishore",
+  "license": "MIT",
+  "devDependencies": {
+    "serve": "^14.0.0"
   },
   "dependencies": {
-    "bcrypt": "^5.1.1",
-    "connect-pg-simple": "^9.0.1", 
-    "cors": "^2.8.5",
-    "dotenv": "^16.4.5",
-    "express": "^4.18.2",
-    "express-session": "^1.18.0",
-    "path": "^0.12.7",
-    "pg": "^8.11.3"
+    "bcrypt": "^6.0.0",
+    "canvas": "^3.2.0",
+    "connect-pg-simple": "^10.0.0",
+    "express-session": "^1.18.2"
   }
 }
