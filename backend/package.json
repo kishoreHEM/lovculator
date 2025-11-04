@@ -1,3 +1,4 @@
+
 {
   "name": "lovculator-backend",
   "version": "1.0.0",
@@ -20,12 +21,5 @@
   },
   "devDependencies": {
     "nodemon": "^3.0.1"
-  },
-  "keywords": [
-    "api",
-    "backend",
-    "love-calculator"
-  ],
-  "author": "Kishore",
-  "license": "MIT"
+  }
 }
