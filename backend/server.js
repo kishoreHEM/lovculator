@@ -608,41 +608,37 @@ app.get('/api/stories/:id/comments', async (req, res) => {
 });
 
 // ========================
-// STATIC FILE SERVING / CATCH-ALL ROUTES
+// API ROUTES ONLY - NO HTML SERVING
 // ========================
 
-// 1. PRIMARY STATIC FILE SERVER (Must be placed after API routes)
-console.log('📁 Serving static files from:', rootPath);
-app.use(express.static(rootPath, {
-  index: false,
-  dotfiles: 'allow'
-}));
-
-// 2. CORE APP ROUTES (Only keep routes that need explicit logic/parameters)
-
-// Keep: Index redirect (e.g., /index redirects to /)
-app.get('/index', (req, res) => { res.redirect('/'); });
-
-// Keep: Profile with username parameter (requires serving the same HTML file)
-app.get('/profile/:username', (req, res) => { 
-  res.sendFile(path.join(rootPath, 'profile.html')); 
+// Health check for root
+app.get('/', (req, res) => {
+  res.json({ 
+    message: 'Lovculator Backend API is running',
+    status: 'healthy',
+    database: 'connected',
+    frontend: 'React app should be deployed separately',
+    api_endpoints: {
+      auth: '/api/auth/*',
+      users: '/api/users/*', 
+      stories: '/api/stories/*',
+      health: '/api/health'
+    }
+  });
 });
 
-// REDIRECT .html URLs TO CLEAN URLs (Keep this, as it is special logic)
-app.get('/*.html', (req, res) => { 
-    const cleanPath = req.path.replace(/\.html$/, ''); 
-    // Do not redirect if the clean path is just '/', as express.static handles that
-    if (cleanPath === '') return res.redirect(301, '/'); 
-    res.redirect(301, cleanPath); 
+// API 404 handler
+app.use('/api/*', (req, res) => {
+  res.status(404).json({ error: 'API route not found' });
 });
 
-// 404 CATCH-ALL ROUTE
-app.use((req, res) => {
-  if (req.path.startsWith('/api/')) {
-    return res.status(404).json({ error: 'API route not found' });
-  }
-  // Use rootPath to send the 404.html file
-  res.status(404).sendFile(path.resolve(rootPath, '404.html')); 
+// Catch-all for non-API routes
+app.use('*', (req, res) => {
+  res.status(404).json({ 
+    error: 'Route not found',
+    message: 'This is an API server. Use /api routes for functionality.',
+    available_routes: ['/api/health', '/api/auth/*', '/api/users/*', '/api/stories/*']
+  });
 });
 
 // ========================
