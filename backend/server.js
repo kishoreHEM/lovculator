@@ -204,7 +204,8 @@ app.post('/api/auth/logout', (req, res) => {
 // ========================
 
 // Define the root directory of the frontend files
-const FRONTEND_ROOT = path.resolve(__dirname, '..');
+const FRONTEND_ROOT = path.resolve(__dirname, 'public');
+
 
 // Serve frontend assets (js, css, images, etc.)
 app.use(express.static(FRONTEND_ROOT));
