@@ -57,7 +57,7 @@ router.post("/login", async (req, res) => {
 
     // ✅ FIX: Explicitly selecting 'password' to prevent bcrypt crash
     const result = await pool.query(
-      "SELECT id, username, email, password FROM users WHERE email = $1",
+      "SELECT id, username, email, password_hash AS password FROM users WHERE email = $1",
       [email]
     );
     const user = result.rows[0];
