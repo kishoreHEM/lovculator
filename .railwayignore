@@ -1,4 +1,4 @@
-# Ignore only unnecessary files
+# ✅ Correct .railwayignore
 .git
 .gitignore
 node_modules

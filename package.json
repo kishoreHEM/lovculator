@@ -2,9 +2,9 @@
   "name": "lovculator",
   "version": "1.0.0",
   "scripts": {
-    "start": "node backend/server.js",
-    "postinstall": "mkdir -p /app/frontend && cp -r frontend/* /app/frontend || true"
-  },
+  "start": "node backend/server.js",
+  "verify": "node verify_railway_files.mjs"
+},
   "engines": {
     "node": "18.x"
   },
