@@ -29,10 +29,11 @@ router.post("/signup", async (req, res) => {
 
     const hashedPassword = await bcrypt.hash(password, 10);
 
+    // Change 'password' to your actual column name, e.g., 'hashed_password'
     const result = await pool.query(
-      "INSERT INTO users (username, email, password) VALUES ($1, $2, $3) RETURNING id, username, email",
-      [username, email, hashedPassword]
-    );
+      "SELECT id, username, email, hashed_password AS password FROM users WHERE email = $1",
+  [email]
+);
 
     const newUser = result.rows[0];
     req.session.user = newUser;
