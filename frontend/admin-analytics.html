@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Admin Analytics - Lovculator</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <link rel="stylesheet" href="/css/style.css" />
+  <style>
+    body {
+      max-width: 800px;
+      margin: 30px auto;
+      background: #fff;
+      padding: 20px;
+      border-radius: 12px;
+      box-shadow: 0 0 15px rgba(0,0,0,0.1);
+      font-family: Arial, sans-serif;
+    }
+    canvas { margin-top: 30px; }
+  </style>
+</head>
+<body>
+  <h2>📊 Lovculator Analytics Dashboard</h2>
+  <p>Monitor your visitors in real-time 🚀</p>
+
+  <div>
+    <h3>Most Visited Pages</h3>
+    <canvas id="pageChart" width="400" height="200"></canvas>
+  </div>
+
+  <div>
+    <h3>Recent Visits</h3>
+    <ul id="recentVisits"></ul>
+  </div>
+
+  <script>
+    const API_BASE = window.location.hostname.includes("localhost")
+      ? "http://localhost:3001/api/analytics"
+      : "https://lovculator.com/api/analytics";
+
+    async function loadAnalytics() {
+      const stats = await fetch(`${API_BASE}/stats`).then(r => r.json());
+      const recent = await fetch(`${API_BASE}/recent`).then(r => r.json());
+
+      // 📊 Chart.js Bar Chart
+      const ctx = document.getElementById("pageChart");
+      new Chart(ctx, {
+        type: "bar",
+        data: {
+          labels: stats.map(s => s.path),
+          datasets: [{
+            label: "Total Visits",
+            data: stats.map(s => s.total_visits),
+            backgroundColor: "#ff4b8d",
+          }]
+        },
+        options: {
+          scales: { y: { beginAtZero: true } }
+        }
+      });
+
+      // 🕒 Recent Visits
+      const list = document.getElementById("recentVisits");
+      recent.forEach(v => {
+        const li = document.createElement("li");
+        li.textContent = `${v.path} • ${v.visit_time.split("T")[0]} • ${v.ip_address}`;
+        list.appendChild(li);
+      });
+    }
+
+    loadAnalytics();
+  </script>
+</body>
+</html>

@@ -13,6 +13,8 @@ import fs from "fs";
 import { fileURLToPath } from "url";
 import compression from "compression";
 import helmet from "helmet";
+import analyticsRoutesFactory from "./routes/analytics.js";
+
 
 // ✅ Environment Setup
 dotenv.config();
@@ -105,9 +107,12 @@ import authRoutes from "./routes/auth.js";
 import userRoutes from "./routes/users.js";
 import storiesRoutes from "./routes/stories.js";
 
+
 app.use("/api/auth", authRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/stories", storiesRoutes);
+app.use("/api/analytics", analyticsRoutesFactory(pool));
+
 
 // ✅ 404 for unknown API endpoints
 app.use("/api/*", (req, res) => {
@@ -159,6 +164,7 @@ const validPages = [
   "privacy",
   "terms",
   "record",
+  "admin-analytics"
 ];
 
 validPages.forEach((page) => {
