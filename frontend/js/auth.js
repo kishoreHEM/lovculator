@@ -55,7 +55,7 @@ style.textContent = `
 document.head.appendChild(style);
 
 // =======================================
-// 🚀 AUTH MANAGER CLASS
+// 🚀 AUTH MANAGER CLASS (Single, Unified Declaration)
 // =======================================
 class AuthManager {
   static async signup(username, email, password) {
@@ -93,16 +93,38 @@ class AuthManager {
     });
     return safeParseResponse(res);
   }
+  
+  // --- NEW: Forgot Password Method ---
+  static async forgotPassword(email) {
+    const res = await fetch(`${API_BASE}/forgot-password`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
+    });
+    return safeParseResponse(res).then((data) => ({ res, data }));
+  }
+
+  // --- NEW: Reset Password Method ---
+  static async resetPassword(token, newPassword) {
+    const res = await fetch(`${API_BASE}/reset-password`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ token, newPassword }),
+    });
+    return safeParseResponse(res).then((data) => ({ res, data }));
+  }
 }
 
 window.AuthManager = AuthManager;
 
 // =======================================
-// 🧠 EVENT HANDLERS (Signup + Login)
+// 🧠 EVENT HANDLERS (All Unified)
 // =======================================
 document.addEventListener("DOMContentLoaded", () => {
   const signupForm = document.getElementById("signup-form");
   const loginForm = document.getElementById("login-form");
+  const forgotPasswordForm = document.getElementById("forgot-password-form"); // NEW
+  const resetPasswordForm = document.getElementById("reset-password-form");   // NEW
 
   // --- SIGNUP HANDLER ---
   if (signupForm) {
@@ -165,5 +187,62 @@ document.addEventListener("DOMContentLoaded", () => {
         toggleLoading(btn, false);
       }
     });
+  }
+  
+  // --- NEW: FORGOT PASSWORD HANDLER ---
+  if (forgotPasswordForm) {
+      forgotPasswordForm.addEventListener("submit", async (e) => {
+          e.preventDefault();
+          const btn = forgotPasswordForm.querySelector(".btn-submit");
+          const email = document.getElementById("email").value.trim();
+
+          toggleLoading(btn, true, "Sending...");
+
+          try {
+              // Crucial: Server handles the 'email exists' check; client just shows success message
+              await AuthManager.forgotPassword(email); 
+              showMessage(
+                  "✅ If that email exists, a password reset link has been sent!", 
+                  "success"
+              );
+              toggleLoading(btn, false);
+          } catch (err) {
+              console.error("Forgot Password error:", err);
+              showMessage("🚫 Network error or server unreachable.", "error");
+              toggleLoading(btn, false);
+          }
+      });
+  }
+
+  // --- NEW: RESET PASSWORD HANDLER ---
+  if (resetPasswordForm) {
+      resetPasswordForm.addEventListener("submit", async (e) => {
+          e.preventDefault();
+          const btn = resetPasswordForm.querySelector(".btn-submit");
+          const token = document.getElementById("reset-token").value;
+          const newPassword = document.getElementById("new-password").value;
+          const confirmPassword = document.getElementById("confirm-password").value;
+
+          if (newPassword.length < 6) return showMessage("⚠️ Password must be at least 6 characters.", "error");
+          if (newPassword !== confirmPassword) return showMessage("⚠️ Passwords do not match.", "error");
+          
+          toggleLoading(btn, true, "Resetting...");
+
+          try {
+              const { res, data } = await AuthManager.resetPassword(token, newPassword);
+              if (res.ok) {
+                  showMessage("✅ Password reset successful! Redirecting to login...", "success");
+                  setTimeout(() => (window.location.href = "/login.html"), 1500);
+              } else {
+                  // This is where invalid/expired token errors show up
+                  showMessage(data.error || "❌ Reset failed. The link may have expired.", "error");
+                  toggleLoading(btn, false);
+              }
+          } catch (err) {
+              console.error("Reset Password error:", err);
+              showMessage("🚫 Network error or server unreachable.", "error");
+              toggleLoading(btn, false);
+          }
+      });
   }
 });
