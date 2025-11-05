@@ -34,6 +34,23 @@ router.get("/", async (req, res) => {
   }
 });
 
+router.get("/", async (req, res) => {
+  try {
+    const userId = req.query.userId;
+    const query = userId
+      ? "SELECT * FROM stories WHERE user_id = $1 ORDER BY created_at DESC"
+      : "SELECT * FROM stories ORDER BY created_at DESC";
+
+    const values = userId ? [userId] : [];
+    const result = await pool.query(query, values);
+    res.json(result.rows);
+  } catch (err) {
+    console.error("❌ Fetch stories error:", err);
+    res.status(500).json({ error: "Failed to fetch stories" });
+  }
+});
+
+
 // ======================================================
 // 2️⃣ CREATE NEW STORY (Requires Auth)
 // ======================================================
