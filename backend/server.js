@@ -75,8 +75,9 @@ app.use(
       "http://localhost:3000",   // ✅ Local dev React
       "http://localhost:5173",   // ✅ Local Vite
     ],
-    credentials: true, // ✅ Allow cookies/sessions
+    credentials: true, // ✅ allow cookies
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization"],
   })
 );
 
@@ -113,7 +114,7 @@ app.use(
     cookie: {
       secure: process.env.NODE_ENV === "production", // ✅ true only in production
       httpOnly: true,
-      sameSite: process.env.NODE_ENV === "production" ? "lax" : "lax",
+      sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
       maxAge: 1000 * 60 * 60 * 24 * 7, // 7 days
     },
   })
