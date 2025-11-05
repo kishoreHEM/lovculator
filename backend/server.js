@@ -1,3 +1,4 @@
+// backend/server.js
 import express from "express";
 import cors from "cors";
 import pkg from "pg";
@@ -7,7 +8,7 @@ import { fileURLToPath } from "url";
 import session from "express-session";
 import connectPgSimple from "connect-pg-simple";
 import helmet from "helmet";
-import fs from "fs";
+import { existsSync } from "fs";
 
 dotenv.config();
 const { Pool } = pkg;
@@ -18,10 +19,11 @@ const app = express();
 const PORT = process.env.PORT || 3001;
 
 // ======================================================
-// 1️⃣ Security + Middleware
+// 🧠 Middleware
 // ======================================================
 app.use(helmet());
 app.use(express.json({ limit: "10mb" }));
+
 app.use(
   cors({
     origin:
@@ -32,19 +34,8 @@ app.use(
   })
 );
 
-// ✅ Force HTTPS in production
-if (process.env.NODE_ENV === "production") {
-  app.use((req, res, next) => {
-    if (req.headers["x-forwarded-proto"] !== "https") {
-      const secureUrl = `https://${req.headers.host}${req.url}`;
-      return res.redirect(301, secureUrl);
-    }
-    next();
-  });
-}
-
 // ======================================================
-// 2️⃣ PostgreSQL Database Connection
+// 🗄 Database Connection
 // ======================================================
 let pool;
 async function initializeDatabase() {
@@ -68,17 +59,20 @@ async function initializeDatabase() {
 }
 
 // ======================================================
-// 3️⃣ Session Store
+// 🔐 Session Store
 // ======================================================
 async function setupSession() {
   const PGStore = connectPgSimple(session);
+  const store = new PGStore({
+    pool,
+    tableName: "session_store",
+    createTableIfMissing: true,
+    ttl: 24 * 60 * 60,
+  });
+
   app.use(
     session({
-      store: new PGStore({
-        pool,
-        tableName: "session_store",
-        createTableIfMissing: true,
-      }),
+      store,
       secret: process.env.SESSION_SECRET || "dev_secret_key",
       resave: false,
       saveUninitialized: false,
@@ -86,79 +80,76 @@ async function setupSession() {
         secure: process.env.NODE_ENV === "production",
         sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
         httpOnly: true,
-        maxAge: 1000 * 60 * 60 * 24, // 1 day
+        maxAge: 1000 * 60 * 60 * 24, // 24 hours
       },
     })
   );
+
   console.log("✅ Session store configured");
 }
 
 // ======================================================
-// Dynamic imports (correct for backend/server.js location)
+// 🧩 Import Routes
 // ======================================================
-const authRoutes = (await import(path.join(__dirname, "routes/auth.js"))).default;
-const storyRoutes = (await import(path.join(__dirname, "routes/stories.js"))).default;
-const userRoutes = (await import(path.join(__dirname, "routes/users.js"))).default;
+import authRoutes from "./routes/auth.js";
+import storyRoutes from "./routes/stories.js";
+import userRoutes from "./routes/users.js";
 
 app.use("/api/auth", authRoutes);
 app.use("/api/stories", storyRoutes);
 app.use("/api/users", userRoutes);
 
-
-
 // ======================================================
-// 5️⃣ Frontend Serving (Auto-detects correct folder)
+// 🌍 Static Frontend Handling
 // ======================================================
-const possiblePaths = [
-  path.resolve("./frontend"), // dev local
-  path.join(__dirname, "frontend"), // same level as backend
-  path.join(process.cwd(), "frontend"), // cwd fallback
-  "/app/frontend", // Railway container
-];
+let FRONTEND_PATH;
 
-let FRONTEND_PATH = possiblePaths.find((p) =>
-  fs.existsSync(path.join(p, "index.html"))
-);
-
-if (!FRONTEND_PATH) {
-  console.warn("⚠️ Frontend not found in known paths, defaulting to /app/frontend");
+// Detect Railway environment
+if (existsSync("/app/frontend")) {
   FRONTEND_PATH = "/app/frontend";
+} else if (existsSync(path.resolve(__dirname, "../frontend"))) {
+  FRONTEND_PATH = path.resolve(__dirname, "../frontend");
+} else {
+  FRONTEND_PATH = "/app/frontend"; // fallback for Railway builds
+  console.warn("⚠️ Frontend not found in known paths, defaulting to /app/frontend");
 }
 
-console.log("🌍 Frontend served from:", FRONTEND_PATH);
 app.use(express.static(FRONTEND_PATH));
+console.log("🌍 Frontend served from:", FRONTEND_PATH);
 
 // ======================================================
-// 6️⃣ Clean URL Routes (No .html)
+// 🚀 Clean URL Routes (No .html in URL)
 // ======================================================
 const cleanRoutes = [
-  "/",
-  "/login",
-  "/signup",
-  "/profile",
-  "/love-stories",
-  "/about",
-  "/contact",
-  "/privacy",
-  "/terms",
+  "signup",
+  "login",
+  "profile",
+  "love-stories",
+  "record",
+  "about",
+  "contact",
+  "privacy",
+  "terms",
 ];
 
 cleanRoutes.forEach((route) => {
-  app.get(route, (req, res) => {
-    res.sendFile(path.join(FRONTEND_PATH, "index.html"));
-  });
+  app.get(`/${route}`, (req, res) =>
+    res.sendFile(path.join(FRONTEND_PATH, `${route}.html`))
+  );
 });
 
-// Fallback: serve index.html for non-API routes
-app.get("*", (req, res) => {
-  if (req.path.startsWith("/api/")) {
-    return res.status(404).json({ error: "API route not found" });
-  }
+// Root fallback (Home)
+app.get("/", (req, res) => {
   res.sendFile(path.join(FRONTEND_PATH, "index.html"));
 });
 
+// 404 fallback
+app.use((req, res) => {
+  res.status(404).sendFile(path.join(FRONTEND_PATH, "404.html"));
+});
+
 // ======================================================
-// 7️⃣ Start Server
+// 🏁 Start Server
 // ======================================================
 (async () => {
   const dbConnected = await initializeDatabase();
