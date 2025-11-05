@@ -94,15 +94,16 @@ async function setupSession() {
 }
 
 // ======================================================
-// 4️⃣ Dynamically import API Routes (ESM-safe)
+// Dynamic imports (correct for backend/server.js location)
 // ======================================================
-const authRoutes = (await import(path.join(__dirname, "backend/routes/auth.js"))).default;
-const storyRoutes = (await import(path.join(__dirname, "backend/routes/stories.js"))).default;
-const userRoutes = (await import(path.join(__dirname, "backend/routes/users.js"))).default;
+const authRoutes = (await import(path.join(__dirname, "routes/auth.js"))).default;
+const storyRoutes = (await import(path.join(__dirname, "routes/stories.js"))).default;
+const userRoutes = (await import(path.join(__dirname, "routes/users.js"))).default;
 
 app.use("/api/auth", authRoutes);
 app.use("/api/stories", storyRoutes);
 app.use("/api/users", userRoutes);
+
 
 
 // ======================================================
