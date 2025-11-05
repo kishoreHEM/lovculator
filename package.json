@@ -2,13 +2,14 @@
   "name": "lovculator",
   "version": "1.0.0",
   "scripts": {
-  "start": "node backend/server.js",
-  "verify": "node verify_railway_files.mjs"
-},
+    "start": "node backend/server.js",
+    "verify": "node verify_railway_files.mjs"
+  },
   "engines": {
     "node": "18.x"
   },
   "dependencies": {
+    "bcryptjs": "^3.0.3",
     "compression": "^1.8.1",
     "helmet": "^8.1.0"
   }

@@ -1,6 +1,6 @@
 // backend/routes/auth.js
 import express from "express";
-import bcrypt from "bcrypt";
+import bcrypt from "bcryptjs";
 import pool from "../db.js";
 
 const router = express.Router();
@@ -15,7 +15,7 @@ router.post("/register", async (req, res) => {
     if (!username || !email || !password)
       return res.status(400).json({ error: "All fields are required." });
 
-    // Check existing user
+    // Check if user already exists
     const existingUser = await pool.query(
       "SELECT * FROM users WHERE email = $1",
       [email]
@@ -23,6 +23,7 @@ router.post("/register", async (req, res) => {
     if (existingUser.rows.length > 0)
       return res.status(400).json({ error: "Email already registered." });
 
+    // Hash password securely
     const hashedPassword = await bcrypt.hash(password, 10);
 
     const result = await pool.query(
@@ -31,7 +32,9 @@ router.post("/register", async (req, res) => {
     );
 
     const newUser = result.rows[0];
-    req.session.user = newUser; // ✅ Create session immediately after signup
+
+    // ✅ Store in session
+    req.session.user = newUser;
     console.log("✅ Session created after signup:", req.session.user);
 
     res.status(201).json({ message: "Signup successful", user: newUser });
@@ -42,7 +45,7 @@ router.post("/register", async (req, res) => {
 });
 
 // ===================================================
-// 2️⃣ LOGIN (Create Session + Send Cookie)
+// 2️⃣ LOGIN
 // ===================================================
 router.post("/login", async (req, res) => {
   try {
@@ -67,10 +70,8 @@ router.post("/login", async (req, res) => {
       username: user.username,
       email: user.email,
     };
-
     console.log("✅ Session created after login:", req.session.user);
 
-    // ✅ Make sure cookie is sent to frontend
     res.status(200).json({
       message: "Login successful",
       user: req.session.user,
@@ -82,7 +83,7 @@ router.post("/login", async (req, res) => {
 });
 
 // ===================================================
-// 3️⃣ AUTH CHECK (Frontend Calls /auth/me)
+// 3️⃣ AUTH CHECK (/api/auth/me)
 // ===================================================
 router.get("/me", (req, res) => {
   if (req.session.user) {
