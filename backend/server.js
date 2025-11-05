@@ -1,4 +1,3 @@
-// backend/server.js
 import express from "express";
 import cors from "cors";
 import pkg from "pg";
@@ -10,16 +9,15 @@ import connectPgSimple from "connect-pg-simple";
 import helmet from "helmet";
 
 dotenv.config();
-
 const { Pool } = pkg;
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-
 const app = express();
 const PORT = process.env.PORT || 3001;
 
 // ======================================================
-// 1️⃣ SECURITY & BASE MIDDLEWARE
+// 1️⃣ Middleware
 // ======================================================
 app.use(helmet());
 app.use(express.json({ limit: "10mb" }));
@@ -34,10 +32,9 @@ app.use(
 );
 
 // ======================================================
-// 2️⃣ DATABASE CONNECTION
+// 2️⃣ Database Connection
 // ======================================================
 let pool;
-
 async function initializeDatabase() {
   try {
     const dbURL = process.env.DATABASE_URL;
@@ -59,7 +56,7 @@ async function initializeDatabase() {
 }
 
 // ======================================================
-// 3️⃣ SESSION STORE
+// 3️⃣ Session Store
 // ======================================================
 async function setupSession() {
   const PGStore = connectPgSimple(session);
@@ -77,7 +74,7 @@ async function setupSession() {
         secure: process.env.NODE_ENV === "production",
         sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
         httpOnly: true,
-        maxAge: 1000 * 60 * 60 * 24, // 24 hours
+        maxAge: 1000 * 60 * 60 * 24,
       },
     })
   );
@@ -85,28 +82,46 @@ async function setupSession() {
 }
 
 // ======================================================
-// 4️⃣ API ROUTES
+// 4️⃣ Routes
 // ======================================================
-import authRoutes from "./routes/auth.js";
-import storyRoutes from "./routes/stories.js";
-import userRoutes from "./routes/users.js";
+import authRoutes from "./backend/routes/auth.js";
+import storyRoutes from "./backend/routes/stories.js";
+import userRoutes from "./backend/routes/users.js";
 
 app.use("/api/auth", authRoutes);
 app.use("/api/stories", storyRoutes);
 app.use("/api/users", userRoutes);
 
 // ======================================================
-// 5️⃣ FRONTEND ROUTING (Static + Clean URLs)
+// 5️⃣ Frontend Static Serving (Auto-detect path)
 // ======================================================
-const FRONTEND_PATH = path.join(process.cwd(), "frontend");
+const possiblePaths = [
+  path.resolve("./frontend"), // local
+  path.resolve("frontend"), // fallback
+  path.join(__dirname, "frontend"), // relative to backend
+  path.join(process.cwd(), "frontend"), // working dir
+  "/app/frontend", // Railway container path
+];
 
+let FRONTEND_PATH = possiblePaths.find((p) => {
+  try {
+    return require("fs").existsSync(path.join(p, "index.html"));
+  } catch {
+    return false;
+  }
+});
 
-// ✅ Serve static assets (CSS, JS, images)
+if (!FRONTEND_PATH) {
+  console.warn("⚠️ Frontend not found in known paths, defaulting to /app/frontend");
+  FRONTEND_PATH = "/app/frontend";
+}
+
+console.log("🌍 Frontend served from:", FRONTEND_PATH);
 app.use(express.static(FRONTEND_PATH));
 
-// ✅ Clean URL redirects for your frontend pages
-const frontendRoutes = [
-  "/", // homepage
+// Clean URL Routing (no .html)
+const cleanRoutes = [
+  "/",
   "/login",
   "/signup",
   "/profile",
@@ -115,17 +130,14 @@ const frontendRoutes = [
   "/contact",
   "/privacy",
   "/terms",
-  "/record",
 ];
-
-// Serve the correct HTML page for each route
-frontendRoutes.forEach((route) => {
+cleanRoutes.forEach((route) => {
   app.get(route, (req, res) => {
-    res.sendFile(path.join(FRONTEND_PATH, `${route === "/" ? "index" : route}.html`));
+    res.sendFile(path.join(FRONTEND_PATH, "index.html"));
   });
 });
 
-// ✅ Catch-all fallback (for unknown routes)
+// Fallback: serve index.html for unknown non-API routes
 app.get("*", (req, res) => {
   if (req.path.startsWith("/api/")) {
     return res.status(404).json({ error: "API route not found" });
@@ -134,7 +146,7 @@ app.get("*", (req, res) => {
 });
 
 // ======================================================
-// 6️⃣ SERVER STARTUP
+// 6️⃣ Startup
 // ======================================================
 (async () => {
   const dbConnected = await initializeDatabase();
