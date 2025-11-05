@@ -61,9 +61,10 @@ class AnonUserTracker {
 // ==============================================
 class LoveStoriesAPI {
     constructor(anonTracker) {
-        this.apiBase = window.location.hostname === 'localhost' 
-            ? 'http://localhost:3001/api' 
-            : '/api';
+        // ✅ Always resolve full production domain
+    this.apiBase = window.location.hostname === 'localhost' 
+    ? 'http://localhost:3001/api'
+    : 'https://lovculator.com/api';
         
         this.timeout = 10000; // 10 second timeout
         this.anonTracker = anonTracker;
@@ -444,7 +445,12 @@ class LoveStories {
 
     async toggleLike(storyId) {
         try {
-            const result = await this.api.toggleLike(storyId);
+            const result = await this.api.toggleLike(storyId).catch(err => {
+        console.error('❌ Like API failed:', err);
+        this.notifications.showError('Unable to like story. Please try again.');
+        return null;
+        });
+    if (!result) return;
             
             // Find the story in the main state array
             const storyIndex = this.stories.findIndex(s => s.id === storyId);
@@ -977,6 +983,18 @@ function initializeLoveStories() {
         console.error('❌ Error initializing Lovculator system:', error);
     }
 }
+
+// ✅ Base API URL for all fetch calls
+const API_BASE = window.location.hostname === 'localhost'   
+  ? 'http://localhost:3001/api'
+  : 'https://lovculator.com/api';
+
+  // Fix mixed-content or SSL redirect issues
+if (window.location.protocol === 'https:' && API_BASE.startsWith('http:')) {
+  console.warn('⚠️ Switching API base to HTTPS');
+  API_BASE = API_BASE.replace('http:', 'https:');
+}
+
 
 // Initialize when DOM is ready
 if (document.readyState === 'loading') {

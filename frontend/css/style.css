@@ -4926,5 +4926,17 @@ body {
     .cta-btn.secondary:hover {
         background: #464646;
     }
-    
+
+    .notification.success { background: linear-gradient(135deg, #4CAF50, #2E7D32); }
+    .notification.error { background: linear-gradient(135deg, #ff6b6b, #d32f2f); }
+
+    .nav-menu.open {
+  right: 0; /* Slide in for mobile menu */
+}
+
+.mobile-menu-overlay.active {
+  display: block;
+  opacity: 0.6;
+}
+
 }

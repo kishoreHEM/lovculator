@@ -7,7 +7,6 @@
     <link rel="stylesheet" href="/css/style.css">
     <link rel="icon" href="/Images/favicon.ico" sizes="any">
     <style>
-        /* Basic styles for the auth form (add this to your style.css or keep here for testing) */
         .auth-container {
             max-width: 400px;
             margin: 80px auto;
@@ -67,21 +66,22 @@
         <main>
             <div class="auth-container">
                 <h2>💖 Create Your Lovculator Account</h2>
-                <form id="signup-form">
-                    
+
+                <!-- ✅ Use the correct ID that matches auth.js -->
+                <form id="signupForm">
                     <div class="form-group">
-                        <label for="username">Username</label>
-                        <input type="text" id="username" name="username" required>
+                        <label for="signupUsername">Username</label>
+                        <input type="text" id="signupUsername" name="username" required>
                     </div>
                     
                     <div class="form-group">
-                        <label for="email">Email</label>
-                        <input type="email" id="email" name="email" required>
+                        <label for="signupEmail">Email</label>
+                        <input type="email" id="signupEmail" name="email" required>
                     </div>
 
                     <div class="form-group">
-                        <label for="password">Password</label>
-                        <input type="password" id="password" name="password" required>
+                        <label for="signupPassword">Password</label>
+                        <input type="password" id="signupPassword" name="password" required>
                     </div>
                     
                     <p id="error-message" style="color: red; margin-bottom: 15px;"></p>
@@ -90,12 +90,12 @@
                 </form>
                 
                 <div class="link-text">
-                    Already have an account? <a href="/login">Log In</a>
+                    Already have an account? <a href="/login.html">Log In</a>
                 </div>
             </div>
         </main>
     </div>
 
-    <script src="js/auth.js"></script>
+    <script src="/js/auth.js"></script>
 </body>
 </html>
