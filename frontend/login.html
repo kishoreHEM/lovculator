@@ -3,9 +3,13 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Log In - Lovculator</title>
-  <link rel="stylesheet" href="/css/style.css" />
+  <title>Login - Lovculator 💖</title>
+
+  <meta name="description" content="Login to Lovculator and access your love stories, records, and profile." />
+  <meta name="referrer" content="no-referrer" />
   <link rel="icon" href="/Images/favicon.ico" sizes="any" />
+  <link rel="stylesheet" href="/css/style.css" />
+
   <style>
     .auth-container {
       max-width: 400px;
@@ -13,7 +17,7 @@
       padding: 30px;
       background: #fff;
       border-radius: 12px;
-      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+      box-shadow: 0 4px 15px rgba(0,0,0,0.1);
       text-align: center;
     }
     .auth-container h2 {
@@ -61,22 +65,23 @@
     }
   </style>
 </head>
+
 <body>
   <div class="container">
     <main>
       <div class="auth-container">
-        <h2>❤️ Welcome Back! Log In</h2>
+        <h2>💖 Welcome Back to Lovculator</h2>
 
-        <!-- ✅ Matching IDs for auth.js -->
-        <form id="loginForm">
+        <!-- ✅ Secure login form (JS handles submit) -->
+        <form id="login-form" method="POST" onsubmit="return false;">
           <div class="form-group">
-            <label for="loginUsername">Username</label>
-            <input type="text" id="loginUsername" name="username" required />
+            <label for="username-or-email">Username or Email</label>
+            <input type="text" id="username-or-email" name="username" required />
           </div>
 
           <div class="form-group">
-            <label for="loginPassword">Password</label>
-            <input type="password" id="loginPassword" name="password" required />
+            <label for="password">Password</label>
+            <input type="password" id="password" name="password" required />
           </div>
 
           <p id="error-message" style="color: red; margin-bottom: 15px;"></p>
@@ -85,12 +90,14 @@
         </form>
 
         <div class="link-text">
-          Don't have an account? <a href="/signup.html">Sign Up</a>
+          Don't have an account?
+          <a href="/signup.html">Create Account</a>
         </div>
       </div>
     </main>
   </div>
 
+  <!-- ✅ Load only auth.js -->
   <script src="/js/auth.js"></script>
 </body>
 </html>
