@@ -1,25 +1,27 @@
-// backend/server.js
+// ======================================================
+// 🌐 Lovculator Server.js (Railway-Ready + Clean URLs)
+// ======================================================
 import express from "express";
 import cors from "cors";
 import pkg from "pg";
 import dotenv from "dotenv";
-import path from "path";
-import { fileURLToPath } from "url";
+import helmet from "helmet";
 import session from "express-session";
 import connectPgSimple from "connect-pg-simple";
-import helmet from "helmet";
 import fs from "fs";
+import path from "path";
+import { fileURLToPath } from "url";
 
 dotenv.config();
-const { Pool } = pkg;
 
+const { Pool } = pkg;
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const app = express();
 const PORT = process.env.PORT || 3001;
 
 // ======================================================
-// 🧠 Middleware
+// 🧩 Middleware
 // ======================================================
 app.use(helmet());
 app.use(express.json({ limit: "10mb" }));
@@ -35,9 +37,10 @@ app.use(
 );
 
 // ======================================================
-// 🗄 Database Connection
+// 🗄️ Database Connection
 // ======================================================
 let pool;
+
 async function initializeDatabase() {
   try {
     const dbURL = process.env.DATABASE_URL;
@@ -46,6 +49,11 @@ async function initializeDatabase() {
     pool = new Pool({
       connectionString: dbURL,
       ssl: { rejectUnauthorized: false },
+    });
+
+    pool.on("error", (err) => {
+      console.error("Unexpected DB error:", err);
+      process.exit(-1);
     });
 
     const client = await pool.connect();
@@ -59,7 +67,7 @@ async function initializeDatabase() {
 }
 
 // ======================================================
-// 🔐 Session Store
+// 💾 Session Configuration
 // ======================================================
 async function setupSession() {
   const PGStore = connectPgSimple(session);
@@ -89,7 +97,7 @@ async function setupSession() {
 }
 
 // ======================================================
-// 🧩 Import Routes
+// 📦 Import API Routes
 // ======================================================
 import authRoutes from "./routes/auth.js";
 import storyRoutes from "./routes/stories.js";
@@ -100,74 +108,71 @@ app.use("/api/stories", storyRoutes);
 app.use("/api/users", userRoutes);
 
 // ======================================================
-// 🌍 Static Frontend Handling (Fixed for Railway + Local)
+// 🎨 Frontend Static Path (with Railway Diagnostics)
 // ======================================================
-let FRONTEND_PATH;
+let frontendPath = path.resolve(__dirname, "../frontend");
 
-// Try local dev path (../frontend relative to /backend)
-const LOCAL_FRONTEND_PATH = path.resolve(__dirname, "../frontend");
-
-// Try Railway default deployment path
-const RAILWAY_FRONTEND_PATH = "/app/frontend";
-
-if (fs.existsSync(LOCAL_FRONTEND_PATH)) {
-  FRONTEND_PATH = LOCAL_FRONTEND_PATH;
-  console.log("🌍 Using local frontend path:", FRONTEND_PATH);
-} else if (fs.existsSync(RAILWAY_FRONTEND_PATH)) {
-  FRONTEND_PATH = RAILWAY_FRONTEND_PATH;
-  console.log("🌍 Using Railway frontend path:", FRONTEND_PATH);
-} else {
-  FRONTEND_PATH = LOCAL_FRONTEND_PATH;
-  console.warn(
-    "⚠️ No frontend folder found in expected paths. " +
-    "Make sure 'frontend/' exists and was committed to your repository."
-  );
+if (!fs.existsSync(frontendPath)) {
+  console.warn("⚠️ No frontend folder found in expected paths. Make sure 'frontend/' exists and was committed to your repository.");
+  frontendPath = "/app/frontend";
 }
 
-app.use(express.static(FRONTEND_PATH));
+console.log(`🌍 Frontend served from: ${frontendPath}`);
 
-// ✅ Check if index.html exists
-const indexPath = path.join(FRONTEND_PATH, "index.html");
-if (fs.existsSync(indexPath)) {
-  console.log("✅ index.html found successfully!");
-} else {
-  console.warn(`🚨 WARNING: index.html not found at ${indexPath}`);
+// 🧭 Diagnostic Check
+try {
+  const files = fs.readdirSync(frontendPath);
+  console.log("📁 Frontend folder contents:", files);
+  if (files.includes("index.html")) {
+    console.log("✅ index.html found successfully!");
+  } else {
+    console.warn("🚨 WARNING: index.html not found inside frontend path!");
+  }
+} catch (err) {
+  console.error("❌ Could not read frontend folder:", err.message);
 }
 
+app.use(express.static(frontendPath));
 
 // ======================================================
-// 🚀 Clean URL Routes (No .html in URL)
+// 🚦 Clean URL Route Handling
 // ======================================================
 const cleanRoutes = [
-  "signup",
-  "login",
-  "profile",
-  "love-stories",
-  "record",
-  "about",
-  "contact",
-  "privacy",
-  "terms",
+  "/", 
+  "/login",
+  "/signup",
+  "/love-stories",
+  "/profile",
+  "/contact",
+  "/about",
+  "/privacy",
+  "/terms",
+  "/record"
 ];
 
 cleanRoutes.forEach((route) => {
-  app.get(`/${route}`, (req, res) =>
-    res.sendFile(path.join(FRONTEND_PATH, `${route}.html`))
-  );
+  app.get(route, (req, res) => {
+    res.sendFile(path.join(frontendPath, "index.html"), (err) => {
+      if (err) {
+        console.error("⚠️ Error serving clean route:", err);
+        res.sendFile(path.join(frontendPath, "404.html"));
+      }
+    });
+  });
 });
 
-// Root route
-app.get("/", (req, res) => {
-  res.sendFile(path.join(FRONTEND_PATH, "index.html"));
-});
-
-// 404 fallback
-app.use((req, res) => {
-  res.status(404).sendFile(path.join(FRONTEND_PATH, "404.html"));
+// Catch-all route for frontend
+app.get("*", (req, res) => {
+  if (req.path.startsWith("/api/")) {
+    return res.status(404).json({ error: "API route not found" });
+  }
+  res.sendFile(path.join(frontendPath, "index.html"), (err) => {
+    if (err) res.sendFile(path.join(frontendPath, "404.html"));
+  });
 });
 
 // ======================================================
-// 🏁 Start Server
+// 🚀 Server Startup
 // ======================================================
 (async () => {
   const dbConnected = await initializeDatabase();
@@ -176,6 +181,6 @@ app.use((req, res) => {
   app.listen(PORT, () => {
     console.log(`🚀 Server running on port ${PORT}`);
     console.log(`📊 Database: ${dbConnected ? "Connected" : "Not connected"}`);
-    console.log(`🌍 Frontend served from: ${FRONTEND_PATH}`);
+    console.log(`🌍 Frontend served from: ${frontendPath}`);
   });
 })();
