@@ -100,31 +100,40 @@ app.use("/api/stories", storyRoutes);
 app.use("/api/users", userRoutes);
 
 // ======================================================
-// 🌍 Static Frontend Handling
+// 🌍 Static Frontend Handling (Fixed for Railway + Local)
 // ======================================================
 let FRONTEND_PATH;
 
-// Detect best available frontend path (local or Railway)
-if (fs.existsSync("/app/frontend")) {
-  FRONTEND_PATH = "/app/frontend";
-} else if (fs.existsSync(path.resolve(__dirname, "../frontend"))) {
-  FRONTEND_PATH = path.resolve(__dirname, "../frontend");
+// Try local dev path (../frontend relative to /backend)
+const LOCAL_FRONTEND_PATH = path.resolve(__dirname, "../frontend");
+
+// Try Railway default deployment path
+const RAILWAY_FRONTEND_PATH = "/app/frontend";
+
+if (fs.existsSync(LOCAL_FRONTEND_PATH)) {
+  FRONTEND_PATH = LOCAL_FRONTEND_PATH;
+  console.log("🌍 Using local frontend path:", FRONTEND_PATH);
+} else if (fs.existsSync(RAILWAY_FRONTEND_PATH)) {
+  FRONTEND_PATH = RAILWAY_FRONTEND_PATH;
+  console.log("🌍 Using Railway frontend path:", FRONTEND_PATH);
 } else {
-  FRONTEND_PATH = "/app/frontend";
-  console.warn("⚠️ Frontend not found in known paths, defaulting to /app/frontend");
+  FRONTEND_PATH = LOCAL_FRONTEND_PATH;
+  console.warn(
+    "⚠️ No frontend folder found in expected paths. " +
+    "Make sure 'frontend/' exists and was committed to your repository."
+  );
 }
 
 app.use(express.static(FRONTEND_PATH));
-console.log("🌍 Frontend served from:", FRONTEND_PATH);
 
-// ✅ Safety check for index.html presence
+// ✅ Check if index.html exists
 const indexPath = path.join(FRONTEND_PATH, "index.html");
-if (!fs.existsSync(indexPath)) {
-  console.warn(
-    "🚨 WARNING: index.html not found in frontend path! " +
-    "Check your Railway deployment or .railwayignore file. Expected at: " + indexPath
-  );
+if (fs.existsSync(indexPath)) {
+  console.log("✅ index.html found successfully!");
+} else {
+  console.warn(`🚨 WARNING: index.html not found at ${indexPath}`);
 }
+
 
 // ======================================================
 // 🚀 Clean URL Routes (No .html in URL)
