@@ -8,7 +8,7 @@ import { fileURLToPath } from "url";
 import session from "express-session";
 import connectPgSimple from "connect-pg-simple";
 import helmet from "helmet";
-import { existsSync } from "fs";
+import fs from "fs";
 
 dotenv.config();
 const { Pool } = pkg;
@@ -104,18 +104,27 @@ app.use("/api/users", userRoutes);
 // ======================================================
 let FRONTEND_PATH;
 
-// Detect Railway environment
-if (existsSync("/app/frontend")) {
+// Detect best available frontend path (local or Railway)
+if (fs.existsSync("/app/frontend")) {
   FRONTEND_PATH = "/app/frontend";
-} else if (existsSync(path.resolve(__dirname, "../frontend"))) {
+} else if (fs.existsSync(path.resolve(__dirname, "../frontend"))) {
   FRONTEND_PATH = path.resolve(__dirname, "../frontend");
 } else {
-  FRONTEND_PATH = "/app/frontend"; // fallback for Railway builds
+  FRONTEND_PATH = "/app/frontend";
   console.warn("⚠️ Frontend not found in known paths, defaulting to /app/frontend");
 }
 
 app.use(express.static(FRONTEND_PATH));
 console.log("🌍 Frontend served from:", FRONTEND_PATH);
+
+// ✅ Safety check for index.html presence
+const indexPath = path.join(FRONTEND_PATH, "index.html");
+if (!fs.existsSync(indexPath)) {
+  console.warn(
+    "🚨 WARNING: index.html not found in frontend path! " +
+    "Check your Railway deployment or .railwayignore file. Expected at: " + indexPath
+  );
+}
 
 // ======================================================
 // 🚀 Clean URL Routes (No .html in URL)
@@ -138,7 +147,7 @@ cleanRoutes.forEach((route) => {
   );
 });
 
-// Root fallback (Home)
+// Root route
 app.get("/", (req, res) => {
   res.sendFile(path.join(FRONTEND_PATH, "index.html"));
 });
