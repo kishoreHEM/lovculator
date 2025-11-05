@@ -1,175 +1,109 @@
 // backend/routes/auth.js
 import express from "express";
-import bcrypt from "bcryptjs";
-import pool from "../db.js"; // ✅ Shared DB connection (from backend/db.js)
+import bcrypt from "bcrypt";
+import pool from "../db.js";
 
 const router = express.Router();
 
-// ======================================================
-// 1️⃣ USER REGISTRATION
-// ======================================================
-router.post("/signup", async (req, res) => {
+// ===================================================
+// 1️⃣ REGISTER / SIGNUP
+// ===================================================
+router.post("/register", async (req, res) => {
   try {
     const { username, email, password } = req.body;
 
-    if (!username || !email || !password) {
+    if (!username || !email || !password)
       return res.status(400).json({ error: "All fields are required." });
-    }
 
-    // Check if username or email already exists
+    // Check existing user
     const existingUser = await pool.query(
-      `SELECT id FROM users WHERE username = $1 OR email = $2`,
-      [username, email]
+      "SELECT * FROM users WHERE email = $1",
+      [email]
     );
+    if (existingUser.rows.length > 0)
+      return res.status(400).json({ error: "Email already registered." });
 
-    if (existingUser.rows.length > 0) {
-      return res
-        .status(409)
-        .json({ error: "Username or email already exists. Please try another." });
-    }
-
-    // Hash password before saving
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    // Insert user
     const result = await pool.query(
-      `INSERT INTO users (username, email, password_hash)
-       VALUES ($1, $2, $3)
-       RETURNING id, username, email`,
+      "INSERT INTO users (username, email, password) VALUES ($1, $2, $3) RETURNING id, username, email",
       [username, email, hashedPassword]
     );
 
     const newUser = result.rows[0];
+    req.session.user = newUser; // ✅ Create session immediately after signup
+    console.log("✅ Session created after signup:", req.session.user);
 
-    // ✅ Save session
-    req.session.userId = newUser.id;
-    req.session.username = newUser.username;
-
-    // Make sure session is persisted before responding
-    req.session.save((err) => {
-      if (err) {
-        console.error("⚠️ Session save error:", err);
-        return res.status(500).json({ error: "Session could not be saved." });
-      }
-      console.log(`✅ New user registered: ${username}`);
-      res.status(201).json({
-        message: "Registration successful",
-        user: newUser,
-      });
-    });
+    res.status(201).json({ message: "Signup successful", user: newUser });
   } catch (err) {
-    if (err.code === "23505") {
-      console.error("❌ Duplicate username or email:", err.detail);
-      return res.status(409).json({
-        error: "Username or email already exists. Please try another.",
-      });
-    }
-
-    console.error("❌ Registration error details:", err);
-    res.status(500).json({ error: "Registration failed. Please try again." });
+    console.error("❌ Signup error:", err);
+    res.status(500).json({ error: "Failed to register user" });
   }
 });
 
-// ======================================================
-// 2️⃣ USER LOGIN
-// ======================================================
+// ===================================================
+// 2️⃣ LOGIN (Create Session + Send Cookie)
+// ===================================================
 router.post("/login", async (req, res) => {
   try {
-    const { username, password } = req.body;
-    if (!username || !password)
-      return res.status(400).json({ error: "Username and password required" });
+    const { email, password } = req.body;
 
-    const userResult = await pool.query(
-      `SELECT * FROM users WHERE username = $1`,
-      [username]
-    );
+    if (!email || !password)
+      return res.status(400).json({ error: "Email and password required." });
 
-    const user = userResult.rows[0];
-    if (!user)
-      return res.status(401).json({ error: "Invalid username or password" });
+    const result = await pool.query("SELECT * FROM users WHERE email = $1", [
+      email,
+    ]);
+    const user = result.rows[0];
+    if (!user) return res.status(404).json({ error: "User not found." });
 
-    const passwordMatch = await bcrypt.compare(password, user.password_hash);
-    if (!passwordMatch)
-      return res.status(401).json({ error: "Invalid username or password" });
+    const validPassword = await bcrypt.compare(password, user.password);
+    if (!validPassword)
+      return res.status(401).json({ error: "Invalid credentials." });
 
-    // ✅ Save user session
-    req.session.userId = user.id;
-    req.session.username = user.username;
+    // ✅ Create session cookie
+    req.session.user = {
+      id: user.id,
+      username: user.username,
+      email: user.email,
+    };
 
-    req.session.save((err) => {
-      if (err) {
-        console.error("⚠️ Session save error:", err);
-        return res.status(500).json({ error: "Session could not be saved." });
-      }
-      console.log(`✅ User logged in: ${username}`);
-      res.json({
-        message: "Login successful",
-        user: { id: user.id, username: user.username, email: user.email },
-      });
+    console.log("✅ Session created after login:", req.session.user);
+
+    // ✅ Make sure cookie is sent to frontend
+    res.status(200).json({
+      message: "Login successful",
+      user: req.session.user,
     });
   } catch (err) {
     console.error("❌ Login error:", err);
-    res.status(500).json({ error: "Login failed. Please try again." });
+    res.status(500).json({ error: "Failed to log in" });
   }
 });
 
-
-// =====================================================
-// ✅ Get Logged-In User (Session Check)
-// =====================================================
-router.get("/me", async (req, res) => {
-  try {
-    if (!req.session || !req.session.user) {
-      return res.status(401).json({ error: "Not logged in" });
-    }
-
-    // Return minimal safe user info (never send password)
-    res.status(200).json({
-      id: req.session.user.id,
-      username: req.session.user.username,
-      email: req.session.user.email,
-    });
-  } catch (err) {
-    console.error("Error fetching /me:", err.message);
-    res.status(500).json({ error: "Internal server error" });
+// ===================================================
+// 3️⃣ AUTH CHECK (Frontend Calls /auth/me)
+// ===================================================
+router.get("/me", (req, res) => {
+  if (req.session.user) {
+    res.json(req.session.user);
+  } else {
+    res.status(401).json({ error: "Not logged in" });
   }
 });
 
-
-// ======================================================
-// 3️⃣ USER LOGOUT
-// ======================================================
+// ===================================================
+// 4️⃣ LOGOUT
+// ===================================================
 router.post("/logout", (req, res) => {
-  if (req.session) {
-    req.session.destroy((err) => {
-      if (err) {
-        console.error("❌ Error destroying session:", err);
-        return res.status(500).json({ error: "Logout failed" });
-      }
-      res.clearCookie("connect.sid");
-      console.log("✅ User logged out successfully");
-      return res.json({ message: "Logout successful" });
-    });
-  } else {
-    res.json({ message: "No active session" });
-  }
-});
-
-// ======================================================
-// 4️⃣ CHECK SESSION
-// ======================================================
-router.get("/session", (req, res) => {
-  if (req.session && req.session.userId) {
-    res.json({
-      loggedIn: true,
-      user: {
-        id: req.session.userId,
-        username: req.session.username,
-      },
-    });
-  } else {
-    res.json({ loggedIn: false });
-  }
+  req.session.destroy((err) => {
+    if (err) {
+      console.error("❌ Logout failed:", err);
+      return res.status(500).json({ error: "Logout failed" });
+    }
+    res.clearCookie("connect.sid");
+    res.status(204).send();
+  });
 });
 
 export default router;

@@ -70,12 +70,8 @@ pool
 // =====================================================
 app.use(
   cors({
-    origin: [
-      "https://lovculator.com",  // ✅ Production site
-      "http://localhost:3000",   // ✅ Local dev React
-      "http://localhost:5173",   // ✅ Local Vite
-    ],
-    credentials: true, // ✅ allow cookies
+    origin: ["https://lovculator.com", "http://localhost:3000"],
+    credentials: true, // allow cookies to be sent
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization"],
   })
@@ -110,15 +106,15 @@ app.use(
     resave: false,
     saveUninitialized: false,
     cookie: {
-      secure: true,          // ✅ Only send cookie over HTTPS
-      httpOnly: true,        // ✅ Prevent JS access
-      sameSite: "none",      // ✅ Allow cross-origin (required for frontend+backend same domain)
+      secure: true,          // ✅ required for HTTPS
+      httpOnly: true,        // ✅ protect cookie
+      sameSite: "none",      // ✅ required for cross-domain cookies
       maxAge: 1000 * 60 * 60 * 24 * 7, // 7 days
     },
   })
 );
 
-console.log("✅ Session store configured successfully");
+console.log("✅ Session configured with trust proxy and SameSite=None");
 
 // =====================================================
 // 🧩 Core Middleware
