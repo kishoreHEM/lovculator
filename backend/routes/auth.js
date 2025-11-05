@@ -113,6 +113,29 @@ router.post("/login", async (req, res) => {
   }
 });
 
+
+// =====================================================
+// ✅ Get Logged-In User (Session Check)
+// =====================================================
+router.get("/me", async (req, res) => {
+  try {
+    if (!req.session || !req.session.user) {
+      return res.status(401).json({ error: "Not logged in" });
+    }
+
+    // Return minimal safe user info (never send password)
+    res.status(200).json({
+      id: req.session.user.id,
+      username: req.session.user.username,
+      email: req.session.user.email,
+    });
+  } catch (err) {
+    console.error("Error fetching /me:", err.message);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+
 // ======================================================
 // 3️⃣ USER LOGOUT
 // ======================================================
