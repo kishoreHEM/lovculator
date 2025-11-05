@@ -1,9 +1,8 @@
-# Ignore only unnecessary files
 .git
 .gitignore
 node_modules
 npm-debug.log
 .DS_Store
 
-# DO NOT IGNORE frontend
-!.frontend
+# ensure frontend is included
+!frontend
