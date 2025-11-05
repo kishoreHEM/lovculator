@@ -1,4 +1,4 @@
-// ✅ frontend/js/auth.js — Clean & Production Ready
+// ✅ frontend/js/auth.js — Final Production-Ready Version
 
 // Detect environment (local vs production)
 const API_BASE = window.location.hostname.includes("localhost")
@@ -10,8 +10,6 @@ console.log(`🌍 Using API Base URL: ${API_BASE}`);
 // =======================================
 // 🧩 Utility Functions
 // =======================================
-
-// Show inline message (error/success)
 function showMessage(text, type = "info") {
   const msgBox = document.getElementById("error-message");
   if (!msgBox) return;
@@ -19,14 +17,12 @@ function showMessage(text, type = "info") {
   msgBox.style.color =
     type === "error" ? "red" : type === "success" ? "green" : "#555";
   msgBox.style.opacity = "1";
-
   setTimeout(() => {
     msgBox.style.transition = "opacity 0.5s ease-out";
     msgBox.style.opacity = "0";
   }, 4000);
 }
 
-// Safe JSON parser (avoids crash if response isn’t JSON)
 async function safeParseResponse(res) {
   const text = await res.text();
   try {
@@ -36,7 +32,6 @@ async function safeParseResponse(res) {
   }
 }
 
-// Small button loader toggle
 function toggleLoading(btn, isLoading, text = "Please wait...") {
   if (!btn) return;
   if (isLoading) {
@@ -53,7 +48,6 @@ function toggleLoading(btn, isLoading, text = "Please wait...") {
   }
 }
 
-// Add simple CSS spinner animation
 const style = document.createElement("style");
 style.textContent = `
 @keyframes spin { from {transform:rotate(0deg);} to {transform:rotate(360deg);} }
@@ -61,7 +55,7 @@ style.textContent = `
 document.head.appendChild(style);
 
 // =======================================
-// 🚀 AUTH MANAGER (GLOBAL CLASS)
+// 🚀 AUTH MANAGER CLASS
 // =======================================
 class AuthManager {
   static async signup(username, email, password) {
@@ -74,14 +68,13 @@ class AuthManager {
     return safeParseResponse(res).then((data) => ({ res, data }));
   }
 
-  static async login(usernameOrEmail, password) {
-    const res = await fetch("https://lovculator.com/api/auth/login", {
-  method: "POST",
-  headers: { "Content-Type": "application/json" },
-  credentials: "include", // ⚡ must include this
-  body: JSON.stringify({ email, password })
-});
-
+  static async login(email, password) {
+    const res = await fetch(`${API_BASE}/login`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      credentials: "include",
+      body: JSON.stringify({ email, password }),
+    });
     return safeParseResponse(res).then((data) => ({ res, data }));
   }
 
@@ -102,7 +95,6 @@ class AuthManager {
   }
 }
 
-// Expose AuthManager globally (for profile.js, etc.)
 window.AuthManager = AuthManager;
 
 // =======================================
@@ -121,12 +113,10 @@ document.addEventListener("DOMContentLoaded", () => {
       const email = document.getElementById("email").value.trim();
       const password = document.getElementById("password").value.trim();
 
-      if (!username || !email || !password) {
+      if (!username || !email || !password)
         return showMessage("⚠️ Please fill in all fields.", "error");
-      }
-      if (password.length < 6) {
+      if (password.length < 6)
         return showMessage("⚠️ Password must be at least 6 characters.", "error");
-      }
 
       toggleLoading(btn, true, "Signing Up...");
       try {
@@ -151,23 +141,22 @@ document.addEventListener("DOMContentLoaded", () => {
     loginForm.addEventListener("submit", async (e) => {
       e.preventDefault();
       const btn = loginForm.querySelector(".btn-submit");
-      const usernameOrEmail = document
-        .getElementById("username-or-email")
-        .value.trim();
+      const usernameOrEmail = document.getElementById("username-or-email").value.trim();
       const password = document.getElementById("password").value.trim();
 
-      if (!usernameOrEmail || !password) {
+      if (!usernameOrEmail || !password)
         return showMessage("⚠️ Please enter both fields.", "error");
-      }
 
       toggleLoading(btn, true, "Logging In...");
+
       try {
         const { res, data } = await AuthManager.login(usernameOrEmail, password);
         if (res.ok) {
           showMessage("✅ Login successful! Redirecting...", "success");
           setTimeout(() => (window.location.href = "/profile.html"), 1200);
         } else {
-          showMessage(data.error || data.message || "❌ Invalid credentials.", "error");
+          const errorMessage = data.error || data.message || "❌ Invalid credentials.";
+          showMessage(errorMessage, "error");
           toggleLoading(btn, false);
         }
       } catch (err) {
