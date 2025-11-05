@@ -57,117 +57,146 @@ class AnonUserTracker {
 
 
 // ==============================================
-// 3. DATA LAYER: LoveStoriesAPI Manager (Robust with Anon ID and Timeout)
+// 3. DATA LAYER: LoveStoriesAPI Manager (Final Version)
 // ==============================================
 class LoveStoriesAPI {
-    constructor(anonTracker) {
-        // ✅ Always resolve full production domain
-    this.apiBase = window.location.hostname === 'localhost' 
-    ? 'http://localhost:3001/api'
-    : 'https://lovculator.com/api';
-        
-        this.timeout = 10000; // 10 second timeout
-        this.anonTracker = anonTracker;
+  constructor(anonTracker) {
+    this.apiBase =
+      window.location.hostname === "localhost"
+        ? "http://localhost:3001/api"
+        : "https://lovculator.com/api";
+
+    this.timeout = 10000; // 10 seconds
+    this.anonTracker = anonTracker;
+  }
+
+  // 🧩 Main API handler (robust, with cookies + timeouts)
+  async request(endpoint, options = {}) {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), this.timeout);
+
+    // Generate / get anonymous device ID
+    let anonymousId;
+    try {
+      anonymousId =
+        this.anonTracker?.getAnonId?.() ||
+        "anonymous_" + Math.random().toString(36).substr(2, 9);
+    } catch {
+      anonymousId = "anonymous_fallback";
     }
 
-    async request(endpoint, options = {}) {
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), this.timeout);
-        
-        // Safety check for getAnonId - if anonTracker is not available, use fallback
-        let anonymousId;
-        if (this.anonTracker && typeof this.anonTracker.getAnonId === 'function') {
-            anonymousId = this.anonTracker.getAnonId();
-        } else {
-            console.warn('⚠️ anonTracker not available, using fallback anonymous ID');
-            anonymousId = 'anonymous_' + Math.random().toString(36).substr(2, 9);
-        }
-        
+    try {
+      const response = await fetch(`${this.apiBase}${endpoint}`, {
+        method: options.method || "GET",
+        headers: {
+          "Content-Type": "application/json",
+          "X-Anon-ID": anonymousId,
+          ...options.headers,
+        },
+        credentials: "include", // ✅ Send session cookie for logged-in users
+        signal: controller.signal,
+        body: options.body || null,
+      });
+
+      clearTimeout(timeoutId);
+
+      // --- Handle non-OK responses ---
+      if (!response.ok) {
+        const errorText = await response.text();
+        let errorData;
         try {
-            const response = await fetch(`${this.apiBase}${endpoint}`, {
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-Anon-ID': anonymousId, // Enforce per-device tracking
-                    ...options.headers
-                },
-                signal: controller.signal,
-                ...options
-            });
-
-            clearTimeout(timeoutId);
-            
-            if (!response.ok) {
-                const errorText = await response.text();
-                
-                // Specific error for already-performed actions
-                if (response.status === 403 || response.status === 409) {
-                    throw new Error(JSON.parse(errorText).message || 'Action not allowed on this device (e.g., already liked/commented).');
-                }
-                
-                throw new Error(`HTTP error! status: ${response.status} - ${errorText}`);
-            }
-
-            return response.status === 204 ? {} : await response.json();
-        } catch (error) {
-            clearTimeout(timeoutId);
-            
-            if (error.name === 'AbortError') {
-                throw new Error('Request timeout - please check your connection');
-            }
-            
-            console.error(`API request failed for ${endpoint}:`, error);
-            throw error;
-        }
-    }
-
-    async getStories() {
-        return this.request('/stories');
-    }
-
-    async createStory(storyData) {
-        const required = ['storyTitle', 'loveStory', 'category', 'mood'];
-        const missing = required.filter(field => !storyData[field]);
-        
-        if (missing.length > 0) {
-            throw new Error(`Missing required fields: ${missing.join(', ')}`);
+          errorData = JSON.parse(errorText);
+        } catch {
+          errorData = { error: errorText };
         }
 
-        return this.request('/stories', {
-            method: 'POST',
-            body: JSON.stringify(storyData)
-        });
+        // 401 Unauthorized → redirect user to login
+        if (response.status === 401) {
+          console.warn("⚠️ Unauthorized. Redirecting to login...");
+          if (!window.location.pathname.includes("login")) {
+            alert("Please log in to continue 💖");
+            window.location.href = "/login.html";
+          }
+          throw new Error("Unauthorized: Please log in.");
+        }
+
+        if (response.status === 403 || response.status === 409) {
+          throw new Error(
+            errorData.message ||
+              "Action not allowed on this device (already liked/commented)."
+          );
+        }
+
+        throw new Error(
+          `HTTP error ${response.status}: ${
+            errorData.error || errorData.message || "Unknown error"
+          }`
+        );
+      }
+
+      // --- Return parsed JSON or empty object ---
+      return response.status === 204 ? {} : await response.json();
+    } catch (error) {
+      clearTimeout(timeoutId);
+
+      if (error.name === "AbortError") {
+        throw new Error("Request timeout – please check your connection");
+      }
+
+      console.error(`API request failed for ${endpoint}:`, error);
+      throw error;
     }
+  }
 
-    async toggleLike(storyId) {
-        if (!storyId || isNaN(storyId)) throw new Error('Invalid story ID');
-        return this.request(`/stories/${storyId}/like`, { method: 'POST' });
-    }
+  // 🧡 Fetch all stories
+  async getStories() {
+    return this.request("/stories");
+  }
 
-    async addComment(storyId, commentData) {
-        if (!storyId || isNaN(storyId)) throw new Error('Invalid story ID');
-        if (!commentData.text || commentData.text.trim() === '') throw new Error('Comment text is required');
+  // 💌 Create a new story
+  async createStory(storyData) {
+    const required = ["storyTitle", "loveStory", "category", "mood"];
+    const missing = required.filter((field) => !storyData[field]);
+    if (missing.length > 0)
+      throw new Error(`Missing required fields: ${missing.join(", ")}`);
 
-        // Only send the text; backend assigns the author name and tracks the device ID
-        const dataToSend = { text: commentData.text.trim() }; 
+    return this.request("/stories", {
+      method: "POST",
+      body: JSON.stringify(storyData),
+    });
+  }
 
-        return this.request(`/stories/${storyId}/comments`, {
-            method: 'POST',
-            body: JSON.stringify(dataToSend)
-        });
-    }
+  // ❤️ Toggle like on a story
+  async toggleLike(storyId) {
+    if (!storyId || isNaN(storyId)) throw new Error("Invalid story ID");
+    return this.request(`/stories/${storyId}/like`, { method: "POST" });
+  }
 
-    async getComments(storyId) {
-        if (!storyId || isNaN(storyId)) throw new Error('Invalid story ID');
-        return this.request(`/stories/${storyId}/comments`);
-    }
+  // 💬 Add a comment
+  async addComment(storyId, commentData) {
+    if (!storyId || isNaN(storyId)) throw new Error("Invalid story ID");
+    if (!commentData.text?.trim()) throw new Error("Comment text is required");
 
-    // New: Corrected syntax for tracking share clicks
-    async trackShareClick(storyId) {
-        if (!storyId || isNaN(storyId)) throw new Error('Invalid story ID');
-        // This endpoint will increment the share count on the server
-        return this.request(`/stories/${storyId}/share`, { method: 'POST' });
-    }
+    const dataToSend = { text: commentData.text.trim() };
+    return this.request(`/stories/${storyId}/comments`, {
+      method: "POST",
+      body: JSON.stringify(dataToSend),
+    });
+  }
+
+  // 💭 Get comments
+  async getComments(storyId) {
+    if (!storyId || isNaN(storyId)) throw new Error("Invalid story ID");
+    return this.request(`/stories/${storyId}/comments`);
+  }
+
+  // 📤 Track share click
+  async trackShareClick(storyId) {
+    if (!storyId || isNaN(storyId)) throw new Error("Invalid story ID");
+    return this.request(`/stories/${storyId}/share`, { method: "POST" });
+  }
 }
+
 
 
 // ==============================================
