@@ -75,12 +75,13 @@ class AuthManager {
   }
 
   static async login(usernameOrEmail, password) {
-    const res = await fetch(`${API_BASE}/login`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      credentials: "include",
-      body: JSON.stringify({ username: usernameOrEmail, password }),
-    });
+    const res = await fetch("https://lovculator.com/api/auth/login", {
+  method: "POST",
+  headers: { "Content-Type": "application/json" },
+  credentials: "include", // ⚡ must include this
+  body: JSON.stringify({ email, password })
+});
+
     return safeParseResponse(res).then((data) => ({ res, data }));
   }
 

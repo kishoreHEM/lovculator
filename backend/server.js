@@ -106,13 +106,14 @@ app.use(
     resave: false,
     saveUninitialized: false,
     cookie: {
-      secure: true,          // ✅ required for HTTPS
-      httpOnly: true,        // ✅ protect cookie
-      sameSite: "none",      // ✅ required for cross-domain cookies
+      secure: process.env.NODE_ENV === "production", // true in prod (HTTPS)
+      httpOnly: true,
+      sameSite: process.env.NODE_ENV === "production" ? "none" : "lax", // ⚡ critical fix
       maxAge: 1000 * 60 * 60 * 24 * 7, // 7 days
     },
   })
 );
+
 
 console.log("✅ Session configured with trust proxy and SameSite=None");
 
