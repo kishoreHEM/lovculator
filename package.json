@@ -2,10 +2,14 @@
   "name": "lovculator",
   "version": "1.0.0",
   "scripts": {
-  "start": "node backend/server.js",
-  "postinstall": "mkdir -p /app/frontend && cp -r frontend/* /app/frontend || true"
-},
+    "start": "node backend/server.js",
+    "postinstall": "mkdir -p /app/frontend && cp -r frontend/* /app/frontend || true"
+  },
   "engines": {
     "node": "18.x"
+  },
+  "dependencies": {
+    "compression": "^1.8.1",
+    "helmet": "^8.1.0"
   }
 }
