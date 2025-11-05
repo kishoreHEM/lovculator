@@ -96,9 +96,9 @@ async function setupSession() {
 // ======================================================
 // 4️⃣ API Routes
 // ======================================================
-import authRoutes from "./backend/routes/auth.js";
-import storyRoutes from "./backend/routes/stories.js";
-import userRoutes from "./backend/routes/users.js";
+import authRoutes from path.join(__dirname, "backend/routes/auth.js");
+import storyRoutes from path.join(__dirname, "backend/routes/stories.js");
+import userRoutes from path.join(__dirname, "backend/routes/users.js");
 
 app.use("/api/auth", authRoutes);
 app.use("/api/stories", storyRoutes);
