@@ -98,7 +98,8 @@ app.use("/api/users", userRoutes);
 // ======================================================
 // 5️⃣ FRONTEND ROUTING (Static + Clean URLs)
 // ======================================================
-const FRONTEND_PATH = path.resolve(__dirname, "../frontend");
+const FRONTEND_PATH = path.join(process.cwd(), "frontend");
+
 
 // ✅ Serve static assets (CSS, JS, images)
 app.use(express.static(FRONTEND_PATH));
