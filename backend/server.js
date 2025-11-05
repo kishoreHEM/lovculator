@@ -114,6 +114,39 @@ app.use("/api/*", (req, res) => {
   res.status(404).json({ error: "API route not found" });
 });
 
+// ✅ Log & Save Frontend Page Views (Skip API + Static)
+app.use(async (req, res, next) => {
+  if (
+    req.path.startsWith("/api") ||
+    req.path.includes("/js/") ||
+    req.path.includes("/css/") ||
+    req.path.includes("/images/")
+  ) {
+    return next();
+  }
+
+  const timestamp = new Date().toISOString();
+  const clientIP =
+    req.headers["x-forwarded-for"]?.split(",")[0] || req.socket.remoteAddress;
+  const userAgent = req.headers["user-agent"] || "Unknown device";
+
+  console.log(
+    `📖 [${timestamp}] Page View: ${req.path} | IP: ${clientIP} | Device: ${userAgent}`
+  );
+
+  // 🧠 Save to PostgreSQL (Non-blocking)
+  try {
+    await pool.query(
+      `INSERT INTO page_visits (path, ip_address, user_agent) VALUES ($1, $2, $3)`,
+      [req.path, clientIP, userAgent]
+    );
+  } catch (err) {
+    console.error("⚠️ Failed to log page visit:", err.message);
+  }
+
+  next();
+});
+
 // ✅ Serve frontend routes (clean URLs)
 const validPages = [
   "index",
