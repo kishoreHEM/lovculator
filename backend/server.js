@@ -101,24 +101,23 @@ app.use((req, res, next) => {
 // =====================================================
 // 🍪 Session Store (PostgreSQL)
 // =====================================================
+app.set("trust proxy", 1); // ✅ Important for Railway behind HTTPS proxy
+
 app.use(
   session({
-    store: new PgSession({
-      pool: pool,
-      tableName: "session_store",
-      createTableIfMissing: true,
-    }),
-    secret: process.env.SESSION_SECRET || "lovculator_secret_key_2025",
+    store: new PgSession({ pool, tableName: "session_store" }),
+    secret: process.env.SESSION_SECRET || "lovculator_secret_key",
     resave: false,
     saveUninitialized: false,
     cookie: {
-      secure: process.env.NODE_ENV === "production", // ✅ true only in production
-      httpOnly: true,
-      sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+      secure: true,          // ✅ Only send cookie over HTTPS
+      httpOnly: true,        // ✅ Prevent JS access
+      sameSite: "none",      // ✅ Allow cross-origin (required for frontend+backend same domain)
       maxAge: 1000 * 60 * 60 * 24 * 7, // 7 days
     },
   })
 );
+
 console.log("✅ Session store configured successfully");
 
 // =====================================================

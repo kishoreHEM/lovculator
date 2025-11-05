@@ -85,7 +85,7 @@ class AuthManager {
   }
 
   static async getProfile() {
-    const res = await fetch(`${API_BASE}/profile`, {
+    const res = await fetch(`${API_BASE}/me`, {
       method: "GET",
       credentials: "include",
     });
