@@ -2,8 +2,9 @@
   "name": "lovculator",
   "version": "1.0.0",
   "scripts": {
-    "start": "node backend/server.js"
-  },
+  "start": "node backend/server.js",
+  "postinstall": "mkdir -p /app/frontend && cp -r frontend/* /app/frontend || true"
+},
   "engines": {
     "node": "18.x"
   }
