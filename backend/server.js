@@ -7,6 +7,7 @@ import { fileURLToPath } from "url";
 import session from "express-session";
 import connectPgSimple from "connect-pg-simple";
 import helmet from "helmet";
+import fs from "fs";
 
 dotenv.config();
 const { Pool } = pkg;
@@ -17,7 +18,7 @@ const app = express();
 const PORT = process.env.PORT || 3001;
 
 // ======================================================
-// 1️⃣ Middleware
+// 1️⃣ Security + Middleware
 // ======================================================
 app.use(helmet());
 app.use(express.json({ limit: "10mb" }));
@@ -31,8 +32,19 @@ app.use(
   })
 );
 
+// ✅ Force HTTPS in production
+if (process.env.NODE_ENV === "production") {
+  app.use((req, res, next) => {
+    if (req.headers["x-forwarded-proto"] !== "https") {
+      const secureUrl = `https://${req.headers.host}${req.url}`;
+      return res.redirect(301, secureUrl);
+    }
+    next();
+  });
+}
+
 // ======================================================
-// 2️⃣ Database Connection
+// 2️⃣ PostgreSQL Database Connection
 // ======================================================
 let pool;
 async function initializeDatabase() {
@@ -74,7 +86,7 @@ async function setupSession() {
         secure: process.env.NODE_ENV === "production",
         sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
         httpOnly: true,
-        maxAge: 1000 * 60 * 60 * 24,
+        maxAge: 1000 * 60 * 60 * 24, // 1 day
       },
     })
   );
@@ -82,7 +94,7 @@ async function setupSession() {
 }
 
 // ======================================================
-// 4️⃣ Routes
+// 4️⃣ API Routes
 // ======================================================
 import authRoutes from "./backend/routes/auth.js";
 import storyRoutes from "./backend/routes/stories.js";
@@ -93,23 +105,18 @@ app.use("/api/stories", storyRoutes);
 app.use("/api/users", userRoutes);
 
 // ======================================================
-// 5️⃣ Frontend Static Serving (Auto-detect path)
+// 5️⃣ Frontend Serving (Auto-detects correct folder)
 // ======================================================
 const possiblePaths = [
-  path.resolve("./frontend"), // local
-  path.resolve("frontend"), // fallback
-  path.join(__dirname, "frontend"), // relative to backend
-  path.join(process.cwd(), "frontend"), // working dir
-  "/app/frontend", // Railway container path
+  path.resolve("./frontend"), // dev local
+  path.join(__dirname, "frontend"), // same level as backend
+  path.join(process.cwd(), "frontend"), // cwd fallback
+  "/app/frontend", // Railway container
 ];
 
-let FRONTEND_PATH = possiblePaths.find((p) => {
-  try {
-    return require("fs").existsSync(path.join(p, "index.html"));
-  } catch {
-    return false;
-  }
-});
+let FRONTEND_PATH = possiblePaths.find((p) =>
+  fs.existsSync(path.join(p, "index.html"))
+);
 
 if (!FRONTEND_PATH) {
   console.warn("⚠️ Frontend not found in known paths, defaulting to /app/frontend");
@@ -119,7 +126,9 @@ if (!FRONTEND_PATH) {
 console.log("🌍 Frontend served from:", FRONTEND_PATH);
 app.use(express.static(FRONTEND_PATH));
 
-// Clean URL Routing (no .html)
+// ======================================================
+// 6️⃣ Clean URL Routes (No .html)
+// ======================================================
 const cleanRoutes = [
   "/",
   "/login",
@@ -131,13 +140,14 @@ const cleanRoutes = [
   "/privacy",
   "/terms",
 ];
+
 cleanRoutes.forEach((route) => {
   app.get(route, (req, res) => {
     res.sendFile(path.join(FRONTEND_PATH, "index.html"));
   });
 });
 
-// Fallback: serve index.html for unknown non-API routes
+// Fallback: serve index.html for non-API routes
 app.get("*", (req, res) => {
   if (req.path.startsWith("/api/")) {
     return res.status(404).json({ error: "API route not found" });
@@ -146,7 +156,7 @@ app.get("*", (req, res) => {
 });
 
 // ======================================================
-// 6️⃣ Startup
+// 7️⃣ Start Server
 // ======================================================
 (async () => {
   const dbConnected = await initializeDatabase();
