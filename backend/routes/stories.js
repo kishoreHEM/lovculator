@@ -1,15 +1,17 @@
-// backend/routes/stories.js
 import express from "express";
-import pool from "../db.js"; // ✅ Correct default import
+import pool from "../db.js";
 
 const router = express.Router();
 
 // ======================================================
-// 1️⃣ FETCH ALL LOVE STORIES
+// 1️⃣ FETCH ALL LOVE STORIES & STORIES BY USER ID
 // ======================================================
+// Note: You had two nearly identical GET routes, consolidating them here.
 router.get("/", async (req, res) => {
   try {
-    const result = await pool.query(`
+    const { userId } = req.query; // Check if a specific user ID is requested
+
+    let query = `
       SELECT 
         id,
         user_id,
@@ -23,8 +25,17 @@ router.get("/", async (req, res) => {
         created_at,
         updated_at
       FROM stories
-      ORDER BY created_at DESC
-    `);
+    `;
+    let values = [];
+
+    if (userId) {
+      query += " WHERE user_id = $1";
+      values.push(userId);
+    }
+
+    query += " ORDER BY created_at DESC";
+
+    const result = await pool.query(query, values);
 
     console.log(`✅ ${result.rowCount} stories fetched`);
     res.json(result.rows);
@@ -34,30 +45,15 @@ router.get("/", async (req, res) => {
   }
 });
 
-router.get("/", async (req, res) => {
-  try {
-    const userId = req.query.userId;
-    const query = userId
-      ? "SELECT * FROM stories WHERE user_id = $1 ORDER BY created_at DESC"
-      : "SELECT * FROM stories ORDER BY created_at DESC";
-
-    const values = userId ? [userId] : [];
-    const result = await pool.query(query, values);
-    res.json(result.rows);
-  } catch (err) {
-    console.error("❌ Fetch stories error:", err);
-    res.status(500).json({ error: "Failed to fetch stories" });
-  }
-});
-
-
 // ======================================================
 // 2️⃣ CREATE NEW STORY (Requires Auth)
 // ======================================================
 router.post("/", async (req, res) => {
   try {
     const { story_title, couple_names, love_story, category, mood } = req.body;
-    const userId = req.session?.userId;
+    
+    // 🔑 CRITICAL FIX: Access user ID from the correct session object
+    const userId = req.session?.user?.id;
 
     if (!userId) {
       return res.status(401).json({ error: "You must be logged in to post a story." });
@@ -84,16 +80,21 @@ router.post("/", async (req, res) => {
 });
 
 // ======================================================
-// 3️⃣ LIKE A STORY
+// 3️⃣ LIKE A STORY (Requires Auth)
 // ======================================================
 router.post("/:id/like", async (req, res) => {
   try {
     const storyId = req.params.id;
-    const userId = req.session?.userId;
+    
+    // 🔑 CRITICAL FIX: Access user ID from the correct session object
+    const userId = req.session?.user?.id;
 
     if (!userId) {
       return res.status(401).json({ error: "You must be logged in to like stories." });
     }
+    
+    // Optional: Check if user has already liked the story (advanced logic)
+    // We proceed here with a simple increment based on your provided code:
 
     const result = await pool.query(
       `UPDATE stories 
