@@ -60,8 +60,9 @@ document.head.appendChild(style);
 // 🚀 AUTH MANAGER CLASS (Single, Unified Declaration)
 // =======================================
 class AuthManager {
+  // All methods must now use AUTH_API_BASE
   static async signup(username, email, password) {
-    const res = await fetch(`${API_BASE}/signup`, {
+    const res = await fetch(`${AUTH_API_BASE}/signup`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       credentials: "include",
@@ -71,7 +72,7 @@ class AuthManager {
   }
 
   static async login(email, password) {
-    const res = await fetch(`${API_BASE}/login`, {
+    const res = await fetch(`${AUTH_API_BASE}/login`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       credentials: "include",
@@ -81,7 +82,7 @@ class AuthManager {
   }
 
   static async getProfile() {
-    const res = await fetch(`${API_BASE}/me`, {
+    const res = await fetch(`${AUTH_API_BASE}/me`, {
       method: "GET",
       credentials: "include",
     });
@@ -89,7 +90,7 @@ class AuthManager {
   }
 
   static async logout() {
-    const res = await fetch(`${API_BASE}/logout`, {
+    const res = await fetch(`${AUTH_API_BASE}/logout`, {
       method: "POST",
       credentials: "include",
     });
@@ -98,7 +99,7 @@ class AuthManager {
   
   // --- NEW: Forgot Password Method ---
   static async forgotPassword(email) {
-    const res = await fetch(`${API_BASE}/forgot-password`, {
+    const res = await fetch(`${AUTH_API_BASE}/forgot-password`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email }),
@@ -108,7 +109,7 @@ class AuthManager {
 
   // --- NEW: Reset Password Method ---
   static async resetPassword(token, newPassword) {
-    const res = await fetch(`${API_BASE}/reset-password`, {
+    const res = await fetch(`${AUTH_API_BASE}/reset-password`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ token, newPassword }),
