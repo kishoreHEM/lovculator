@@ -1,11 +1,13 @@
-// ✅ frontend/js/auth.js — Final Production-Ready Version
+// ✅ Correct Global API Base Definition (Use window.ROOT_API_BASE)
 
-// Detect environment (local vs production)
-const API_BASE = window.location.hostname.includes("localhost")
-  ? "http://localhost:3001/api/auth"
-  : "https://lovculator.com/api/auth";
+window.ROOT_API_BASE = window.location.hostname.includes("localhost")
+  ? "http://localhost:3001/api"
+  : "https://lovculator.com/api";
 
-console.log(`🌍 Using API Base URL: ${API_BASE}`);
+// API_BASE specific to this file uses the root path:
+const AUTH_API_BASE = `${window.ROOT_API_BASE}/auth`;
+
+console.log(`🌍 Using Root API Base URL: ${window.ROOT_API_BASE}`);
 
 // =======================================
 // 🧩 Utility Functions
