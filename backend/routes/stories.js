@@ -10,6 +10,7 @@ router.get("/", async (req, res) => {
   try {
     const { userId } = req.query; 
 
+    // 🔑 FIX: Ensure all columns are present and correctly ordered with commas.
     let query = `
       SELECT 
         id,
@@ -21,7 +22,7 @@ router.get("/", async (req, res) => {
         mood,
         likes_count,
         comments_count,
-        allow_comments,  // ✅ FIX: Added this column
+        allow_comments,  -- MUST be here for frontend rendering
         created_at,
         updated_at
       FROM stories
@@ -41,6 +42,7 @@ router.get("/", async (req, res) => {
     res.json(result.rows);
   } catch (err) {
     console.error("❌ Fetch stories error:", err.message);
+    // Send a 500 status to indicate server failure
     res.status(500).json({ error: "Failed to fetch stories" });
   }
 });
@@ -50,16 +52,16 @@ router.get("/", async (req, res) => {
 // ======================================================
 router.post("/", async (req, res) => {
   try {
+    // 🔑 FIX: Ensure 'allowComments' is destructured
     const { 
         story_title, 
         couple_names, 
         love_story, 
         category, 
         mood, 
-        allowComments // ✅ FIX: Added to destructuring
+        allowComments 
     } = req.body;
     
-    // 🔑 CRITICAL FIX: Access user ID from the correct session object
     const userId = req.session?.user?.id;
 
     if (!userId) {
@@ -70,13 +72,13 @@ router.post("/", async (req, res) => {
       return res.status(400).json({ error: "Story title and content are required." });
     }
 
-    // Now correctly inserts the allow_comments value
+    // 🔑 FIX: Correctly insert all fields, including allow_comments
     const result = await pool.query(
       `INSERT INTO stories 
         (user_id, story_title, couple_names, love_story, category, mood, allow_comments, created_at, updated_at)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, NOW(), NOW()) 
+       VALUES ($1, $2, $3, $4, $5, $6, $7, NOW(), NOW())
        RETURNING *`,
-      [userId, story_title, couple_names, love_story, category, mood, allowComments] // ✅ FIX: Added to values array
+      [userId, story_title, couple_names, love_story, category, mood, allowComments]
     );
 
     console.log(`✅ New story added by user ${userId}`);
@@ -86,11 +88,12 @@ router.post("/", async (req, res) => {
     res.status(500).json({ error: "Failed to post story" });
   }
 });
+
 // ======================================================
-// 3️⃣ LIKE A STORY (Requires Auth)
+// 3️⃣ LIKE/UNLIKE A STORY (Requires Auth - ROBUST TOGGLE)
 // ======================================================
 router.post("/:id/like", async (req, res) => {
-  const client = await pool.connect(); // Use a client for transactions
+  const client = await pool.connect(); 
   try {
     await client.query('BEGIN');
     
@@ -101,7 +104,6 @@ router.post("/:id/like", async (req, res) => {
       return res.status(401).json({ error: "You must be logged in to like stories." });
     }
 
-    // 1. Check if the user has already liked this story
     const checkResult = await client.query(
       `SELECT * FROM likes WHERE user_id = $1 AND story_id = $2`,
       [userId, storyId]
@@ -112,14 +114,12 @@ router.post("/:id/like", async (req, res) => {
     let action = '';
 
     if (isLiked) {
-      // 2. If already liked, UNLIKE (DELETE from likes table)
       await client.query(
         `DELETE FROM likes WHERE user_id = $1 AND story_id = $2`,
         [userId, storyId]
       );
       action = 'unliked';
     } else {
-      // 3. If not liked, LIKE (INSERT into likes table)
       await client.query(
         `INSERT INTO likes (user_id, story_id) VALUES ($1, $2)`,
         [userId, storyId]
@@ -127,7 +127,7 @@ router.post("/:id/like", async (req, res) => {
       action = 'liked';
     }
 
-    // 4. Recalculate and update the total likes_count on the stories table
+    // Recalculate and update the total likes_count on the stories table
     const countResult = await client.query(
       `UPDATE stories 
        SET likes_count = (SELECT COUNT(*) FROM likes WHERE story_id = $1),
@@ -142,24 +142,20 @@ router.post("/:id/like", async (req, res) => {
 
     console.log(`❤️ Story ${storyId} ${action} by user ${userId}`);
     
-    // 5. Send the new status and count back to the frontend
     res.json({ 
         message: `Story ${action} successfully`, 
         likes_count: newLikesCount,
-        // The new like status is the opposite of what it was before the action
         is_liked: !isLiked 
     });
 
   } catch (err) {
-    await client.query('ROLLBACK'); // Important: roll back transaction on error
+    await client.query('ROLLBACK'); 
     console.error(`❌ Error toggling like for story ${storyId}:`, err.message);
     res.status(500).json({ error: "Failed to toggle like on story." });
   } finally {
     client.release();
   }
 });
-
-// backend/routes/stories.js (Add this new block)
 
 // ======================================================
 // 4️⃣ ADD A COMMENT (Requires Auth)
@@ -172,11 +168,9 @@ router.post("/:storyId/comments", async (req, res) => {
     const storyId = req.params.storyId;
     const { text } = req.body;
     
-    // 🔑 CRITICAL: Get User ID from session (We assume comments require login based on frontend logic)
     const userId = req.session?.user?.id; 
 
     if (!userId) {
-      // You can choose to allow anonymous, but for now, require login
       return res.status(401).json({ error: "Please log in to post a comment." });
     }
     
@@ -184,7 +178,7 @@ router.post("/:storyId/comments", async (req, res) => {
       return res.status(400).json({ error: "Comment text cannot be empty." });
     }
 
-    // A. Insert the comment into the comments table
+    // A. Insert the comment
     const commentResult = await client.query(
       `INSERT INTO comments (story_id, user_id, comment_text)
        VALUES ($1, $2, $3)
@@ -192,7 +186,7 @@ router.post("/:storyId/comments", async (req, res) => {
       [storyId, userId, text.trim()]
     );
     
-    // B. Increment the comments_count on the stories table
+    // B. Increment the comments_count
     const updateResult = await client.query(
       `UPDATE stories 
        SET comments_count = COALESCE(comments_count, 0) + 1,
@@ -208,11 +202,10 @@ router.post("/:storyId/comments", async (req, res) => {
 
     console.log(`💬 Comment added to story ${storyId} by user ${userId}`);
     
-    // C. Respond with the new count (or the comment itself)
     res.status(201).json({ 
         message: "Comment posted successfully",
         comment: commentResult.rows[0],
-        comments_count: newCommentCount // Send the updated count for UI update
+        comments_count: newCommentCount 
     });
 
   } catch (err) {
@@ -223,8 +216,6 @@ router.post("/:storyId/comments", async (req, res) => {
     client.release();
   }
 });
-
-// backend/routes/stories.js (Add this new block)
 
 // ======================================================
 // 5️⃣ FETCH COMMENTS
@@ -242,7 +233,7 @@ router.get("/:storyId/comments", async (req, res) => {
                 COALESCE(u.username, 'Anonymous') as author_name,
                 c.user_id
              FROM comments c
-             JOIN users u ON c.user_id = u.id -- Simple join assuming all comments require user_id
+             JOIN users u ON c.user_id = u.id 
              WHERE c.story_id = $1
              ORDER BY c.created_at ASC`,
             [storyId]
