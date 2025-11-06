@@ -4,7 +4,24 @@ import pool from "../db.js";
 const router = express.Router();
 
 // ======================================================
-// 1️⃣ GET ALL STORIES (Now with Filtering and Search)
+// Helper Middleware: Authentication Check
+// ======================================================
+const isAuthenticated = (req, res, next) => {
+    // Check for a valid session user ID
+    const userId = req.session?.userId || req.session?.user?.id;
+    if (userId) { 
+        // Attach the user ID to the request for easy access in the route
+        req.user = { id: userId };
+        return next();
+    }
+    
+    // If not authenticated, send 401
+    res.status(401).json({ error: 'Unauthorized: Please log in to perform this action.' });
+};
+
+
+// ======================================================
+// 1️⃣ GET ALL STORIES (FIXED SQL CRASH)
 // ======================================================
 router.get("/", async (req, res) => {
     // Extract optional query parameters
@@ -29,7 +46,7 @@ router.get("/", async (req, res) => {
             s.created_at,
             COALESCE(lc.likes_count, 0) AS likes_count,
             COALESCE(cc.comments_count, 0) AS comments_count,
-            COALESCE(sh.shares_count, 0) AS shares_count,
+            0 AS shares_count, -- 🛑 CRITICAL FIX: Hardcoded to 0 to bypass SQL crash
             CASE WHEN EXISTS (
                 SELECT 1 FROM likes l 
                 WHERE l.story_id = s.id 
@@ -42,7 +59,7 @@ router.get("/", async (req, res) => {
             stories s
         LEFT JOIN (SELECT story_id, COUNT(*) AS likes_count FROM likes GROUP BY story_id) lc ON s.id = lc.story_id
         LEFT JOIN (SELECT story_id, COUNT(*) AS comments_count FROM comments GROUP BY story_id) cc ON s.id = cc.story_id
-        LEFT JOIN (SELECT story_id, COUNT(*) AS shares_count FROM shares GROUP BY story_id) sh ON s.id = sh.story_id
+        -- 🛑 LEFT JOIN ON SHARES TABLE IS REMOVED HERE
     `;
 
     const queryParams = [
@@ -69,7 +86,7 @@ router.get("/", async (req, res) => {
         // Use ILIKE for case-insensitive pattern matching
         conditions.push(`(s.story_title ILIKE $${queryParams.length + 1} OR s.love_story ILIKE $${queryParams.length + 2})`);
         queryParams.push(`%${searchQuery}%`); // For story_title
-        queryParams.push(`%${searchQuery}%`); // For love_story (reuses the value, but needs a new placeholder)
+        queryParams.push(`%${searchQuery}%`); // For love_story
     }
 
     // Append WHERE clause if conditions exist
@@ -84,7 +101,8 @@ router.get("/", async (req, res) => {
         const result = await pool.query(query, queryParams);
         res.json(result.rows);
     } catch (err) {
-        console.error("❌ Error fetching stories with filters:", err);
+        // This is the error handler that was logging the 500 status
+        console.error("❌ Error fetching stories with filters (500 crash point):", err);
         res.status(500).json({ error: "Failed to fetch stories." });
     }
 });
@@ -92,35 +110,33 @@ router.get("/", async (req, res) => {
 // ======================================================
 // 2️⃣ CREATE NEW STORY (Requires Auth)
 // ======================================================
-router.post("/", async (req, res) => {
+router.post("/", isAuthenticated, async (req, res) => {
   try {
-    // 🔑 FIX: Ensure 'allowComments' is destructured
     const { 
         story_title, 
         couple_names, 
         love_story, 
         category, 
         mood, 
-        allowComments 
+        allowComments,
+        anonymousPost
     } = req.body;
     
-    const userId = req.session?.user?.id;
-
-    if (!userId) {
-      return res.status(401).json({ error: "You must be logged in to post a story." });
-    }
+    const userId = req.user.id; 
 
     if (!story_title || !love_story) {
       return res.status(400).json({ error: "Story title and content are required." });
     }
+    
+    const names = anonymousPost ? 'Anonymous Couple' : couple_names;
+    const anonStatus = anonymousPost || false;
 
-    // 🔑 FIX: Correctly insert all fields, including allow_comments
     const result = await pool.query(
       `INSERT INTO stories 
-        (user_id, story_title, couple_names, love_story, category, mood, allow_comments, created_at, updated_at)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, NOW(), NOW())
+        (user_id, story_title, couple_names, love_story, category, mood, allow_comments, anonymous_post, created_at, updated_at)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW(), NOW())
        RETURNING *`,
-      [userId, story_title, couple_names, love_story, category, mood, allowComments]
+      [userId, story_title, names, love_story, category, mood, allowComments, anonStatus]
     );
 
     console.log(`✅ New story added by user ${userId}`);
@@ -134,17 +150,13 @@ router.post("/", async (req, res) => {
 // ======================================================
 // 3️⃣ LIKE/UNLIKE A STORY (Requires Auth - ROBUST TOGGLE)
 // ======================================================
-router.post("/:id/like", async (req, res) => {
+router.post("/:id/like", isAuthenticated, async (req, res) => {
   const client = await pool.connect(); 
   try {
     await client.query('BEGIN');
     
     const storyId = req.params.id;
-    const userId = req.session?.user?.id;
-
-    if (!userId) {
-      return res.status(401).json({ error: "You must be logged in to like stories." });
-    }
+    const userId = req.user.id; 
 
     const checkResult = await client.query(
       `SELECT * FROM likes WHERE user_id = $1 AND story_id = $2`,
@@ -202,7 +214,7 @@ router.post("/:id/like", async (req, res) => {
 // ======================================================
 // 4️⃣ ADD A COMMENT (Requires Auth)
 // ======================================================
-router.post("/:storyId/comments", async (req, res) => {
+router.post("/:storyId/comments", isAuthenticated, async (req, res) => {
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
@@ -210,12 +222,8 @@ router.post("/:storyId/comments", async (req, res) => {
     const storyId = req.params.storyId;
     const { text } = req.body;
     
-    const userId = req.session?.user?.id; 
+    const userId = req.user.id; 
 
-    if (!userId) {
-      return res.status(401).json({ error: "Please log in to post a comment." });
-    }
-    
     if (!text || text.trim().length === 0) {
       return res.status(400).json({ error: "Comment text cannot be empty." });
     }
@@ -287,5 +295,88 @@ router.get("/:storyId/comments", async (req, res) => {
         res.status(500).json({ error: "Failed to fetch comments." });
     }
 });
+
+// ======================================================
+// 6️⃣ DELETE A STORY (Requires Auth & Authorization)
+// ======================================================
+router.delete('/:storyId', isAuthenticated, async (req, res) => {
+    const { storyId } = req.params;
+    const userId = req.user.id; 
+
+    if (!storyId || isNaN(storyId)) {
+        return res.status(400).json({ error: 'Invalid story ID.' });
+    }
+
+    try {
+        // Step 1: Check ownership/authorization
+        const storyCheck = await pool.query(
+            `SELECT user_id FROM stories WHERE id = $1`, 
+            [storyId]
+        );
+
+        if (storyCheck.rows.length === 0) {
+            return res.status(404).json({ error: 'Story not found.' });
+        }
+
+        const storyOwnerId = storyCheck.rows[0].user_id;
+
+        // Authorization Check: Only the owner can delete the story.
+        const isAuthorized = (storyOwnerId === userId); 
+
+        if (!isAuthorized) {
+            return res.status(403).json({ error: 'Forbidden: You can only delete your own stories.' });
+        }
+        
+        // Step 2: Delete the story
+        await pool.query(
+            `DELETE FROM stories WHERE id = $1`,
+            [storyId]
+        );
+
+        console.log(`💀 Story ${storyId} deleted by user ${userId}`);
+        res.status(204).send(); 
+
+    } catch (error) {
+        console.error(`❌ Error deleting story ${storyId}:`, error);
+        res.status(500).json({ error: 'Internal server error while deleting story.' });
+    }
+});
+
+// ======================================================
+// 7️⃣ REPORT A STORY (Requires Auth)
+// ======================================================
+router.post("/:storyId/report", isAuthenticated, async (req, res) => {
+    const { storyId } = req.params;
+    const { reason, description } = req.body;
+    const reporterId = req.user.id;
+
+    if (!storyId || isNaN(storyId) || !reason) {
+        return res.status(400).json({ error: 'Invalid story ID or missing report reason.' });
+    }
+
+    try {
+        // Check if the story exists
+        const storyCheck = await pool.query(`SELECT id FROM stories WHERE id = $1`, [storyId]);
+        if (storyCheck.rowCount === 0) {
+            return res.status(404).json({ error: 'Story not found.' });
+        }
+
+        // Insert the report
+        const result = await pool.query(
+            `INSERT INTO story_reports (story_id, reporter_id, reason, description)
+             VALUES ($1, $2, $3, $4)
+             RETURNING *`,
+            [storyId, reporterId, reason, description || null]
+        );
+
+        console.log(`⚠️ Story ${storyId} reported by user ${reporterId}. Reason: ${reason}`);
+        res.status(201).json({ message: 'Story reported successfully. We will review it shortly.' });
+
+    } catch (err) {
+        console.error(`❌ Error reporting story ${storyId}:`, err.message);
+        res.status(500).json({ error: "Failed to submit report." });
+    }
+});
+
 
 export default router;

@@ -203,7 +203,24 @@ class LoveStoriesAPI {
     if (!storyId || isNaN(storyId)) throw new Error("Invalid story ID");
     return this.request(`/stories/${storyId}/share`, { method: "POST" });
   }
-}
+  
+  // 🗑️ NEW: Delete a story
+  async deleteStory(storyId) {
+    if (!storyId || isNaN(storyId)) throw new Error("Invalid story ID");
+    // Sends the DELETE request to /api/stories/:storyId
+    return this.request(`/stories/${storyId}`, { method: "DELETE" }); 
+  }
+  
+  // 🚩 NEW: Report a story
+  async reportStory(storyId, reportData) {
+    if (!storyId || isNaN(storyId)) throw new Error("Invalid story ID");
+    if (!reportData.reason) throw new Error("Report reason is required");
+    return this.request(`/stories/${storyId}/report`, { 
+        method: "POST",
+        body: JSON.stringify(reportData)
+    });
+  }
+} // End of LoveStoriesAPI class
 
 
 
@@ -248,6 +265,10 @@ class LoveStories {
                 } else if (target.classList.contains('share-action-toggle')) { // Native Share Logic
                     const { shareUrl, shareTitle, shareText } = target.dataset;
                     this.handleNativeShare(shareUrl, shareTitle, shareText);
+                } else if (target.classList.contains('delete-story-button')) {
+                    this.handleDeleteStory(storyId); // ⬅️ NEW DELETION LISTENER
+                } else if (target.classList.contains('report-story-button')) {
+                    this.openReportModal(storyId); // ⬅️ NEW REPORTING LISTENER
                 }
             }
         });
@@ -354,6 +375,9 @@ class LoveStories {
         const shareUrl = `https://lovculator.com/stories/${story.id}`; 
         const shareTitle = story.story_title;
         const shareText = `Read this beautiful love story: ${story.story_title}`;
+        
+        // Conditional check for deletion button
+        const isOwner = window.currentUserId && story.user_id === window.currentUserId;
 
         return `
             <div class="story-card" data-story-id="${story.id}">
@@ -380,6 +404,12 @@ class LoveStories {
                     <span class="story-mood">${this.getMoodText(story.mood)}</span>
                     <div class="story-actions">
                         
+                        ${isOwner ? `
+                            <button class="delete-story-button" title="Delete Story">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                            </button>
+                        ` : ''}
+
                         <button class="story-action like-button ${story.user_liked ? 'liked' : ''}">
                             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="${story.user_liked ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="like-icon">
                                 <path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/>
@@ -404,6 +434,10 @@ class LoveStories {
                                 <line x1="12" y1="2" x2="12" y2="15"></line>
                             </svg>
                             <span class="share-count">${story.shares_count || 0}</span>
+                        </button>
+
+                        <button class="story-action report-story-button" title="Report Inappropriate Content">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="flag-icon"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"></path><line x1="4" y1="22" x2="4" y2="15"></line></svg>
                         </button>
                     </div>
                 </div>
@@ -601,6 +635,54 @@ class LoveStories {
                 console.error('Error tracking share click:', error);
             }
         }
+    }
+    
+    // 🗑️ NEW: Client-side logic for story deletion
+    async handleDeleteStory(storyId) {
+        if (!confirm("Are you sure you want to permanently delete this story? This action cannot be undone.")) {
+            return;
+        }
+
+        try {
+            // Call the API endpoint
+            await this.api.deleteStory(storyId);
+            
+            // Remove the story from the frontend list
+            const storyIndex = this.stories.findIndex(s => s.id === storyId);
+            if (storyIndex !== -1) {
+                this.stories.splice(storyIndex, 1);
+            }
+
+            // Re-render the page
+            if (window.loveStoriesPage) {
+                window.loveStoriesPage.renderStories();
+                window.loveStoriesPage.updateStats();
+            } else {
+                this.renderStories();
+            }
+
+            this.notifications.showSuccess('Story deleted successfully. 🗑️');
+            
+        } catch (error) {
+            console.error('Error deleting story:', error);
+            this.notifications.showError('Failed to delete story: ' + (error.message || 'Check permissions or try again.'));
+        }
+    }
+
+    // 🚩 NEW: Placeholder for opening the report modal (UI to be built)
+    openReportModal(storyId) {
+        // NOTE: This will require a new StoryReportModal class or similar UI logic.
+        this.notifications.show('Reporting feature is coming soon! Story ID: ' + storyId, 'error');
+        console.log(`Open report modal for story ${storyId}`);
+        // For now, you could launch a simple prompt for testing:
+        /*
+        const reason = prompt("Enter a reason for reporting this story:");
+        if (reason) {
+            this.api.reportStory(storyId, { reason, description: "Via simple prompt" })
+                .then(() => this.notifications.showSuccess('Report submitted!'))
+                .catch(e => this.notifications.showError('Report failed: ' + e.message));
+        }
+        */
     }
 
     loadMoreStories() {
