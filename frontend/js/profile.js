@@ -2,9 +2,8 @@
 
 class ProfileManager {
   constructor() {
-    this.API_BASE = window.location.hostname.includes("localhost")
-      ? "http://localhost:3001/api"
-      : "https://lovculator.com/api";
+    // 🔑 Use the correct global variable for API Base (Assumes fix in auth.js)
+    this.API_BASE = window.ROOT_API_BASE; 
 
     this.profileInfoContainer = document.getElementById("profileInfoContainer"); 
     this.storiesContainer = document.getElementById("userStoriesContainer");
@@ -24,6 +23,7 @@ class ProfileManager {
     this.showLoading("userStoriesContainer");
 
     try {
+      // NOTE: Using window.ROOT_API_BASE + /auth/me for correct path
       const res = await fetch(`${this.API_BASE}/auth/me`, { credentials: "include" });
 
       if (!res.ok) {
@@ -37,7 +37,6 @@ class ProfileManager {
       this.renderProfileDetails(user);
       await this.loadUserStories(user.id);
       
-      // 🔑 CRITICAL: Attach handlers only after user data is confirmed
       this.attachTabHandlers(); 
       
     } catch (err) {
@@ -146,7 +145,7 @@ class ProfileManager {
   }
   
   // ------------------------------
-  // 6️⃣ Handle Tab Switching (Consolidated and Corrected)
+  // 6️⃣ Handle Tab Switching
   // ------------------------------
   attachTabHandlers() {
       document.querySelectorAll('.profile-tabs .tab-btn').forEach(button => {
@@ -159,9 +158,15 @@ class ProfileManager {
 
               // Activate selected button and pane
               e.target.classList.add('active');
-              document.getElementById(`${tabId}-tab`).classList.add('active');
+              // ❌ FIX: Safely access classList to prevent "null" error
+              const targetPane = document.getElementById(`${tabId}-tab`);
+              if (targetPane) {
+                 targetPane.classList.add('active');
+              } else {
+                 console.error(`❌ Tab pane element #${tabId}-tab not found in profile.html`);
+                 return; // Stop if the pane is missing
+              }
 
-              // 🔑 Load content based on tab (Now correctly inside the class)
               if (!this.currentUser) return; 
 
               switch(tabId) {
@@ -198,6 +203,8 @@ class ProfileManager {
           }
 
           container.innerHTML = this.renderUserList(followers);
+          this.attachFollowButtonHandlers(); // 🔑 NEW: Attach handlers after rendering
+
       } catch (err) {
           console.error("❌ Error loading followers:", err);
           container.innerHTML = `<p style="color:red;">❌ Failed to load followers list.</p>`;
@@ -222,6 +229,8 @@ class ProfileManager {
           }
 
           container.innerHTML = this.renderUserList(following);
+          this.attachFollowButtonHandlers(); // 🔑 NEW: Attach handlers after rendering
+          
       } catch (err) {
           console.error("❌ Error loading following:", err);
           container.innerHTML = `<p style="color:red;">❌ Failed to load following list.</p>`;
@@ -229,22 +238,98 @@ class ProfileManager {
   }
 
   // ------------------------------
-  // 9️⃣ Utility: Render User List
+  // 9️⃣ Utility: Render User List (UPDATED with Follow Button)
   // ------------------------------
   renderUserList(users) {
-      return users.map(user => `
-          <div class="user-list-item" style="display:flex; justify-content:space-between; align-items:center; padding:10px; border-bottom:1px solid #eee;">
-              <div class="user-info">
-                  <span style="font-weight:bold; color:#ff4b8d;">@${user.username}</span>
-                  <span style="color:#888; font-size:0.8em;">(${user.email})</span>
+      const myId = this.currentUser.id; 
+
+      return users.map(user => {
+          if (user.id == myId) return ''; 
+
+          // 💡 Initial button state logic would go here if we fetch the relationship status
+          // For now, it starts as '...' and is set by attachFollowButtonHandlers' first run
+          
+          return `
+              <div class="user-list-item" style="display:flex; justify-content:space-between; align-items:center; padding:10px; border-bottom:1px solid #eee;">
+                  <div class="user-info">
+                      <span style="font-weight:bold; color:#ff4b8d;">@${user.username}</span>
+                      <span style="color:#888; font-size:0.8em;">(${user.email})</span>
+                  </div>
+                  <button 
+                      class="btn btn-small follow-toggle-btn" 
+                      data-user-id="${user.id}"
+                      data-initial-status="unknown"
+                      title="Click to Follow/Unfollow"
+                      style="background:#f0f0f0; color:#333; border:none; padding:5px 10px; border-radius:5px; cursor:pointer;"
+                  >
+                      Follow 
+                  </button>
               </div>
-          </div>
-      `).join('');
+          `;
+      }).join('');
   }
 
+  // ------------------------------
+  // 🔟 Toggle Follow Status (MOVED INTO CLASS)
+  // ------------------------------
+  async toggleFollow(targetId, button) {
+      if (!this.currentUser) return; // Must be logged in
+
+      button.disabled = true;
+      const initialText = button.textContent;
+      button.textContent = '...';
+
+      try {
+          // Calls POST /api/users/:targetId/follow
+          const response = await this.api.request(`/users/${targetId}/follow`, {
+              method: 'POST'
+          });
+
+          const isFollowing = response.is_following; 
+          this.updateFollowButton(button, isFollowing);
+          
+      } catch (err) {
+          console.error("❌ Follow/Unfollow failed:", err);
+          button.textContent = initialText; 
+          alert("Failed to change follow status. Please try again.");
+      } finally {
+          button.disabled = false;
+      }
+  }
 
   // ------------------------------
-  // 🔟 Utility: Loading Placeholder
+  // 1️⃣1️⃣ Update Button Appearance (MOVED INTO CLASS)
+  // ------------------------------
+  updateFollowButton(button, isFollowing) {
+      if (isFollowing) {
+          button.textContent = 'Following';
+          button.style.backgroundColor = '#ff4b8d';
+          button.style.color = 'white';
+          button.dataset.initialStatus = 'following';
+      } else {
+          button.textContent = 'Follow';
+          button.style.backgroundColor = '#f0f0f0';
+          button.style.color = '#333';
+          button.dataset.initialStatus = 'not-following';
+      }
+  }
+
+  // ------------------------------
+  // 1️⃣2️⃣ Attach Listeners to New Buttons (MOVED INTO CLASS)
+  // ------------------------------
+  attachFollowButtonHandlers() {
+      // Use document as the container listener for simplicity across both tabs
+      document.addEventListener('click', (e) => {
+          const button = e.target.closest('.follow-toggle-btn');
+          if (button && this.currentUser) {
+              const targetId = button.dataset.userId;
+              this.toggleFollow(targetId, button);
+          }
+      });
+  }
+
+  // ------------------------------
+  // 1️⃣3️⃣ Utility: Loading Placeholder
   // ------------------------------
   showLoading(elementId, text = "Loading...") {
     const el = document.getElementById(elementId);
@@ -261,9 +346,9 @@ class ProfileManager {
 
 // 🌟 Initialize ProfileManager
 document.addEventListener("DOMContentLoaded", () => {
+  // 🔑 Removed global const declaration and rely on window.ROOT_API_BASE
   if (typeof LoveStoriesAPI === 'undefined' || typeof NotificationService === 'undefined') {
       console.error("❌ Dependency missing: love-stories.js must be loaded before profile.js");
-      // Add a visual error/redirect here if dependencies are truly missing
       return; 
   }
   new ProfileManager();
