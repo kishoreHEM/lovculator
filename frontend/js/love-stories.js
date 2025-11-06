@@ -492,21 +492,25 @@ class LoveStories {
     }
 
     async toggleLike(storyId) {
-  try {
-    const result = await this.api.toggleLike(storyId);
+    const btn = document.querySelector(`[data-like-btn="${storyId}"]`);
+    if (btn) btn.disabled = true; // 🧱 temporarily disable button
 
-    const storyIndex = this.stories.findIndex(s => s.id === storyId);
-    if (storyIndex !== -1) {
-      this.stories[storyIndex].likes_count = result.likes_count;
-      this.stories[storyIndex].user_liked = result.is_liked;
+    try {
+        const result = await this.api.toggleLike(storyId);
 
-      if (result.is_liked) {
-        this.notifications.showSuccess('Story Liked! ❤️');
-        window.simpleStats?.trackLike();
-      } else {
-        this.notifications.showSuccess('Story Unliked 💔');
-      }
-    }
+        const storyIndex = this.stories.findIndex(s => s.id === storyId);
+        if (storyIndex !== -1) {
+            this.stories[storyIndex].likes_count = result.likes_count;
+            this.stories[storyIndex].user_liked = result.is_liked;
+
+            if (result.is_liked) {
+                this.notifications.showSuccess('Story Liked! ❤️');
+                window.simpleStats?.trackLike();
+            } else {
+                this.notifications.showSuccess('Story Unliked 💔');
+            }
+        }
+
 
     // 🔄 Update story list & stats
     if (window.loveStoriesPage) {

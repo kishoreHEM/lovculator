@@ -136,18 +136,16 @@ router.post("/:id/like", isAuthenticated, async (req, res) => {
     try {
         await client.query("BEGIN");
 
-        const storyId = req.params.id;
+        const storyId = parseInt(req.params.id, 10);
         const userId = req.user.id;
 
-        const checkResult = await client.query(
-            `SELECT * FROM story_likes WHERE user_id = $1 AND story_id = $2`,
+        const existing = await client.query(
+            `SELECT 1 FROM story_likes WHERE user_id = $1 AND story_id = $2 FOR UPDATE`,
             [userId, storyId]
         );
 
-        let isLiked = checkResult.rowCount > 0;
         let action = "";
-
-        if (isLiked) {
+        if (existing.rowCount > 0) {
             await client.query(
                 `DELETE FROM story_likes WHERE user_id = $1 AND story_id = $2`,
                 [userId, storyId]
@@ -155,7 +153,9 @@ router.post("/:id/like", isAuthenticated, async (req, res) => {
             action = "unliked";
         } else {
             await client.query(
-                `INSERT INTO story_likes (user_id, story_id) VALUES ($1, $2)`,
+                `INSERT INTO story_likes (user_id, story_id)
+                 VALUES ($1, $2)
+                 ON CONFLICT (story_id, user_id) DO NOTHING`,
                 [userId, storyId]
             );
             action = "liked";
@@ -171,9 +171,9 @@ router.post("/:id/like", isAuthenticated, async (req, res) => {
         console.log(`❤️ Story ${storyId} ${action} by user ${userId}`);
 
         res.json({
-            message: `Story ${action} successfully`,
+            message: `Story ${action} successfully.`,
             likes_count: parseInt(countResult.rows[0].likes_count, 10),
-            is_liked: !isLiked
+            is_liked: action === "liked"
         });
     } catch (err) {
         await client.query("ROLLBACK");
@@ -192,23 +192,36 @@ router.post("/:storyId/comments", isAuthenticated, async (req, res) => {
     try {
         await client.query("BEGIN");
 
-        const storyId = req.params.storyId;
+        const storyId = parseInt(req.params.storyId, 10);
         const { text } = req.body;
         const userId = req.user.id;
 
         if (!text || text.trim().length === 0) {
+            await client.query("ROLLBACK");
             return res.status(400).json({ error: "Comment text cannot be empty." });
         }
 
+        // ✅ Ensure story exists before inserting
+        const storyExists = await client.query(
+            `SELECT id FROM stories WHERE id = $1`,
+            [storyId]
+        );
+        if (storyExists.rowCount === 0) {
+            await client.query("ROLLBACK");
+            return res.status(404).json({ error: "Story not found." });
+        }
+
+        // ✅ Insert comment
         const commentResult = await client.query(
-            `INSERT INTO story_comments (story_id, user_id, comment_text)
-             VALUES ($1, $2, $3)
-             RETURNING *`,
+            `INSERT INTO story_comments (story_id, user_id, comment_text, created_at)
+             VALUES ($1, $2, $3, NOW())
+             RETURNING id, story_id, user_id, comment_text, created_at`,
             [storyId, userId, text.trim()]
         );
 
+        // ✅ Update count on story
         const updateResult = await client.query(
-            `UPDATE stories 
+            `UPDATE stories
              SET comments_count = COALESCE(comments_count, 0) + 1,
                  updated_at = NOW()
              WHERE id = $1
@@ -218,14 +231,12 @@ router.post("/:storyId/comments", isAuthenticated, async (req, res) => {
 
         await client.query("COMMIT");
 
-        const newCommentCount = updateResult.rows[0].comments_count;
-
         console.log(`💬 Comment added to story ${storyId} by user ${userId}`);
 
         res.status(201).json({
-            message: "Comment posted successfully",
+            message: "Comment posted successfully.",
             comment: commentResult.rows[0],
-            comments_count: newCommentCount
+            comments_count: updateResult.rows[0].comments_count
         });
     } catch (err) {
         await client.query("ROLLBACK");
