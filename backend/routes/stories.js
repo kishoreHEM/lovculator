@@ -63,13 +63,22 @@ router.post("/", async (req, res) => {
       return res.status(400).json({ error: "Story title and content are required." });
     }
 
-    const result = await pool.query(
-      `INSERT INTO stories 
-        (user_id, story_title, couple_names, love_story, category, mood, created_at, updated_at)
-       VALUES ($1, $2, $3, $4, $5, $6, NOW(), NOW())
-       RETURNING *`,
-      [userId, story_title, couple_names, love_story, category, mood]
-    );
+    // backend/routes/stories.js (Replace the INSERT query)
+  const result = await pool.query(
+    `INSERT INTO stories 
+        (user_id, story_title, couple_names, love_story, category, mood, allow_comments, created_at, updated_at)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, NOW(), NOW()) // $7 added
+     RETURNING *`,
+    [
+        userId, 
+        story_title, 
+        couple_names, 
+        love_story, 
+        category, 
+        mood, 
+        allowComments // ⬅️ ADDED
+    ]
+  );
 
     console.log(`✅ New story added by user ${userId}`);
     res.status(201).json(result.rows[0]);
