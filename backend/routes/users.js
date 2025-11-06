@@ -89,3 +89,53 @@ router.delete("/:id/unfollow", (req, res) => {
 });
 
 export default router;
+
+// ======================================================
+// 5️⃣ FETCH USER FOLLOWERS (New Route)
+// ======================================================
+router.get("/:userId/followers", async (req, res) => {
+  try {
+    const { userId } = req.params;
+    
+    // Select the users who FOLLOW the userId (i.e., target_id = userId)
+    const result = await pool.query(
+      `SELECT u.id, u.username, u.display_name, u.email
+       FROM follows f
+       JOIN users u ON u.id = f.follower_id
+       WHERE f.target_id = $1
+       ORDER BY u.username ASC`,
+      [userId]
+    );
+
+    // Frontend expects an array of user objects
+    res.json(result.rows);
+  } catch (err) {
+    console.error("❌ Fetch followers error:", err);
+    res.status(500).json({ error: "Failed to fetch followers list" });
+  }
+});
+
+// ======================================================
+// 6️⃣ FETCH USER FOLLOWING (New Route)
+// ======================================================
+router.get("/:userId/following", async (req, res) => {
+  try {
+    const { userId } = req.params;
+    
+    // Select the users the userId FOLLOWS (i.e., follower_id = userId)
+    const result = await pool.query(
+      `SELECT u.id, u.username, u.display_name, u.email
+       FROM follows f
+       JOIN users u ON u.id = f.target_id
+       WHERE f.follower_id = $1
+       ORDER BY u.username ASC`,
+      [userId]
+    );
+
+    // Frontend expects an array of user objects
+    res.json(result.rows);
+  } catch (err) {
+    console.error("❌ Fetch following error:", err);
+    res.status(500).json({ error: "Failed to fetch following list" });
+  }
+});
