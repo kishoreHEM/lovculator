@@ -36,35 +36,36 @@ router.get("/", async (req, res) => {
     // SQL query building variables
     // NOTE: The shares table reference is now correctly working since you created it!
     let query = `
-        SELECT
-            s.id,
-            s.user_id,
-            s.couple_names,
-            s.story_title,
-            s.love_story,
-            s.category,
-            s.mood,
-            s.together_since,
-            s.anonymous_post,
-            s.allow_comments,
-            s.created_at,
-            COALESCE(lc.likes_count, 0) AS likes_count,
-            COALESCE(cc.comments_count, 0) AS comments_count,
-            COALESCE(sh.shares_count, 0) AS shares_count,
-            CASE WHEN EXISTS (
-                SELECT 1 FROM likes l 
-                WHERE l.story_id = s.id 
-                AND (
-                    l.user_id = $1 OR 
-                    l.anon_id = $2
-                )
-            ) THEN TRUE ELSE FALSE END AS user_liked
-        FROM
-            stories s
-        LEFT JOIN (SELECT story_id, COUNT(*) AS likes_count FROM likes GROUP BY story_id) lc ON s.id = lc.story_id
-        LEFT JOIN (SELECT story_id, COUNT(*) AS comments_count FROM comments GROUP BY story_id) cc ON s.id = cc.story_id
-        LEFT JOIN (SELECT story_id, COUNT(*) AS shares_count FROM shares GROUP BY story_id) sh ON s.id = sh.story_id
-    `;
+    SELECT
+        s.id,
+        s.user_id,
+        s.couple_names,
+        s.story_title,
+        s.love_story,
+        s.category,
+        s.mood,
+        s.together_since,
+        s.anonymous_post,
+        s.allow_comments,
+        s.created_at,
+        COALESCE(lc.likes_count, 0) AS likes_count,
+        COALESCE(cc.comments_count, 0) AS comments_count,
+        COALESCE(sh.shares_count, 0) AS shares_count,
+        CASE WHEN EXISTS (
+            SELECT 1 FROM likes l 
+            WHERE l.story_id = s.id 
+            AND (
+                l.user_id = $1 OR 
+                l.anon_id = $2
+            )
+        ) THEN TRUE ELSE FALSE END AS user_liked
+    FROM
+        stories s
+    LEFT JOIN (SELECT story_id, COUNT(*) AS likes_count FROM likes GROUP BY story_id) lc ON s.id = lc.story_id
+    LEFT JOIN (SELECT story_id, COUNT(*) AS comments_count FROM comments GROUP BY story_id) cc ON s.id = cc.story_id
+    -- 🛑 FIXED LINE: Use public.shares to ensure the table is found
+    LEFT JOIN (SELECT story_id, COUNT(*) AS shares_count FROM public.shares GROUP BY story_id) sh ON s.id = sh.story_id
+`;
 
     const queryParams = [
         sessionUserId || null, // $1: user_id for user_liked check
