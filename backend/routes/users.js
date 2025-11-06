@@ -1,21 +1,32 @@
 // backend/routes/users.js
 import express from "express";
-import pool from "../db.js"; // ✅ shared connection
+import pool from "../db.js";
 
 const router = express.Router();
+
+// ======================================================
+// 🔒 Middleware: Authentication Check
+// ======================================================
+const isAuthenticated = (req, res, next) => {
+  const userId = req.session?.userId || req.session?.user?.id;
+  if (userId) {
+    req.user = { id: userId };
+    return next();
+  }
+  res.status(401).json({ error: "Unauthorized: Please log in." });
+};
 
 // ======================================================
 // 1️⃣ FETCH ALL USERS (Public Info Only)
 // ======================================================
 router.get("/", async (req, res) => {
   try {
-    const result = await pool.query(
-      `SELECT id, username, email, display_name, bio, location, relationship_status, 
-              follower_count, following_count
-       FROM users
-       ORDER BY id ASC`
-    );
-
+    const result = await pool.query(`
+      SELECT id, username, email, display_name, bio, location, relationship_status,
+             follower_count, following_count
+      FROM users
+      ORDER BY id ASC
+    `);
     res.json(result.rows);
   } catch (err) {
     console.error("❌ Fetch users error:", err);
@@ -29,14 +40,12 @@ router.get("/", async (req, res) => {
 router.get("/:username", async (req, res) => {
   try {
     const username = req.params.username;
-
-    const result = await pool.query(
-      `SELECT id, username, email, display_name, bio, location, relationship_status,
-              follower_count, following_count
-       FROM users
-       WHERE username = $1`,
-      [username]
-    );
+    const result = await pool.query(`
+      SELECT id, username, email, display_name, bio, location, relationship_status,
+             follower_count, following_count
+      FROM users
+      WHERE username = $1
+    `, [username]);
 
     if (result.rows.length === 0) {
       return res.status(404).json({ error: "User not found" });
@@ -52,25 +61,23 @@ router.get("/:username", async (req, res) => {
 // ======================================================
 // 3️⃣ UPDATE USER PROFILE (Requires Auth)
 // ======================================================
-router.put("/:id", async (req, res) => {
+router.put("/:id", isAuthenticated, async (req, res) => {
   try {
     const { id } = req.params;
-    // 🔑 Fields the user can update
-    const { display_name, bio, location, relationship_status } = req.body; 
-    const sessionUserId = req.session?.userId;
+    const { display_name, bio, location, relationship_status } = req.body;
+    const sessionUserId = req.user.id;
 
-    // 🛑 Authorization Check
-    if (!sessionUserId || parseInt(id) !== sessionUserId) {
+    if (parseInt(id) !== sessionUserId) {
       return res.status(403).json({ error: "Unauthorized action" });
     }
 
-    const result = await pool.query(
-      `UPDATE users 
-       SET display_name = $1, bio = $2, location = $3, relationship_status = $4
-       WHERE id = $5
-       RETURNING id, username, display_name, bio, location, relationship_status, follower_count, following_count, created_at`, // 🔑 Return all fields needed for re-rendering the profile
-      [display_name, bio, location, relationship_status, id]
-    );
+    const result = await pool.query(`
+      UPDATE users
+      SET display_name = $1, bio = $2, location = $3, relationship_status = $4
+      WHERE id = $5
+      RETURNING id, username, display_name, bio, location, relationship_status,
+                follower_count, following_count, created_at
+    `, [display_name, bio, location, relationship_status, id]);
 
     res.json(result.rows[0]);
   } catch (err) {
@@ -79,92 +86,89 @@ router.put("/:id", async (req, res) => {
   }
 });
 
-// ------------------------------------------------------
-// 4️⃣ FOLLOW / UNFOLLOW (Full Logic)
-// ------------------------------------------------------
-router.post("/:targetId/follow", async (req, res) => {
-    // 🔑 req.session?.userId is the person doing the following (the follower)
-    const followerId = req.session?.userId; 
-    // 🔑 req.params.targetId is the person being followed/unfollowed
-    const targetId = parseInt(req.params.targetId); 
+// ======================================================
+// 4️⃣ FOLLOW / UNFOLLOW TOGGLE
+// ======================================================
+router.post("/:targetId/follow", isAuthenticated, async (req, res) => {
+  const followerId = req.user.id;
+  const targetId = parseInt(req.params.targetId);
 
-    if (!followerId) {
-        return res.status(401).json({ error: "Authentication required to follow." });
+  if (followerId === targetId) {
+    return res.status(400).json({ error: "You cannot follow yourself." });
+  }
+
+  const client = await pool.connect();
+  try {
+    await client.query("BEGIN");
+
+    const check = await client.query(
+      "SELECT 1 FROM follows WHERE follower_id = $1 AND target_id = $2",
+      [followerId, targetId]
+    );
+
+    let isFollowing;
+
+    if (check.rowCount > 0) {
+      await client.query(
+        "DELETE FROM follows WHERE follower_id = $1 AND target_id = $2",
+        [followerId, targetId]
+      );
+      await client.query(
+        "UPDATE users SET follower_count = follower_count - 1 WHERE id = $1",
+        [targetId]
+      );
+      await client.query(
+        "UPDATE users SET following_count = following_count - 1 WHERE id = $1",
+        [followerId]
+      );
+      isFollowing = false;
+    } else {
+      await client.query(
+        "INSERT INTO follows (follower_id, target_id) VALUES ($1, $2)",
+        [followerId, targetId]
+      );
+      await client.query(
+        "UPDATE users SET follower_count = follower_count + 1 WHERE id = $1",
+        [targetId]
+      );
+      await client.query(
+        "UPDATE users SET following_count = following_count + 1 WHERE id = $1",
+        [followerId]
+      );
+      isFollowing = true;
     }
 
-    if (followerId === targetId) {
-        return res.status(400).json({ error: "You cannot follow yourself." });
-    }
-
-    // Start a transaction for atomicity
-    const client = await pool.connect();
-    try {
-        await client.query('BEGIN');
-
-        // 1. Check if the follow relationship already exists
-        const check = await client.query(
-            'SELECT * FROM follows WHERE follower_id = $1 AND target_id = $2',
-            [followerId, targetId]
-        );
-
-        let isFollowing;
-
-        if (check.rows.length > 0) {
-            // Relationship exists: UNFOLLOW
-            await client.query(
-                'DELETE FROM follows WHERE follower_id = $1 AND target_id = $2',
-                [followerId, targetId]
-            );
-            // Decrement target's follower_count and follower's following_count
-            await client.query('UPDATE users SET follower_count = follower_count - 1 WHERE id = $1', [targetId]);
-            await client.query('UPDATE users SET following_count = following_count - 1 WHERE id = $1', [followerId]);
-            isFollowing = false;
-        } else {
-            // Relationship does not exist: FOLLOW
-            await client.query(
-                'INSERT INTO follows (follower_id, target_id) VALUES ($1, $2)',
-                [followerId, targetId]
-            );
-            // Increment target's follower_count and follower's following_count
-            await client.query('UPDATE users SET follower_count = follower_count + 1 WHERE id = $1', [targetId]);
-            await client.query('UPDATE users SET following_count = following_count + 1 WHERE id = $1', [followerId]);
-            isFollowing = true;
-        }
-
-        await client.query('COMMIT');
-        // Return the new status to the frontend
-        res.json({ success: true, is_following: isFollowing, message: isFollowing ? "Followed successfully." : "Unfollowed successfully." });
-
-    } catch (err) {
-        await client.query('ROLLBACK');
-        console.error("❌ Follow/Unfollow transaction error:", err);
-        res.status(500).json({ error: "Failed to toggle follow status." });
-    } finally {
-        client.release();
-    }
+    await client.query("COMMIT");
+    res.json({
+      success: true,
+      is_following: isFollowing,
+      message: isFollowing
+        ? "Followed successfully."
+        : "Unfollowed successfully.",
+    });
+  } catch (err) {
+    await client.query("ROLLBACK");
+    console.error("❌ Follow/Unfollow transaction error:", err);
+    res.status(500).json({ error: "Failed to toggle follow status." });
+  } finally {
+    client.release();
+  }
 });
 
-// Remove the old placeholder DELETE route as the POST route now handles the toggle
-// router.delete("/:id/unfollow", (req, res) => { ... });
-
 // ======================================================
-// 5️⃣ FETCH USER FOLLOWERS (New Route)
+// 5️⃣ FETCH FOLLOWERS
 // ======================================================
 router.get("/:userId/followers", async (req, res) => {
   try {
     const { userId } = req.params;
-    
-    // Select the users who FOLLOW the userId (i.e., target_id = userId)
-    const result = await pool.query(
-      `SELECT u.id, u.username, u.display_name, u.email
-       FROM follows f
-       JOIN users u ON u.id = f.follower_id
-       WHERE f.target_id = $1
-       ORDER BY u.username ASC`,
-      [userId]
-    );
+    const result = await pool.query(`
+      SELECT u.id, u.username, u.display_name, u.email
+      FROM follows f
+      JOIN users u ON u.id = f.follower_id
+      WHERE f.target_id = $1
+      ORDER BY u.username ASC
+    `, [userId]);
 
-    // Frontend expects an array of user objects
     res.json(result.rows);
   } catch (err) {
     console.error("❌ Fetch followers error:", err);
@@ -173,23 +177,19 @@ router.get("/:userId/followers", async (req, res) => {
 });
 
 // ======================================================
-// 6️⃣ FETCH USER FOLLOWING (New Route)
+// 6️⃣ FETCH FOLLOWING
 // ======================================================
 router.get("/:userId/following", async (req, res) => {
   try {
     const { userId } = req.params;
-    
-    // Select the users the userId FOLLOWS (i.e., follower_id = userId)
-    const result = await pool.query(
-      `SELECT u.id, u.username, u.display_name, u.email
-       FROM follows f
-       JOIN users u ON u.id = f.target_id
-       WHERE f.follower_id = $1
-       ORDER BY u.username ASC`,
-      [userId]
-    );
+    const result = await pool.query(`
+      SELECT u.id, u.username, u.display_name, u.email
+      FROM follows f
+      JOIN users u ON u.id = f.target_id
+      WHERE f.follower_id = $1
+      ORDER BY u.username ASC
+    `, [userId]);
 
-    // Frontend expects an array of user objects
     res.json(result.rows);
   } catch (err) {
     console.error("❌ Fetch following error:", err);
@@ -197,106 +197,89 @@ router.get("/:userId/following", async (req, res) => {
   }
 });
 
-// backend/routes/users.js
-
 // ======================================================
-// 7️⃣ CHECK FOLLOW STATUS (New Route)
+// 7️⃣ CHECK FOLLOW STATUS
 // ======================================================
 router.get("/:targetId/is-following", async (req, res) => {
-    const followerId = req.session?.userId;
-    const targetId = req.params.targetId;
+  const followerId = req.session?.userId;
+  const targetId = req.params.targetId;
 
-    if (!followerId) {
-        // If not logged in, they can't be following anyone
-        return res.json({ is_following: false });
-    }
+  if (!followerId) return res.json({ is_following: false });
 
-    try {
-        const result = await pool.query(
-            'SELECT 1 FROM follows WHERE follower_id = $1 AND target_id = $2',
-            [followerId, targetId]
-        );
-
-        // If a row is returned, the relationship exists
-        const isFollowing = result.rows.length > 0;
-        res.json({ is_following: isFollowing });
-    } catch (err) {
-        console.error("❌ Error checking follow status:", err);
-        res.status(500).json({ error: "Failed to check follow status" });
-    }
+  try {
+    const result = await pool.query(
+      "SELECT 1 FROM follows WHERE follower_id = $1 AND target_id = $2",
+      [followerId, targetId]
+    );
+    res.json({ is_following: result.rowCount > 0 });
+  } catch (err) {
+    console.error("❌ Error checking follow status:", err);
+    res.status(500).json({ error: "Failed to check follow status" });
+  }
 });
 
-// backend/routes/users.js (Route 8: GET USER ACTIVITY - UPDATED for Followers and Likes)
-
 // ======================================================
-// 8️⃣ GET USER ACTIVITY (Followers & Likes)
+// 8️⃣ GET USER ACTIVITY (Match frontend expectations)
 // ======================================================
 router.get("/:id/activity", async (req, res) => {
-    const targetId = parseInt(req.params.id);
-    const sessionUserId = req.session?.userId;
+  const targetId = parseInt(req.params.id);
 
-    if (!sessionUserId || sessionUserId !== targetId) {
-        return res.status(403).json({ error: "Unauthorized to view this activity feed." });
-    }
+  try {
+    // 1️⃣ New followers
+    const followersResult = await pool.query(`
+      SELECT 
+        u.username AS actor_username,
+        f.created_at AS date
+      FROM follows f
+      JOIN users u ON f.follower_id = u.id
+      WHERE f.target_id = $1
+      ORDER BY f.created_at DESC
+      LIMIT 10;
+    `, [targetId]);
 
-    try {
-        // 1. Fetch recent FOLLOWERS
-        const followersResult = await pool.query(
-            `SELECT
-                u.id AS actor_id, 
-                u.username AS actor_username, 
-                f.created_at AS date
-             FROM follows f
-             JOIN users u ON f.follower_id = u.id
-             WHERE f.target_id = $1
-             ORDER BY f.created_at DESC
-             LIMIT 10`,
-            [targetId]
-        );
+    const followerActivity = followersResult.rows.map(r => ({
+      type: "new_follower",
+      actor_username: r.actor_username,
+      message: `@${r.actor_username} started following you.`,
+      date: r.date,
+      related_story_id: null
+    }));
 
-        const followerActivity = followersResult.rows.map(row => ({
-            type: 'new_follower',
-            ...row,
-            message: `@${row.actor_username} started following you.`,
-            related_story_id: null // No story ID for a follow activity
-        }));
-        
-        // 2. Fetch recent LIKES on the user's stories
-        const likesResult = await pool.query(
-            `SELECT 
-                l.user_id AS actor_id,
-                u.username AS actor_username,
-                s.id AS related_story_id,
-                s.title AS related_story_title,
-                l.created_at AS date
-             FROM likes l
-             JOIN stories s ON l.story_id = s.id
-             JOIN users u ON l.user_id = u.id
-             WHERE s.user_id = $1 -- Filter for likes on THIS user's stories
-             ORDER BY l.created_at DESC
-             LIMIT 10`,
-            [targetId]
-        );
-        
-        const likeActivity = likesResult.rows.map(row => ({
-            type: 'story_like',
-            ...row,
-            message: `@${row.actor_username} liked your story: "${row.related_story_title}".`,
-        }));
+    // 2️⃣ Story likes
+    const likesResult = await pool.query(`
+      SELECT 
+        u.username AS actor_username,
+        s.id AS related_story_id,
+        s.story_title,
+        l.created_at AS date
+      FROM likes l
+      JOIN users u ON l.user_id = u.id
+      JOIN stories s ON l.story_id = s.id
+      WHERE s.user_id = $1
+      ORDER BY l.created_at DESC
+      LIMIT 10;
+    `, [targetId]);
 
-        // 3. Combine and Sort Activities
-        let activityFeed = [...followerActivity, ...likeActivity];
-        
-        // Sort by date (newest first) and limit the overall feed size
-        activityFeed.sort((a, b) => new Date(b.date) - new Date(a.date));
-        activityFeed = activityFeed.slice(0, 20); // Show up to 20 total items
+    const likeActivity = likesResult.rows.map(r => ({
+      type: "story_like",
+      actor_username: r.actor_username,
+      message: `@${r.actor_username} liked your story "${r.story_title}" 💖`,
+      date: r.date,
+      related_story_id: r.related_story_id
+    }));
 
-        res.json(activityFeed);
+    // Combine
+    const combined = [...followerActivity, ...likeActivity].sort(
+      (a, b) => new Date(b.date) - new Date(a.date)
+    );
 
-    } catch (err) {
-        console.error("❌ Error fetching user activity:", err);
-        res.status(500).json({ error: "Failed to load activity feed." });
-    }
+    res.json(combined.slice(0, 20));
+  } catch (err) {
+    console.error("❌ Error fetching user activity:", err);
+    res.status(500).json({ error: "Failed to load activity feed." });
+  }
 });
+
+
 
 export default router;

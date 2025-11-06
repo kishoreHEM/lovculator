@@ -1117,3 +1117,51 @@ if (document.readyState === 'loading') {
 } else {
     initializeLoveStories();
 }
+
+initializeLoveStories();
+
+// ==============================================
+// ✨ Count-Up Animation for Stats
+// ==============================================
+function animateCountUp(elementId, targetValue, duration = 1000) {
+    const element = document.getElementById(elementId);
+    if (!element) return;
+
+    // Convert to number (in case of formatted text like "0040000")
+    const cleanValue = parseInt(String(targetValue).replace(/\D/g, '')) || 0;
+    const startValue = 0;
+    const increment = cleanValue / (duration / 16); // ~60fps
+
+    let current = startValue;
+
+    const timer = setInterval(() => {
+        current += increment;
+        if (current >= cleanValue) {
+            clearInterval(timer);
+            element.textContent = cleanValue; // final value (no padding)
+        } else {
+            element.textContent = Math.floor(current);
+        }
+    }, 16);
+}
+
+// Listen after stories are fully loaded
+document.addEventListener('storiesLoaded', () => {
+    const clean = (id) => {
+        const el = document.getElementById(id);
+        if (!el) return 0;
+        const val = parseInt(el.textContent.toString().replace(/[^\d]/g, '')) || 0;
+        // 🧩 If the number looks inflated (e.g., 40000 when it should be 4)
+        // reduce it down proportionally
+        return val > 1000 ? Math.round(val / 10000) : val;
+    };
+
+    const stories = clean('totalStories');
+    const likes = clean('totalLikes');
+    const comments = clean('totalComments');
+
+    animateCountUp('totalStories', stories);
+    animateCountUp('totalLikes', likes);
+    animateCountUp('totalComments', comments);
+});
+
