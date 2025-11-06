@@ -54,6 +54,34 @@
         </main>
     </div>
 
+    <div id="editProfileModal" class="modal">
+        <div class="modal-content">
+            <span class="close-btn">&times;</span>
+            <h3>✏️ Edit Your Profile</h3>
+            <form id="editProfileForm">
+                <label for="editDisplayName">Display Name:</label>
+                <input type="text" id="editDisplayName" name="display_name" maxlength="50" required>
+
+                <label for="editBio">Bio:</label>
+                <textarea id="editBio" name="bio" rows="4" maxlength="300"></textarea>
+
+                <label for="editLocation">Location:</label>
+                <input type="text" id="editLocation" name="location" maxlength="50">
+
+                <label for="editRelationshipStatus">Relationship Status:</label>
+                <select id="editRelationshipStatus" name="relationship_status">
+                    <option value="Single">Single</option>
+                    <option value="In a Relationship">In a Relationship</option>
+                    <option value="Married">Married</option>
+                    <option value="It's Complicated">It's Complicated</option>
+                </select>
+                
+                <button type="submit" class="btn btn-primary" id="saveProfileBtn">Save Changes</button>
+                <p id="editProfileMessage" style="margin-top: 10px;"></p>
+            </form>
+        </div>
+    </div>
+
     <footer class="footer">
         </footer>
 
