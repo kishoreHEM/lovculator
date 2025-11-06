@@ -492,34 +492,49 @@ class LoveStories {
     }
 
     async toggleLike(storyId) {
-    try {
-        const result = await this.api.toggleLike(storyId); 
-        
-        const storyIndex = this.stories.findIndex(s => s.id === storyId);
-        if (storyIndex !== -1) {
-            this.stories[storyIndex].likes_count = result.likes_count; 
-            this.stories[storyIndex].user_liked = result.is_liked; 
-            
-            if (result.is_liked) {
-                 this.notifications.showSuccess('Story Liked! ❤️');
-                 window.simpleStats?.trackLike();
-            } else {
-                 this.notifications.showSuccess('Story Unliked. 💔');
-            }
-        }
-        
-        if (window.loveStoriesPage) {
-            window.loveStoriesPage.renderStories(); 
-            window.loveStoriesPage.updateStats();
-        } else {
-            this.renderStories(); 
-        }
+  try {
+    const result = await this.api.toggleLike(storyId);
 
-        } catch (error) {
-            console.error('Error toggling like:', error);
-            this.notifications.showError('Failed to update like: ' + error.message);
-        }
+    const storyIndex = this.stories.findIndex(s => s.id === storyId);
+    if (storyIndex !== -1) {
+      this.stories[storyIndex].likes_count = result.likes_count;
+      this.stories[storyIndex].user_liked = result.is_liked;
+
+      if (result.is_liked) {
+        this.notifications.showSuccess('Story Liked! ❤️');
+        window.simpleStats?.trackLike();
+      } else {
+        this.notifications.showSuccess('Story Unliked 💔');
+      }
     }
+
+    // 🔄 Update story list & stats
+    if (window.loveStoriesPage) {
+      window.loveStoriesPage.renderStories();
+      window.loveStoriesPage.updateStats();
+    } else {
+      this.renderStories();
+    }
+
+  } catch (error) {
+    console.error('❌ Error toggling like:', error);
+
+    // ✅ Check for unauthorized / not logged in
+    const isUnauthorized =
+      error?.data?.error?.includes('Unauthorized') ||
+      error?.message?.includes('401');
+
+    if (isUnauthorized) {
+      this.notifications.showError('❤️ Please log in to like stories!');
+      setTimeout(() => (window.location.href = '/login.html'), 1200);
+      return;
+    }
+
+    // Generic error fallback
+    this.notifications.showError('Failed to update like. Please try again.');
+  }
+}
+
 
     toggleComments(storyId) {
         const commentsSection = document.getElementById(`comments-${storyId}`);
@@ -579,10 +594,23 @@ class LoveStories {
             
             input.value = '';
             this.notifications.showSuccess('Comment added!');
-        } catch (error) {
-            console.error('Error adding comment:', error);
-            this.notifications.showError('Failed to add comment: ' + error.message);
-        }
+        } 
+        
+        catch (error) {
+  console.error('Error adding comment:', error);
+
+  const isUnauthorized =
+    error?.data?.error?.includes('Unauthorized') ||
+    error?.message?.includes('401');
+
+  if (isUnauthorized) {
+    this.notifications.showError('🔐 Please log in to comment!');
+    setTimeout(() => (window.location.href = '/login.html'), 1200);
+    return;
+  }
+
+  this.notifications.showError('Failed to add comment. Please try again.');
+}
     }
 }
     
