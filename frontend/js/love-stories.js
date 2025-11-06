@@ -217,15 +217,12 @@ class LoveStories {
         this.stories = []; // This array now holds the currently FILTERED stories from the server
         this.storiesContainer = document.getElementById('storiesContainer');
         this.loadMoreBtn = document.getElementById('loadMoreStories');
-        // Pagination logic is handled by LoveStoriesPage now, but keep state management here
         this.init();
     }
 
     async init() {
-        // loadStories is now called by LoveStoriesPage.init()
         this.bindEvents(); 
         this.setupStoryDelegation(); 
-        console.log('💖 Love Stories initialized with database');
     }
 
     // Binds the ONE-TIME event delegation listener to the parent container
@@ -275,7 +272,6 @@ class LoveStories {
             // Call the API with the query string (e.g., /stories?category=proposal&search=test)
             this.stories = await this.api.request(`/stories?${queryString}`);
             
-            // Do NOT call renderStories here. The LoveStoriesPage controller will handle it.
             // Dispatch a generic event for external listeners
             document.dispatchEvent(new CustomEvent('storiesLoaded')); 
             
@@ -287,7 +283,6 @@ class LoveStories {
         }
     }
 
-    // Note: bindEvents now mostly contains modal/mood logic, as pagination/search events move to LoveStoriesPage
     bindEvents() {
         // Mood selection
         document.querySelectorAll('.mood-option').forEach(option => {
@@ -299,11 +294,6 @@ class LoveStories {
                     option.dataset.mood;
             });
         });
-
-        // Load more stories (This event is now bound in LoveStoriesPage.bindEvents)
-        // if (this.loadMoreBtn) {
-        //     this.loadMoreBtn.addEventListener('click', () => this.loadMoreStories());
-        // }
     }
 
     async addStory(storyData) {
@@ -331,12 +321,10 @@ class LoveStories {
         }
     }
 
-    // This method is now called by LoveStoriesPage to render the subset of stories
+    // This method is a fallback/helper now; LoveStoriesPage controls rendering
     renderStories() {
         if (!this.storiesContainer) return;
         
-        // This method is deprecated here. LoveStoriesPage.renderStories() handles the slicing/sorting.
-        // It's only included here for backward compatibility if the page controller isn't used.
         if (window.loveStoriesPage) return; 
 
         if (this.stories.length === 0) {
@@ -345,8 +333,7 @@ class LoveStories {
             return;
         }
         
-        const storiesToShow = this.stories.slice(0, 
-            window.loveStoriesPage?.currentPage * window.loveStoriesPage?.storiesPerPage || 10);
+        const storiesToShow = this.stories.slice(0, 10);
         
         this.storiesContainer.innerHTML = storiesToShow.map(story => 
             this.getStoryHTML(story)).join('');
@@ -359,8 +346,6 @@ class LoveStories {
             }
         }
     }
-
-    // ... (Keep all your helper methods like getStoryHTML, getEmptyStateHTML, toggleReadMore)
 
     getStoryHTML(story) {
         const date = new Date(story.created_at).toLocaleDateString();
@@ -452,7 +437,6 @@ class LoveStories {
     }
     
     toggleReadMore(storyId) {
-        // Use the main stories array which holds the current filtered list
         const story = this.stories.find(s => s.id === storyId); 
         if (!story) return;
         
@@ -490,7 +474,6 @@ class LoveStories {
             }
         }
         
-        // Use the page controller to re-render the list without fetching from server
         if (window.loveStoriesPage) {
             window.loveStoriesPage.renderStories(); 
             window.loveStoriesPage.updateStats();
@@ -621,7 +604,7 @@ class LoveStories {
     }
 
     loadMoreStories() {
-        // This is now handled by LoveStoriesPage
+        // Handled by LoveStoriesPage
     }
     
     // Helper methods for category/mood display
@@ -644,7 +627,6 @@ class LoveStories {
 // 5. UI CLASS: StoryModal (Handles the story submission form)
 // ==============================================
 class StoryModal {
-    // ... (Keep this class exactly as it was)
     constructor(loveStoriesInstance, notificationService) {
         this.loveStories = loveStoriesInstance;
         this.notifications = notificationService;
@@ -807,8 +789,7 @@ class StoryModal {
 // ==============================================
 class LoveStoriesPage {
     constructor(loveStoriesInstance) {
-        this.loveStories = loveStoriesInstance; // Data manager instance
-        // State variables to track UI status
+        this.loveStories = loveStoriesInstance; 
         this.currentCategory = 'all'; 
         this.currentSearch = ''; 
         this.currentSort = 'newest';
@@ -821,27 +802,22 @@ class LoveStoriesPage {
 
     init() {
         this.bindEvents();
-        // 🚀 Kick off the initial load with default filters
         this.applyFiltersAndSort();
     }
 
     bindEvents() {
-        // --- Filtering/Search UI elements (from love-stories.html) ---
         const searchInput = document.getElementById('storySearchInput');
         const filterSelect = document.getElementById('categoryFilterSelect');
-        const applyBtn = document.getElementById('applyFiltersBtn'); // Main trigger button
+        const applyBtn = document.getElementById('applyFiltersBtn');
 
         if (applyBtn) {
-            // All filter/search changes funnel through this one function
             applyBtn.addEventListener('click', this.applyFiltersAndSort.bind(this));
         }
 
-        // Optional: Auto-filter on category change (without clicking Apply)
         if (filterSelect) {
             filterSelect.addEventListener('change', this.applyFiltersAndSort.bind(this));
         }
 
-        // Optional: Search on Enter key press in the search bar
         if (searchInput) {
             searchInput.addEventListener('keypress', (e) => {
                 if (e.key === 'Enter') {
@@ -850,29 +826,24 @@ class LoveStoriesPage {
             });
         }
 
-        // --- Sorting ---
         document.getElementById('sortStories')?.addEventListener('change', (e) => {
             this.currentSort = e.target.value;
-            // Sorting is CLIENT-SIDE, so just re-render
             this.renderStories(); 
         });
 
-        // --- Load More ---
         document.getElementById('loadMoreStories')?.addEventListener('click', () => {
             this.loadMoreStories();
         });
     }
 
-    // 🚀 CRITICAL METHOD: Fetches data from the server with search/filter parameters
     async applyFiltersAndSort() {
         const searchInput = document.getElementById('storySearchInput');
         const filterSelect = document.getElementById('categoryFilterSelect');
         const loadMoreBtn = document.getElementById('loadMoreStories');
 
-        // 1. Collect current search and filter values
         this.currentSearch = searchInput ? searchInput.value.trim() : '';
         this.currentCategory = filterSelect ? filterSelect.value : 'all';
-        this.currentPage = 1; // Always reset pagination when applying new filters
+        this.currentPage = 1;
 
         const apiParams = {};
         if (this.currentSearch) {
@@ -887,10 +858,8 @@ class LoveStoriesPage {
         this.loveStories.storiesContainer.innerHTML = '<div class="loading-indicator">Loading stories...</div>';
 
         try {
-            // 2. Call the LoveStories manager to fetch filtered data from the server
             await this.loveStories.loadStories(apiParams);
             
-            // 3. Update state and UI
             this.isLoading = false;
             this.updateStats(); 
             this.renderStories(); 
@@ -902,7 +871,6 @@ class LoveStoriesPage {
         }
     }
 
-    // Client-side sorting on the *currently loaded* stories array
     sortStories(stories, sortBy) {
         switch (sortBy) {
             case 'newest':
@@ -918,17 +886,13 @@ class LoveStoriesPage {
         }
     }
 
-    // Client-side rendering and pagination
     renderStories() {
         const container = document.getElementById('storiesContainer');
         const loadMoreBtn = document.getElementById('loadMoreStories');
         
         if (!container) return;
 
-        // 1. Get the current list of stories from the manager
         const storiesToRenderFrom = this.loveStories.stories;
-
-        // 2. Apply client-side sort
         const sortedStories = this.sortStories(storiesToRenderFrom, this.currentSort);
 
         if (sortedStories.length === 0 && !this.isLoading) {
@@ -937,14 +901,12 @@ class LoveStoriesPage {
             return;
         }
 
-        // 3. Apply pagination slice
         const storiesToShow = sortedStories.slice(0, this.currentPage * this.storiesPerPage);
         
         container.innerHTML = storiesToShow.map(story => 
             this.loveStories.getStoryHTML(story)
         ).join('');
         
-        // 4. Update "Load More" button visibility
         if (loadMoreBtn) {
             if (sortedStories.length > storiesToShow.length) {
                 loadMoreBtn.classList.remove('hidden');
@@ -959,7 +921,6 @@ class LoveStoriesPage {
         this.renderStories();
     }
 
-    // Updates the stat counters (if present in love-stories.html)
     updateStats() {
         const stories = this.loveStories.stories; 
         
@@ -967,7 +928,6 @@ class LoveStoriesPage {
         const totalLikes = stories.reduce((sum, story) => sum + (story.likes_count || 0), 0);
         const totalComments = stories.reduce((sum, story) => sum + (story.comments_count || 0), 0);
 
-        // Update the display stats (ensure your HTML has these IDs)
         if(document.getElementById('totalStories')) {
             document.getElementById('totalStories').textContent = totalStories;
         }
@@ -982,22 +942,74 @@ class LoveStoriesPage {
 
 
 // ==============================================
-// 7. GLOBAL INITIALIZATION 
+// 7. UTILITY CLASS: ThemeManager (New for Dark Mode)
 // ==============================================
-let loveStories, storyModal, notificationService, anonTracker, loveStoriesPage;
+class ThemeManager {
+    constructor() {
+        this.storageKey = 'lovculator_theme';
+        this.toggle = document.getElementById('darkModeToggle');
+        this.init();
+    }
+
+    init() {
+        const savedTheme = localStorage.getItem(this.storageKey);
+        
+        let initialDarkMode = false;
+        
+        if (savedTheme === 'dark') {
+            initialDarkMode = true;
+        } else if (savedTheme === null && window.matchMedia) {
+            // Check system preference if no preference is saved
+            initialDarkMode = window.matchMedia('(prefers-color-scheme: dark)').matches;
+        }
+        
+        // Apply the initial theme
+        if (initialDarkMode) {
+            document.body.classList.add('dark-mode');
+            if (this.toggle) {
+                this.toggle.checked = true;
+            }
+        }
+        
+        // Bind the event listener
+        if (this.toggle) {
+            this.toggle.addEventListener('change', this.toggleTheme.bind(this));
+        }
+    }
+
+    toggleTheme() {
+        if (document.body.classList.toggle('dark-mode')) {
+            // Theme switched to dark
+            localStorage.setItem(this.storageKey, 'dark');
+        } else {
+            // Theme switched to light
+            localStorage.setItem(this.storageKey, 'light');
+        }
+    }
+}
+
+
+// ==============================================
+// 8. GLOBAL INITIALIZATION (CORRECTED)
+// ==============================================
+let loveStories, storyModal, notificationService, anonTracker, loveStoriesPage, themeManager;
 
 function initializeLoveStories() {
     try {
         const storiesContainer = document.getElementById('storiesContainer');
         const storyFab = document.getElementById('storyFab');
         
-        console.log('🔧 Initializing Love Stories system...');
-        
         // Core Utilities - Initialize FIRST
         notificationService = new NotificationService();
         anonTracker = new AnonUserTracker(); 
         
-        // Data/State Manager - Pass anonTracker properly
+        // Theme Manager - Initialize before all else to apply theme quickly
+        if (document.getElementById('darkModeToggle')) {
+            themeManager = new ThemeManager();
+            window.themeManager = themeManager;
+        }
+        
+        // Data/State Manager
         loveStories = new LoveStories(notificationService, anonTracker); 
         
         // UI Components
@@ -1011,8 +1023,6 @@ function initializeLoveStories() {
         }
         
         window.loveStories = loveStories; 
-        
-        console.log('🚀 Lovculator system fully initialized and ready!');
         
     } catch (error) {
         console.error('❌ Error initializing Lovculator system:', error);
