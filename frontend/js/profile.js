@@ -6,10 +6,13 @@ class ProfileManager {
       ? "http://localhost:3001/api"
       : "https://lovculator.com/api";
 
-    this.container = document.getElementById("userProfileContainer");
+    this.profileInfoContainer = document.getElementById("profileInfoContainer"); 
     this.storiesContainer = document.getElementById("userStoriesContainer");
     this.currentUser = null;
-
+    
+    // Assumes LoveStoriesAPI is globally available from love-stories.js
+    this.api = new LoveStoriesAPI(); 
+    
     this.init();
   }
 
@@ -17,7 +20,8 @@ class ProfileManager {
   // 1️⃣ Initialize Profile
   // ------------------------------
   async init() {
-    this.showLoading("Loading your profile...");
+    this.showLoading("profileInfoContainer");
+    this.showLoading("userStoriesContainer");
 
     try {
       const res = await fetch(`${this.API_BASE}/auth/me`, { credentials: "include" });
@@ -30,53 +34,56 @@ class ProfileManager {
       const user = await res.json();
       this.currentUser = user;
 
-      this.fadeTransition(this.getProfileHTML(user), async () => {
-        this.attachLogoutHandler();
-        await this.loadUserStories(user.id);
-      });
-
+      this.renderProfileDetails(user);
+      await this.loadUserStories(user.id);
+      
+      // 🔑 CRITICAL: Attach handlers only after user data is confirmed
+      this.attachTabHandlers(); 
+      
     } catch (err) {
       console.error("❌ Profile load error:", err);
-      this.fadeTransition(`<p style="color:red;text-align:center;">❌ Failed to load profile.</p>`);
+      this.profileInfoContainer.innerHTML = `<p style="color:red;text-align:center;">❌ Failed to load profile.</p>`;
     }
   }
 
   // ------------------------------
-  // 2️⃣ Generate Profile HTML
+  // 2️⃣ Render Profile Details
   // ------------------------------
-  getProfileHTML(user) {
-    return `
-      <div class="user-profile-card" style="text-align:center;animation:fadeIn 0.5s;">
-        <h2>💖 Welcome, ${user.username}</h2>
-        <p><strong>Email:</strong> ${user.email || "Not available"}</p>
-        <p style="color:#666;margin:10px 0;">View your stories and activity below.</p>
-        <div style="margin-top:20px;">
-          <button id="logoutBtn" class="btn"
-            style="background:#ff4b8d;color:#fff;padding:10px 18px;border:none;border-radius:8px;cursor:pointer;">
-            🚪 Logout
-          </button>
+  renderProfileDetails(user) {
+    if (!this.profileInfoContainer) return;
+    
+    const initials = user.username ? user.username[0].toUpperCase() : '?';
+    const joinedDate = new Date(user.created_at).toLocaleDateString();
+
+    this.profileInfoContainer.innerHTML = `
+        <div class="profile-info">
+            <div class="profile-avatar">
+                <span id="initials">${initials}</span>
+            </div>
+            <div class="profile-details">
+                <h1 id="profileUsername">${user.username}</h1>
+                <p id="profileEmail">${user.email}</p>
+                <p id="profileJoined">Joined: ${joinedDate}</p>
+                <div class="profile-actions">
+                    <button id="logoutBtn" class="btn btn-secondary">🚪 Logout</button>
+                    <a href="record.html" class="btn btn-primary">📊 View Records</a>
+                </div>
+            </div>
         </div>
-      </div>
     `;
+    this.attachLogoutHandler();
   }
 
   // ------------------------------
   // 3️⃣ Handle Unauthorized User
   // ------------------------------
   handleUnauthorized() {
-    this.fadeTransition(`
-      <div class="not-logged-in" style="text-align:center;">
-        <p>⚠️ You must log in to view your profile.</p>
-        <a href="/login.html" class="btn"
-          style="background:#ff4b8d;color:#fff;padding:10px 18px;border-radius:8px;text-decoration:none;">
-          Go to Login
-        </a>
-      </div>
-    `);
+    alert("⚠️ You must log in to view your profile.");
+    window.location.href = "/login.html";
   }
 
   // ------------------------------
-  // 4️⃣ Logout
+  // 4️⃣ Logout Handler
   // ------------------------------
   attachLogoutHandler() {
     const logoutBtn = document.getElementById("logoutBtn");
@@ -93,16 +100,8 @@ class ProfileManager {
       });
 
       if (logoutRes.ok) {
-        this.fadeTransition(`
-          <div style="text-align:center;">
-            <p>✅ Logged out successfully!</p>
-            <a href="/login.html" class="btn"
-              style="background:#ff4b8d;color:#fff;padding:10px 18px;border-radius:8px;text-decoration:none;">
-              Go to Login
-            </a>
-          </div>
-        `);
-        setTimeout(() => (window.location.href = "/login.html"), 800);
+        alert("✅ Logged out successfully!");
+        setTimeout(() => (window.location.href = "/login.html"), 200);
       } else {
         alert("Logout failed. Please try again.");
       }
@@ -118,91 +117,154 @@ class ProfileManager {
   async loadUserStories(userId) {
     if (!this.storiesContainer) return;
 
-    this.storiesContainer.innerHTML = `
-      <div style="text-align:center;margin-top:20px;">
-        <div class="spinner" style="width:30px;height:30px;border:3px solid #ddd;border-top-color:#ff4b8d;border-radius:50%;margin:auto;animation:spin 1s linear infinite;"></div>
-        <p style="color:#888;">Loading your stories...</p>
-      </div>
-    `;
+    this.storiesContainer.innerHTML = `<div class="loading-wrapper"><div class="spinner"></div><p>Loading your stories...</p></div>`;
 
     try {
-      const res = await fetch(`${this.API_BASE}/stories?userId=${userId}`, {
-        credentials: "include",
-      });
-
-      if (!res.ok) throw new Error("Failed to fetch user stories");
-
-      const stories = await res.json();
-
+      const stories = await this.api.request(`/stories?userId=${userId}`); 
+      
       if (!stories.length) {
         this.storiesContainer.innerHTML = `
-          <p style="text-align:center;color:#777;margin-top:20px;">
-            💌 You haven’t shared any love stories yet.<br>
-            <a href="/love-stories" style="color:#ff4b8d;text-decoration:none;">Share one now!</a>
-          </p>
+          <div class="empty-state">
+            <p>💌 You haven’t shared any love stories yet.<br></p>
+            <a href="/love-stories.html" class="btn btn-primary">Share one now!</a>
+          </div>
         `;
         return;
       }
 
-      // Render stories dynamically
-      this.storiesContainer.innerHTML = stories.map((story) => `
-        <div class="story-card" style="border:1px solid #eee;border-radius:10px;padding:15px;margin:10px;box-shadow:0 2px 8px rgba(0,0,0,0.05);animation:fadeIn 0.3s;">
-          <h3 style="color:#ff4b8d;">${story.story_title}</h3>
-          <p style="color:#444;margin:8px 0;">${story.love_story.substring(0, 100)}...</p>
-          <p style="font-size:13px;color:#888;">
-            <strong>${story.category || "Love"}</strong> | ❤️ ${story.likes_count || 0} likes | 🗓️ ${new Date(story.created_at).toLocaleDateString()}
-          </p>
-        </div>
-      `).join("");
+      // Reusing LoveStories rendering logic
+      const tempLoveStories = new LoveStories(new NotificationService(), new AnonUserTracker());
+
+      this.storiesContainer.innerHTML = stories.map((story) => 
+        tempLoveStories.getStoryHTML(story)
+      ).join("");
 
     } catch (err) {
       console.error("❌ Error loading user stories:", err);
-      this.storiesContainer.innerHTML = `
-        <p style="text-align:center;color:red;">
-          ❌ Could not load your stories. Please try again later.
-        </p>
-      `;
+      this.storiesContainer.innerHTML = `<p style="text-align:center;color:red;">❌ Could not load your stories. Check your network.</p>`;
     }
   }
+  
+  // ------------------------------
+  // 6️⃣ Handle Tab Switching (Consolidated and Corrected)
+  // ------------------------------
+  attachTabHandlers() {
+      document.querySelectorAll('.profile-tabs .tab-btn').forEach(button => {
+          button.addEventListener('click', (e) => {
+              const tabId = e.target.dataset.tab;
 
-  // ------------------------------
-  // 6️⃣ Utility: Loading + Transition
-  // ------------------------------
-  showLoading(text = "Loading...") {
-    this.container.innerHTML = `
-      <div class="loading-wrapper" style="text-align:center;margin-top:60px;animation:fadeIn 0.5s;">
-        <div class="spinner" style="width:40px;height:40px;border:4px solid #ddd;border-top-color:#ff4b8d;border-radius:50%;margin:0 auto;animation:spin 1s linear infinite;"></div>
-        <p style="margin-top:12px;color:#666;">${text}</p>
-      </div>
-    `;
+              // Deactivate all buttons and panes
+              document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+              document.querySelectorAll('.tab-pane').forEach(pane => pane.classList.remove('active'));
+
+              // Activate selected button and pane
+              e.target.classList.add('active');
+              document.getElementById(`${tabId}-tab`).classList.add('active');
+
+              // 🔑 Load content based on tab (Now correctly inside the class)
+              if (!this.currentUser) return; 
+
+              switch(tabId) {
+                  case 'stories':
+                      this.loadUserStories(this.currentUser.id);
+                      break;
+                  case 'followers':
+                      this.loadFollowers(this.currentUser.id);
+                      break;
+                  case 'following':
+                      this.loadFollowing(this.currentUser.id);
+                      break;
+                  // 'activity' tab left for future implementation
+              }
+          });
+      });
   }
 
-  fadeTransition(newHTML, callback = () => {}) {
-    this.container.style.opacity = "0";
-    this.container.style.transition = "opacity 0.2s ease-out";
-    setTimeout(() => {
-      this.container.innerHTML = newHTML;
-      this.container.style.transition = "opacity 0.5s ease-in";
-      this.container.style.opacity = "1";
-      callback();
-    }, 200);
+  // ------------------------------
+  // 7️⃣ Load Followers
+  // ------------------------------
+  async loadFollowers(userId) {
+      const container = document.getElementById("followersContainer");
+      if (!container) return;
+      
+      this.showLoading("followersContainer", "Loading Followers...");
+
+      try {
+          const followers = await this.api.request(`/users/${userId}/followers`);
+
+          if (!followers.length) {
+              container.innerHTML = `<p class="empty-state">No users are following you yet. 🥺</p>`;
+              return;
+          }
+
+          container.innerHTML = this.renderUserList(followers);
+      } catch (err) {
+          console.error("❌ Error loading followers:", err);
+          container.innerHTML = `<p style="color:red;">❌ Failed to load followers list.</p>`;
+      }
+  }
+
+  // ------------------------------
+  // 8️⃣ Load Following
+  // ------------------------------
+  async loadFollowing(userId) {
+      const container = document.getElementById("followingContainer");
+      if (!container) return;
+      
+      this.showLoading("followingContainer", "Loading Following...");
+
+      try {
+          const following = await this.api.request(`/users/${userId}/following`);
+
+          if (!following.length) {
+              container.innerHTML = `<p class="empty-state">You are not following any users yet. 🔍</p>`;
+              return;
+          }
+
+          container.innerHTML = this.renderUserList(following);
+      } catch (err) {
+          console.error("❌ Error loading following:", err);
+          container.innerHTML = `<p style="color:red;">❌ Failed to load following list.</p>`;
+      }
+  }
+
+  // ------------------------------
+  // 9️⃣ Utility: Render User List
+  // ------------------------------
+  renderUserList(users) {
+      return users.map(user => `
+          <div class="user-list-item" style="display:flex; justify-content:space-between; align-items:center; padding:10px; border-bottom:1px solid #eee;">
+              <div class="user-info">
+                  <span style="font-weight:bold; color:#ff4b8d;">@${user.username}</span>
+                  <span style="color:#888; font-size:0.8em;">(${user.email})</span>
+              </div>
+          </div>
+      `).join('');
+  }
+
+
+  // ------------------------------
+  // 🔟 Utility: Loading Placeholder
+  // ------------------------------
+  showLoading(elementId, text = "Loading...") {
+    const el = document.getElementById(elementId);
+    if (el) {
+        el.innerHTML = `
+          <div class="loading-wrapper" style="text-align:center;padding:40px;">
+            <div class="spinner"></div>
+            <p style="margin-top:12px;color:#666;">${text}</p>
+          </div>
+        `;
+    }
   }
 }
 
 // 🌟 Initialize ProfileManager
 document.addEventListener("DOMContentLoaded", () => {
-  const container = document.getElementById("userProfileContainer");
-  if (!container) {
-    console.error("❌ userProfileContainer not found in DOM.");
-    return;
+  if (typeof LoveStoriesAPI === 'undefined' || typeof NotificationService === 'undefined') {
+      console.error("❌ Dependency missing: love-stories.js must be loaded before profile.js");
+      // Add a visual error/redirect here if dependencies are truly missing
+      return; 
   }
-
   new ProfileManager();
-
-  const style = document.createElement("style");
-  style.textContent = `
-    @keyframes spin { from {transform:rotate(0deg);} to {transform:rotate(360deg);} }
-    @keyframes fadeIn { from {opacity:0;transform:translateY(10px);} to {opacity:1;transform:translateY(0);} }
-  `;
-  document.head.appendChild(style);
 });
