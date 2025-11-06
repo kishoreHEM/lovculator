@@ -34,8 +34,8 @@ class ProfileManager {
       this.renderProfileDetails(user);
       await this.loadUserStories(user.id);
       
-      this.attachTabHandlers();
-      this.attachEditProfileHandlers(); // 🔑 NEW: Attach Edit Handlers 
+      this.attachTabHandlers(); 
+      this.attachEditProfileHandlers(); // Added for profile editing
       
     } catch (err) {
       console.error("❌ Profile load error:", err);
@@ -44,7 +44,7 @@ class ProfileManager {
   }
 
   // ------------------------------
-  // 2️⃣ Render Profile Details (UPDATED for better UI)
+  // 2️⃣ Render Profile Details
   // ------------------------------
   renderProfileDetails(user) {
     if (!this.profileInfoContainer) return;
@@ -92,6 +92,7 @@ class ProfileManager {
         </div>
     `;
     this.attachLogoutHandler();
+    this.attachEditProfileHandlers(); // Ensure this is called here too if the DOM elements exist
   }
 
   // ------------------------------
@@ -130,105 +131,100 @@ class ProfileManager {
       alert("⚠️ Network error during logout.");
     }
   }
+  
+  // ------------------------------
+  // 4️⃣.1 Edit Profile Handlers
+  // ------------------------------
+  attachEditProfileHandlers() {
+      const editBtn = document.getElementById("editProfileBtn");
+      const modal = document.getElementById("editProfileModal");
+      const closeBtn = modal?.querySelector(".close-btn");
+      const form = document.getElementById("editProfileForm");
+
+      if (editBtn) {
+          // Open modal
+          editBtn.addEventListener("click", () => {
+              this.populateEditForm();
+              if(modal) modal.style.display = "block";
+          });
+      }
+
+      if (closeBtn) {
+          // Close modal
+          closeBtn.addEventListener("click", () => {
+              if(modal) modal.style.display = "none";
+          });
+      }
+
+      // Close on outside click
+      window.addEventListener("click", (e) => {
+          if (e.target === modal) {
+              modal.style.display = "none";
+          }
+      });
+
+      if (form) {
+          // Submit handler
+          form.addEventListener("submit", this.handleEditProfile.bind(this));
+      }
+  }
 
   // ------------------------------
-// 4️⃣.1 Edit Profile Handlers (New)
-// ------------------------------
-attachEditProfileHandlers() {
-    const editBtn = document.getElementById("editProfileBtn");
-    const modal = document.getElementById("editProfileModal");
-    const closeBtn = modal?.querySelector(".close-btn");
-    const form = document.getElementById("editProfileForm");
+  // 4️⃣.2 Populate Edit Form
+  // ------------------------------
+  populateEditForm() {
+      if (!this.currentUser) return;
 
-    if (editBtn) {
-        // Open modal
-        editBtn.addEventListener("click", () => {
-            this.populateEditForm();
-            modal.style.display = "block";
-        });
-    }
+      // Use current user data to fill the form fields
+      document.getElementById("editDisplayName").value = this.currentUser.display_name || '';
+      document.getElementById("editBio").value = this.currentUser.bio || '';
+      document.getElementById("editLocation").value = this.currentUser.location || '';
+      document.getElementById("editRelationshipStatus").value = this.currentUser.relationship_status || 'Single';
+      
+      document.getElementById("editProfileMessage").textContent = "";
+  }
 
-    if (closeBtn) {
-        // Close modal
-        closeBtn.addEventListener("click", () => {
-            modal.style.display = "none";
-        });
-    }
+  // ------------------------------
+  // 4️⃣.3 Handle Edit Profile Submission
+  // ------------------------------
+  async handleEditProfile(e) {
+      e.preventDefault();
+      const saveBtn = document.getElementById("saveProfileBtn");
+      const messageEl = document.getElementById("editProfileMessage");
+      const modal = document.getElementById("editProfileModal");
+      
+      saveBtn.disabled = true;
+      messageEl.textContent = "Saving...";
 
-    // Close on outside click
-    window.addEventListener("click", (e) => {
-        if (e.target === modal) {
-            modal.style.display = "none";
-        }
-    });
+      const formData = new FormData(e.target);
+      const updatedData = Object.fromEntries(formData.entries());
 
-    if (form) {
-        // Submit handler
-        form.addEventListener("submit", this.handleEditProfile.bind(this));
-    }
-}
+      try {
+          const updatedUser = await this.api.request(`/users/${this.currentUser.id}`, {
+              method: 'PUT',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(updatedData)
+          });
 
-// ------------------------------
-// 4️⃣.2 Populate Edit Form (New)
-// ------------------------------
-populateEditForm() {
-    if (!this.currentUser) return;
+          this.currentUser = { ...this.currentUser, ...updatedUser }; 
+          this.renderProfileDetails(this.currentUser); 
+          
+          messageEl.textContent = "✅ Profile updated successfully!";
+          messageEl.style.color = 'green';
+          
+          setTimeout(() => {
+              if(modal) modal.style.display = 'none';
+          }, 1500);
 
-    // Use current user data to fill the form fields
-    document.getElementById("editDisplayName").value = this.currentUser.display_name || '';
-    document.getElementById("editBio").value = this.currentUser.bio || '';
-    document.getElementById("editLocation").value = this.currentUser.location || '';
-    document.getElementById("editRelationshipStatus").value = this.currentUser.relationship_status || 'Single';
-    
-    document.getElementById("editProfileMessage").textContent = "";
-}
-
-// ------------------------------
-// 4️⃣.3 Handle Edit Profile Submission (New)
-// ------------------------------
-async handleEditProfile(e) {
-    e.preventDefault();
-    const saveBtn = document.getElementById("saveProfileBtn");
-    const messageEl = document.getElementById("editProfileMessage");
-    const modal = document.getElementById("editProfileModal");
-    
-    saveBtn.disabled = true;
-    messageEl.textContent = "Saving...";
-
-    const formData = new FormData(e.target);
-    const updatedData = Object.fromEntries(formData.entries());
-
-    try {
-        // Send PUT request to the backend route
-        const updatedUser = await this.api.request(`/users/${this.currentUser.id}`, {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(updatedData)
-        });
-
-        // 1. Update local state
-        this.currentUser = { ...this.currentUser, ...updatedUser }; 
-        
-        // 2. Re-render profile section with new data
-        this.renderProfileDetails(this.currentUser); 
-        
-        messageEl.textContent = "✅ Profile updated successfully!";
-        messageEl.style.color = 'green';
-        
-        // Close modal after a short delay
-        setTimeout(() => {
-            modal.style.display = 'none';
-        }, 1500);
-
-    } catch (err) {
-        console.error("❌ Profile update failed:", err);
-        const errorMsg = err.data?.error || "Failed to save changes. Please try again.";
-        messageEl.textContent = `❌ ${errorMsg}`;
-        messageEl.style.color = 'red';
-    } finally {
-        saveBtn.disabled = false;
-    }
-}
+      } catch (err) {
+          console.error("❌ Profile update failed:", err);
+          const errorMsg = err.data?.error || "Failed to save changes. Please try again.";
+          messageEl.textContent = `❌ ${errorMsg}`;
+          messageEl.style.color = 'red';
+      } finally {
+          saveBtn.disabled = false;
+      }
+  }
 
   // ------------------------------
   // 5️⃣ Load User’s Stories
@@ -296,13 +292,16 @@ async handleEditProfile(e) {
                   case 'following':
                       this.loadFollowing(this.currentUser.id);
                       break;
+                  case 'activity': // CALL TO NEW ACTIVITY METHOD
+                      this.loadUserActivity(this.currentUser.id); 
+                      break;
               }
           });
       });
   }
 
   // ------------------------------
-  // 7️⃣ Load Followers (UPDATED to fetch follow status)
+  // 7️⃣ Load Followers
   // ------------------------------
   async loadFollowers(userId) {
       const container = document.getElementById("followersContainer");
@@ -331,7 +330,7 @@ async handleEditProfile(e) {
   }
 
   // ------------------------------
-  // 8️⃣ Load Following (UPDATED to fetch follow status)
+  // 8️⃣ Load Following
   // ------------------------------
   async loadFollowing(userId) {
       const container = document.getElementById("followingContainer");
@@ -360,7 +359,7 @@ async handleEditProfile(e) {
   }
 
   // ------------------------------
-  // 9️⃣ Utility: Render User List (Includes status)
+  // 9️⃣ Utility: Render User List
   // ------------------------------
   renderUserList(users, statusMap = {}) { 
       const myId = this.currentUser.id; 
@@ -449,8 +448,8 @@ async handleEditProfile(e) {
           const button = e.target.closest('.follow-toggle-btn');
           if (button && this.currentUser) {
               const targetId = button.dataset.userId;
-              const isRelevantClick = document.getElementById('followers-tab').classList.contains('active') || 
-                                      document.getElementById('following-tab').classList.contains('active');
+              const isRelevantClick = document.getElementById('followers-tab')?.classList.contains('active') || 
+                                      document.getElementById('following-tab')?.classList.contains('active');
                                       
               if (isRelevantClick) {
                  this.toggleFollow(targetId, button);
@@ -460,7 +459,7 @@ async handleEditProfile(e) {
   }
 
   // ------------------------------
-  // 1️⃣3️⃣ Batch Status Check (FIXED - NO SEMICOLON)
+  // 1️⃣3️⃣ Batch Status Check
   // ------------------------------
   async getFollowStatusBatch(userIds) {
       if (!this.currentUser) {
@@ -517,6 +516,83 @@ async handleEditProfile(e) {
         `;
     }
   }
+
+  // ------------------------------
+  // 1️⃣6️⃣ Load User Activity (CORRECTLY PLACED)
+  // ------------------------------
+  async loadUserActivity(userId) {
+    const container = document.getElementById("userActivityContainer");
+    if (!container) return;
+    
+    this.showLoading("userActivityContainer", "Loading your activity feed...");
+
+    try {
+        // Fetch activity from the new backend route
+        const activity = await this.api.request(`/users/${userId}/activity`);
+
+        if (!activity.length) {
+            container.innerHTML = `<p class="empty-state">No recent activity yet. Share more stories! 🚀</p>`;
+            return;
+        }
+
+        container.innerHTML = this.renderActivityFeed(activity);
+
+    } catch (err) {
+        console.error("❌ Error loading user activity:", err);
+        container.innerHTML = `<p style="color:red;">❌ Failed to load activity feed.</p>`;
+    }
+  }
+
+  // ------------------------------
+// 1️⃣7️⃣ Render Activity Feed (UPDATED to handle Likes)
+// ------------------------------
+renderActivityFeed(activity) {
+    return `
+        <div class="activity-list">
+            ${activity.map(item => {
+                const date = new Date(item.date).toLocaleDateString('en-US', { 
+                    month: 'short', 
+                    day: 'numeric', 
+                    hour: 'numeric', 
+                    minute: 'numeric' 
+                });
+                
+                let linkHTML = '';
+                let icon = '🔔';
+                let messageStyle = '';
+
+                // Add links and icons based on activity type
+                if (item.type === 'story_like') {
+                    // Link to the story page if a story ID is present
+                    linkHTML = `<a href="/love-stories.html?storyId=${item.related_story_id}" style="color:#ff4b8d; font-weight: 500;">(View Story)</a>`;
+                    icon = '❤️';
+                    messageStyle = 'color: #ff4b8d;';
+                } else if (item.type === 'new_follower') {
+                    // Link to the user's profile
+                    linkHTML = `<a href="/profile.html?user=${item.actor_username}" style="color:#666;">(View Profile)</a>`;
+                    icon = '✨';
+                    messageStyle = 'color:#333;';
+                }
+
+                return `
+                    <div class="activity-item" style="padding:15px; border-bottom:1px solid #eee; display:flex; justify-content:space-between; align-items:center;">
+                        <p style="flex-grow: 1;">
+                            <span style="font-size: 1.2em; margin-right: 8px;">${icon}</span>
+                            <span style="font-weight:bold; ${messageStyle}">${item.message}</span>
+                            <br>
+                            <span style="color:#888; font-size:0.85em; margin-left: 20px;">
+                                ${linkHTML}
+                            </span>
+                        </p>
+                        <span style="font-size:0.75em; color:#bbb; flex-shrink: 0; margin-left: 10px; text-align: right;">
+                            ${date}
+                        </span>
+                    </div>
+                `;
+            }).join('')}
+        </div>
+    `;
+}
 } // End of ProfileManager Class
 
 // 🌟 Initialize ProfileManager

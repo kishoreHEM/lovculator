@@ -226,4 +226,77 @@ router.get("/:targetId/is-following", async (req, res) => {
     }
 });
 
+// backend/routes/users.js (Route 8: GET USER ACTIVITY - UPDATED for Followers and Likes)
+
+// ======================================================
+// 8️⃣ GET USER ACTIVITY (Followers & Likes)
+// ======================================================
+router.get("/:id/activity", async (req, res) => {
+    const targetId = parseInt(req.params.id);
+    const sessionUserId = req.session?.userId;
+
+    if (!sessionUserId || sessionUserId !== targetId) {
+        return res.status(403).json({ error: "Unauthorized to view this activity feed." });
+    }
+
+    try {
+        // 1. Fetch recent FOLLOWERS
+        const followersResult = await pool.query(
+            `SELECT
+                u.id AS actor_id, 
+                u.username AS actor_username, 
+                f.created_at AS date
+             FROM follows f
+             JOIN users u ON f.follower_id = u.id
+             WHERE f.target_id = $1
+             ORDER BY f.created_at DESC
+             LIMIT 10`,
+            [targetId]
+        );
+
+        const followerActivity = followersResult.rows.map(row => ({
+            type: 'new_follower',
+            ...row,
+            message: `@${row.actor_username} started following you.`,
+            related_story_id: null // No story ID for a follow activity
+        }));
+        
+        // 2. Fetch recent LIKES on the user's stories
+        const likesResult = await pool.query(
+            `SELECT 
+                l.user_id AS actor_id,
+                u.username AS actor_username,
+                s.id AS related_story_id,
+                s.title AS related_story_title,
+                l.created_at AS date
+             FROM likes l
+             JOIN stories s ON l.story_id = s.id
+             JOIN users u ON l.user_id = u.id
+             WHERE s.user_id = $1 -- Filter for likes on THIS user's stories
+             ORDER BY l.created_at DESC
+             LIMIT 10`,
+            [targetId]
+        );
+        
+        const likeActivity = likesResult.rows.map(row => ({
+            type: 'story_like',
+            ...row,
+            message: `@${row.actor_username} liked your story: "${row.related_story_title}".`,
+        }));
+
+        // 3. Combine and Sort Activities
+        let activityFeed = [...followerActivity, ...likeActivity];
+        
+        // Sort by date (newest first) and limit the overall feed size
+        activityFeed.sort((a, b) => new Date(b.date) - new Date(a.date));
+        activityFeed = activityFeed.slice(0, 20); // Show up to 20 total items
+
+        res.json(activityFeed);
+
+    } catch (err) {
+        console.error("❌ Error fetching user activity:", err);
+        res.status(500).json({ error: "Failed to load activity feed." });
+    }
+});
+
 export default router;
