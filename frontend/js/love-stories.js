@@ -474,27 +474,32 @@ class LoveStories {
 
     async toggleLike(storyId) {
     try {
-        const result = await this.api.toggleLike(storyId);
-        if (!result || !result.story) return; // Ensure response is valid
-            
-            // Find the story in the main state array
+        // The server now returns: { likes_count: N, is_liked: boolean }
+        const result = await this.api.toggleLike(storyId); 
+        
+        // Find the story in the main state array
         const storyIndex = this.stories.findIndex(s => s.id === storyId);
         if (storyIndex !== -1) {
-            // 🔑 FIX 1: Change to result.story.likes_count
-            this.stories[storyIndex].likes_count = result.story.likes_count; 
-            // 🔑 FIX 2: You likely need a property to indicate if the user liked it
-            // Assuming the backend response structure needs to be adjusted slightly or you need to check
-            // For now, let's just focus on the count:
-            // this.stories[storyIndex].user_liked = result.story.user_liked; 
-        }
+            // ✅ FIX 1: Read the new count directly
+            this.stories[storyIndex].likes_count = result.likes_count; 
+            // ✅ FIX 2: Read the new like status
+            this.stories[storyIndex].user_liked = result.is_liked; 
             
-            // Update the UI
-            if (window.loveStoriesPage) {
-                window.loveStoriesPage.applyFiltersAndSort();
-                window.loveStoriesPage.updateStats();
+            if (result.is_liked) {
+                 this.notifications.showSuccess('Story Liked! ❤️');
+                 window.simpleStats?.trackLike();
             } else {
-                this.renderStories();
+                 this.notifications.showSuccess('Story Unliked. 💔');
             }
+        }
+        
+        // 3. Force UI refresh
+        if (window.loveStoriesPage) {
+            window.loveStoriesPage.applyFiltersAndSort(); 
+            window.loveStoriesPage.updateStats();
+        } else {
+            this.renderStories(); // Rerender the card to show updated count/icon
+        }
 
         } catch (error) {
             console.error('Error toggling like:', error);

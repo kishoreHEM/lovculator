@@ -83,37 +83,72 @@ router.post("/", async (req, res) => {
 // 3️⃣ LIKE A STORY (Requires Auth)
 // ======================================================
 router.post("/:id/like", async (req, res) => {
+  const client = await pool.connect(); // Use a client for transactions
   try {
-    const storyId = req.params.id;
+    await client.query('BEGIN');
     
-    // 🔑 CRITICAL FIX: Access user ID from the correct session object
+    const storyId = req.params.id;
     const userId = req.session?.user?.id;
 
     if (!userId) {
       return res.status(401).json({ error: "You must be logged in to like stories." });
     }
-    
-    // Optional: Check if user has already liked the story (advanced logic)
-    // We proceed here with a simple increment based on your provided code:
 
-    const result = await pool.query(
+    // 1. Check if the user has already liked this story
+    const checkResult = await client.query(
+      `SELECT * FROM likes WHERE user_id = $1 AND story_id = $2`,
+      [userId, storyId]
+    );
+
+    let isLiked = checkResult.rowCount > 0;
+    let newLikesCount;
+    let action = '';
+
+    if (isLiked) {
+      // 2. If already liked, UNLIKE (DELETE from likes table)
+      await client.query(
+        `DELETE FROM likes WHERE user_id = $1 AND story_id = $2`,
+        [userId, storyId]
+      );
+      action = 'unliked';
+    } else {
+      // 3. If not liked, LIKE (INSERT into likes table)
+      await client.query(
+        `INSERT INTO likes (user_id, story_id) VALUES ($1, $2)`,
+        [userId, storyId]
+      );
+      action = 'liked';
+    }
+
+    // 4. Recalculate and update the total likes_count on the stories table
+    const countResult = await client.query(
       `UPDATE stories 
-       SET likes_count = COALESCE(likes_count, 0) + 1,
+       SET likes_count = (SELECT COUNT(*) FROM likes WHERE story_id = $1),
            updated_at = NOW()
        WHERE id = $1
-       RETURNING *`,
+       RETURNING likes_count`,
       [storyId]
     );
 
-    if (result.rowCount === 0) {
-      return res.status(404).json({ error: "Story not found" });
-    }
+    newLikesCount = countResult.rows[0].likes_count;
+    await client.query('COMMIT');
 
-    console.log(`❤️ Story ${storyId} liked by user ${userId}`);
-    res.json({ message: "Story liked successfully", story: result.rows[0] });
+    console.log(`❤️ Story ${storyId} ${action} by user ${userId}`);
+    
+    // 5. Send the new status and count back to the frontend
+    res.json({ 
+        message: `Story ${action} successfully`, 
+        likes_count: newLikesCount,
+        // The new like status is the opposite of what it was before the action
+        is_liked: !isLiked 
+    });
+
   } catch (err) {
-    console.error("❌ Error liking story:", err.message);
-    res.status(500).json({ error: "Failed to like story" });
+    await client.query('ROLLBACK'); // Important: roll back transaction on error
+    console.error(`❌ Error toggling like for story ${storyId}:`, err.message);
+    res.status(500).json({ error: "Failed to toggle like on story." });
+  } finally {
+    client.release();
   }
 });
 
