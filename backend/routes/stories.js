@@ -6,10 +6,9 @@ const router = express.Router();
 // ======================================================
 // 1️⃣ FETCH ALL LOVE STORIES & STORIES BY USER ID
 // ======================================================
-// Note: You had two nearly identical GET routes, consolidating them here.
 router.get("/", async (req, res) => {
   try {
-    const { userId } = req.query; // Check if a specific user ID is requested
+    const { userId } = req.query; 
 
     let query = `
       SELECT 
@@ -22,6 +21,7 @@ router.get("/", async (req, res) => {
         mood,
         likes_count,
         comments_count,
+        allow_comments,  // ✅ FIX: Added this column
         created_at,
         updated_at
       FROM stories
@@ -50,7 +50,14 @@ router.get("/", async (req, res) => {
 // ======================================================
 router.post("/", async (req, res) => {
   try {
-    const { story_title, couple_names, love_story, category, mood } = req.body;
+    const { 
+        story_title, 
+        couple_names, 
+        love_story, 
+        category, 
+        mood, 
+        allowComments // ✅ FIX: Added to destructuring
+    } = req.body;
     
     // 🔑 CRITICAL FIX: Access user ID from the correct session object
     const userId = req.session?.user?.id;
@@ -63,22 +70,14 @@ router.post("/", async (req, res) => {
       return res.status(400).json({ error: "Story title and content are required." });
     }
 
-    // backend/routes/stories.js (Replace the INSERT query)
-  const result = await pool.query(
-    `INSERT INTO stories 
+    // Now correctly inserts the allow_comments value
+    const result = await pool.query(
+      `INSERT INTO stories 
         (user_id, story_title, couple_names, love_story, category, mood, allow_comments, created_at, updated_at)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, NOW(), NOW()) // $7 added
-     RETURNING *`,
-    [
-        userId, 
-        story_title, 
-        couple_names, 
-        love_story, 
-        category, 
-        mood, 
-        allowComments // ⬅️ ADDED
-    ]
-  );
+       VALUES ($1, $2, $3, $4, $5, $6, $7, NOW(), NOW()) 
+       RETURNING *`,
+      [userId, story_title, couple_names, love_story, category, mood, allowComments] // ✅ FIX: Added to values array
+    );
 
     console.log(`✅ New story added by user ${userId}`);
     res.status(201).json(result.rows[0]);
@@ -87,7 +86,6 @@ router.post("/", async (req, res) => {
     res.status(500).json({ error: "Failed to post story" });
   }
 });
-
 // ======================================================
 // 3️⃣ LIKE A STORY (Requires Auth)
 // ======================================================
