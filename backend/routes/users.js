@@ -221,20 +221,17 @@ router.get("/:targetId/is-following", async (req, res) => {
 // ======================================================
 // 8️⃣ GET USER ACTIVITY (Match frontend expectations)
 // ======================================================
+// ✅ backend/routes/users.js
 router.get("/:id/activity", async (req, res) => {
   const targetId = parseInt(req.params.id);
 
   try {
-    // 1️⃣ New followers
     const followersResult = await pool.query(`
-      SELECT 
-        u.username AS actor_username,
-        f.created_at AS date
+      SELECT u.username AS actor_username, f.created_at AS date
       FROM follows f
       JOIN users u ON f.follower_id = u.id
       WHERE f.target_id = $1
-      ORDER BY f.created_at DESC
-      LIMIT 10;
+      ORDER BY f.created_at DESC LIMIT 10;
     `, [targetId]);
 
     const followerActivity = followersResult.rows.map(r => ({
@@ -245,19 +242,13 @@ router.get("/:id/activity", async (req, res) => {
       related_story_id: null
     }));
 
-    // 2️⃣ Story likes
     const likesResult = await pool.query(`
-      SELECT 
-        u.username AS actor_username,
-        s.id AS related_story_id,
-        s.story_title,
-        l.created_at AS date
+      SELECT u.username AS actor_username, s.id AS related_story_id, s.story_title, l.created_at AS date
       FROM likes l
       JOIN users u ON l.user_id = u.id
       JOIN stories s ON l.story_id = s.id
       WHERE s.user_id = $1
-      ORDER BY l.created_at DESC
-      LIMIT 10;
+      ORDER BY l.created_at DESC LIMIT 10;
     `, [targetId]);
 
     const likeActivity = likesResult.rows.map(r => ({
@@ -268,7 +259,6 @@ router.get("/:id/activity", async (req, res) => {
       related_story_id: r.related_story_id
     }));
 
-    // Combine
     const combined = [...followerActivity, ...likeActivity].sort(
       (a, b) => new Date(b.date) - new Date(a.date)
     );
@@ -279,6 +269,7 @@ router.get("/:id/activity", async (req, res) => {
     res.status(500).json({ error: "Failed to load activity feed." });
   }
 });
+
 
 
 
