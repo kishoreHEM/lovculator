@@ -519,58 +519,60 @@ class LoveStories {
     }
 
     async loadComments(storyId) {
-        try {
-            const comments = await this.api.getComments(storyId);
-            const commentsList = document.getElementById(`comments-list-${storyId}`);
-            if (commentsList) {
-                commentsList.innerHTML = comments.map(comment => `
-                    <div class="comment">
-                        <div class="comment-author">${comment.author_name || 'Anonymous'}</div>
-                        <div class="comment-text">${comment.comment_text}</div>
-                        <div class="comment-time">${new Date(comment.created_at).toLocaleDateString()}</div>
-                    </div>
-                `).join('');
-            }
-        } catch (error) {
-            console.error('Error loading comments:', error);
-            this.notifications.showError('Failed to load comments.');
+    try {
+        const comments = await this.api.getComments(storyId);
+        const commentsList = document.getElementById(`comments-list-${storyId}`);
+        if (commentsList) {
+            commentsList.innerHTML = comments.map(comment => `
+                <div class="comment">
+                    <div class="comment-author">${comment.author_name || 'Anonymous User'}</div>
+                    <div class="comment-text">${comment.comment_text}</div>
+                    <div class="comment-time">${new Date(comment.created_at).toLocaleDateString()}</div>
+                </div>
+            `).join('');
         }
+    } catch (error) {
+        console.error('Error loading comments:', error);
+        this.notifications.showError('Failed to load comments.');
     }
+}
 
     async handleAddComment(storyId) {
-        const storyCard = document.querySelector(`[data-story-id="${storyId}"]`);
-        if (!storyCard) return;
+    const storyCard = document.querySelector(`[data-story-id="${storyId}"]`);
+    if (!storyCard) return;
 
-        const input = storyCard.querySelector('.comment-input');
-        const text = input?.value.trim();
-        
-        if (text) {
-            try {
-                const result = await this.api.addComment(storyId, { text: text });
+    const input = storyCard.querySelector('.comment-input');
+    const text = input?.value.trim();
+    
+    if (text) {
+        try {
+            // Server returns { ..., comments_count: N }
+            const result = await this.api.addComment(storyId, { text: text });
 
-                const storyIndex = this.stories.findIndex(s => s.id === storyId);
-                if (storyIndex !== -1) {
-                    this.stories[storyIndex].comments_count = result.comments_count;
-                }
-
-                window.simpleStats?.trackComment();
-                
-                // Reload comments and update stats/counts on screen
-                this.loadComments(storyId);
-                if (window.loveStoriesPage) {
-                    window.loveStoriesPage.updateStats();
-                } else {
-                    this.renderStories();
-                }
-                
-                input.value = '';
-                this.notifications.showSuccess('Comment added!');
-            } catch (error) {
-                console.error('Error adding comment:', error);
-                this.notifications.showError('Failed to add comment: ' + error.message);
+            const storyIndex = this.stories.findIndex(s => s.id === storyId);
+            if (storyIndex !== -1) {
+                // FIX: Use the new comments_count returned from the server response
+                this.stories[storyIndex].comments_count = result.comments_count;
             }
+
+            window.simpleStats?.trackComment();
+            
+            // Reload comments and update stats/counts on screen
+            this.loadComments(storyId);
+            if (window.loveStoriesPage) {
+                window.loveStoriesPage.updateStats();
+            } else {
+                this.renderStories();
+            }
+            
+            input.value = '';
+            this.notifications.showSuccess('Comment added!');
+        } catch (error) {
+            console.error('Error adding comment:', error);
+            this.notifications.showError('Failed to add comment: ' + error.message);
         }
     }
+}
     
     // Helper to update the share count element on the page
     updateShareCountUI(storyId, count) {

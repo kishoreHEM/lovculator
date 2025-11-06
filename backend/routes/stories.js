@@ -161,4 +161,100 @@ router.post("/:id/like", async (req, res) => {
   }
 });
 
+// backend/routes/stories.js (Add this new block)
+
+// ======================================================
+// 4️⃣ ADD A COMMENT (Requires Auth)
+// ======================================================
+router.post("/:storyId/comments", async (req, res) => {
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    
+    const storyId = req.params.storyId;
+    const { text } = req.body;
+    
+    // 🔑 CRITICAL: Get User ID from session (We assume comments require login based on frontend logic)
+    const userId = req.session?.user?.id; 
+
+    if (!userId) {
+      // You can choose to allow anonymous, but for now, require login
+      return res.status(401).json({ error: "Please log in to post a comment." });
+    }
+    
+    if (!text || text.trim().length === 0) {
+      return res.status(400).json({ error: "Comment text cannot be empty." });
+    }
+
+    // A. Insert the comment into the comments table
+    const commentResult = await client.query(
+      `INSERT INTO comments (story_id, user_id, comment_text)
+       VALUES ($1, $2, $3)
+       RETURNING *`,
+      [storyId, userId, text.trim()]
+    );
+    
+    // B. Increment the comments_count on the stories table
+    const updateResult = await client.query(
+      `UPDATE stories 
+       SET comments_count = COALESCE(comments_count, 0) + 1,
+           updated_at = NOW()
+       WHERE id = $1
+       RETURNING comments_count`,
+      [storyId]
+    );
+
+    await client.query('COMMIT');
+
+    const newCommentCount = updateResult.rows[0].comments_count;
+
+    console.log(`💬 Comment added to story ${storyId} by user ${userId}`);
+    
+    // C. Respond with the new count (or the comment itself)
+    res.status(201).json({ 
+        message: "Comment posted successfully",
+        comment: commentResult.rows[0],
+        comments_count: newCommentCount // Send the updated count for UI update
+    });
+
+  } catch (err) {
+    await client.query('ROLLBACK');
+    console.error(`❌ Error posting comment to story ${req.params.storyId}:`, err.message);
+    res.status(500).json({ error: "Failed to post comment." });
+  } finally {
+    client.release();
+  }
+});
+
+// backend/routes/stories.js (Add this new block)
+
+// ======================================================
+// 5️⃣ FETCH COMMENTS
+// ======================================================
+router.get("/:storyId/comments", async (req, res) => {
+    try {
+        const storyId = req.params.storyId;
+        
+        // Join with users table to get the author's username/name
+        const result = await pool.query(
+            `SELECT 
+                c.id, 
+                c.comment_text, 
+                c.created_at, 
+                COALESCE(u.username, 'Anonymous') as author_name,
+                c.user_id
+             FROM comments c
+             JOIN users u ON c.user_id = u.id -- Simple join assuming all comments require user_id
+             WHERE c.story_id = $1
+             ORDER BY c.created_at ASC`,
+            [storyId]
+        );
+
+        res.json(result.rows);
+    } catch (err) {
+        console.error(`❌ Error fetching comments for story ${req.params.storyId}:`, err.message);
+        res.status(500).json({ error: "Failed to fetch comments." });
+    }
+});
+
 export default router;
