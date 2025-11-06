@@ -5250,4 +5250,61 @@ body {
         background: #262626;
         border-color: #363636;
     }
+
+    /* --- Stories Filter and Search Styles --- */
+
+.stories-controls {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    margin-bottom: 20px;
+    padding: 10px;
+    background: #f8f8f8;
+    border-radius: 8px;
+    border: 1px solid #eee;
+}
+
+.search-bar {
+    flex-grow: 1;
+}
+
+#storySearchInput,
+#categoryFilterSelect {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+    font-size: 1rem;
+    box-sizing: border-box;
+}
+
+.filter-dropdown {
+    flex-shrink: 0;
+    width: 180px; /* Give the dropdown a fixed width */
+}
+
+#applyFiltersBtn {
+    flex-shrink: 0;
+    padding: 10px 15px;
+    /* Use existing btn-primary styles */
+}
+
+/* Mobile adjustments */
+@media (max-width: 600px) {
+    .stories-controls {
+        flex-wrap: wrap;
+    }
+
+    .filter-dropdown,
+    .search-bar,
+    #applyFiltersBtn {
+        width: 100%; /* Full width stacking */
+        margin-bottom: 5px;
+    }
+    
+    #applyFiltersBtn {
+        margin-bottom: 0;
+    }
+}
+
 }

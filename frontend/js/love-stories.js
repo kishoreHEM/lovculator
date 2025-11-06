@@ -121,9 +121,16 @@ class LoveStoriesAPI {
         }
 
         if (response.status === 403 || response.status === 409) {
+          // ✅ FIX: Prioritize error or message from server for clearer feedback
+          const serverErrorMsg = errorData.error || errorData.message; 
+          
+          if (serverErrorMsg) {
+              throw new Error(serverErrorMsg);
+          }
+          
+          // Fallback message
           throw new Error(
-            errorData.message ||
-              "Action not allowed on this device (already liked/commented)."
+            "Action not allowed on this device (already liked/commented) or unauthorized access."
           );
         }
 
@@ -149,8 +156,9 @@ class LoveStoriesAPI {
   }
 
   // 🧡 Fetch all stories
-  async getStories() {
-    return this.request("/stories");
+  async getStories(queryString = "") {
+    // This method is now effectively deprecated, replaced by request('/stories?...')
+    return this.request(`/stories${queryString}`); 
   }
 
   // 💌 Create a new story
@@ -204,34 +212,23 @@ class LoveStoriesAPI {
 // ==============================================
 class LoveStories {
     constructor(notificationService, anonTracker) {
-        console.log('🔧 LoveStories constructor called with:', { 
-            notificationService: !!notificationService, 
-            anonTracker: !!anonTracker
-        }); 
-        // Make sure anonTracker is passed correctly
         this.api = new LoveStoriesAPI(anonTracker);
         this.notifications = notificationService;
-        this.stories = [];
-        this.currentPage = 1;
-        this.storiesPerPage = 10;
+        this.stories = []; // This array now holds the currently FILTERED stories from the server
         this.storiesContainer = document.getElementById('storiesContainer');
         this.loadMoreBtn = document.getElementById('loadMoreStories');
-        console.log('✅ LoveStories API initialized:', { 
-            api: !!this.api, 
-            apiAnonTracker: !!this.api.anonTracker 
-        });
-
+        // Pagination logic is handled by LoveStoriesPage now, but keep state management here
         this.init();
     }
 
     async init() {
-        await this.loadStories();
+        // loadStories is now called by LoveStoriesPage.init()
         this.bindEvents(); 
-        this.setupStoryDelegation(); // Binds the critical ONE-TIME event listener
+        this.setupStoryDelegation(); 
         console.log('💖 Love Stories initialized with database');
     }
 
-    // NEW/CORRECTED METHOD: Binds the ONE-TIME event delegation listener to the parent container
+    // Binds the ONE-TIME event delegation listener to the parent container
     setupStoryDelegation() {
         if (!this.storiesContainer) return;
 
@@ -240,7 +237,6 @@ class LoveStories {
             if (!storyCard) return;
 
             const storyId = parseInt(storyCard.dataset.storyId);
-            // Target includes buttons and the share button
             const target = e.target.closest('button'); 
             
             if (target) {
@@ -271,20 +267,27 @@ class LoveStories {
         });
     }
 
-    async loadStories() {
+    // 🔄 UPDATED: loadStories now accepts filter/search params
+    async loadStories(params = {}) {
+        const queryString = new URLSearchParams(params).toString();
+        
         try {
-            this.stories = await this.api.getStories();
+            // Call the API with the query string (e.g., /stories?category=proposal&search=test)
+            this.stories = await this.api.request(`/stories?${queryString}`);
+            
+            // Do NOT call renderStories here. The LoveStoriesPage controller will handle it.
+            // Dispatch a generic event for external listeners
             document.dispatchEvent(new CustomEvent('storiesLoaded')); 
-            this.renderStories();
+            
         } catch (error) {
             console.error('Error loading stories:', error);
             this.stories = [];
             document.dispatchEvent(new CustomEvent('storiesLoaded')); 
-            this.renderStories();
-            this.notifications.showError('Could not load love stories.');
+            throw error; // Re-throw so LoveStoriesPage can catch and display error
         }
     }
 
+    // Note: bindEvents now mostly contains modal/mood logic, as pagination/search events move to LoveStoriesPage
     bindEvents() {
         // Mood selection
         document.querySelectorAll('.mood-option').forEach(option => {
@@ -297,28 +300,23 @@ class LoveStories {
             });
         });
 
-        // Load more stories
-        if (this.loadMoreBtn) {
-            this.loadMoreBtn.addEventListener('click', () => this.loadMoreStories());
-        }
-
-        // Empty state FAB
-        const emptyStateFab = document.getElementById('emptyStateFab');
-        if (emptyStateFab) {
-            emptyStateFab.addEventListener('click', 
-                () => document.getElementById('storyFab').click());
-        }
+        // Load more stories (This event is now bound in LoveStoriesPage.bindEvents)
+        // if (this.loadMoreBtn) {
+        //     this.loadMoreBtn.addEventListener('click', () => this.loadMoreStories());
+        // }
     }
 
     async addStory(storyData) {
         try {
             const newStory = await this.api.createStory(storyData);
-            this.stories.unshift(newStory);
             
+            // After adding, we need to refresh the list, triggering a new API call
             if (window.loveStoriesPage) {
-                window.loveStoriesPage.handleInitialLoad(); 
+                window.loveStoriesPage.applyFiltersAndSort(); // Triggers a full list reload
             } else {
-                this.renderStories();
+                 // Fallback: If page controller not loaded, unshift and manually rerender
+                 this.stories.unshift(newStory);
+                 this.renderStories();
             }
             
             window.simpleStats?.trackStory();
@@ -333,21 +331,22 @@ class LoveStories {
         }
     }
 
+    // This method is now called by LoveStoriesPage to render the subset of stories
     renderStories() {
         if (!this.storiesContainer) return;
         
-        if (window.loveStoriesPage && this.storiesContainer === document.getElementById('storiesContainer')) {
-            return;
-        }
+        // This method is deprecated here. LoveStoriesPage.renderStories() handles the slicing/sorting.
+        // It's only included here for backward compatibility if the page controller isn't used.
+        if (window.loveStoriesPage) return; 
 
         if (this.stories.length === 0) {
             this.storiesContainer.innerHTML = this.getEmptyStateHTML();
             if (this.loadMoreBtn) this.loadMoreBtn.classList.add('hidden');
             return;
         }
-
+        
         const storiesToShow = this.stories.slice(0, 
-            this.currentPage * this.storiesPerPage);
+            window.loveStoriesPage?.currentPage * window.loveStoriesPage?.storiesPerPage || 10);
         
         this.storiesContainer.innerHTML = storiesToShow.map(story => 
             this.getStoryHTML(story)).join('');
@@ -361,11 +360,12 @@ class LoveStories {
         }
     }
 
+    // ... (Keep all your helper methods like getStoryHTML, getEmptyStateHTML, toggleReadMore)
+
     getStoryHTML(story) {
         const date = new Date(story.created_at).toLocaleDateString();
         const isLong = story.love_story.length > 200;
 
-        // Define the URL and text for sharing
         const shareUrl = `https://lovculator.com/stories/${story.id}`; 
         const shareTitle = story.story_title;
         const shareText = `Read this beautiful love story: ${story.story_title}`;
@@ -442,17 +442,18 @@ class LoveStories {
         return `
             <div class="empty-state">
                 <div class="empty-icon">💌</div>
-                <h3>No stories yet</h3>
-                <p>Be the first to share your love story!</p>
+                <h3>No stories found</h3>
+                <p>Try clearing your search filters or be the first to share one!</p>
                 <button class="fab-button" id="emptyStateFab">
                     <span class="fab-icon">+</span>
                 </button>
             </div>
         `;
     }
-
+    
     toggleReadMore(storyId) {
-        const story = this.stories.find(s => s.id === storyId) || window.loveStoriesPage?.filteredStories.find(s => s.id === storyId);
+        // Use the main stories array which holds the current filtered list
+        const story = this.stories.find(s => s.id === storyId); 
         if (!story) return;
         
         const storyCard = document.querySelector(`[data-story-id="${storyId}"]`);
@@ -474,15 +475,11 @@ class LoveStories {
 
     async toggleLike(storyId) {
     try {
-        // The server now returns: { likes_count: N, is_liked: boolean }
         const result = await this.api.toggleLike(storyId); 
         
-        // Find the story in the main state array
         const storyIndex = this.stories.findIndex(s => s.id === storyId);
         if (storyIndex !== -1) {
-            // ✅ FIX 1: Read the new count directly
             this.stories[storyIndex].likes_count = result.likes_count; 
-            // ✅ FIX 2: Read the new like status
             this.stories[storyIndex].user_liked = result.is_liked; 
             
             if (result.is_liked) {
@@ -493,12 +490,12 @@ class LoveStories {
             }
         }
         
-        // 3. Force UI refresh
+        // Use the page controller to re-render the list without fetching from server
         if (window.loveStoriesPage) {
-            window.loveStoriesPage.applyFiltersAndSort(); 
+            window.loveStoriesPage.renderStories(); 
             window.loveStoriesPage.updateStats();
         } else {
-            this.renderStories(); // Rerender the card to show updated count/icon
+            this.renderStories(); 
         }
 
         } catch (error) {
@@ -546,20 +543,18 @@ class LoveStories {
     
     if (text) {
         try {
-            // Server returns { ..., comments_count: N }
             const result = await this.api.addComment(storyId, { text: text });
 
             const storyIndex = this.stories.findIndex(s => s.id === storyId);
             if (storyIndex !== -1) {
-                // FIX: Use the new comments_count returned from the server response
                 this.stories[storyIndex].comments_count = result.comments_count;
             }
 
             window.simpleStats?.trackComment();
             
-            // Reload comments and update stats/counts on screen
             this.loadComments(storyId);
             if (window.loveStoriesPage) {
+                window.loveStoriesPage.renderStories();
                 window.loveStoriesPage.updateStats();
             } else {
                 this.renderStories();
@@ -574,7 +569,6 @@ class LoveStories {
     }
 }
     
-    // Helper to update the share count element on the page
     updateShareCountUI(storyId, count) {
         const storyCard = document.querySelector(`[data-story-id="${storyId}"]`);
         const countEl = storyCard?.querySelector('.share-count');
@@ -583,12 +577,10 @@ class LoveStories {
         }
     }
 
-    // New: Handles the native share dialog and tracks the click (intent)
     async handleNativeShare(url, title, text) {
         
         let shareAttempted = false;
 
-        // 1. Attempt to call the native share dialog
         if (navigator.share) {
             shareAttempted = true;
             try {
@@ -601,30 +593,24 @@ class LoveStories {
                 if (error.name !== 'AbortError') {
                     console.error('Error sharing:', error);
                     this.notifications.showError('Failed to share story.');
-                    // If a non-abort error occurs, we still try to log the click, but stop here
                 }
             }
         } else {
-            // Fallback for desktop browsers that don't support the API
             this.notifications.showError('Native sharing not supported. Please use a mobile device or copy the URL.');
         }
 
-        // 2. Track the Share Click (Intent) if the share button was visible/available
-        if (shareAttempted || !navigator.share) { // Always track click unless a fatal error occurred before
+        if (shareAttempted || !navigator.share) { 
             try {
-                // Extract ID from the URL we passed (assuming last segment is the ID)
                 const storyId = parseInt(url.split('/').pop()); 
                 if (isNaN(storyId)) throw new Error("Could not parse story ID for tracking.");
                 
                 const result = await this.api.trackShareClick(storyId);
 
-                // Update the share count locally
                 const storyIndex = this.stories.findIndex(s => s.id === storyId);
                 if (storyIndex !== -1) {
                     this.stories[storyIndex].shares_count = result.shares_count;
                 }
 
-                // Update the UI
                 this.updateShareCountUI(storyId, result.shares_count);
                 window.simpleStats?.trackShare();
 
@@ -635,8 +621,7 @@ class LoveStories {
     }
 
     loadMoreStories() {
-        this.currentPage++;
-        this.renderStories();
+        // This is now handled by LoveStoriesPage
     }
     
     // Helper methods for category/mood display
@@ -659,6 +644,7 @@ class LoveStories {
 // 5. UI CLASS: StoryModal (Handles the story submission form)
 // ==============================================
 class StoryModal {
+    // ... (Keep this class exactly as it was)
     constructor(loveStoriesInstance, notificationService) {
         this.loveStories = loveStoriesInstance;
         this.notifications = notificationService;
@@ -822,9 +808,9 @@ class StoryModal {
 class LoveStoriesPage {
     constructor(loveStoriesInstance) {
         this.loveStories = loveStoriesInstance; // Data manager instance
-        this.stories = [];
-        this.filteredStories = [];
-        this.currentFilter = 'all';
+        // State variables to track UI status
+        this.currentCategory = 'all'; 
+        this.currentSearch = ''; 
         this.currentSort = 'newest';
         this.currentPage = 1;
         this.storiesPerPage = 10;
@@ -835,78 +821,88 @@ class LoveStoriesPage {
 
     init() {
         this.bindEvents();
-        
-        // Load stories once the main manager has fetched data from the API
-        document.addEventListener('storiesLoaded', () => this.handleInitialLoad());
-        
-        // If the main manager has already loaded data (async race condition)
-        if (this.loveStories.stories.length > 0) {
-            this.handleInitialLoad();
-        }
-    }
-
-    handleInitialLoad() {
-        this.stories = this.loveStories.stories; // Get raw API data
-        this.applyFiltersAndSort(); 
-        this.updateStats(); 
+        // 🚀 Kick off the initial load with default filters
+        this.applyFiltersAndSort();
     }
 
     bindEvents() {
-        document.querySelectorAll('.filter-tab').forEach(tab => {
-            tab.addEventListener('click', (e) => this.handleFilterChange(e));
-        });
+        // --- Filtering/Search UI elements (from love-stories.html) ---
+        const searchInput = document.getElementById('storySearchInput');
+        const filterSelect = document.getElementById('categoryFilterSelect');
+        const applyBtn = document.getElementById('applyFiltersBtn'); // Main trigger button
 
-        document.getElementById('sortStories')?.addEventListener('change', (e) => {
-            this.currentSort = e.target.value;
-            this.applyFiltersAndSort();
-        });
-
-        const searchInput = document.getElementById('storiesSearch');
-        if (searchInput) {
-            searchInput.addEventListener('input', (e) => this.handleSearch(e.target.value));
+        if (applyBtn) {
+            // All filter/search changes funnel through this one function
+            applyBtn.addEventListener('click', this.applyFiltersAndSort.bind(this));
         }
 
+        // Optional: Auto-filter on category change (without clicking Apply)
+        if (filterSelect) {
+            filterSelect.addEventListener('change', this.applyFiltersAndSort.bind(this));
+        }
+
+        // Optional: Search on Enter key press in the search bar
+        if (searchInput) {
+            searchInput.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') {
+                    this.applyFiltersAndSort();
+                }
+            });
+        }
+
+        // --- Sorting ---
+        document.getElementById('sortStories')?.addEventListener('change', (e) => {
+            this.currentSort = e.target.value;
+            // Sorting is CLIENT-SIDE, so just re-render
+            this.renderStories(); 
+        });
+
+        // --- Load More ---
         document.getElementById('loadMoreStories')?.addEventListener('click', () => {
             this.loadMoreStories();
         });
     }
 
-    handleFilterChange(e) {
-        document.querySelectorAll('.filter-tab').forEach(tab => tab.classList.remove('active'));
-        e.target.classList.add('active');
-        
-        this.currentFilter = e.target.dataset.filter;
-        this.currentPage = 1;
-        this.applyFiltersAndSort();
-    }
+    // 🚀 CRITICAL METHOD: Fetches data from the server with search/filter parameters
+    async applyFiltersAndSort() {
+        const searchInput = document.getElementById('storySearchInput');
+        const filterSelect = document.getElementById('categoryFilterSelect');
+        const loadMoreBtn = document.getElementById('loadMoreStories');
 
-    handleSearch(searchTerm) {
-        this.currentPage = 1;
-        this.applyFiltersAndSort(searchTerm);
-    }
+        // 1. Collect current search and filter values
+        this.currentSearch = searchInput ? searchInput.value.trim() : '';
+        this.currentCategory = filterSelect ? filterSelect.value : 'all';
+        this.currentPage = 1; // Always reset pagination when applying new filters
 
-    applyFiltersAndSort(searchTerm = '') {
-        let filtered = this.stories;
-        
-        if (this.currentFilter !== 'all') {
-            filtered = filtered.filter(story => story.category === this.currentFilter);
+        const apiParams = {};
+        if (this.currentSearch) {
+            apiParams.search = this.currentSearch;
         }
-        
-        if (searchTerm) {
-            const term = searchTerm.toLowerCase();
-            filtered = filtered.filter(story => 
-                story.story_title.toLowerCase().includes(term) ||
-                story.love_story.toLowerCase().includes(term) ||
-                (story.couple_names && story.couple_names.toLowerCase().includes(term))
-            );
+        if (this.currentCategory && this.currentCategory !== 'all') {
+            apiParams.category = this.currentCategory;
         }
-        
-        filtered = this.sortStories(filtered, this.currentSort);
-        
-        this.filteredStories = filtered;
-        this.renderStories();
+
+        this.isLoading = true;
+        loadMoreBtn?.classList.add('hidden');
+        this.loveStories.storiesContainer.innerHTML = '<div class="loading-indicator">Loading stories...</div>';
+
+        try {
+            // 2. Call the LoveStories manager to fetch filtered data from the server
+            await this.loveStories.loadStories(apiParams);
+            
+            // 3. Update state and UI
+            this.isLoading = false;
+            this.updateStats(); 
+            this.renderStories(); 
+            
+        } catch (error) {
+            this.isLoading = false;
+            this.loveStories.notifications.showError('Failed to load stories with the current filters.');
+            this.loveStories.storiesContainer.innerHTML = this.loveStories.getEmptyStateHTML();
+        }
     }
 
+    // Client-side sorting on the *currently loaded* stories array
     sortStories(stories, sortBy) {
         switch (sortBy) {
             case 'newest':
@@ -922,32 +918,35 @@ class LoveStoriesPage {
         }
     }
 
+    // Client-side rendering and pagination
     renderStories() {
         const container = document.getElementById('storiesContainer');
         const loadMoreBtn = document.getElementById('loadMoreStories');
-        const emptyState = document.getElementById('emptyState');
         
         if (!container) return;
 
-        if (this.filteredStories.length === 0) {
-            container.classList.add('hidden');
-            emptyState?.classList.remove('hidden');
+        // 1. Get the current list of stories from the manager
+        const storiesToRenderFrom = this.loveStories.stories;
+
+        // 2. Apply client-side sort
+        const sortedStories = this.sortStories(storiesToRenderFrom, this.currentSort);
+
+        if (sortedStories.length === 0 && !this.isLoading) {
+            container.innerHTML = this.loveStories.getEmptyStateHTML();
             loadMoreBtn?.classList.add('hidden');
-            container.innerHTML = '';
             return;
         }
 
-        container.classList.remove('hidden');
-        emptyState?.classList.add('hidden');
-
-        const storiesToShow = this.filteredStories.slice(0, this.currentPage * this.storiesPerPage);
+        // 3. Apply pagination slice
+        const storiesToShow = sortedStories.slice(0, this.currentPage * this.storiesPerPage);
         
         container.innerHTML = storiesToShow.map(story => 
             this.loveStories.getStoryHTML(story)
         ).join('');
         
+        // 4. Update "Load More" button visibility
         if (loadMoreBtn) {
-            if (this.filteredStories.length > storiesToShow.length) {
+            if (sortedStories.length > storiesToShow.length) {
                 loadMoreBtn.classList.remove('hidden');
             } else {
                 loadMoreBtn.classList.add('hidden');
@@ -960,20 +959,30 @@ class LoveStoriesPage {
         this.renderStories();
     }
 
+    // Updates the stat counters (if present in love-stories.html)
     updateStats() {
-        const totalStories = this.stories.length;
-        const totalLikes = this.stories.reduce((sum, story) => sum + (story.likes_count || 0), 0);
-        const totalComments = this.stories.reduce((sum, story) => sum + (story.comments_count || 0), 0);
+        const stories = this.loveStories.stories; 
+        
+        const totalStories = stories.length; 
+        const totalLikes = stories.reduce((sum, story) => sum + (story.likes_count || 0), 0);
+        const totalComments = stories.reduce((sum, story) => sum + (story.comments_count || 0), 0);
 
-        document.getElementById('totalStories').textContent = totalStories;
-        document.getElementById('totalLikes').textContent = totalLikes;
-        document.getElementById('totalComments').textContent = totalComments;
+        // Update the display stats (ensure your HTML has these IDs)
+        if(document.getElementById('totalStories')) {
+            document.getElementById('totalStories').textContent = totalStories;
+        }
+        if(document.getElementById('totalLikes')) {
+            document.getElementById('totalLikes').textContent = totalLikes;
+        }
+        if(document.getElementById('totalComments')) {
+            document.getElementById('totalComments').textContent = totalComments;
+        }
     }
 }
 
 
 // ==============================================
-// 7. GLOBAL INITIALIZATION (CORRECTED)
+// 7. GLOBAL INITIALIZATION 
 // ==============================================
 let loveStories, storyModal, notificationService, anonTracker, loveStoriesPage;
 
@@ -988,26 +997,17 @@ function initializeLoveStories() {
         notificationService = new NotificationService();
         anonTracker = new AnonUserTracker(); 
         
-        console.log('✅ Utilities initialized:', { 
-            notificationService: !!notificationService, 
-            anonTracker: !!anonTracker 
-        });
-        
         // Data/State Manager - Pass anonTracker properly
         loveStories = new LoveStories(notificationService, anonTracker); 
-        
-        console.log('✅ LoveStories initialized with anonTracker:', !!loveStories.api.anonTracker);
         
         // UI Components
         if (storiesContainer) {
             loveStoriesPage = new LoveStoriesPage(loveStories); 
             window.loveStoriesPage = loveStoriesPage; 
-            console.log('✅ LoveStoriesPage initialized');
         }
 
         if (storyFab) {
             storyModal = new StoryModal(loveStories, notificationService); 
-            console.log('✅ StoryModal initialized');
         }
         
         window.loveStories = loveStories; 
@@ -1018,18 +1018,6 @@ function initializeLoveStories() {
         console.error('❌ Error initializing Lovculator system:', error);
     }
 }
-
-// ✅ Base API URL for all fetch calls
-const API_BASE = window.location.hostname === 'localhost'   
-  ? 'http://localhost:3001/api'
-  : 'https://lovculator.com/api';
-
-  // Fix mixed-content or SSL redirect issues
-if (window.location.protocol === 'https:' && API_BASE.startsWith('http:')) {
-  console.warn('⚠️ Switching API base to HTTPS');
-  API_BASE = API_BASE.replace('http:', 'https:');
-}
-
 
 // Initialize when DOM is ready
 if (document.readyState === 'loading') {

@@ -4,47 +4,89 @@ import pool from "../db.js";
 const router = express.Router();
 
 // ======================================================
-// 1️⃣ FETCH ALL LOVE STORIES & STORIES BY USER ID
+// 1️⃣ GET ALL STORIES (Now with Filtering and Search)
 // ======================================================
 router.get("/", async (req, res) => {
-  try {
-    const { userId } = req.query; 
-
-    // 🔑 FIX: Ensure all columns are present and correctly ordered with commas.
+    // Extract optional query parameters
+    const userId = req.query.userId;
+    const category = req.query.category;
+    const searchQuery = req.query.search;
+    const sessionUserId = req.session?.userId;
+    
+    // SQL query building variables
     let query = `
-      SELECT 
-        id,
-        user_id,
-        story_title,
-        couple_names,
-        love_story,
-        category,
-        mood,
-        likes_count,
-        comments_count,
-        allow_comments,  -- MUST be here for frontend rendering
-        created_at,
-        updated_at
-      FROM stories
+        SELECT
+            s.id,
+            s.user_id,
+            s.couple_names,
+            s.story_title,
+            s.love_story,
+            s.category,
+            s.mood,
+            s.together_since,
+            s.anonymous_post,
+            s.allow_comments,
+            s.created_at,
+            COALESCE(lc.likes_count, 0) AS likes_count,
+            COALESCE(cc.comments_count, 0) AS comments_count,
+            COALESCE(sh.shares_count, 0) AS shares_count,
+            CASE WHEN EXISTS (
+                SELECT 1 FROM likes l 
+                WHERE l.story_id = s.id 
+                AND (
+                    l.user_id = $1 OR 
+                    l.anon_id = $2
+                )
+            ) THEN TRUE ELSE FALSE END AS user_liked
+        FROM
+            stories s
+        LEFT JOIN (SELECT story_id, COUNT(*) AS likes_count FROM likes GROUP BY story_id) lc ON s.id = lc.story_id
+        LEFT JOIN (SELECT story_id, COUNT(*) AS comments_count FROM comments GROUP BY story_id) cc ON s.id = cc.story_id
+        LEFT JOIN (SELECT story_id, COUNT(*) AS shares_count FROM shares GROUP BY story_id) sh ON s.id = sh.story_id
     `;
-    let values = [];
 
+    const queryParams = [
+        sessionUserId || null, // $1: user_id for user_liked check
+        req.headers['x-anon-id'] || 'no_anon_id' // $2: anon_id for user_liked check
+    ];
+    
+    const conditions = [];
+
+    // 1. Filter by specific user ID (for profile page)
     if (userId) {
-      query += " WHERE user_id = $1";
-      values.push(userId);
+        conditions.push(`s.user_id = $${queryParams.length + 1}`);
+        queryParams.push(userId);
+    }
+    
+    // 2. Filter by Category
+    if (category && category !== 'all') {
+        conditions.push(`s.category = $${queryParams.length + 1}`);
+        queryParams.push(category);
     }
 
-    query += " ORDER BY created_at DESC";
+    // 3. Filter by Search Query (title or story content)
+    if (searchQuery) {
+        // Use ILIKE for case-insensitive pattern matching
+        conditions.push(`(s.story_title ILIKE $${queryParams.length + 1} OR s.love_story ILIKE $${queryParams.length + 2})`);
+        queryParams.push(`%${searchQuery}%`); // For story_title
+        queryParams.push(`%${searchQuery}%`); // For love_story (reuses the value, but needs a new placeholder)
+    }
 
-    const result = await pool.query(query, values);
+    // Append WHERE clause if conditions exist
+    if (conditions.length > 0) {
+        query += ` WHERE ` + conditions.join(' AND ');
+    }
 
-    console.log(`✅ ${result.rowCount} stories fetched`);
-    res.json(result.rows);
-  } catch (err) {
-    console.error("❌ Fetch stories error:", err.message);
-    // Send a 500 status to indicate server failure
-    res.status(500).json({ error: "Failed to fetch stories" });
-  }
+    // Final ordering
+    query += ` ORDER BY s.created_at DESC;`;
+
+    try {
+        const result = await pool.query(query, queryParams);
+        res.json(result.rows);
+    } catch (err) {
+        console.error("❌ Error fetching stories with filters:", err);
+        res.status(500).json({ error: "Failed to fetch stories." });
+    }
 });
 
 // ======================================================
