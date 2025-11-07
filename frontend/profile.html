@@ -53,34 +53,51 @@
     </main>
   </div>
 
-  <!-- Profile Edit Modal -->
-  <div id="editProfileModal" class="modal">
-    <div class="modal-content">
-      <span class="close-btn">&times;</span>
+  <!-- 🌸 Enhanced Edit Profile Modal -->
+<div id="editProfileModal" class="modal">
+  <div class="modal-overlay"></div>
+  <div class="modal-dialog">
+    <div class="modal-header">
       <h3>✏️ Edit Your Profile</h3>
-      <form id="editProfileForm">
-        <label for="editDisplayName">Display Name:</label>
+      <span class="close-btn" id="closeModalBtn">&times;</span>
+    </div>
+
+    <form id="editProfileForm" class="modal-form">
+      <div class="form-group">
+        <label for="editDisplayName">Display Name</label>
         <input type="text" id="editDisplayName" name="display_name" maxlength="50" required />
+      </div>
 
-        <label for="editBio">Bio:</label>
-        <textarea id="editBio" name="bio" rows="4" maxlength="300"></textarea>
+      <div class="form-group">
+        <label for="editBio">Bio</label>
+        <textarea id="editBio" name="bio" rows="3" maxlength="300" placeholder="Tell us something about your love journey..."></textarea>
+      </div>
 
-        <label for="editLocation">Location:</label>
-        <input type="text" id="editLocation" name="location" maxlength="50" />
+      <div class="form-group">
+        <label for="editLocation">Location</label>
+        <input type="text" id="editLocation" name="location" maxlength="50" placeholder="e.g., Hyderabad, India" />
+      </div>
 
-        <label for="editRelationshipStatus">Relationship Status:</label>
+      <div class="form-group">
+        <label for="editRelationshipStatus">Relationship Status</label>
         <select id="editRelationshipStatus" name="relationship_status">
           <option value="Single">Single</option>
           <option value="In a Relationship">In a Relationship</option>
           <option value="Married">Married</option>
           <option value="It's Complicated">It's Complicated</option>
         </select>
+      </div>
 
-        <button type="submit" class="btn btn-primary" id="saveProfileBtn">Save Changes</button>
-        <p id="editProfileMessage" style="margin-top: 10px"></p>
-      </form>
-    </div>
+      <div class="modal-footer">
+        <button type="submit" id="saveProfileBtn" class="btn btn-primary">💾 Save Changes</button>
+        <button type="button" class="btn btn-secondary" id="cancelEditBtn">Cancel</button>
+      </div>
+
+      <p id="editProfileMessage" class="edit-message"></p>
+    </form>
   </div>
+</div>
+
 
   <footer class="footer"></footer>
 
