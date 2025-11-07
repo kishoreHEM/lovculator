@@ -1,4 +1,13 @@
 // ==============================================
+// 🌍 Global API Base URL (Fixes "undefined" issue)
+// ==============================================
+window.API_BASE = window.location.hostname.includes("localhost")
+  ? "http://localhost:3001/api"
+  : "https://lovculator.com/api";
+
+
+
+// ==============================================
 // 1. UTILITY CLASS: NotificationService
 // ==============================================
 class NotificationService {
