@@ -171,17 +171,19 @@ class LoveStoriesAPI {
   }
 
   // 💌 Create a new story
-  async createStory(storyData) {
-    const required = ["storyTitle", "loveStory", "category", "mood"];
-    const missing = required.filter((field) => !storyData[field]);
-    if (missing.length > 0)
-      throw new Error(`Missing required fields: ${missing.join(", ")}`);
+  // 💌 Create a new story
+async createStory(storyData) {
+  const required = ["story_title", "love_story", "category", "mood"];
+  const missing = required.filter((field) => !storyData[field]);
+  if (missing.length > 0)
+    throw new Error(`Missing required fields: ${missing.join(", ")}`);
 
-    return this.request("/stories", {
-      method: "POST",
-      body: JSON.stringify(storyData),
-    });
-  }
+  return this.request("/stories", {
+    method: "POST",
+    body: JSON.stringify(storyData),
+  });
+}
+
 
   // ❤️ Toggle like on a story
   async toggleLike(storyId) {
