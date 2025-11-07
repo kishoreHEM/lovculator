@@ -144,7 +144,10 @@ class ProfileManager {
         if (editBtn) {
             editBtn.addEventListener("click", () => {
                 this.populateEditForm();
-                if (modal) modal.style.display = "block";
+                if (modal) modal.classList.add("active");
+                if (modal) modal.classList.remove("active");
+
+
             });
         }
 
