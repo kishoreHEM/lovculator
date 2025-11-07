@@ -60,34 +60,41 @@ router.post("/signup", async (req, res) => {
 // ===================================================
 // 2️⃣ LOGIN
 // ===================================================
+// ===================================================
+// 2️⃣ LOGIN — Supports Username OR Email
+// ===================================================
 router.post("/login", async (req, res) => {
   try {
     let { email, password } = req.body;
 
     if (!email || !password) {
-      return res.status(400).json({ error: "Email and password required." });
+      return res.status(400).json({ error: "Email or username and password required." });
     }
 
+    // Normalize input
     email = email.trim().toLowerCase();
 
-    // ✅ Fetch user
+    // ✅ Allow login by username OR email (case-insensitive)
     const result = await pool.query(
-      "SELECT id, username, email, password_hash FROM users WHERE email = $1",
+      `SELECT id, username, email, password_hash
+       FROM users
+       WHERE LOWER(email) = LOWER($1) OR LOWER(username) = LOWER($1)
+       LIMIT 1`,
       [email]
     );
-    const user = result.rows[0];
 
+    const user = result.rows[0];
     if (!user) {
-      return res.status(401).json({ error: "Invalid email or password." });
+      return res.status(401).json({ error: "Invalid email/username or password." });
     }
 
-    // ✅ Compare password
+    // ✅ Verify password hash
     const validPassword = await bcrypt.compare(password, user.password_hash);
     if (!validPassword) {
-      return res.status(401).json({ error: "Invalid email or password." });
+      return res.status(401).json({ error: "Invalid email/username or password." });
     }
 
-    // ✅ Save session
+    // ✅ Save minimal session
     req.session.user = {
       id: user.id,
       username: user.username,
@@ -98,11 +105,13 @@ router.post("/login", async (req, res) => {
       message: "Login successful ✅",
       user: req.session.user,
     });
+
   } catch (err) {
     console.error("❌ Login error:", err);
     res.status(500).json({ error: "Failed to log in." });
   }
 });
+
 
 // ===================================================
 // 3️⃣ AUTH CHECK (/api/auth/me)
