@@ -244,7 +244,7 @@ router.get("/:id/activity", async (req, res) => {
 
     const likesResult = await pool.query(`
       SELECT u.username AS actor_username, s.id AS related_story_id, s.story_title, l.created_at AS date
-      FROM likes l
+      FROM story_likes l
       JOIN users u ON l.user_id = u.id
       JOIN stories s ON l.story_id = s.id
       WHERE s.user_id = $1
