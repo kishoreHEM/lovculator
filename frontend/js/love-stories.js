@@ -382,15 +382,33 @@ class LoveStories {
         return `
             <div class="story-card" data-story-id="${story.id}">
                 <div class="story-card-header">
-                    <div class="story-couple">
-                        <h4>${story.anonymous_post ? 'Anonymous Couple' : story.couple_names}</h4>
-                        <div class="story-meta">
-                            <span>${date}</span>
-                            ${story.together_since ? `<span>•</span><span>Together since ${story.together_since}</span>` : ''}
-                        </div>
-                    </div>
-                    <span class="story-category">${this.getCategoryEmoji(story.category)} ${this.formatCategory(story.category)}</span>
-                </div>
+  <div class="story-user-info">
+    <a href="/profile.html?user=${encodeURIComponent(story.username)}" class="story-user-link">
+      <img src="${story.avatar_url || '/images/default-avatar.png'}" 
+           alt="${story.display_name || 'User'}" 
+           class="story-avatar" />
+    </a>
+    <div class="story-user-details">
+      <a href="/profile.html?user=${encodeURIComponent(story.username)}" 
+         class="story-username-link">
+        <h4 class="story-username">
+          ${story.anonymous_post 
+            ? 'Anonymous User' 
+            : story.display_name || story.username}
+        </h4>
+      </a>
+      <span class="story-date">${new Date(story.created_at).toLocaleDateString()}</span>
+    </div>
+  </div>
+
+  <!-- 💖 NEW: Follow button -->
+  ${story.anonymous_post ? '' : `
+  <button class="follow-btn" data-user-id="${story.user_id}">
+    + Follow
+  </button>`}
+</div>
+
+
                 
                 <h3 class="story-title">${story.story_title}</h3>
                 
@@ -510,6 +528,8 @@ class LoveStories {
                 this.notifications.showSuccess('Story Unliked 💔');
             }
         }
+
+
 
 
     // 🔄 Update story list & stats
@@ -1143,14 +1163,51 @@ function initializeLoveStories() {
     }
 }
 
-// Initialize when DOM is ready
+// ✅ Initialize only ONCE when DOM is ready
 if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', initializeLoveStories);
+  document.addEventListener('DOMContentLoaded', initializeLoveStories);
 } else {
-    initializeLoveStories();
+  initializeLoveStories();
 }
 
-initializeLoveStories();
+// 💖 Add Follow Button Handler after DOM is ready
+document.addEventListener("DOMContentLoaded", () => {
+  console.log("💖 Love Stories page loaded");
+
+  // 2️⃣ Add event listener for follow buttons (global delegation)
+  document.addEventListener("click", async (e) => {
+    if (e.target.classList.contains("follow-btn")) {
+      const btn = e.target;
+      const targetId = btn.dataset.userId;
+
+      btn.disabled = true;
+      const originalText = btn.textContent;
+
+      try {
+        const res = await fetch(`${window.API_BASE}/users/${targetId}/follow`, {
+          method: "POST",
+          credentials: "include"
+        });
+        const data = await res.json();
+
+        if (res.ok) {
+          btn.textContent = data.is_following ? "Following" : "+ Follow";
+          btn.classList.toggle("following", data.is_following);
+        } else {
+          alert(data.error || "Please log in to follow users.");
+        }
+      } catch (err) {
+        console.error("Follow error:", err);
+        alert("Something went wrong.");
+      } finally {
+        btn.disabled = false;
+        setTimeout(() => (
+          btn.textContent = btn.classList.contains("following") ? "Following" : "+ Follow"
+        ), 1000);
+      }
+    }
+  });
+});
 
 // ==============================================
 // ✨ Count-Up Animation for Stats
