@@ -855,43 +855,61 @@ class StoryModal {
     }
 
     async handleSubmit(e) {
-        e.preventDefault();
-        
-        const submitBtn = this.storyForm.querySelector('.submit-story-btn');
-        const btnText = submitBtn.querySelector('.btn-text');
-        const btnLoading = submitBtn.querySelector('.btn-loading');
-        
-        btnText.classList.add('hidden');
-        btnLoading.classList.remove('hidden');
-        submitBtn.disabled = true;
+  e.preventDefault();
+  
+  const submitBtn = this.storyForm.querySelector('.submit-story-btn');
+  const btnText = submitBtn.querySelector('.btn-text');
+  const btnLoading = submitBtn.querySelector('.btn-loading');
+  
+  btnText.classList.add('hidden');
+  btnLoading.classList.remove('hidden');
+  submitBtn.disabled = true;
 
-        const formData = {
-            coupleNames: document.getElementById('coupleNames').value,
-            storyTitle: document.getElementById('storyTitle').value,
-            togetherSince: document.getElementById('togetherSince').value,
-            loveStory: this.loveStory.value,
-            category: document.getElementById('storyCategory').value,
-            mood: document.getElementById('selectedMood').value,
-            allowComments: document.getElementById('allowComments').checked,
-            anonymousPost: document.getElementById('anonymousPost').checked
-        };
+  const formData = {
+    coupleNames: document.getElementById('coupleNames').value,
+    storyTitle: document.getElementById('storyTitle').value,
+    togetherSince: document.getElementById('togetherSince').value,
+    loveStory: this.loveStory.value,
+    category: document.getElementById('storyCategory').value,
+    mood: document.getElementById('selectedMood').value,
+    allowComments: document.getElementById('allowComments').checked,
+    anonymousPost: document.getElementById('anonymousPost').checked
+  };
 
-        try {
-            await this.loveStories.addStory(formData);
-            
-            this.closeModalFunc();
-            this.showSuccessMessage();
-            
-        } catch (error) {
-            console.error('Error submitting story:', error);
-            this.notifications.showError('Failed to share story. ' + error.message);
-        } finally {
-            this.resetForm();
-            btnText.classList.remove('hidden');
-            btnLoading.classList.add('hidden');
-            submitBtn.disabled = false;
-        }
-    }
+  const backendPayload = {
+    story_title: formData.storyTitle,
+    love_story: formData.loveStory,
+    category: formData.category,
+    mood: formData.mood,
+    couple_names: formData.coupleNames,
+    together_since: formData.togetherSince,
+    allow_comments: formData.allowComments,
+    anonymous_post: formData.anonymousPost
+  };
+
+  if (!backendPayload.story_title?.trim() || !backendPayload.love_story?.trim()) {
+    this.notifications.showError("Please fill in both title and story content before submitting.");
+    submitBtn.disabled = false;
+    btnText.classList.remove('hidden');
+    btnLoading.classList.add('hidden');
+    return;
+  }
+
+  try {
+    await this.loveStories.addStory(backendPayload);
+    this.closeModalFunc();
+    this.showSuccessMessage();
+  } catch (error) {
+    console.error('Error submitting story:', error);
+    this.notifications.showError('Failed to share story. ' + error.message);
+  } finally {
+    this.resetForm();
+    btnText.classList.remove('hidden');
+    btnLoading.classList.add('hidden');
+    submitBtn.disabled = false;
+  }
+}
+
 
     showSuccessMessage() {
         if (this.successMessage) {
