@@ -24,10 +24,11 @@
     <link rel="canonical" href="https://lovculator.com/love-stories">
     
     <!-- Favicon Links -->
-    <link rel="apple-touch-icon" href="/images/apple-touch-icon.png">
-    <link rel="shortcut icon" href="/images/favicon-32x32.png" type="image/png">
-    <link rel="icon" href="/images/favicon.ico" sizes="any">
+    <link rel="apple-touch-icon" href="/Images/apple-touch-icon.png">
 
+    <link rel="shortcut icon" href="/Images/favicon-32x32.png" type="image/png">
+
+    <link rel="icon" href="/images/favicon.ico" sizes="any">
     
     <!-- CSS -->
     <link rel="stylesheet" href="/css/style.css">
@@ -106,24 +107,16 @@
                 </div>
             </section>
 
-            <div class="stories-controls">
-    <div class="search-bar">
-        <input type="text" id="storySearchInput" placeholder="Search by title or story content..." aria-label="Search stories">
-    </div>
-    <div class="filter-dropdown">
-        <select id="categoryFilterSelect" aria-label="Filter by story category">
-            <option value="all">All Categories</option>
-            <option value="romantic">Romantic Moment 💖</option>
-            <option value="proposal">Marriage Proposal 💍</option>
-            <option value="journey">Love Journey 🛤️</option>
-            <option value="challenge">Overcoming Challenges 🛡️</option>
-            <option value="special">Special Memory 🌟</option>
-            <option value="longdistance">Long Distance Love ✈️</option>
-            <option value="secondchance">Second Chance 🔁</option>
-        </select>
-    </div>  
-    <button id="applyFiltersBtn" class="btn btn-primary btn-small">Apply</button>
-</div>
+            <!-- Stories Filters -->
+            <section class="stories-filters">
+                <div class="filter-tabs">
+                    <button class="filter-tab active" data-filter="all">All Stories</button>
+                    <button class="filter-tab" data-filter="romantic">💖 Romantic</button>
+                    <button class="filter-tab" data-filter="proposal">💍 Proposal</button>
+                    <button class="filter-tab" data-filter="longdistance">✈️ Long Distance</button>
+                    <button class="filter-tab" data-filter="journey">🛤️ Journey</button>
+                    <button class="filter-tab" data-filter="challenge">🛡️ Challenges</button>
+                </div>
                 
                 <div class="sort-options">
                     <select id="sortStories" class="sort-select">
@@ -320,7 +313,7 @@
 
     <!-- JavaScript Files -->
     <script src="js/navigation.js"></script>
-    <script src="js/love-stories.js?v=3.5"></script>
+    <script src="js/love-stories.js"></script>
     <script src="js/fab-notifications.js"></script>
     <script src="js/simple-stats.js"></script>
 </body>
