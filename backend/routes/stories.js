@@ -121,7 +121,8 @@ router.post("/", isAuthenticated, async (req, res) => {
       togetherSince,
     } = req.body;
 
-    if (!story_title || !love_story) {
+    if (!storyTitleFinal || !loveStoryFinal) {
+
       return res
         .status(400)
         .json({ error: "Story title and content are required." });
@@ -138,16 +139,17 @@ router.post("/", isAuthenticated, async (req, res) => {
       RETURNING *;
     `;
     const { rows } = await pool.query(insertSql, [
-      userId,
-      story_title,
-      names,
-      love_story,
-      category || null,
-      mood || null,
-      togetherSince || null,
-      !!allowComments,
-      !!anonymousPost,
-    ]);
+  userId,
+  storyTitleFinal,
+  names,
+  loveStoryFinal,
+  category || null,
+  mood || null,
+  togetherSinceFinal,
+  !!allowCommentsFinal,
+  !!anonymousPostFinal,
+]);
+
 
     console.log(`✅ New story added by user ${userId}`);
     res.status(201).json(rows[0]);
