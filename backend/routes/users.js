@@ -35,30 +35,45 @@ router.get("/", async (req, res) => {
 });
 
 /* ======================================================
-   2️⃣ FETCH SINGLE USER BY USERNAME (With Story Count)
+   2️⃣ FETCH SINGLE USER PROFILE (with counts)
+   ✅ FIX: Use /profile/:username to prevent conflicts
 ====================================================== */
-router.get("/:username", async (req, res) => {
+router.get("/profile/:username", async (req, res) => {
   try {
     const { username } = req.params;
-    const result = await pool.query(`
-      SELECT 
-        u.id, u.username, u.display_name, u.bio, u.location, u.relationship_status,
-        u.follower_count, u.following_count, u.avatar_url, u.created_at,
-        COUNT(s.id) AS stories_count
-      FROM users u
-      LEFT JOIN stories s ON s.user_id = u.id
-      WHERE u.username = $1
-      GROUP BY u.id
-    `, [username]);
 
-    if (result.rows.length === 0) {
-      return res.status(404).json({ error: "User not found" });
+    const userQuery = `
+      SELECT 
+        u.id, u.username, u.display_name, u.bio, u.location, 
+        u.relationship_status, u.avatar_url, u.created_at,
+        (SELECT COUNT(*) FROM follows WHERE target_id = u.id) AS follower_count,
+        (SELECT COUNT(*) FROM follows WHERE follower_id = u.id) AS following_count,
+        (SELECT COUNT(*) FROM stories WHERE user_id = u.id) AS stories_count
+      FROM users u
+      WHERE LOWER(u.username) = LOWER($1)
+      LIMIT 1;
+    `;
+    const { rows } = await pool.query(userQuery, [username]);
+    if (rows.length === 0) return res.status(404).json({ error: "User not found" });
+
+    const user = rows[0];
+
+    // Check if logged-in user is following this user
+    const currentUserId = req.session?.user?.id || req.session?.userId;
+    if (currentUserId && currentUserId !== user.id) {
+      const followCheck = await pool.query(
+        `SELECT 1 FROM follows WHERE follower_id = $1 AND target_id = $2`,
+        [currentUserId, user.id]
+      );
+      user.is_following_author = followCheck.rowCount > 0;
+    } else {
+      user.is_following_author = false;
     }
 
-    res.json(result.rows[0]);
+    res.json(user);
   } catch (err) {
-    console.error("❌ Fetch user error:", err);
-    res.status(500).json({ error: "Failed to fetch user" });
+    console.error("❌ Fetch user profile error:", err);
+    res.status(500).json({ error: "Failed to load user profile." });
   }
 });
 
