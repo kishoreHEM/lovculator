@@ -114,13 +114,38 @@ router.post("/login", async (req, res) => {
 
 
 // ===================================================
-// 3️⃣ AUTH CHECK (/api/auth/me)
+// 3️⃣ AUTH CHECK (/api/auth/me) — FIXED VERSION
 // ===================================================
-router.get("/me", (req, res) => {
-  if (req.session.user) {
-    res.json(req.session.user);
-  } else {
-    res.status(401).json({ error: "Not logged in." });
+router.get("/me", async (req, res) => {
+  const userId = req.session?.user?.id;
+
+  if (!userId) {
+    return res.status(401).json({ error: "Not logged in." });
+  }
+
+  try {
+    // Fetch latest user data from DB
+    const result = await pool.query(
+      `SELECT id, username, email, display_name, bio, location, relationship_status,
+              follower_count, following_count, created_at
+       FROM users
+       WHERE id = $1`,
+      [userId]
+    );
+
+    if (result.rowCount === 0) {
+      return res.status(404).json({ error: "User not found." });
+    }
+
+    const user = result.rows[0];
+
+    // Optionally, refresh session cache too
+    req.session.user = user;
+
+    res.json(user);
+  } catch (err) {
+    console.error("❌ Error in /auth/me:", err);
+    res.status(500).json({ error: "Failed to fetch user details." });
   }
 });
 
