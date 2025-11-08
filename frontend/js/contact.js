@@ -30,24 +30,30 @@ class ContactForm {
     }
 
     loadEmailJSSDK() {
-        return new Promise((resolve, reject) => {
-            if (typeof emailjs !== 'undefined') {
-                emailjs.init(this.EMAILJS_PUBLIC_KEY);
-                resolve();
-                return;
-            }
+    return new Promise((resolve, reject) => {
+        if (typeof emailjs !== 'undefined') {
+            emailjs.init(this.EMAILJS_PUBLIC_KEY);
+            resolve();
+            return;
+        }
 
-            const script = document.createElement('script');
-            script.src = 'https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js';
-            script.onload = () => {
-                console.log('🔥 EmailJS SDK loaded, initializing...');
+        // ✅ Load EmailJS from your own domain (no CSP violations)
+        const script = document.createElement('script');
+        script.src = '/js/email.min.js'; // Host this file locally in /frontend/js/
+        script.onload = () => {
+            console.log('🔥 EmailJS SDK loaded locally, initializing...');
+            try {
                 emailjs.init(this.EMAILJS_PUBLIC_KEY);
                 resolve();
-            };
-            script.onerror = () => reject(new Error('Failed to load EmailJS SDK'));
-            document.head.appendChild(script);
-        });
-    }
+            } catch (err) {
+                reject(err);
+            }
+        };
+        script.onerror = () => reject(new Error('Failed to load local EmailJS SDK'));
+        document.head.appendChild(script);
+    });
+}
+
 
     async handleSubmit(e) {
         e.preventDefault();
