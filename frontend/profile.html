@@ -3,17 +3,40 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>User Profile - Lovculator</title>
+  <title>User Profile - Lovculator 💖</title>
   <meta name="description" content="View your Lovculator profile — love stories, followers, and connections." />
   <meta name="theme-color" content="#ff4b8d" />
+
+  <!-- Main Styles -->
   <link rel="stylesheet" href="/css/style.css" />
 </head>
-
 <body>
-  <header class="header"></header>
+<!-- Header -->
+<header class="header">
+  <nav class="navbar">
+    <div class="nav-brand">
+      <a href="/" class="logo" aria-label="Lovculator Home">💖 Lovculator</a>
+    </div>
 
+    <!-- Desktop menu -->
+    <ul class="nav-menu">
+      <li class="nav-item"><a href="/signup" class="nav-link">Signup</a></li>
+      <li class="nav-item"><a href="/login" class="nav-link">Login</a></li>
+      <li class="nav-item"><a href="/love-calculator" class="nav-link active">Love Calculator</a></li>
+    </ul>
+
+    <!-- Mobile elements -->
+    <button class="menu-toggle" aria-label="Toggle menu">
+      <span></span><span></span><span></span>
+    </button>
+    <div class="mobile-menu-overlay"></div>
+  </nav>
+</header>
+
+  <!-- 🧠 Profile Container -->
   <div class="container">
     <main class="main-content">
+      <!-- Profile Info -->
       <section class="profile-hero" id="profileInfoContainer">
         <div class="loading-profile">
           <p>Loading Profile...</p>
@@ -22,6 +45,7 @@
 
       <hr />
 
+      <!-- Tabs Section -->
       <div class="profile-content">
         <div class="profile-tabs">
           <button class="tab-btn active" data-tab="stories">💖 Love Stories</button>
@@ -30,19 +54,24 @@
           <button class="tab-btn" data-tab="activity">📊 Activity</button>
         </div>
 
+        <!-- Tab Contents -->
         <div class="tab-content">
+          <!-- Stories Tab -->
           <div id="stories-tab" class="tab-pane active">
             <div class="stories-grid" id="userStoriesContainer"></div>
           </div>
 
+          <!-- Followers Tab -->
           <div id="followers-tab" class="tab-pane">
             <div class="users-list" id="followersContainer"></div>
           </div>
 
+          <!-- Following Tab -->
           <div id="following-tab" class="tab-pane">
             <div class="users-list" id="followingContainer"></div>
           </div>
 
+          <!-- Activity Tab -->
           <div id="activity-tab" class="tab-pane">
             <div class="activity-feed" id="userActivityContainer">
               <p class="empty-state">Loading your activity... 🚀</p>
@@ -53,55 +82,55 @@
     </main>
   </div>
 
-  <!-- 🌸 Enhanced Edit Profile Modal -->
-<div id="editProfileModal" class="modal">
-  <div class="modal-overlay"></div>
-  <div class="modal-dialog">
-    <div class="modal-header">
-      <h3>✏️ Edit Your Profile</h3>
-      <span class="close-btn" id="closeModalBtn">&times;</span>
+  <!-- 🌸 Edit Profile Modal -->
+  <div id="editProfileModal" class="modal">
+    <div class="modal-overlay"></div>
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <h3>✏️ Edit Your Profile</h3>
+        <span class="close-btn" id="closeModalBtn">&times;</span>
+      </div>
+
+      <form id="editProfileForm" class="modal-form">
+        <div class="form-group">
+          <label for="editDisplayName">Display Name</label>
+          <input type="text" id="editDisplayName" name="display_name" maxlength="50" required />
+        </div>
+
+        <div class="form-group">
+          <label for="editBio">Bio</label>
+          <textarea id="editBio" name="bio" rows="3" maxlength="300" placeholder="Tell us something about your love journey..."></textarea>
+        </div>
+
+        <div class="form-group">
+          <label for="editLocation">Location</label>
+          <input type="text" id="editLocation" name="location" maxlength="50" placeholder="e.g., Hyderabad, India" />
+        </div>
+
+        <div class="form-group">
+          <label for="editRelationshipStatus">Relationship Status</label>
+          <select id="editRelationshipStatus" name="relationship_status">
+            <option value="Single">Single</option>
+            <option value="In a Relationship">In a Relationship</option>
+            <option value="Married">Married</option>
+            <option value="It's Complicated">It's Complicated</option>
+          </select>
+        </div>
+
+        <div class="modal-footer">
+          <button type="submit" id="saveProfileBtn" class="btn btn-primary">💾 Save Changes</button>
+          <button type="button" class="btn btn-secondary" id="cancelEditBtn">Cancel</button>
+        </div>
+
+        <p id="editProfileMessage" class="edit-message"></p>
+      </form>
     </div>
-
-    <form id="editProfileForm" class="modal-form">
-      <div class="form-group">
-        <label for="editDisplayName">Display Name</label>
-        <input type="text" id="editDisplayName" name="display_name" maxlength="50" required />
-      </div>
-
-      <div class="form-group">
-        <label for="editBio">Bio</label>
-        <textarea id="editBio" name="bio" rows="3" maxlength="300" placeholder="Tell us something about your love journey..."></textarea>
-      </div>
-
-      <div class="form-group">
-        <label for="editLocation">Location</label>
-        <input type="text" id="editLocation" name="location" maxlength="50" placeholder="e.g., Hyderabad, India" />
-      </div>
-
-      <div class="form-group">
-        <label for="editRelationshipStatus">Relationship Status</label>
-        <select id="editRelationshipStatus" name="relationship_status">
-          <option value="Single">Single</option>
-          <option value="In a Relationship">In a Relationship</option>
-          <option value="Married">Married</option>
-          <option value="It's Complicated">It's Complicated</option>
-        </select>
-      </div>
-
-      <div class="modal-footer">
-        <button type="submit" id="saveProfileBtn" class="btn btn-primary">💾 Save Changes</button>
-        <button type="button" class="btn btn-secondary" id="cancelEditBtn">Cancel</button>
-      </div>
-
-      <p id="editProfileMessage" class="edit-message"></p>
-    </form>
   </div>
-</div>
 
-
+  <!-- Footer -->
   <footer class="footer"></footer>
 
-  <!-- Scripts -->
+  <!-- JS Files -->
   <script src="/js/navigation.js"></script>
   <script src="/js/auth.js"></script>
   <script src="/js/love-stories.js"></script>
