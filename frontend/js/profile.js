@@ -132,44 +132,60 @@ class ProfileManager {
     }
 
     // =====================================================
-    // 5️⃣ Edit Profile Handlers
-    // =====================================================
+// 5️⃣ Edit Profile Handlers (Fixed)
+// =====================================================
 
-    attachEditProfileHandlers() {
-        const editBtn = document.getElementById("editProfileBtn");
-        const modal = document.getElementById("editProfileModal");
-        const closeBtn = modal?.querySelector(".close-btn");
-        const form = document.getElementById("editProfileForm");
-        
-        if (editBtn) {
-            editBtn.addEventListener("click", () => {
-                this.populateEditForm();
-                if (modal) modal.classList.add("active");
-                if (modal) modal.classList.remove("active");
+attachEditProfileHandlers() {
+  const editBtn = document.getElementById("editProfileBtn");
+  const modal = document.getElementById("editProfileModal");
+  const closeBtn = modal?.querySelector(".close-btn");
+  const cancelBtn = document.getElementById("cancelEditBtn");
+  const form = document.getElementById("editProfileForm");
 
+  // 🟢 Open modal
+  if (editBtn) {
+    editBtn.addEventListener("click", () => {
+      this.populateEditForm();
 
-            });
-        }
+      if (modal) {
+        modal.style.display = "flex"; // make it visible
+        setTimeout(() => modal.classList.add("active"), 10); // small delay for smooth fade-in
+      }
+    });
+  }
 
-        if (closeBtn) closeBtn.addEventListener("click", () => (modal.style.display = "none"));
-        
-        window.addEventListener("click", (e) => {
-            if (e.target === modal) modal.style.display = "none";
-        });
-
-        if (form) form.addEventListener("submit", this.handleEditProfile.bind(this));
+  // 🔴 Close modal helper
+  const closeModal = () => {
+    if (modal) {
+      modal.classList.remove("active");
+      setTimeout(() => (modal.style.display = "none"), 300); // matches transition duration
     }
+  };
 
-    populateEditForm() {
-        if (!this.currentUser) return;
+  // Close on X or Cancel
+  if (closeBtn) closeBtn.addEventListener("click", closeModal);
+  if (cancelBtn) cancelBtn.addEventListener("click", closeModal);
 
-        document.getElementById("editDisplayName").value = this.currentUser.display_name || "";
-        document.getElementById("editBio").value = this.currentUser.bio || "";
-        document.getElementById("editLocation").value = this.currentUser.location || "";
-        document.getElementById("editRelationshipStatus").value =
-            this.currentUser.relationship_status || "Single";
-        document.getElementById("editProfileMessage").textContent = "";
-    }
+  // Close when clicking outside modal dialog
+  window.addEventListener("click", (e) => {
+    if (e.target === modal) closeModal();
+  });
+
+  // 📝 Handle form submit
+  if (form) form.addEventListener("submit", this.handleEditProfile.bind(this));
+}
+
+populateEditForm() {
+  if (!this.currentUser) return;
+
+  document.getElementById("editDisplayName").value = this.currentUser.display_name || "";
+  document.getElementById("editBio").value = this.currentUser.bio || "";
+  document.getElementById("editLocation").value = this.currentUser.location || "";
+  document.getElementById("editRelationshipStatus").value =
+    this.currentUser.relationship_status || "Single";
+  document.getElementById("editProfileMessage").textContent = "";
+}
+
 
     async handleEditProfile(e) {
         e.preventDefault();
