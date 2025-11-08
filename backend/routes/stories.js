@@ -21,10 +21,10 @@ const isAuthenticated = (req, res, next) => {
    1) GET all stories (with author + follow info)
 ------------------------------------------- */
 router.get("/", async (req, res) => {
-  const filterUserId = req.query.userId;        // optional filter
-  const category = req.query.category;          // optional filter
-  const searchQuery = req.query.search;         // optional search
-  const viewerUserId = req.session?.user?.id || 0; // current viewer
+  const filterUserId = req.query.userId;
+  const category = req.query.category;
+  const searchQuery = req.query.search;
+  const viewerUserId = req.session?.user?.id || 0;
 
   const params = [viewerUserId];
   let sql = `
@@ -47,37 +47,28 @@ router.get("/", async (req, res) => {
         SELECT 1 FROM story_likes l
         WHERE l.story_id = s.id AND l.user_id = $1
       ) THEN TRUE ELSE FALSE END AS user_liked,
-
-      -- Author info
       u.id           AS author_id,
       u.username     AS author_username,
       u.display_name AS author_display_name,
       u.avatar_url   AS author_avatar_url,
-
-      -- Is viewer following the author?
       CASE WHEN EXISTS (
         SELECT 1 FROM follows f
         WHERE f.follower_id = $1 AND f.target_id = s.user_id
       ) THEN TRUE ELSE FALSE END AS is_following_author
-
     FROM stories s
     LEFT JOIN users u ON u.id = s.user_id
     LEFT JOIN (
-      SELECT story_id, COUNT(*) AS likes_count
-      FROM story_likes GROUP BY story_id
+      SELECT story_id, COUNT(*) AS likes_count FROM story_likes GROUP BY story_id
     ) lc ON lc.story_id = s.id
     LEFT JOIN (
-      SELECT story_id, COUNT(*) AS comments_count
-      FROM story_comments GROUP BY story_id
+      SELECT story_id, COUNT(*) AS comments_count FROM story_comments GROUP BY story_id
     ) cc ON cc.story_id = s.id
     LEFT JOIN (
-      SELECT story_id, COUNT(*) AS shares_count
-      FROM shares GROUP BY story_id
+      SELECT story_id, COUNT(*) AS shares_count FROM shares GROUP BY story_id
     ) sc ON sc.story_id = s.id
   `;
 
   const where = [];
-
   if (filterUserId) {
     where.push(`s.user_id = $${params.length + 1}`);
     params.push(filterUserId);
@@ -106,7 +97,7 @@ router.get("/", async (req, res) => {
 });
 
 /* -------------------------------------------
-   2) Create story (auth)
+   2) Create Story (auth)
 ------------------------------------------- */
 router.post("/", isAuthenticated, async (req, res) => {
   try {
@@ -121,15 +112,22 @@ router.post("/", isAuthenticated, async (req, res) => {
       togetherSince,
     } = req.body;
 
-    if (!storyTitleFinal || !loveStoryFinal) {
+    // ✅ Normalize and validate
+    const storyTitleFinal = story_title?.trim() || "Untitled Story";
+    const loveStoryFinal = love_story?.trim() || "";
+    const togetherSinceFinal = togetherSince?.trim() || null;
+    const allowCommentsFinal = Boolean(allowComments);
+    const anonymousPostFinal = Boolean(anonymousPost);
 
+    if (!loveStoryFinal) {
       return res
         .status(400)
-        .json({ error: "Story title and content are required." });
+        .json({ error: "Love story content cannot be empty." });
     }
 
     const userId = req.user.id;
-    const names = anonymousPost ? "Anonymous Couple" : couple_names || null;
+    const coupleNamesFinal =
+      anonymousPostFinal ? "Anonymous Couple" : couple_names?.trim() || null;
 
     const insertSql = `
       INSERT INTO stories
@@ -138,24 +136,24 @@ router.post("/", isAuthenticated, async (req, res) => {
       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9, NOW(), NOW())
       RETURNING *;
     `;
-    const { rows } = await pool.query(insertSql, [
-  userId,
-  storyTitleFinal,
-  names,
-  loveStoryFinal,
-  category || null,
-  mood || null,
-  togetherSinceFinal,
-  !!allowCommentsFinal,
-  !!anonymousPostFinal,
-]);
 
+    const { rows } = await pool.query(insertSql, [
+      userId,
+      storyTitleFinal,
+      coupleNamesFinal,
+      loveStoryFinal,
+      category || null,
+      mood || null,
+      togetherSinceFinal,
+      allowCommentsFinal,
+      anonymousPostFinal,
+    ]);
 
     console.log(`✅ New story added by user ${userId}`);
     res.status(201).json(rows[0]);
   } catch (err) {
     console.error("❌ Error creating story:", err);
-    res.status(500).json({ error: "Failed to post story" });
+    res.status(500).json({ error: "Failed to post story." });
   }
 });
 
@@ -212,7 +210,7 @@ router.post("/:id/like", isAuthenticated, async (req, res) => {
 });
 
 /* -------------------------------------------
-   4) Add comment (auth)
+   4) Add Comment (auth)
 ------------------------------------------- */
 router.post("/:storyId/comments", isAuthenticated, async (req, res) => {
   const client = await pool.connect();
@@ -265,7 +263,7 @@ router.post("/:storyId/comments", isAuthenticated, async (req, res) => {
 });
 
 /* -------------------------------------------
-   5) Fetch comments (with author avatar)
+   5) Fetch Comments (with author avatar)
 ------------------------------------------- */
 router.get("/:storyId/comments", async (req, res) => {
   try {
@@ -292,7 +290,7 @@ router.get("/:storyId/comments", async (req, res) => {
 });
 
 /* -------------------------------------------
-   6) Track share
+   6) Share Tracking
 ------------------------------------------- */
 router.post("/:storyId/share", async (req, res) => {
   try {
@@ -322,28 +320,36 @@ router.post("/:storyId/share", async (req, res) => {
 });
 
 /* -------------------------------------------
-   7) Delete story (auth & ownership)
+   7) Delete Story (auth & ownership)
 ------------------------------------------- */
 router.delete("/:storyId", isAuthenticated, async (req, res) => {
-  const { storyId } = req.params;
+  const storyId = parseInt(req.params.storyId, 10);
   const userId = req.user.id;
 
+  if (isNaN(storyId)) {
+    return res.status(400).json({ error: "Invalid story ID." });
+  }
+
   try {
-    const check = await pool.query(
+    const { rows } = await pool.query(
       `SELECT user_id FROM stories WHERE id = $1`,
       [storyId]
     );
-    if (check.rowCount === 0)
-      return res.status(404).json({ error: "Story not found." });
 
-    if (check.rows[0].user_id !== userId)
+    if (rows.length === 0) {
+      return res.status(404).json({ error: "Story not found." });
+    }
+
+    if (rows[0].user_id !== userId) {
       return res
         .status(403)
-        .json({ error: "Forbidden: You can only delete your own story." });
+        .json({ error: "Forbidden: You can only delete your own stories." });
+    }
 
     await pool.query(`DELETE FROM stories WHERE id = $1`, [storyId]);
+
     console.log(`💀 Story ${storyId} deleted by user ${userId}`);
-    return res.status(204).send();
+    res.status(200).json({ message: "Story deleted successfully." });
   } catch (err) {
     console.error("❌ Delete story error:", err);
     res.status(500).json({ error: "Failed to delete story." });
@@ -351,35 +357,43 @@ router.delete("/:storyId", isAuthenticated, async (req, res) => {
 });
 
 /* -------------------------------------------
-   8) Report story (auth)
+   8) Report Story (auth required)
 ------------------------------------------- */
 router.post("/:storyId/report", isAuthenticated, async (req, res) => {
-  const { storyId } = req.params;
+  const storyId = parseInt(req.params.storyId, 10);
   const { reason, description } = req.body;
   const reporterId = req.user.id;
 
-  if (!storyId || isNaN(storyId) || !reason) {
+  if (isNaN(storyId)) {
+    return res.status(400).json({ error: "Invalid story ID." });
+  }
+
+  if (!reason || reason.trim().length < 3) {
     return res
       .status(400)
-      .json({ error: "Invalid story ID or missing report reason." });
+      .json({ error: "Please provide a valid reason for reporting." });
   }
 
   try {
-    const exists = await pool.query(`SELECT id FROM stories WHERE id = $1`, [
+    const storyCheck = await pool.query(`SELECT id FROM stories WHERE id = $1`, [
       storyId,
     ]);
-    if (exists.rowCount === 0)
+    if (storyCheck.rowCount === 0) {
       return res.status(404).json({ error: "Story not found." });
+    }
 
     await pool.query(
-      `INSERT INTO story_reports (story_id, reporter_id, reason, description)
-       VALUES ($1,$2,$3,$4)`,
-      [storyId, reporterId, reason, description || null]
+      `INSERT INTO story_reports (story_id, reporter_id, reason, description, created_at)
+       VALUES ($1, $2, $3, $4, NOW())`,
+      [storyId, reporterId, reason.trim(), description?.trim() || null]
     );
 
-    res
-      .status(201)
-      .json({ message: "Story reported successfully. We will review it shortly." });
+    console.log(`🚨 Story ${storyId} reported by user ${reporterId}`);
+
+    res.status(201).json({
+      message:
+        "Story reported successfully. Our moderation team will review it shortly.",
+    });
   } catch (err) {
     console.error("❌ Report story error:", err);
     res.status(500).json({ error: "Failed to submit report." });
