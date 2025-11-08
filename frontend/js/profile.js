@@ -21,80 +21,187 @@ class ProfileManager {
     }
 
     // =====================================================
-    // 1️⃣ Initialize Profile
-    // =====================================================
+// 1️⃣ Initialize Profile (Fixed for visiting other users)
+// =====================================================
+async init() {
+    this.showLoading("profileInfoContainer");
+    this.showLoading("userStoriesContainer");
 
-    async init() {
-        this.showLoading("profileInfoContainer");
-        this.showLoading("userStoriesContainer");
+    try {
+        const params = new URLSearchParams(window.location.search);
+        const usernameParam = params.get("user"); // example: profile.html?user=kishore6
+
+        // Step 1️⃣: Check logged-in user session
+        let currentUser = null;
         try {
-            const res = await fetch(`${this.API_BASE}/auth/me`, { credentials: "include" });
-            if (!res.ok) {
-                this.handleUnauthorized();
-                return;
+            const meRes = await fetch(`${this.API_BASE}/auth/me`, { credentials: "include" });
+            if (meRes.ok) {
+                currentUser = await meRes.json();
+                this.currentUser = currentUser;
+                window.currentUserId = currentUser.id;
             }
-
-            const user = await res.json();
-            this.currentUser = user;
-
-            this.renderProfileDetails(user);
-            await this.loadUserStories(user.id);
-
-            this.attachTabHandlers();
-            this.attachEditProfileHandlers();
-        } catch (err) {
-            console.error("❌ Profile load error:", err);
-            this.profileInfoContainer.innerHTML = `<p style="color:red;text-align:center;">❌ Failed to load profile.</p>`;
+        } catch {
+            console.warn("⚠️ No active session found");
         }
-    }
 
-    // =====================================================
-    // 2️⃣ Render Profile Details
-    // =====================================================
+        // Step 2️⃣: Determine whose profile to load
+        if (usernameParam && (!currentUser || usernameParam !== currentUser.username)) {
+            // Viewing someone else's profile
+            const userRes = await fetch(`${this.API_BASE}/users/${usernameParam}`);
+            if (!userRes.ok) throw new Error("User not found");
 
-    renderProfileDetails(user) {
-        if (!this.profileInfoContainer) return;
-        const followerCount = user.follower_count ?? 0;
-        const followingCount = user.following_count ?? 0;
-        const displayName = user.display_name || user.username || "User";
-        const initials = displayName ? displayName[0].toUpperCase() : "?";
-        const joinedDate = user.created_at
-            ? new Date(user.created_at).toLocaleDateString("en-US", {
-                month: "long",
-                year: "numeric",
-            })
-            : "Recently";
+            const otherUser = await userRes.json();
+            this.viewedUser = otherUser;
 
-        this.profileInfoContainer.innerHTML = `
-            <div class="profile-header-card">
-                <div class="profile-main-info">
-                    <div class="profile-avatar" style="--initial-bg:#ff4b8d;--initial-color:white;">
-                        <span id="initials">${initials}</span>
-                    </div>
-                    <div class="profile-details">
-                        <h1 id="profileUsername">${displayName}</h1>
-                        <div class="social-stats">
-                            <span id="profileFollowers">${followerCount} Followers</span>
-                            <span class="separator">·</span>
-                            <span id="profileFollowing">${followingCount} Following</span>
-                        </div>
-                        <p id="profileJoined" class="joined-date">Joined ${joinedDate}</p>
-                        <div class="profile-bio-summary">
-                            ${user.bio ? `<p class="bio-text">${user.bio}</p>` : `<p class="bio-text empty">No bio set yet.</p>`}
-                            ${user.location ? `<span class="location">📍 ${user.location}</span>` : ""}
-                        </div>
-                    </div>
-                </div>
-                <div class="profile-actions-bar">
-                    <button id="editProfileBtn" class="btn btn-secondary btn-small">✏️ Edit Profile</button>
-                    <button id="logoutBtn" class="btn btn-secondary btn-small">🚪 Logout</button>
-                </div>
-            </div>
-        `;
+            this.renderProfileDetails(otherUser, false);
+            await this.loadUserStories(otherUser.id);
+        } else if (currentUser) {
+            // Viewing your own profile
+            this.viewedUser = currentUser;
+            this.renderProfileDetails(currentUser, true);
+            await this.loadUserStories(currentUser.id);
+        } else {
+            // No session + no username = redirect to login
+            this.handleUnauthorized();
+            return;
+        }
 
-        this.attachLogoutHandler();
+        // Step 3️⃣: Attach handlers after loading
+        this.attachTabHandlers();
         this.attachEditProfileHandlers();
+
+    } catch (err) {
+        console.error("❌ Profile load error:", err);
+        this.profileInfoContainer.innerHTML = `
+            <p style="color:red;text-align:center;">❌ Failed to load profile.</p>`;
     }
+}
+
+
+// =====================================================
+// 1️⃣ Initialize Profile
+// =====================================================
+async init() {
+  this.showLoading("profileInfoContainer");
+  this.showLoading("userStoriesContainer");
+
+  try {
+    const params = new URLSearchParams(window.location.search);
+    const username = params.get("user"); // if visiting someone else's profile
+
+    // Get current logged-in user
+    const meRes = await fetch(`${this.API_BASE}/auth/me`, { credentials: "include" });
+    const meData = meRes.ok ? await meRes.json() : null;
+    this.currentUser = meData;
+
+    // If ?user= provided → viewing someone else’s profile
+    if (username && (!meData || username !== meData.username)) {
+      const userRes = await this.api.request(`/users/profile/${username}`);
+      this.viewedUser = userRes;
+      this.renderProfileDetails(userRes, false); // not own profile
+      await this.loadUserStories(userRes.username);
+    } 
+    // Otherwise, show own profile
+    else if (meData) {
+      this.viewedUser = meData;
+      this.renderProfileDetails(meData, true); // own profile
+      await this.loadUserStories(meData.username);
+    } else {
+      this.handleUnauthorized();
+    }
+
+    this.attachTabHandlers();
+    this.attachEditProfileHandlers();
+  } catch (err) {
+    console.error("❌ Profile load error:", err);
+    this.profileInfoContainer.innerHTML = `<p style="color:red;text-align:center;">❌ Failed to load profile.</p>`;
+  }
+}
+
+
+// =====================================================
+// 2️⃣ Render Profile Details
+// =====================================================
+renderProfileDetails(user, isOwnProfile = true) {
+  if (!this.profileInfoContainer) return;
+
+  const followerCount = user.follower_count ?? 0;
+  const followingCount = user.following_count ?? 0;
+  const displayName = user.display_name || user.username || "User";
+  const joinedDate = user.created_at
+    ? new Date(user.created_at).toLocaleDateString("en-US", { month: "long", year: "numeric" })
+    : "Recently";
+
+  const avatar = user.avatar_url
+    ? `<img src="${user.avatar_url}" alt="${displayName}" class="profile-avatar-img" />`
+    : `<div class="profile-avatar-fallback">${displayName[0]?.toUpperCase() || "?"}</div>`;
+
+  this.profileInfoContainer.innerHTML = `
+    <div class="profile-header-card">
+      <div class="profile-main-info">
+        <div class="profile-avatar">${avatar}</div>
+        <div class="profile-details">
+          <h1 id="profileUsername">${displayName}</h1>
+          <div class="social-stats">
+            <span id="profileFollowers">${followerCount} Followers</span>
+            <span class="separator">·</span>
+            <span id="profileFollowing">${followingCount} Following</span>
+          </div>
+          <p id="profileJoined" class="joined-date">Joined ${joinedDate}</p>
+          <div class="profile-bio-summary">
+            ${user.bio ? `<p class="bio-text">${user.bio}</p>` : `<p class="bio-text empty">No bio set yet.</p>`}
+            ${user.location ? `<span class="location">📍 ${user.location}</span>` : ""}
+          </div>
+        </div>
+      </div>
+
+      <div class="profile-actions-bar">
+        ${
+          isOwnProfile
+            ? `<button id="editProfileBtn" class="btn btn-secondary btn-small">✏️ Edit Profile</button>
+               <button id="logoutBtn" class="btn btn-secondary btn-small">🚪 Logout</button>`
+            : `<button id="followProfileBtn" class="btn btn-primary btn-small">+ Follow</button>`
+        }
+      </div>
+    </div>
+  `;
+
+  // Reattach events
+  if (isOwnProfile) {
+    this.attachLogoutHandler();
+    this.attachEditProfileHandlers();
+  } else {
+    this.attachFollowProfileHandler(user.id);
+  }
+}
+
+
+// =====================================================
+// 3️⃣ Follow / Unfollow Other User
+// =====================================================
+attachFollowProfileHandler(targetId) {
+  const btn = document.getElementById("followProfileBtn");
+  if (!btn) return;
+
+  btn.addEventListener("click", async () => {
+    btn.disabled = true;
+    const initialText = btn.textContent;
+
+    try {
+      const res = await this.api.request(`/users/${targetId}/follow`, { method: "POST" });
+      btn.textContent = res.is_following ? "Following" : "+ Follow";
+      btn.classList.toggle("following", res.is_following);
+    } catch (err) {
+      console.error("❌ Follow toggle failed:", err);
+      alert("Something went wrong. Please try again.");
+      btn.textContent = initialText;
+    } finally {
+      btn.disabled = false;
+    }
+  });
+}
+
+
 
     // =====================================================
     // 3️⃣ Handle Unauthorized User
@@ -131,7 +238,7 @@ class ProfileManager {
         }
     }
 
-    // =====================================================
+// =====================================================
 // 5️⃣ Edit Profile Handlers (Fixed)
 // =====================================================
 
