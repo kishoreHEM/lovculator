@@ -4,9 +4,9 @@ import pool from "../db.js";
 
 const router = express.Router();
 
-// ======================================================
-// 🔒 Middleware: Authentication Check
-// ======================================================
+/* ======================================================
+   🔒 Middleware: Authentication Check
+====================================================== */
 const isAuthenticated = (req, res, next) => {
   const userId = req.session?.userId || req.session?.user?.id;
   if (userId) {
@@ -16,14 +16,14 @@ const isAuthenticated = (req, res, next) => {
   res.status(401).json({ error: "Unauthorized: Please log in." });
 };
 
-// ======================================================
-// 1️⃣ FETCH ALL USERS (Public Info Only)
-// ======================================================
+/* ======================================================
+   1️⃣ FETCH ALL USERS (Public Info Only)
+====================================================== */
 router.get("/", async (req, res) => {
   try {
     const result = await pool.query(`
-      SELECT id, username, email, display_name, bio, location, relationship_status,
-             follower_count, following_count
+      SELECT id, username, display_name, bio, location, relationship_status,
+             follower_count, following_count, avatar_url, created_at
       FROM users
       ORDER BY id ASC
     `);
@@ -34,17 +34,21 @@ router.get("/", async (req, res) => {
   }
 });
 
-// ======================================================
-// 2️⃣ FETCH SINGLE USER BY USERNAME
-// ======================================================
+/* ======================================================
+   2️⃣ FETCH SINGLE USER BY USERNAME (With Story Count)
+====================================================== */
 router.get("/:username", async (req, res) => {
   try {
-    const username = req.params.username;
+    const { username } = req.params;
     const result = await pool.query(`
-      SELECT id, username, email, display_name, bio, location, relationship_status,
-             follower_count, following_count
-      FROM users
-      WHERE username = $1
+      SELECT 
+        u.id, u.username, u.display_name, u.bio, u.location, u.relationship_status,
+        u.follower_count, u.following_count, u.avatar_url, u.created_at,
+        COUNT(s.id) AS stories_count
+      FROM users u
+      LEFT JOIN stories s ON s.user_id = u.id
+      WHERE u.username = $1
+      GROUP BY u.id
     `, [username]);
 
     if (result.rows.length === 0) {
@@ -58,13 +62,13 @@ router.get("/:username", async (req, res) => {
   }
 });
 
-// ======================================================
-// 3️⃣ UPDATE USER PROFILE (Requires Auth)
-// ======================================================
+/* ======================================================
+   3️⃣ UPDATE USER PROFILE (Requires Auth)
+====================================================== */
 router.put("/:id", isAuthenticated, async (req, res) => {
   try {
     const { id } = req.params;
-    const { display_name, bio, location, relationship_status } = req.body;
+    const { display_name, bio, location, relationship_status, avatar_url } = req.body;
     const sessionUserId = req.user.id;
 
     if (parseInt(id) !== sessionUserId) {
@@ -73,11 +77,11 @@ router.put("/:id", isAuthenticated, async (req, res) => {
 
     const result = await pool.query(`
       UPDATE users
-      SET display_name = $1, bio = $2, location = $3, relationship_status = $4
-      WHERE id = $5
+      SET display_name = $1, bio = $2, location = $3, relationship_status = $4, avatar_url = $5
+      WHERE id = $6
       RETURNING id, username, display_name, bio, location, relationship_status,
-                follower_count, following_count, created_at
-    `, [display_name, bio, location, relationship_status, id]);
+                follower_count, following_count, avatar_url, created_at
+    `, [display_name, bio, location, relationship_status, avatar_url, id]);
 
     res.json(result.rows[0]);
   } catch (err) {
@@ -86,9 +90,9 @@ router.put("/:id", isAuthenticated, async (req, res) => {
   }
 });
 
-// ======================================================
-// 4️⃣ FOLLOW / UNFOLLOW TOGGLE
-// ======================================================
+/* ======================================================
+   4️⃣ FOLLOW / UNFOLLOW TOGGLE
+====================================================== */
 router.post("/:targetId/follow", isAuthenticated, async (req, res) => {
   const followerId = req.user.id;
   const targetId = parseInt(req.params.targetId);
@@ -113,27 +117,11 @@ router.post("/:targetId/follow", isAuthenticated, async (req, res) => {
         "DELETE FROM follows WHERE follower_id = $1 AND target_id = $2",
         [followerId, targetId]
       );
-      await client.query(
-        "UPDATE users SET follower_count = follower_count - 1 WHERE id = $1",
-        [targetId]
-      );
-      await client.query(
-        "UPDATE users SET following_count = following_count - 1 WHERE id = $1",
-        [followerId]
-      );
       isFollowing = false;
     } else {
       await client.query(
-        "INSERT INTO follows (follower_id, target_id) VALUES ($1, $2)",
+        "INSERT INTO follows (follower_id, target_id, created_at) VALUES ($1, $2, NOW())",
         [followerId, targetId]
-      );
-      await client.query(
-        "UPDATE users SET follower_count = follower_count + 1 WHERE id = $1",
-        [targetId]
-      );
-      await client.query(
-        "UPDATE users SET following_count = following_count + 1 WHERE id = $1",
-        [followerId]
       );
       isFollowing = true;
     }
@@ -155,14 +143,14 @@ router.post("/:targetId/follow", isAuthenticated, async (req, res) => {
   }
 });
 
-// ======================================================
-// 5️⃣ FETCH FOLLOWERS
-// ======================================================
+/* ======================================================
+   5️⃣ FETCH FOLLOWERS LIST
+====================================================== */
 router.get("/:userId/followers", async (req, res) => {
   try {
     const { userId } = req.params;
     const result = await pool.query(`
-      SELECT u.id, u.username, u.display_name, u.email
+      SELECT u.id, u.username, u.display_name, u.avatar_url, u.bio
       FROM follows f
       JOIN users u ON u.id = f.follower_id
       WHERE f.target_id = $1
@@ -176,14 +164,14 @@ router.get("/:userId/followers", async (req, res) => {
   }
 });
 
-// ======================================================
-// 6️⃣ FETCH FOLLOWING
-// ======================================================
+/* ======================================================
+   6️⃣ FETCH FOLLOWING LIST
+====================================================== */
 router.get("/:userId/following", async (req, res) => {
   try {
     const { userId } = req.params;
     const result = await pool.query(`
-      SELECT u.id, u.username, u.display_name, u.email
+      SELECT u.id, u.username, u.display_name, u.avatar_url, u.bio
       FROM follows f
       JOIN users u ON u.id = f.target_id
       WHERE f.follower_id = $1
@@ -197,9 +185,9 @@ router.get("/:userId/following", async (req, res) => {
   }
 });
 
-// ======================================================
-// 7️⃣ CHECK FOLLOW STATUS
-// ======================================================
+/* ======================================================
+   7️⃣ CHECK FOLLOW STATUS
+====================================================== */
 router.get("/:targetId/is-following", async (req, res) => {
   const followerId = req.session?.userId;
   const targetId = req.params.targetId;
@@ -218,10 +206,9 @@ router.get("/:targetId/is-following", async (req, res) => {
   }
 });
 
-// ======================================================
-// 8️⃣ GET USER ACTIVITY (Match frontend expectations)
-// ======================================================
-// ✅ backend/routes/users.js
+/* ======================================================
+   8️⃣ USER ACTIVITY FEED (Followers + Likes)
+====================================================== */
 router.get("/:id/activity", async (req, res) => {
   const targetId = parseInt(req.params.id);
 
@@ -270,7 +257,42 @@ router.get("/:id/activity", async (req, res) => {
   }
 });
 
+/* ======================================================
+   9️⃣ FETCH STORIES BY USERNAME (Profile Page)
+====================================================== */
+router.get("/:username/stories", async (req, res) => {
+  try {
+    const { username } = req.params;
+    const userRes = await pool.query(`SELECT id FROM users WHERE username = $1`, [username]);
+    if (userRes.rowCount === 0)
+      return res.status(404).json({ error: "User not found" });
 
+    const userId = userRes.rows[0].id;
 
+    const { rows } = await pool.query(`
+      SELECT s.*, 
+             COALESCE(lc.likes_count, 0) AS likes_count,
+             COALESCE(cc.comments_count, 0) AS comments_count,
+             COALESCE(sc.shares_count, 0) AS shares_count
+      FROM stories s
+      LEFT JOIN (
+        SELECT story_id, COUNT(*) AS likes_count FROM story_likes GROUP BY story_id
+      ) lc ON lc.story_id = s.id
+      LEFT JOIN (
+        SELECT story_id, COUNT(*) AS comments_count FROM story_comments GROUP BY story_id
+      ) cc ON cc.story_id = s.id
+      LEFT JOIN (
+        SELECT story_id, COUNT(*) AS shares_count FROM shares GROUP BY story_id
+      ) sc ON sc.story_id = s.id
+      WHERE s.user_id = $1
+      ORDER BY s.created_at DESC
+    `, [userId]);
+
+    res.json(rows);
+  } catch (err) {
+    console.error("❌ Fetch user stories error:", err);
+    res.status(500).json({ error: "Failed to load user's stories" });
+  }
+});
 
 export default router;
