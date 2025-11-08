@@ -1,0 +1,745 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lovculator • Love Calculator by Name - Name Compatibility Analysis</title>
+    <meta name="description" content="Calculate love compatibility with Lovculator. Name compatibility analysis based on numerology, vibrations, and relationship insights.">
+    <meta name="theme-color" content="#ff4b8d">
+
+    <!-- Open Graph -->
+    <meta property="og:title" content="Lovculator • Love Calculator by Name - Name Compatibility Analysis">
+    <meta property="og:description" content="Calculate love compatibility based on name analysis, numerology, and vibrational patterns.">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://lovculator.com/">
+    <meta property="og:image" content="https://lovculator.com/images/lovculator.png">
+
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="Lovculator • Love Calculator by Name">
+    <meta name="twitter:description" content="Calculate love compatibility based on name analysis, numerology, and vibrational patterns.">
+    <meta name="twitter:image" content="https://lovculator.com/images/lovculator.png">
+
+    <!-- Canonical URL -->
+    <link rel="canonical" href="https://lovculator.com/">
+
+    <!-- PWA -->
+    <link rel="manifest" href="/manifest.json">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="Lovculator">
+    <link rel="apple-touch-icon" href="/images/apple-touch-icon.png">
+    <link rel="shortcut icon" href="/images/favicon-32x32.png" type="image/png">
+    <link rel="icon" href="/images/favicon.ico" sizes="any">
+
+    <!-- Schema Markup -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "WebApplication",
+      "name": "Lovculator • Love Calculator by Name",
+      "description": "Name compatibility analysis tool for love calculation based on numerology and vibrational patterns.",
+      "url": "https://lovculator.com/",
+      "applicationCategory": "UtilitiesApplication",
+      "operatingSystem": "Any",
+      "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
+      "author": { "@type": "Organization", "name": "Lovculator" },
+      "keywords": "love calculator, name compatibility, name numerology, love percentage, relationship compatibility"
+    }
+    </script>
+
+    <!-- CSS -->
+    <!-- CSS -->
+<link rel="stylesheet" href="/css/style.css?v=3.0">
+
+</head>
+<body>
+<!-- Header -->
+<header class="header">
+  <nav class="navbar">
+    <div class="nav-brand">
+      <a href="/" class="logo" aria-label="Lovculator Home">💖 Lovculator</a>
+    </div>
+
+    <!-- Desktop menu -->
+    <ul class="nav-menu">
+      <li class="nav-item"><a href="/signup" class="nav-link">Signup</a></li>
+      <li class="nav-item"><a href="/login" class="nav-link">Login</a></li>
+      <li class="nav-item"><a href="/love-stories" class="nav-link active">Love Stories</a></li>
+    </ul>
+
+    <!-- Mobile elements -->
+    <button class="menu-toggle" aria-label="Toggle menu">
+      <span></span><span></span><span></span>
+    </button>
+    <div class="mobile-menu-overlay"></div>
+  </nav>
+</header>
+
+<div class="container">
+  <main class="main-content">
+    <h1 class="sr-only">Lovculator • Love Calculator by Name - Name Compatibility Analysis</h1>
+
+    <!-- Main Calculator Post -->
+    <article class="calculator-post">
+      <div class="calculator-header">
+        <div class="post-user">
+          <div class="post-avatar" aria-hidden="true">LC</div>
+          <div class="post-username">Love Calculator</div>
+        </div>
+      </div>
+
+      <div class="calculator-content">
+        <form id="loveForm" class="love-form">
+          <div class="calculator-body">
+            <div class="person-details-grid">
+              <!-- Your Details -->
+              <div class="person-details first">
+                <div class="form-group">
+                  <label for="fin_person1">Your First Name</label>
+                  <input type="text" name="person1" id="fin_person1" class="form-control" placeholder="Enter Your Name" required maxlength="50" autocomplete="off" value="">
+                </div>
+                <div class="form-group gender-group">
+                  <label>Your Gender</label>
+                  <div class="gender-options">
+                    <label class="gender-option">
+                      <input type="radio" name="gender1" value="male" checked>
+                      <span class="gender-label">👨 Male</span>
+                    </label>
+                    <label class="gender-option">
+                      <input type="radio" name="gender1" value="female">
+                      <span class="gender-label">👩 Female</span>
+                    </label>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Partner's Details -->
+              <div class="person-details second">
+                <div class="form-group">
+                  <label for="fin_person2">Partner's First Name</label>
+                  <input type="text" name="person2" id="fin_person2" class="form-control" placeholder="Enter Partner's Name" required maxlength="50" autocomplete="off" value="">
+                </div>
+                <div class="form-group gender-group">
+                  <label>Partner's Gender</label>
+                  <div class="gender-options">
+                    <label class="gender-option">
+                      <input type="radio" name="gender2" value="male">
+                      <span class="gender-label">👨 Male</span>
+                    </label>
+                    <label class="gender-option">
+                      <input type="radio" name="gender2" value="female" checked>
+                      <span class="gender-label">👩 Female</span>
+                    </label>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <button type="submit" class="calculate-btn">
+              Calculate Love Compatibility <span aria-hidden="true">💘</span>
+            </button>
+          </div>
+        </form>
+
+        <!-- Result -->
+        <div id="result" class="result hidden" role="region" aria-live="polite">
+          <div class="result-content">
+            <div class="love-percentage"><span id="percentage">0</span>%</div>
+            <div class="love-message" id="message"></div>
+            <div class="names-display">
+              <span id="displayName1"></span> <span aria-hidden="true">❤️</span> <span id="displayName2"></span>
+            </div>
+            <button id="calculateAgain" class="again-btn" aria-label="Calculate again">Calculate Again</button>
+
+            <!-- Share Buttons (modern, with icons) -->
+            <div class="share-buttons" id="shareButtons">
+              <div class="share-section-title">🎉🎉 Share Your Love Score!</div>
+
+              <button class="share-btn facebook" aria-label="Share result on Facebook" onclick="shareOnFacebook()">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" aria-hidden="true">
+                  <circle cx="12" cy="12" r="12" fill="#1877F2"></circle>
+                  <path d="M15.12 8.36H13.5c-.18 0-.39.23-.39.59v1.22h2.01l-.24 2.04h-1.77v6.21h-2.1v-6.21h-1.38v-2.04h1.38v-1.2c0-1.38.81-2.39 2.33-2.39h1.68v1.78z" fill="#fff"/>
+                </svg>
+                <span>Share on Facebook</span>
+              </button>
+
+              <button class="share-btn twitter" aria-label="Tweet result on X" onclick="shareOnTwitter()">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M18.901 1.002h3.635L14.757 10.45 22.88 23.003h-6.848l-5.63-7.555-6.66 7.555H.994l8.368-9.52-8.243-9.507h7.108l4.907 6.64 5.967-6.64zM16.94 21.01H18.52L6.152 2.99H4.495L16.94 21.01z" fill="#000"/>
+                </svg>
+                <span>Tweet Result</span>
+              </button>
+
+              <button class="share-btn whatsapp" aria-label="Share result on WhatsApp" onclick="shareOnWhatsApp()">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" aria-hidden="true">
+                  <circle cx="12" cy="12" r="12" fill="#25D366"></circle>
+                  <path fill="#fff" d="M16.4 13.1c-.3-.2-1.8-.9-2.1-1-.3-.1-.5-.2-.7.2s-.8 1-1 1.2-.4.2-.7 0c-.3-.2-1.4-.5-2.7-1.7-1-1-1.7-2.2-1.9-2.5s0-.5.2-.7c.2-.2.3-.5.4-.6.1-.2.1-.3.2-.5.1-.2 0-.4 0-.6s-.7-1.6-1-2.2c-.3-.6-.5-.5-.7-.5h-.6c-.2 0-.5.1-.7.3s-.9.9-.9 2.2.9 2.6 1 2.8c.1.2 1.8 2.8 4.3 4 1.6.7 2.2.8 2.6.8.4 0 1.3-.1 1.6-.5.3-.4.7-.6.8-.9.1-.3.1-.5.1-.6 0-.1-.1-.3-.3-.4z"/>
+                </svg>
+                <span>Share on WhatsApp</span>
+              </button>
+
+              <button class="share-btn instagram" aria-label="Share on Instagram" onclick="shareOnInstagram()">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" stroke="#C13584" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24" aria-hidden="true">
+                  <rect x="2" y="2" width="20" height="20" rx="5" ry="5"></rect>
+                  <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"></path>
+                  <line x1="17.5" y1="6.5" x2="17.51" y2="6.5"></line>
+                </svg>
+                <span>Share on Instagram</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </article>
+
+    <!-- Lovculator Platform Section -->
+    <section class="lovculator-platform-section" aria-labelledby="platform-title">
+      <div class="platform-header">
+        <h2 id="platform-title">💖 Lovculator: More Than Just a Calculator</h2>
+        <p class="platform-subtitle">A comprehensive romantic platform combining love calculation technology with social storytelling</p>
+      </div>
+
+      <div class="platform-features-grid">
+        <div class="platform-feature-card">
+          <div class="feature-icon">🔢</div>
+          <h3>Love Calculation Technology</h3>
+          <p>Advanced algorithms analyze name compatibility, personality matching, and relationship insights to give you detailed love scores.</p>
+          <ul class="feature-list">
+            <li>Name compatibility analysis</li>
+            <li>Personality matching</li>
+            <li>Future potential assessment</li>
+            <li>Detailed relationship insights</li>
+          </ul>
+        </div>
+
+        <div class="platform-feature-card">
+          <div class="feature-icon">📖</div>
+          <h3>Social Storytelling</h3>
+          <p>Join our vibrant community and share your love journey or discover thousands of real love stories from around the world.</p>
+          <ul class="feature-list">
+            <li>Share stories anonymously or publicly</li>
+            <li>Browse real love stories worldwide</li>
+            <li>Multiple story categories</li>
+            <li>Like, comment, and follow stories</li>
+          </ul>
+        </div>
+
+        <div class="platform-feature-card">
+          <div class="feature-icon">👥</div>
+          <h3>Romantic Networking</h3>
+          <p>Connect with like-minded romantic souls and build meaningful connections within our supportive community.</p>
+          <ul class="feature-list">
+            <li>Create your romantic persona</li>
+            <li>Follow interesting stories and authors</li>
+            <li>Community interaction features</li>
+            <li>Full privacy controls</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="platform-differentiators">
+        <h3>What Makes Lovculator Unique</h3>
+        <div class="differentiators-grid">
+          <div class="differentiator-item">
+            <span class="diff-icon">🎯</span>
+            <div class="diff-content">
+              <h4>More Than Just Calculation</h4>
+              <p>While we start with love calculation, we've built a complete romantic ecosystem for all your relationship needs.</p>
+            </div>
+          </div>
+          <div class="differentiator-item">
+            <span class="diff-icon">🌍</span>
+            <div class="diff-content">
+              <h4>Global Community</h4>
+              <p>Real stories from real people across different cultures and backgrounds, celebrating love in all its forms.</p>
+            </div>
+          </div>
+          <div class="differentiator-item">
+            <span class="diff-icon">🔒</span>
+            <div class="diff-content">
+              <h4>Privacy Focused</h4>
+              <p>Anonymous sharing options and strict privacy controls ensure your comfort and security.</p>
+            </div>
+          </div>
+          <div class="differentiator-item">
+            <span class="diff-icon">💝</span>
+            <div class="diff-content">
+              <h4>Positive Environment</h4>
+              <p>A supportive community focused on celebrating love in all its beautiful forms.</p>
+            </div>
+          </div>
+          <div class="differentiator-item">
+            <span class="diff-icon">📱</span>
+            <div class="diff-content">
+              <h4>Modern Experience</h4>
+              <p>Beautiful, responsive design that works perfectly on all your devices.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="platform-audience">
+        <h3>Who is Lovculator For?</h3>
+        <div class="audience-grid">
+          <div class="audience-card">
+            <span class="audience-emoji">💑</span>
+            <h4>Couples</h4>
+            <p>Exploring their compatibility and sharing their love journey</p>
+          </div>
+          <div class="audience-card">
+            <span class="audience-emoji">💕</span>
+            <h4>Singles</h4>
+            <p>Looking for romantic inspiration and connection</p>
+          </div>
+          <div class="audience-card">
+            <span class="audience-emoji">📚</span>
+            <h4>Romance Enthusiasts</h4>
+            <p>Who love reading and sharing love stories</p>
+          </div>
+          <div class="audience-card">
+            <span class="audience-emoji">🌟</span>
+            <h4>Everyone</h4>
+            <p>Who believes in the power of love and connection</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="platform-mission">
+        <div class="mission-content">
+          <h3>Our Mission</h3>
+          <p>To create a safe, inspiring space where people can:</p>
+          <div class="mission-points">
+            <div class="mission-point"><span class="point-icon">💫</span><span>Calculate and understand relationship compatibility</span></div>
+            <div class="mission-point"><span class="point-icon">📖</span><span>Share and celebrate their love stories</span></div>
+            <div class="mission-point"><span class="point-icon">🌐</span><span>Connect with a global community of romantic souls</span></div>
+            <div class="mission-point"><span class="point-icon">✨</span><span>Find inspiration and hope in real love stories</span></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="platform-cta">
+        <div class="cta-content">
+          <h3>Join the Lovculator Movement</h3>
+          <p>Lovculator is more than a website - it's a movement celebrating love in all its beautiful forms! 💖</p>
+          <div class="cta-buttons">
+            <a href="love-stories" class="cta-btn primary">📖 Explore Love Stories</a>
+            <a href="/" class="cta-btn secondary">🔢 Try Love Calculator</a>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Name Analysis -->
+    <section class="name-analysis-section" aria-labelledby="name-analysis-title">
+      <div class="name-analysis-header">
+        <h2 id="name-analysis-title">Name Compatibility Analysis</h2>
+        <p class="name-analysis-subtitle">Discover how names influence relationship compatibility through advanced analysis</p>
+      </div>
+
+      <div class="name-factors-grid">
+        <div class="name-factor-card">
+          <span class="factor-icon" aria-hidden="true">🔢</span>
+          <h4>Name Numerology</h4>
+          <p>Each name carries specific numerical vibrations that influence personality traits and compatibility patterns.</p>
+        </div>
+        <div class="name-factor-card">
+          <span class="factor-icon" aria-hidden="true">📊</span>
+          <h4>Letter Vibration</h4>
+          <p>Individual letters emit unique energetic frequencies that harmonize or clash with other name vibrations.</p>
+        </div>
+        <div class="name-factor-card">
+          <span class="factor-icon" aria-hidden="true">🎵</span>
+          <h4>Phonetic Harmony</h4>
+          <p>The sound and rhythm of names create musical compatibility that affects emotional connection.</p>
+        </div>
+        <div class="name-factor-card">
+          <span class="factor-icon" aria-hidden="true">🌍</span>
+          <h4>Cultural Significance</h4>
+          <p>Names carry cultural meanings and historical significance that influence relationship dynamics.</p>
+        </div>
+      </div>
+
+      <div style="margin-top: 30px; padding: 20px; background: #f8f9fa; border-radius: 8px; border-left: 4px solid #667eea;">
+        <h4 style="color: #262626; margin-bottom: 10px;">How Name Analysis Works</h4>
+        <p style="color: #666; margin: 0; line-height: 1.6;">
+          Our algorithm analyzes the vibrational compatibility between names using numerology, phonetic patterns, 
+          and energetic frequencies to determine relationship potential. Each name combination creates unique 
+          energetic signatures that influence love compatibility.
+        </p>
+      </div>
+    </section>
+
+    <!-- Compatibility Guide -->
+    <section class="compatibility-guide" aria-labelledby="compatibility-guide-title">
+      <div class="guide-header">
+        <h2 id="compatibility-guide-title">Love Compatibility Guide</h2>
+        <p class="guide-subtitle">Understand what your percentage means</p>
+      </div>
+
+      <div class="compatibility-grid">
+        <div class="compat-card" data-range="90-100">
+          <div class="compat-header"><span class="percentage">90-100%</span><span class="emoji" aria-hidden="true">💖</span></div>
+          <h4>Perfect Match</h4>
+          <p>True soulmate connection! You complement each other perfectly and have amazing chemistry.</p>
+          <ul>
+            <li>Strong emotional bond</li>
+            <li>Excellent communication</li>
+            <li>Shared values and goals</li>
+          </ul>
+        </div>
+
+        <div class="compat-card" data-range="80-89">
+          <div class="compat-header"><span class="percentage">80-89%</span><span class="emoji" aria-hidden="true">🌟</span></div>
+          <h4>Excellent Match</h4>
+          <p>Great potential for a lasting relationship with strong foundation.</p>
+          <ul>
+            <li>Good understanding</li>
+            <li>Strong attraction</li>
+            <li>Compatible lifestyles</li>
+          </ul>
+        </div>
+
+        <div class="compat-card" data-range="70-79">
+          <div class="compat-header"><span class="percentage">70-79%</span><span class="emoji" aria-hidden="true">💕</span></div>
+          <h4>Very Good Match</h4>
+          <p>Strong connection with good potential for growth.</p>
+          <ul>
+            <li>Good chemistry</li>
+            <li>Similar interests</li>
+            <li>Growing bond</li>
+          </ul>
+        </div>
+
+        <div class="compat-card" data-range="60-69">
+          <div class="compat-header"><span class="percentage">60-69%</span><span class="emoji" aria-hidden="true">😊</span></div>
+          <h4>Good Match</h4>
+          <p>Worth exploring with effort and understanding.</p>
+          <ul>
+            <li>Potential for growth</li>
+            <li>Some differences</li>
+            <li>Needs communication</li>
+          </ul>
+        </div>
+
+        <div class="compat-card" data-range="50-59">
+          <div class="compat-header"><span class="percentage">50-59%</span><span class="emoji" aria-hidden="true">👌</span></div>
+          <h4>Average Match</h4>
+          <p>Could work with compromise and mutual effort.</p>
+          <ul>
+            <li>Mixed compatibility</li>
+            <li>Requires work</li>
+            <li>Learning opportunity</li>
+          </ul>
+        </div>
+
+        <div class="compat-card" data-range="0-49">
+          <div class="compat-header"><span class="percentage">0-49%</span><span class="emoji" aria-hidden="true">🤔</span></div>
+          <h4>Challenging Match</h4>
+          <p>Significant differences that require understanding.</p>
+          <ul>
+            <li>Major differences</li>
+            <li>Communication key</li>
+            <li>Growth potential</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <!-- Love Tips -->
+    <section class="love-tips-guide" aria-labelledby="love-tips-title">
+      <div class="guide-header">
+        <h2 id="love-tips-title">💕 Relationship Tips</h2>
+        <p class="guide-subtitle">Expert advice for stronger relationships</p>
+      </div>
+
+      <div class="tips-grid">
+        <article class="tip-card">
+          <div class="tip-icon">💬</div>
+          <h4>Communication is Key</h4>
+          <p>Always express your feelings openly and listen actively to your partner.</p>
+          <ul>
+            <li>Practice active listening</li>
+            <li>Use "I" statements</li>
+            <li>Schedule regular check-ins</li>
+          </ul>
+        </article>
+
+        <article class="tip-card">
+          <div class="tip-icon">⏰</div>
+          <h4>Quality Time Together</h4>
+          <p>Make time for each other without distractions.</p>
+          <ul>
+            <li>Weekly date nights</li>
+            <li>Digital-free time</li>
+            <li>Shared hobbies</li>
+          </ul>
+        </article>
+
+        <article class="tip-card">
+          <div class="tip-icon">🙏</div>
+          <h4>Appreciation & Gratitude</h4>
+          <p>Regularly express appreciation for the little things.</p>
+          <ul>
+            <li>Say thank you often</li>
+            <li>Leave love notes</li>
+            <li>Acknowledge efforts</li>
+          </ul>
+        </article>
+
+        <article class="tip-card">
+          <div class="tip-icon">🤝</div>
+          <h4>Trust & Respect</h4>
+          <p>Build a foundation of mutual trust and respect.</p>
+          <ul>
+            <li>Keep promises</li>
+            <li>Respect boundaries</li>
+            <li>Be reliable</li>
+          </ul>
+        </article>
+
+        <article class="tip-card">
+          <div class="tip-icon">🌱</div>
+          <h4>Grow Together</h4>
+          <p>Support each other's personal growth and dreams.</p>
+          <ul>
+            <li>Set shared goals</li>
+            <li>Learn new things together</li>
+            <li>Encourage ambitions</li>
+          </ul>
+        </article>
+
+        <article class="tip-card">
+          <div class="tip-icon">😊</div>
+          <h4>Keep Romance Alive</h4>
+          <p>Never stop dating your partner.</p>
+          <ul>
+            <li>Surprise each other</li>
+            <li>Physical affection</li>
+            <li>Remember special dates</li>
+          </ul>
+        </article>
+      </div>
+
+      <div class="inspiration-quote">
+        <blockquote>
+          "The best thing to hold onto in life is each other."
+          <cite>- Audrey Hepburn</cite>
+        </blockquote>
+      </div>
+    </section>
+
+    <!-- FAQ Section -->
+    <section class="faq-section" aria-labelledby="faq-title">
+      <div class="faq-header">
+        <h2 id="faq-title">Love Calculator FAQs</h2>
+        <p class="faq-subtitle">Common questions about love compatibility and name analysis</p>
+      </div>
+
+      <div class="faq-grid">
+        <div class="faq-item">
+          <button class="faq-question" aria-expanded="false" aria-controls="faq1">
+            How do names affect relationship compatibility?
+            <span class="faq-icon" aria-hidden="true">▼</span>
+          </button>
+          <div class="faq-answer" id="faq1">
+            Names carry vibrational energies that influence personality traits and relationship dynamics. Our analysis examines numerology, phonetic harmony, and energetic frequencies between names to determine compatibility potential.
+          </div>
+        </div>
+
+        <div class="faq-item">
+          <button class="faq-question" aria-expanded="false" aria-controls="faq2">
+            Is the love calculator accurate?
+            <span class="faq-icon" aria-hidden="true">▼</span>
+          </button>
+          <div class="faq-answer" id="faq2">
+            Our love calculator uses advanced algorithms based on name compatibility analysis. While it provides entertaining and insightful results, remember that real relationships require communication, effort, and mutual understanding.
+          </div>
+        </div>
+
+        <div class="faq-item">
+          <button class="faq-question" aria-expanded="false" aria-controls="faq3">
+            Can I use nicknames for the analysis?
+            <span class="faq-icon" aria-hidden="true">▼</span>
+          </button>
+          <div class="faq-answer" id="faq3">
+            Yes! Nicknames often carry the energy you express in relationships. Using the name your partner calls you can provide more accurate compatibility insights.
+          </div>
+        </div>
+
+        <div class="faq-item">
+          <button class="faq-question" aria-expanded="false" aria-controls="faq4">
+            How often should I use the love calculator?
+            <span class="faq-icon" aria-hidden="true">▼</span>
+          </button>
+          <div class="faq-answer" id="faq4">
+            You can use it as often as you like! It's perfect for checking compatibility with different name combinations, friends, or just for fun. Remember, it's for entertainment purposes.
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- Footer -->
+  <footer class="footer">
+    <div class="footer-content">
+      <p>💖 Lovculator - Find your perfect match</p>
+      <div class="footer-links">
+        <a href="/privacy">Privacy Policy</a>
+        <a href="/terms">Terms of Service</a>
+        <a href="/about">About Us</a>
+        <a href="/contact">Contact</a>
+      </div>
+
+      <div class="footer-social">
+        <a href="https://x.com/?lang=en" aria-label="Twitter (X)">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+            <path d="M18.901 1.002h3.635L14.757 10.45 22.88 23.003h-6.848l-5.63-7.555-6.66 7.555H.994l8.368-9.52-8.243-9.507h7.108l4.907 6.64 5.967-6.64zM16.94 21.01H18.52L6.152 2.99H4.495L16.94 21.01z"/>
+          </svg>
+        </a>
+        <a href="https://www.facebook.com/" aria-label="Facebook">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+            <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
+          </svg>
+        </a>
+        <a href="https://www.instagram.com/" aria-label="Instagram">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+            <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.73-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073z"/>
+          </svg>
+        </a>
+      </div>
+
+      <div class="footer-copyright">
+        &copy; 2025 Lovculator. All rights reserved.
+      </div>
+    </div>
+  </footer>
+</div>
+
+<!-- Floating Action Button for Love Stories -->
+<div class="fab-container">
+  <button class="fab-button" id="storyFab" aria-label="Share your love story">
+    <span class="fab-icon">+</span>
+  </button>
+</div>
+
+<!-- Love Story Modal -->
+<div class="modal-overlay hidden" id="storyModal" role="dialog" aria-labelledby="modalTitle" aria-modal="true">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h2 id="modalTitle">Share Your Love Story</h2>
+      <button class="close-modal" id="closeModal" aria-label="Close modal">&times;</button>
+    </div>
+
+    <form class="story-form" id="storyForm">
+      <div class="form-group">
+        <label for="coupleNames" class="form-label">Your Names *</label>
+        <input type="text" id="coupleNames" placeholder="e.g., John & Jane" required aria-required="true">
+      </div>
+
+      <div class="form-group">
+        <label for="storyTitle" class="form-label">Story Title *</label>
+        <input type="text" id="storyTitle" placeholder="Give your story a beautiful title" required aria-required="true">
+      </div>
+
+      <div class="form-group">
+        <label for="togetherSince" class="form-label">Together Since (Optional)</label>
+        <input type="month" id="togetherSince" aria-describedby="togetherSinceHelp">
+        <small id="togetherSinceHelp" class="form-help">Approximate date you started dating</small>
+      </div>
+
+      <div class="form-group">
+        <label for="loveStory" class="form-label">Your Love Story *</label>
+        <textarea id="loveStory" placeholder="Share your beautiful love story... How did you meet? What makes your love special?" rows="8" required aria-required="true" aria-describedby="charCounter"></textarea>
+        <div class="char-count"><span id="charCounter">0</span>/1000 characters</div>
+      </div>
+
+      <div class="form-group">
+        <label for="storyCategory" class="form-label">Category *</label>
+        <select id="storyCategory" required aria-required="true">
+          <option value="">Choose a category...</option>
+          <option value="romantic">💖 Romantic Moment</option>
+          <option value="proposal">💍 Marriage Proposal</option>
+          <option value="journey">🛤️ Love Journey</option>
+          <option value="challenge">🛡️ Overcoming Challenges</option>
+          <option value="special">🌟 Special Memory</option>
+          <option value="longdistance">✈️ Long Distance Love</option>
+          <option value="secondchance">🔁 Second Chance</option>
+        </select>
+      </div>
+
+      <!-- Mood Selection -->
+      <div class="form-group">
+        <label class="form-label" id="moodLabel">Story Mood *</label>
+        <div class="mood-options" role="radiogroup" aria-labelledby="moodLabel">
+          <div class="mood-option selected" data-mood="romantic" tabindex="0" role="radio" aria-checked="true"><span>😊 Romantic</span></div>
+          <div class="mood-option" data-mood="emotional" tabindex="0" role="radio" aria-checked="false"><span>🥰 Emotional</span></div>
+          <div class="mood-option" data-mood="funny" tabindex="0" role="radio" aria-checked="false"><span>😂 Funny</span></div>
+          <div class="mood-option" data-mood="inspiring" tabindex="0" role="radio" aria-checked="false"><span>✨ Inspiring</span></div>
+          <div class="mood-option" data-mood="dramatic" tabindex="0" role="radio" aria-checked="false"><span>🎭 Dramatic</span></div>
+        </div>
+        <input type="hidden" id="selectedMood" value="romantic" required aria-required="true">
+      </div>
+
+      <!-- Privacy Settings -->
+      <div class="form-group">
+        <div class="privacy-settings">
+          <label class="privacy-label">
+            <input type="checkbox" id="allowComments" checked aria-describedby="commentsHelp">
+            <span class="checkmark"></span>
+            Allow comments from community
+          </label>
+          <small id="commentsHelp" class="form-help">Others can comment on your story</small>
+
+          <label class="privacy-label">
+            <input type="checkbox" id="anonymousPost" aria-describedby="anonymousHelp">
+            <span class="checkmark"></span>
+            Post anonymously
+          </label>
+          <small id="anonymousHelp" class="form-help">Your name will be hidden</small>
+        </div>
+      </div>
+
+      <button type="submit" class="submit-story-btn" aria-label="Share your love story">
+        <span class="btn-loading hidden">Sharing...</span>
+        <span class="btn-text">Share Your Story ❤️</span>
+      </button>
+
+      <p class="privacy-notice">
+        By sharing your story, you agree to our <a href="terms.html">Terms of Service</a> and <a href="privacy.html">Privacy Policy</a>
+      </p>
+    </form>
+
+    <!-- Success Message -->
+    <div class="success-message hidden" id="successMessage" role="dialog" aria-labelledby="successTitle" aria-modal="true">
+      <div class="success-content">
+        <span class="success-icon" aria-hidden="true">❤️</span>
+        <h4 id="successTitle">Thank You for Sharing!</h4>
+        <p>Your love story has been submitted successfully.</p>
+        <button class="success-ok-btn" id="successOk" aria-label="Close success message and share another story">Share Another Story</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Install Prompt -->
+<div id="installPrompt" class="install-prompt hidden" role="dialog" aria-labelledby="installPromptTitle">
+  <div class="prompt-content">
+    <p id="installPromptTitle">Install Lovculator for better experience?</p>
+    <button id="installBtn" class="install-btn">Install</button>
+    <button id="cancelInstall" class="cancel-btn">Not Now</button>
+  </div>
+</div>
+
+<!-- JavaScript Files (defer for performance) -->
+<script src="js/navigation.js" defer></script>
+<script src="js/app.js" defer></script>
+<script src="js/love-stories.js" defer></script>
+<script src="js/simple-stats.js" defer></script>
+<script src="js/fab-notifications.js" defer></script>
+<script src="js/social-share.js" defer></script>
+<script src="js/faq.js" defer></script>
+<script src="js/init.js" defer></script>
+</body>
+</html>
