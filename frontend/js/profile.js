@@ -20,7 +20,7 @@ class ProfileManager {
         this.init();
     }
 
-    // =====================================================
+// =====================================================
 // 1️⃣ Initialize Profile (Fixed for visiting other users)
 // =====================================================
 async init() {
@@ -47,7 +47,7 @@ async init() {
         // Step 2️⃣: Determine whose profile to load
         if (usernameParam && (!currentUser || usernameParam !== currentUser.username)) {
             // Viewing someone else's profile
-            const userRes = await fetch(`${this.API_BASE}/users/${usernameParam}`);
+            const userRes = await fetch(`${this.API_BASE}/users/profile/${usernameParam}`);
             if (!userRes.ok) throw new Error("User not found");
 
             const otherUser = await userRes.json();
@@ -55,6 +55,7 @@ async init() {
 
             this.renderProfileDetails(otherUser, false);
             await this.loadUserStories(otherUser.id);
+
         } else if (currentUser) {
             // Viewing your own profile
             this.viewedUser = currentUser;
@@ -75,47 +76,6 @@ async init() {
         this.profileInfoContainer.innerHTML = `
             <p style="color:red;text-align:center;">❌ Failed to load profile.</p>`;
     }
-}
-
-
-// =====================================================
-// 1️⃣ Initialize Profile
-// =====================================================
-async init() {
-  this.showLoading("profileInfoContainer");
-  this.showLoading("userStoriesContainer");
-
-  try {
-    const params = new URLSearchParams(window.location.search);
-    const username = params.get("user"); // if visiting someone else's profile
-
-    // Get current logged-in user
-    const meRes = await fetch(`${this.API_BASE}/auth/me`, { credentials: "include" });
-    const meData = meRes.ok ? await meRes.json() : null;
-    this.currentUser = meData;
-
-    // If ?user= provided → viewing someone else’s profile
-    if (username && (!meData || username !== meData.username)) {
-      const userRes = await this.api.request(`/users/profile/${username}`);
-      this.viewedUser = userRes;
-      this.renderProfileDetails(userRes, false); // not own profile
-      await this.loadUserStories(userRes.username);
-    } 
-    // Otherwise, show own profile
-    else if (meData) {
-      this.viewedUser = meData;
-      this.renderProfileDetails(meData, true); // own profile
-      await this.loadUserStories(meData.username);
-    } else {
-      this.handleUnauthorized();
-    }
-
-    this.attachTabHandlers();
-    this.attachEditProfileHandlers();
-  } catch (err) {
-    console.error("❌ Profile load error:", err);
-    this.profileInfoContainer.innerHTML = `<p style="color:red;text-align:center;">❌ Failed to load profile.</p>`;
-  }
 }
 
 
@@ -335,32 +295,43 @@ populateEditForm() {
     }
 
     // =====================================================
-    // 6️⃣ Load User’s Stories
-    // =====================================================
+// 6️⃣ Load User’s Stories (Fixed for both self/other)
+// =====================================================
+async loadUserStories(userIdentifier) {
+  if (!this.storiesContainer) return;
 
-    async loadUserStories(userId) {
-        if (!this.storiesContainer) return;
+  this.showLoading("userStoriesContainer", "Loading love stories...");
 
-        this.showLoading("userStoriesContainer", "Loading your stories...");
-        try {
-            const stories = await this.api.request(`/stories?userId=${userId}`);
+  try {
+    // ✅ Universal route works for both numeric ID and username
+    const stories = await this.api.request(`/users/${userIdentifier}/stories`);
 
-            if (!stories.length) {
-                this.storiesContainer.innerHTML = `
-                    <div class="empty-state">
-                        <p>💌 You haven’t shared any love stories yet.</p>
-                        <a href="/love-stories.html" class="btn btn-primary">Share one now!</a>
-                    </div>`;
-                return;
-            }
-            // Assuming LoveStories, NotificationService, and AnonUserTracker are defined classes
-            const tempLoveStories = new LoveStories(new NotificationService(), new AnonUserTracker());
-            this.storiesContainer.innerHTML = stories.map((story) => tempLoveStories.getStoryHTML(story)).join("");
-        } catch (err) {
-            console.error("❌ Error loading user stories:", err);
-            this.storiesContainer.innerHTML = `<p style="color:red;text-align:center;">❌ Could not load your stories.</p>`;
-        }
+    if (!stories.length) {
+      this.storiesContainer.innerHTML = `
+        <div class="empty-state">
+          <p>💌 No love stories shared yet.</p>
+          ${
+            this.isOwnProfile
+              ? `<a href="/love-stories.html" class="btn btn-primary">Share your first story!</a>`
+              : `<p>Check back later for updates 💞</p>`
+          }
+        </div>`;
+      return;
     }
+
+    // ✅ Render using LoveStories component
+    const tempLoveStories = new LoveStories(new NotificationService(), new AnonUserTracker());
+    this.storiesContainer.innerHTML = stories
+      .map((story) => tempLoveStories.getStoryHTML(story))
+      .join("");
+
+  } catch (err) {
+    console.error("❌ Error loading user stories:", err);
+    this.storiesContainer.innerHTML = `
+      <p style="color:red;text-align:center;">❌ Could not load user's stories.</p>`;
+  }
+}
+
 
     // =====================================================
     // 7️⃣ Tab Switching
@@ -491,17 +462,31 @@ populateEditForm() {
         button.textContent = "...";
 
         try {
-            // CORRECTED: Template literal for URL
-            const res = await this.api.request(`/users/${targetId}/follow`, { method: "POST" });
-            this.updateFollowButton(button, res.is_following);
-            this.updateProfileCounts(res.is_following);
-        } catch (err) {
-            console.error("❌ Follow toggle failed:", err);
-            button.textContent = initial;
-        } finally {
-            button.disabled = false;
-        }
+    // ✅ Correct API call
+    const res = await this.api.request(`/users/${targetId}/follow`, { method: "POST" });
+    
+    // ✅ Update button state
+    this.updateFollowButton(button, res.is_following);
+    this.updateProfileCounts(res.is_following);
+
+    // ✅ Instantly update visible counts without refresh
+    if (document.getElementById("profileFollowers") && res.target_follower_count !== undefined) {
+        document.getElementById("profileFollowers").textContent = `${res.target_follower_count} Followers`;
     }
+    if (document.getElementById("profileFollowing") && res.follower_following_count !== undefined) {
+        document.getElementById("profileFollowing").textContent = `${res.follower_following_count} Following`;
+    }
+
+} catch (err) {
+    console.error("❌ Follow toggle failed:", err);
+    button.textContent = initial;
+} finally {
+    button.disabled = false;
+}
+    }
+
+
+    
 
     updateFollowButton(button, isFollowing) {
         button.textContent = isFollowing ? "Following" : "Follow";
