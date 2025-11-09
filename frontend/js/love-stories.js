@@ -379,143 +379,118 @@ class LoveStories {
         }
     }
 
+    // ✅ CORRECT FUNCTION TO REPLACE THE OLD ONE IN love-stories.js
+
     getStoryHTML(story) {
-  const date = new Date(story.created_at).toLocaleDateString();
-  const isLong = story.love_story.length > 200;
+        const date = new Date(story.created_at).toLocaleDateString();
+        const isLong = story.love_story.length > 200;
 
-  const shareUrl = `https://lovculator.com/stories/${story.id}`;
-  const shareTitle = story.story_title;
-  const shareText = `Read this beautiful love story: ${story.story_title}`;
+        const shareUrl = `https://lovculator.com/stories/${story.id}`; 
+        const shareTitle = story.story_title;
+        const shareText = `Read this beautiful love story: ${story.story_title}`;
+        
+        // 1. Author and Avatar Logic
+        // Use author_display_name, fallback to username, then 'User'
+        const authorName = story.anonymous_post
+          ? "Anonymous User"
+          : story.author_display_name || story.author_username || "User";
 
-  // ✅ Correct author details from backend fields
-  const authorName = story.anonymous_post
-    ? "Anonymous User"
-    : story.author_display_name || story.author_username || "User";
+        const authorUsername = story.author_username || '';
+        // Use a generic image for the avatar path
+        const authorAvatar = story.author_avatar_url || "/images/default-avatar.png"; 
+        
+        // 2. Ownership Check (Use user_id)
+        const ownerId = story.user_id; 
+        const isOwner = window.currentUserId && ownerId === window.currentUserId;
 
-  const authorAvatar = story.author_avatar_url || "/images/default-avatar.png";
-  const isOwner = window.currentUserId && story.author_id === window.currentUserId;
+        // 3. HTML Structure (Quora-like)
+        return `
+            <div class="story-card" data-story-id="${story.id}">
+                <div class="story-card-header">
+                    <div class="story-user-info">
+                        <a href="/profile.html?user=${encodeURIComponent(authorUsername)}" class="story-user-link">
+                            <img src="${authorAvatar}" alt="${authorName}" class="story-avatar" />
+                        </a>
+                        <div class="story-user-details">
+                            <a href="/profile.html?user=${encodeURIComponent(authorUsername)}" class="story-username-link">
+                                <h4 class="story-username">${authorName}</h4>
+                            </a>
+                            <span class="story-date">${date}</span>
+                        </div>
+                    </div>
 
-  return `
-    <div class="story-card" data-story-id="${story.id}">
-      <div class="story-card-header">
-        <div class="story-user-info">
-          <a href="/profile.html?user=${encodeURIComponent(story.author_username || '')}" class="story-user-link">
-            <img src="${authorAvatar}" alt="${authorName}" class="story-avatar" />
-          </a>
-          <div class="story-user-details">
-            <a href="/profile.html?user=${encodeURIComponent(story.author_username || '')}" class="story-username-link">
-              <h4 class="story-username">${authorName}</h4>
-            </a>
-            <span class="story-date">${date}</span>
-          </div>
-        </div>
+                    ${
+                      story.anonymous_post || isOwner
+                        ? ""
+                        : `<button class="follow-btn ${story.is_following_author ? 'following' : ''}" 
+                              data-user-id="${story.author_id}">
+                              ${story.is_following_author ? 'Following' : '+ Follow'}
+                           </button>`
+                    }
+                </div>
+                
+                <h3 class="story-title">${story.story_title}</h3>
+                <div class="story-content ${isLong ? '' : 'expanded'}">
+                    ${isLong ? story.love_story.substring(0, 200) + '...' : story.love_story}
+                </div>
+                ${isLong ? `<button class="read-more">Read More</button>` : ''}
+                
+                <div class="story-footer">
+                    <span class="story-mood">${this.getMoodText(story.mood)}</span>
+                    <div class="story-actions">
+                        
+                        ${isOwner ? `
+                            <button class="delete-story-button" title="Delete Story">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                            </button>
+                        ` : ''}
 
-        <!-- 💖 Hide Follow button for self or anonymous -->
-        ${
-          story.anonymous_post || isOwner
-            ? ""
-            : `<button class="follow-btn ${story.is_following_author ? 'following' : ''}" 
-                  data-user-id="${story.author_id}">
-                  ${story.is_following_author ? 'Following' : '+ Follow'}
-               </button>`
-        }
-      </div>
+                        <button class="story-action like-button ${story.user_liked ? 'liked' : ''}">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="${story.user_liked ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="like-icon">
+                                <path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/>
+                            </svg>
+                            <span class="like-count">${story.likes_count}</span>
+                        </button>
+                        
+                        <button class="story-action comment-toggle">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="comment-icon">
+                                <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/>
+                            </svg>
+                            <span>${story.comments_count}</span>
+                        </button>
+                        
+                        <button class="story-action share-action-toggle" 
+                                data-share-url="${shareUrl}" 
+                                data-share-title="${shareTitle}"
+                                data-share-text="${shareText}">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="share-icon">
+                                <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"></path>
+                                <polyline points="16 6 12 2 8 6"></polyline>
+                                <line x1="12" y1="2" x2="12" y2="15"></line>
+                            </svg>
+                            <span class="share-count">${story.shares_count || 0}</span>
+                        </button>
 
-      <h3 class="story-title">${story.story_title}</h3>
-      <div class="story-content ${isLong ? '' : 'expanded'}">
-        ${isLong ? story.love_story.substring(0, 200) + '...' : story.love_story}
-      </div>
-      ${isLong ? `<button class="read-more">Read More</button>` : ''}
-
-      <div class="story-footer">
-        <span class="story-mood">${this.getMoodText(story.mood)}</span>
-        <div class="story-actions">
-
-          ${isOwner ? `
-              <button class="delete-story-button" title="Delete Story">
-                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" 
-                     viewBox="0 0 24 24" fill="none" stroke="currentColor" 
-                     stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                     <polyline points="3 6 5 6 21 6"></polyline>
-                     <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 
-                              0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
-                </svg>
-              </button>` 
-            : ''
-          }
-
-          <button class="story-action like-button ${story.user_liked ? 'liked' : ''}">
-            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" 
-                 viewBox="0 0 24 24" fill="${story.user_liked ? 'currentColor' : 'none'}" 
-                 stroke="currentColor" stroke-width="2" stroke-linecap="round" 
-                 stroke-linejoin="round" class="like-icon">
-              <path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 
-                       5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 
-                       2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 
-                       0 0 0 2 8.5c0 2.3 1.5 4.05 3 
-                       5.5l7 7Z"/>
-            </svg>
-            <span class="like-count">${story.likes_count}</span>
-          </button>
-
-          <button class="story-action comment-toggle">
-            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" 
-                 viewBox="0 0 24 24" fill="none" stroke="currentColor" 
-                 stroke-width="2" stroke-linecap="round" stroke-linejoin="round" 
-                 class="comment-icon">
-              <path d="M21 11.5a8.38 8.38 0 0 1-.9 
-                       3.8 8.5 8.5 0 0 1-7.6 4.7 
-                       8.38 8.38 0 0 1-3.8-.9L3 
-                       21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 
-                       8.5 8.5 0 0 1 4.7-7.6 
-                       8.38 8.38 0 0 1 3.8-.9h.5a8.48 
-                       8.48 0 0 1 8 8v.5z"/>
-            </svg>
-            <span>${story.comments_count}</span>
-          </button>
-
-          <button class="story-action share-action-toggle"
-                  data-share-url="${shareUrl}"
-                  data-share-title="${shareTitle}"
-                  data-share-text="${shareText}">
-            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20"
-                 viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                 stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
-                 class="share-icon">
-              <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 
-                       0 0 0 2-2v-8"></path>
-              <polyline points="16 6 12 2 8 6"></polyline>
-              <line x1="12" y1="2" x2="12" y2="15"></line>
-            </svg>
-            <span class="share-count">${story.shares_count || 0}</span>
-          </button>
-
-          <button class="story-action report-story-button" title="Report Inappropriate Content">
-            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" 
-                 viewBox="0 0 24 24" fill="none" stroke="currentColor" 
-                 stroke-width="2" stroke-linecap="round" stroke-linejoin="round" 
-                 class="flag-icon">
-              <path d="M4 15s1-1 4-1 5 2 8 2 
-                       4-1 4-1V3s-1 1-4 1-5-2-8-2-4 
-                       1-4 1z"></path>
-              <line x1="4" y1="22" x2="4" y2="15"></line>
-            </svg>
-          </button>
-        </div>
-      </div>
-
-      ${story.allow_comments ? `
-        <div class="comments-section hidden" id="comments-${story.id}">
-          <div class="comment-form">
-            <input type="text" class="comment-input" placeholder="Add a comment..." 
-                   data-story-id="${story.id}">
-            <button class="comment-submit">Post</button>
-          </div>
-          <div class="comments-list" id="comments-list-${story.id}"></div>
-        </div>` : ''}
-    </div>
-  `;
-}
+                        <button class="story-action report-story-button" title="Report Inappropriate Content">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="flag-icon"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"></path><line x1="4" y1="22" x2="4" y2="15"></line></svg>
+                        </button>
+                    </div>
+                </div>
+                
+                ${story.allow_comments ? `
+                    <div class="comments-section hidden" id="comments-${story.id}">
+                        <div class="comment-form">
+                            <input type="text" class="comment-input" placeholder="Add a comment..." 
+                                   data-story-id="${story.id}">
+                            <button class="comment-submit">Post</button>
+                        </div>
+                        <div class="comments-list" id="comments-list-${story.id}">
+                            </div>
+                    </div>
+                ` : ''}
+            </div>
+        `;
+    }
 
     getEmptyStateHTML() {
         return `
