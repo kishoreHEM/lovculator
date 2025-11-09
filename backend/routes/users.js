@@ -106,7 +106,7 @@ router.put("/:id", isAuthenticated, async (req, res) => {
 });
 
 /* ======================================================
-   4️⃣ FOLLOW / UNFOLLOW TOGGLE
+   4️⃣ FOLLOW / UNFOLLOW TOGGLE (Enhanced with Live Counts)
 ====================================================== */
 router.post("/:targetId/follow", isAuthenticated, async (req, res) => {
   const followerId = req.user.id;
@@ -120,6 +120,7 @@ router.post("/:targetId/follow", isAuthenticated, async (req, res) => {
   try {
     await client.query("BEGIN");
 
+    // Check if already following
     const check = await client.query(
       "SELECT 1 FROM follows WHERE follower_id = $1 AND target_id = $2",
       [followerId, targetId]
@@ -128,12 +129,14 @@ router.post("/:targetId/follow", isAuthenticated, async (req, res) => {
     let isFollowing;
 
     if (check.rowCount > 0) {
+      // 🩶 Unfollow
       await client.query(
         "DELETE FROM follows WHERE follower_id = $1 AND target_id = $2",
         [followerId, targetId]
       );
       isFollowing = false;
     } else {
+      // ❤️ Follow
       await client.query(
         "INSERT INTO follows (follower_id, target_id, created_at) VALUES ($1, $2, NOW())",
         [followerId, targetId]
@@ -141,14 +144,34 @@ router.post("/:targetId/follow", isAuthenticated, async (req, res) => {
       isFollowing = true;
     }
 
+    // 🔄 Update both users' counts
+    await client.query(`
+      UPDATE users
+      SET follower_count = (SELECT COUNT(*) FROM follows WHERE target_id = users.id),
+          following_count = (SELECT COUNT(*) FROM follows WHERE follower_id = users.id)
+      WHERE id IN ($1, $2);
+    `, [followerId, targetId]);
+
+    // ✅ Get latest counts
+    const { rows: targetUser } = await client.query(
+      "SELECT follower_count FROM users WHERE id = $1",
+      [targetId]
+    );
+    const { rows: followerUser } = await client.query(
+      "SELECT following_count FROM users WHERE id = $1",
+      [followerId]
+    );
+
     await client.query("COMMIT");
+
     res.json({
       success: true,
       is_following: isFollowing,
-      message: isFollowing
-        ? "Followed successfully."
-        : "Unfollowed successfully.",
+      message: isFollowing ? "Followed successfully." : "Unfollowed successfully.",
+      target_follower_count: targetUser[0]?.follower_count || 0,
+      follower_following_count: followerUser[0]?.following_count || 0,
     });
+
   } catch (err) {
     await client.query("ROLLBACK");
     console.error("❌ Follow/Unfollow transaction error:", err);
@@ -157,6 +180,7 @@ router.post("/:targetId/follow", isAuthenticated, async (req, res) => {
     client.release();
   }
 });
+
 
 /* ======================================================
    5️⃣ FETCH FOLLOWERS LIST
@@ -273,23 +297,36 @@ router.get("/:id/activity", async (req, res) => {
 });
 
 /* ======================================================
-   9️⃣ FETCH STORIES BY USERNAME (Profile Page)
+   9️⃣ FETCH STORIES BY USER (Accepts ID or Username)
 ====================================================== */
-router.get("/:username/stories", async (req, res) => {
+router.get("/:identifier/stories", async (req, res) => {
   try {
-    const { username } = req.params;
-    const userRes = await pool.query(`SELECT id FROM users WHERE username = $1`, [username]);
-    if (userRes.rowCount === 0)
+    const { identifier } = req.params;
+
+    // Detect whether it's a number or a username
+    const userRes = await pool.query(
+      isNaN(identifier)
+        ? `SELECT id FROM users WHERE LOWER(username) = LOWER($1)`
+        : `SELECT id FROM users WHERE id = $1`,
+      [identifier]
+    );
+
+    if (userRes.rowCount === 0) {
       return res.status(404).json({ error: "User not found" });
+    }
 
     const userId = userRes.rows[0].id;
 
     const { rows } = await pool.query(`
       SELECT s.*, 
+             u.username AS author_username,
+             u.display_name AS author_display_name,
+             u.avatar_url AS author_avatar_url,
              COALESCE(lc.likes_count, 0) AS likes_count,
              COALESCE(cc.comments_count, 0) AS comments_count,
              COALESCE(sc.shares_count, 0) AS shares_count
       FROM stories s
+      JOIN users u ON u.id = s.user_id
       LEFT JOIN (
         SELECT story_id, COUNT(*) AS likes_count FROM story_likes GROUP BY story_id
       ) lc ON lc.story_id = s.id
@@ -300,7 +337,7 @@ router.get("/:username/stories", async (req, res) => {
         SELECT story_id, COUNT(*) AS shares_count FROM shares GROUP BY story_id
       ) sc ON sc.story_id = s.id
       WHERE s.user_id = $1
-      ORDER BY s.created_at DESC
+      ORDER BY s.created_at DESC;
     `, [userId]);
 
     res.json(rows);
@@ -309,5 +346,7 @@ router.get("/:username/stories", async (req, res) => {
     res.status(500).json({ error: "Failed to load user's stories" });
   }
 });
+
+
 
 export default router;
