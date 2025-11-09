@@ -4,7 +4,7 @@
     box-sizing: border-box;
 }
 body {
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    font-family: -apple-system,system-ui,BlinkMacSystemFont,'Segoe UI',Roboto,Oxygen-Sans,Ubuntu,Cantarell,'Helvetica Neue',sans-serif;
     background: #fafafa;
     min-height: 100vh;
     line-height: 1.6;
@@ -24,6 +24,13 @@ body {
     padding-bottom: 60px;
     width: 100%;
     box-sizing: border-box;
+}
+
+/* 🌸 Centered Content Wrapper */
+.feed-container {
+  max-width: 700px;
+  margin: 30px auto;
+  padding: 0 16px;
 }
 /* Instagram Style Header */
 .header {
@@ -2467,64 +2474,6 @@ body {
     outline: none;
 }
 
-/* Love Stories Page Specific Styles */
-.stories-hero {
-    background: white;
-    border: 1px solid #dbdbdb;
-    border-radius: 12px;
-    padding: 50px 30px;
-    text-align: center;
-    margin-bottom: 30px;
-    box-shadow: 0 2px 10px rgba(0,0,0,0.05);
-}
-.stories-hero h1 {
-    font-size: 2.5rem;
-    font-weight: 700;
-    color: #262626;
-    margin-bottom: 15px;
-    background: linear-gradient(135deg, #ff4b8d, #ff6b6b);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-}
-.hero-subtitle {
-    color: #8e8e8e;
-    font-size: 1.1rem;
-    line-height: 1.5;
-    margin-bottom: 30px;
-    max-width: 500px;
-    margin-left: auto;
-    margin-right: auto;
-}
-.hero-stats {
-    display: flex;
-    justify-content: center;
-    gap: 40px;
-    flex-wrap: wrap;
-    margin-top: 30px;
-}
-.hero-stats .stat {
-    text-align: center;
-    padding: 15px 25px;
-    background: #fafafa;
-    border-radius: 12px;
-    border: 1px solid #f0f0f0;
-    min-width: 120px;
-}
-.stat-number {
-    display: block;
-    font-size: 2rem;
-    font-weight: 700;
-    color: #ff4b8d;
-    margin-bottom: 5px;
-}
-.stat-label {
-    font-size: 0.8rem;
-    opacity: 0.8;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    color: #666;
-}
 /* Stories Filters */
 .stories-filters {
     background: white;
@@ -2762,7 +2711,7 @@ body {
 }
 .story-date {
     font-size: 0.85rem;
-    color: #999;
+    color: #8e8e8e;
 }
 .story-user-link, 
 .story-username-link {
@@ -3498,141 +3447,193 @@ body {
     gap: 4px;
 }
 
-/* Detailed Story Card - For Love Stories Gallery */
+/* ======================================================
+   🌸 QUORA-LIKE FEED LAYOUT POLISH
+====================================================== */
+
+/* Light gray background like Quora */
+body {
+  background-color: #f6f7f8;
+  font-family: "Inter", "Segoe UI", Roboto, sans-serif;
+  color: #222;
+  line-height: 1.5;
+}
+
+/* Feed container - centers all posts */
+.feed-container {
+  max-width: 720px;
+  margin: 40px auto;
+  padding: 0 16px;
+}
+
+/* Adjust card spacing */
 .story-card {
-    background: #fafafa;
-    border: 1px solid #dbdbdb;
-    border-radius: 12px;
-    padding: 25px;
-    transition: all 0.3s ease;
-    position: relative;
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid #eaeaea;
+  padding: 22px 0;
+  transition: background 0.2s ease;
 }
+
 .story-card:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
-    border-color: #ff4b8d;
+  background: #fafafa;
 }
-.story-card-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
-    margin-bottom: 15px;
-    gap: 15px;
+
+/* Smooth spacing between sections */
+.story-card:last-child {
+  border-bottom: none;
 }
-.story-couple {
-    flex: 1;
-}
-.story-couple h4 {
-    margin: 0 0 5px 0;
-    color: #262626;
-    font-size: 1.1rem;
-    font-weight: 600;
-}
-.story-meta {
-    display: flex;
-    gap: 15px;
-    font-size: 0.8rem;
-    color: #8e8e8e;
-    flex-wrap: wrap;
-}
-.story-category {
-    background: linear-gradient(135deg, #ff4b8d, #ff6b6b);
-    color: white;
-    padding: 4px 8px;
-    border-radius: 12px;
-    font-size: 0.7rem;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.3px;
-}
-.story-title {
-    font-size: 1.3rem;
-    font-weight: 600;
-    color: #262626;
-    margin-bottom: 12px;
-    line-height: 1.4;
-}
-.story-content {
-    color: #444;
-    line-height: 1.6;
-    margin-bottom: 15px;
-    max-height: 4.8em;
-    overflow: hidden;
-    position: relative;
-}
-.story-content.expanded {
-    max-height: none;
-}
+
+/* Fix gradient fade color */
 .story-content::after {
-    content: '';
-    position: absolute;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    height: 2em;
-    background: linear-gradient(transparent, #fafafa);
-    opacity: 1;
-    transition: opacity 0.3s ease;
+  background: linear-gradient(transparent, #f6f7f8);
 }
-.story-content.expanded::after {
-    opacity: 0;
+
+/* Header layout fine-tuned */
+.story-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
 }
-.story-footer {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding-top: 15px;
-    border-top: 1px solid #f0f0f0;
-    flex-wrap: wrap;
-    gap: 10px;
+
+.story-author-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
 }
-.story-mood {
-    font-size: 0.9rem;
-    color: #444;
-    display: flex;
-    align-items: center;
-    gap: 5px;
+
+.story-author-avatar {
+  width: 46px;
+  height: 46px;
+  border-radius: 50%;
+  overflow: hidden;
+  flex-shrink: 0;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.1);
 }
-.story-actions {
-    display: flex;
-    gap: 15px;
+
+.story-author-avatar-fallback {
+  background: #ff4b8d;
+  color: #fff;
+  font-size: 1.2rem;
+  font-weight: bold;
 }
-.story-action {
-    background: none;
-    border: none;
-    color: #444;
-    cursor: pointer;
-    font-size: 0.9rem;
-    display: flex;
-    align-items: center;
-    gap: 5px;
-    transition: all 0.3s ease;
-    padding: 5px 10px;
-    border-radius: 6px;
+
+/* Name and meta info */
+.story-couple h4 {
+  font-size: 1rem;
+  font-weight: 700;
+  margin: 0;
+  color: #222;
 }
-.story-action:hover {
-    background: #f8f9fa;
-    color: #ff4b8d;
+
+.story-meta {
+  font-size: 0.82rem;
+  color: #8e8e8e;
+  display: flex;
+  align-items: center;
+  gap: 6px;
 }
-.story-action.liked {
-    color: #ff4b8d;
+
+/* Follow button refined */
+.follow-button {
+  border: 1px solid #ff4b8d;
+  color: #ff4b8d;
+  border-radius: 20px;
+  padding: 5px 14px;
+  font-weight: 600;
+  background: transparent;
+  cursor: pointer;
+  transition: all 0.2s ease;
 }
-.story-action.liked .like-count {
-    color: #ff4b8d;
-    font-weight: 600;
+
+.follow-button:hover {
+  background: #ff4b8d;
+  color: #fff;
 }
+
+/* Story title + content */
+.story-title {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #222;
+  margin-bottom: 10px;
+}
+
+.story-content {
+  color: #444;
+  font-size: 0.95rem;
+  line-height: 1.6;
+  margin-bottom: 12px;
+  max-height: 4.8em;
+  overflow: hidden;
+  position: relative;
+}
+
+.story-content.expanded {
+  max-height: none;
+}
+
 .read-more {
-    background: none;
-    border: none;
-    color: #ff4b8d;
-    cursor: pointer;
-    font-weight: 600;
-    margin-top: 8px;
-    padding: 5px 0;
-    font-size: 0.9rem;
+  color: #ff4b8d;
+  border: none;
+  background: none;
+  font-weight: 600;
+  cursor: pointer;
+  font-size: 0.9rem;
+  margin-top: 4px;
 }
 .read-more:hover {
-    text-decoration: underline;
+  text-decoration: underline;
+}
+
+/* Footer styling */
+.story-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-top: 1px solid #eee;
+  padding-top: 12px;
+  margin-top: 8px;
+  flex-wrap: wrap;
+}
+
+.story-actions {
+  display: flex;
+  gap: 20px;
+}
+
+.story-action {
+  background: none;
+  border: none;
+  color: #666;
+  font-size: 0.9rem;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  padding: 4px 6px;
+  border-radius: 6px;
+  transition: color 0.2s ease, background 0.2s ease;
+}
+
+.story-action:hover {
+  color: #ff4b8d;
+  background: #f5f5f5;
+}
+
+.story-action.liked {
+  color: #ff4b8d;
+  font-weight: 600;
+}
+
+.story-mood {
+  font-size: 0.85rem;
+  background: #eee;
+  color: #333;
+  padding: 4px 10px;
+  border-radius: 14px;
 }
 /* Users List */
 .users-list {
