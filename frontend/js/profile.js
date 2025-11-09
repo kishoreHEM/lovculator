@@ -101,7 +101,7 @@ renderProfileDetails(user, isOwnProfile = true) {
       <div class="profile-main-info">
         <div class="profile-avatar">${avatar}</div>
         <div class="profile-details">
-          <h1 id="profileUsername">${displayName}</h1>
+          <h3 id="profileUsername">${displayName}</h3>
           <div class="social-stats">
             <span id="profileFollowers">${followerCount} Followers</span>
             <span class="separator">·</span>
@@ -416,22 +416,31 @@ async loadUserStories(userIdentifier) {
     }
 
     renderUserList(users, statusMap = {}) {
-        const myId = this.currentUser.id;
+        const myId = this.currentUser ? this.currentUser.id : null; // Check for currentUser existence
 
         return users
             .map((user) => {
                 if (user.id == myId) return "";
 
                 const isFollowing = statusMap[user.id] || false;
-                const btnText = isFollowing ? "Following" : "Follow";
-                const btnClass = isFollowing ? "following" : "not-following";
+                const btnText = isFollowing ? "Following" : "+ Follow"; // Quora style uses + Follow
+                
+                // Use the class 'follow-btn' to match the feed component
+                const btnClass = isFollowing ? "following" : ""; 
 
-                // CORRECTED: Template literal for HTML string
-                return `<div class="user-list-item">
-                    <span>@${user.username}</span>
-                    <button class="btn btn-small follow-toggle-btn ${btnClass}" data-user-id="${user.id}">
-                        ${btnText}
-                    </button>
+                return `<div class="user-card" data-user-id="${user.id}">
+                    <a href="/profile.html?user=${encodeURIComponent(user.username)}">
+                         <img src="${user.avatar_url || '/images/default-avatar.png'}" alt="${user.username}" class="user-avatar" />
+                    </a>
+                    <div class="user-info">
+                        <h4>${user.display_name || user.username}</h4>
+                        <p class="user-bio">${user.bio || ''}</p>
+                    </div>
+                    <div class="user-actions">
+                        <button class="follow-btn follow-toggle-btn ${btnClass}" data-user-id="${user.id}">
+                            ${btnText}
+                        </button>
+                    </div>
                 </div>`;
             })
             .join("");
@@ -495,33 +504,25 @@ async loadUserStories(userIdentifier) {
 
     async getFollowStatusBatch(ids) {
         if (!this.currentUser) return {};
-
-        const statusMap = {};
-
-        try {
-            // CORRECTED: Template literal for URL
-            const following = await this.api.request(`/users/${this.currentUser.id}/following`);
-            const set = new Set(following.map((u) => u.id));
-            ids.forEach((id) => (statusMap[id] = set.has(parseInt(id))));
-        } catch {
-            ids.forEach((id) => (statusMap[id] = false));
+        
+        // Use a cached list if available
+        if (!this._followingSet) {
+            try {
+                // Fetch the list of users the current user is following
+                const following = await this.api.request(`/users/${this.currentUser.id}/following`);
+                // Cache the list in a Set for fast lookup
+                this._followingSet = new Set(following.map((u) => u.id));
+            } catch (error) {
+                console.error("Failed to load user's following list for batch check:", error);
+                this._followingSet = new Set(); // Cache an empty set on failure
+            }
         }
 
+        const statusMap = {};
+        // The IDs in 'ids' might be strings, so ensure consistency with cached numbers
+        ids.forEach((id) => (statusMap[id] = this._followingSet.has(parseInt(id))));
+        
         return statusMap;
-    }
-
-    updateProfileCounts(isFollowing) {
-        const el = document.getElementById("profileFollowing");
-
-        if (!el) return;
-
-        let count = parseInt(el.textContent.split(" ")[0]) || 0;
-        count = isFollowing ? count + 1 : Math.max(0, count - 1);
-
-        // CORRECTED: Template literal for string assignment
-        el.textContent = `${count} Following`;
-
-        this.currentUser.following_count = count;
     }
 
     // =====================================================
