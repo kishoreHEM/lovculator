@@ -16,6 +16,8 @@ import compression from "compression";
 import helmet from "helmet";
 import analyticsRoutesFactory from "./routes/analytics.js";
 import { trackPageVisit } from "./middleware/trackVisit.js";
+import questionsRouter from "./routes/questions.js";
+import answersRoutes from "./routes/answers.js";
 
 
 // =====================================================
@@ -199,6 +201,8 @@ app.use("/api/users", userRoutes);
 app.use("/api/stories", storiesRoutes);
 app.use("/api/analytics", analyticsRoutesFactory(pool));
 app.use(trackPageVisit);
+app.use("/api/questions", questionsRouter(pool));
+app.use("/api/answers", answersRoutes(pool));
 
 
 // Catch-all for invalid API endpoints

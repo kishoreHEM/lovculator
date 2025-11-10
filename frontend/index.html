@@ -84,6 +84,25 @@
         </nav>
     </header>
 
+    <!-- 🌸 Quora-like Ask/Post Bar -->
+<div class="ask-post-bar">
+  <div class="ask-input" id="askTrigger">What do you want to ask or share?</div>
+  <div class="ask-buttons">
+    <button class="ask-btn" id="askQuestionBtn">Ask</button>
+    <button class="post-btn" id="postStoryBtn">Post</button>
+  </div>
+</div>
+
+<!-- 🌼 Mini Ask Modal (Inline Popup) -->
+<div class="mini-ask-modal hidden" id="miniAskModal">
+  <textarea id="askQuestionInput" placeholder="Type your question..." maxlength="180"></textarea>
+  <div class="ask-modal-actions">
+    <button id="cancelAsk" class="btn-secondary">Cancel</button>
+    <button id="submitAsk" class="btn-primary">Post</button>
+  </div>
+</div>
+
+
     <div class="container">
         <main class="main-content">
             <!-- Stories Filters -->
@@ -280,6 +299,19 @@
             <button class="success-ok-btn" id="successOk">Share Another Story</button>
         </div>
     </div>
+
+    <!-- 🧠 Ask Question Modal -->
+<div id="askQuestionModal" class="modal-overlay">
+  <div class="modal-box small">
+    <h3>Ask a Question 💬</h3>
+    <textarea id="questionInput" placeholder="Type your question..." maxlength="180"></textarea>
+    <div class="modal-actions">
+      <button id="cancelAskBtn" class="btn-secondary">Cancel</button>
+      <button id="submitAskBtn" class="btn-primary">Post Question</button>
+    </div>
+  </div>
+</div>
+
 
     <!-- Install Prompt -->
     <div id="installPrompt" class="install-prompt hidden" role="dialog" aria-labelledby="installPromptTitle">

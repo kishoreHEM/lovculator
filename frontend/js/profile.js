@@ -312,7 +312,7 @@ async loadUserStories(userIdentifier) {
           <p>💌 No love stories shared yet.</p>
           ${
             this.isOwnProfile
-              ? `<a href="/love-stories.html" class="btn btn-primary">Share your first story!</a>`
+              ? `<a href="/index.html" class="btn btn-primary">Share your first story!</a>`
               : `<p>Check back later for updates 💞</p>`
           }
         </div>`;

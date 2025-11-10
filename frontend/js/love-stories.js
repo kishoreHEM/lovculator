@@ -1298,20 +1298,91 @@ function animateCountUp(elementId, targetValue, duration = 1000) {
     }, 16);
 }
 
-// Listen after stories are fully loaded
-document.addEventListener('storiesLoaded', () => {
-    const clean = (id) => {
-        const el = document.getElementById(id);
-        if (!el) return 0;
-        const val = parseInt(el.textContent.toString().replace(/[^\d]/g, '')) || 0;
-        return val > 1000 ? Math.round(val / 10000) : val;
-    };
+// 🌸 Mini Ask Question Popup
+document.addEventListener("DOMContentLoaded", () => {
+  const askBtn = document.getElementById("askQuestionBtn");
+  const miniModal = document.getElementById("miniAskModal");
+  const cancelBtn = document.getElementById("cancelAsk");
+  const submitBtn = document.getElementById("submitAsk");
+  const input = document.getElementById("askQuestionInput");
 
-    const stories = clean('totalStories');
-    const likes = clean('totalLikes');
-    const comments = clean('totalComments');
+  if (!askBtn || !miniModal) return;
 
-    animateCountUp('totalStories', stories);
-    animateCountUp('totalLikes', likes);
-    animateCountUp('totalComments', comments);
+  // Open the mini modal
+  askBtn.addEventListener("click", () => {
+    miniModal.classList.toggle("hidden");
+    if (!miniModal.classList.contains("hidden")) {
+      input.focus();
+    }
+  });
+
+  // Cancel and hide modal
+  cancelBtn?.addEventListener("click", () => {
+    miniModal.classList.add("hidden");
+    input.value = "";
+  });
+
+  // Submit handler (demo)
+  submitBtn?.addEventListener("click", async () => {
+    const question = input.value.trim();
+    if (!question) {
+      alert("Please type your question before posting!");
+      return;
+    }
+
+    // You can later send this to your backend
+    console.log("📝 New Question:", question);
+
+    alert("Your question has been posted!");
+    input.value = "";
+    miniModal.classList.add("hidden");
+  });
+
+  // Also trigger modal when user clicks fake input
+  const askTrigger = document.getElementById("askTrigger");
+  askTrigger?.addEventListener("click", () => {
+    miniModal.classList.toggle("hidden");
+    input.focus();
+  });
 });
+
+// ✏️ Edit Answer
+async function editAnswer(id, encodedText) {
+  const currentText = decodeURIComponent(encodedText);
+  const newAnswer = prompt("Edit your answer:", currentText);
+  if (!newAnswer || !newAnswer.trim()) return;
+
+  try {
+    const res = await fetch(`${API_BASE}/answers/${id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ answer: newAnswer })
+    });
+
+    if (res.ok) {
+      alert("✅ Answer updated successfully!");
+      loadAnswers();
+    } else {
+      alert("❌ Failed to update answer.");
+    }
+  } catch (err) {
+    console.error("Error editing answer:", err);
+  }
+}
+
+// 🗑️ Delete Answer
+async function deleteAnswer(id) {
+  if (!confirm("Are you sure you want to delete this answer?")) return;
+
+  try {
+    const res = await fetch(`${API_BASE}/answers/${id}`, { method: "DELETE" });
+    if (res.ok) {
+      alert("🗑️ Answer deleted.");
+      loadAnswers();
+    } else {
+      alert("❌ Failed to delete answer.");
+    }
+  } catch (err) {
+    console.error("Error deleting answer:", err);
+  }
+}
