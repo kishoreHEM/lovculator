@@ -3,34 +3,108 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Admin Analytics - Lovculator</title>
+  <title>📊 Lovculator Analytics Dashboard</title>
+  
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <link rel="stylesheet" href="/css/style.css" />
   <style>
     body {
-      max-width: 800px;
-      margin: 30px auto;
+      max-width: 900px;
+      margin: 40px auto;
       background: #fff;
-      padding: 20px;
-      border-radius: 12px;
-      box-shadow: 0 0 15px rgba(0,0,0,0.1);
-      font-family: Arial, sans-serif;
+      padding: 30px;
+      border-radius: 14px;
+      box-shadow: 0 0 20px rgba(0,0,0,0.08);
+      font-family: "Poppins", Arial, sans-serif;
+      color: #333;
     }
-    canvas { margin-top: 30px; }
+
+    h2 {
+      color: #ff4b8d;
+      font-weight: 700;
+      text-align: center;
+      margin-bottom: 10px;
+    }
+
+    p.subtitle {
+      text-align: center;
+      color: #777;
+      font-size: 0.95rem;
+      margin-bottom: 40px;
+    }
+
+    .chart-container {
+      margin-bottom: 40px;
+    }
+
+    canvas {
+      width: 100%;
+      max-height: 350px;
+    }
+
+    h3 {
+      font-size: 1.1rem;
+      margin-bottom: 15px;
+      color: #222;
+      border-left: 4px solid #ff4b8d;
+      padding-left: 10px;
+    }
+
+    ul {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+    }
+
+    li {
+      padding: 10px 15px;
+      background: #fafafa;
+      margin-bottom: 8px;
+      border-radius: 8px;
+      border: 1px solid #eee;
+      font-size: 0.9rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    li span {
+      color: #999;
+      font-size: 0.85rem;
+    }
+
+    .footer {
+      text-align: center;
+      color: #888;
+      margin-top: 30px;
+      font-size: 0.85rem;
+    }
   </style>
 </head>
 <body>
-  <h2>📊 Lovculator Analytics Dashboard</h2>
-  <p>Monitor your visitors in real-time 🚀</p>
+  <h2>📈 Lovculator Analytics Dashboard</h2>
+  <p class="subtitle">Monitor your visitors, most popular pages, and traffic trends 🚀</p>
 
-  <div>
-    <h3>Most Visited Pages</h3>
-    <canvas id="pageChart" width="400" height="200"></canvas>
+  <!-- Daily Trend Chart -->
+  <div class="chart-container">
+    <h3>📅 Daily Visits (Last 14 Days)</h3>
+    <canvas id="dailyChart"></canvas>
   </div>
 
-  <div>
-    <h3>Recent Visits</h3>
+  <!-- Top Pages Chart -->
+  <div class="chart-container">
+    <h3>🏆 Most Visited Pages</h3>
+    <canvas id="pageChart"></canvas>
+  </div>
+
+  <!-- Recent Visits -->
+  <div class="chart-container">
+    <h3>🕒 Recent Visits</h3>
     <ul id="recentVisits"></ul>
+  </div>
+
+  <div class="footer">
+    Made with ❤️ by Lovculator Analytics • Powered by PostgreSQL + Chart.js
   </div>
 
   <script>
@@ -39,33 +113,92 @@
       : "https://lovculator.com/api/analytics";
 
     async function loadAnalytics() {
-      const stats = await fetch(`${API_BASE}/stats`).then(r => r.json());
-      const recent = await fetch(`${API_BASE}/recent`).then(r => r.json());
+      try {
+        const [statsRes, recentRes, dailyRes] = await Promise.all([
+          fetch(`${API_BASE}/stats`),
+          fetch(`${API_BASE}/recent`),
+          fetch(`${API_BASE}/daily`)
+        ]);
 
-      // 📊 Chart.js Bar Chart
-      const ctx = document.getElementById("pageChart");
-      new Chart(ctx, {
-        type: "bar",
-        data: {
-          labels: stats.map(s => s.path),
-          datasets: [{
-            label: "Total Visits",
-            data: stats.map(s => s.total_visits),
-            backgroundColor: "#ff4b8d",
-          }]
-        },
-        options: {
-          scales: { y: { beginAtZero: true } }
-        }
-      });
+        const stats = await statsRes.json();
+        const recent = await recentRes.json();
+        const daily = await dailyRes.json();
 
-      // 🕒 Recent Visits
-      const list = document.getElementById("recentVisits");
-      recent.forEach(v => {
-        const li = document.createElement("li");
-        li.textContent = `${v.path} • ${v.visit_time.split("T")[0]} • ${v.ip_address}`;
-        list.appendChild(li);
-      });
+        /* -------------------------------
+         * 1️⃣ Daily Visits Chart (Line)
+         * ------------------------------- */
+        const dailyCtx = document.getElementById("dailyChart");
+        new Chart(dailyCtx, {
+          type: "line",
+          data: {
+            labels: daily.map(d => d.visit_date),
+            datasets: [{
+              label: "Visits per Day",
+              data: daily.map(d => d.visits),
+              fill: true,
+              borderColor: "#ff4b8d",
+              backgroundColor: "rgba(255, 75, 141, 0.15)",
+              tension: 0.3,
+              pointRadius: 5,
+              pointHoverRadius: 7,
+            }]
+          },
+          options: {
+            responsive: true,
+            scales: {
+              y: { beginAtZero: true, ticks: { precision: 0 } },
+              x: { ticks: { autoSkip: false, maxRotation: 45, minRotation: 45 } }
+            },
+            plugins: {
+              legend: { display: false },
+              tooltip: { mode: "index", intersect: false }
+            }
+          }
+        });
+
+        /* -------------------------------
+         * 2️⃣ Most Visited Pages Chart (Bar)
+         * ------------------------------- */
+        const pageCtx = document.getElementById("pageChart");
+        new Chart(pageCtx, {
+          type: "bar",
+          data: {
+            labels: stats.map(s => s.path),
+            datasets: [{
+              label: "Total Visits",
+              data: stats.map(s => s.total_visits),
+              backgroundColor: "#ff4b8d",
+              borderRadius: 6,
+            }]
+          },
+          options: {
+            scales: { y: { beginAtZero: true, ticks: { precision: 0 } } },
+            plugins: {
+              legend: { display: false },
+              tooltip: { mode: "index", intersect: false }
+            }
+          }
+        });
+
+        /* -------------------------------
+         * 3️⃣ Recent Visits List
+         * ------------------------------- */
+        const list = document.getElementById("recentVisits");
+        list.innerHTML = "";
+        recent.forEach(v => {
+          const li = document.createElement("li");
+          const date = new Date(v.visit_time).toLocaleString();
+          li.innerHTML = `
+            <strong>${v.path}</strong>
+            <span>${date} • ${v.ip_address || "unknown"}</span>
+          `;
+          list.appendChild(li);
+        });
+
+      } catch (err) {
+        console.error("❌ Analytics Load Error:", err);
+        alert("Failed to load analytics data. Please check backend connection.");
+      }
     }
 
     loadAnalytics();
