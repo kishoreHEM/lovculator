@@ -549,36 +549,65 @@ async loadUserStories(userIdentifier) {
     }
 
     renderActivityFeed(activity) {
-        // CORRECTED: Template literal for HTML string
-        return `<div class="activity-list">
-            ${activity
-                .map((item) => {
-                    const date = new Date(item.date).toLocaleString();
-                    let icon = "🔔", link = "", color = "#333";
+    return `<div class="activity-list">
+        ${activity
+            .map((item) => {
+                const date = new Date(item.date).toLocaleString();
+                let icon = "🔔", linkHtml = "", color = "#333";
+                
+                console.log("🔍 Activity Item:", item); // Debug log
+                
+                if (item.type === "story_like") {
+                    icon = "❤️";
+                    color = "#ff4b8d";
                     
-                    if (item.type === "story_like") {
-                        icon = "❤️";
-                        link = "View Story"; // Assuming this is the link text
-                        color = "#ff4b8d";
-                    } else if (item.type === "new_follower") {
-                        icon = "✨";
-                        link = "View Profile"; // Assuming this is the link text
+                    // ✅ FIXED: Safe URL construction
+                    if (item.story_id) {
+                        linkHtml = `<a href="/stories.html?story=${item.story_id}" class="activity-link">View Story</a>`;
+                    } else {
+                        // Fallback: Link to general stories page
+                        linkHtml = `<a href="/stories.html" class="activity-link">Browse Stories</a>`;
                     }
                     
-                    // CORRECTED: Template literal for inner item
-                    return `
-                        <div class="activity-item" style="border-left: 3px solid ${color};">
-                            <p class="activity-message">
-                                ${icon} ${item.message}
-                            </p>
-                            ${link ? `<a href="/${item.link_target || item.type.replace('_', '-')}/${item.target_id}">${link}</a>` : ''}
-                            <span class="activity-date">${date}</span>
+                } else if (item.type === "new_follower") {
+                    icon = "✨";
+                    
+                    // ✅ FIXED: Safe URL construction
+                    if (item.follower_username) {
+                        linkHtml = `<a href="/profile.html?user=${encodeURIComponent(item.follower_username)}" class="activity-link">View Profile</a>`;
+                    } else if (item.actor_username) {
+                        linkHtml = `<a href="/profile.html?user=${encodeURIComponent(item.actor_username)}" class="activity-link">View Profile</a>`;
+                    } else {
+                        // Extract username from message
+                        const usernameMatch = item.message?.match(/@(\w+)/);
+                        if (usernameMatch) {
+                            linkHtml = `<a href="/profile.html?user=${encodeURIComponent(usernameMatch[1])}" class="activity-link">View Profile</a>`;
+                        } else {
+                            // Fallback: Link to followers page
+                            linkHtml = `<a href="/followers.html" class="activity-link">View Followers</a>`;
+                        }
+                    }
+                } else {
+                    // Handle other activity types
+                    linkHtml = `<a href="/activity.html" class="activity-link">View Details</a>`;
+                }
+                
+                // ✅ FIXED: Proper HTML structure
+                return `
+                    <div class="activity-item" style="border-left: 3px solid ${color};">
+                        <div class="activity-message">
+                            <span class="activity-icon">${icon}</span>
+                            <span class="activity-text">${item.message}</span>
                         </div>
-                    `;
-                })
-                .join("")}
-        </div>`;
-    }
+                        <div class="activity-meta">
+                            ${linkHtml} • <span class="activity-date">${date}</span>
+                        </div>
+                    </div>
+                `;
+            })
+            .join("")}
+    </div>`;
+}
 
     // =====================================================
     // 🧩 Utility
