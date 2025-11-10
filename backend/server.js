@@ -16,8 +16,6 @@ import compression from "compression";
 import helmet from "helmet";
 import analyticsRoutesFactory from "./routes/analytics.js";
 import { trackPageVisit } from "./middleware/trackVisit.js";
-import questionsRouter from "./routes/questions.js";
-import answersRoutes from "./routes/answers.js";
 
 
 // =====================================================
