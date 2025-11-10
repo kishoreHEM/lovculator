@@ -15,7 +15,7 @@ import { fileURLToPath } from "url";
 import compression from "compression";
 import helmet from "helmet";
 import analyticsRoutesFactory from "./routes/analytics.js";
-import { trackPageVisit } from "./middleware/trackvisit.js";
+import { trackPageVisit } from "./middleware/trackVisit.js";
 
 
 // =====================================================
