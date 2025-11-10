@@ -15,6 +15,8 @@ import { fileURLToPath } from "url";
 import compression from "compression";
 import helmet from "helmet";
 import analyticsRoutesFactory from "./routes/analytics.js";
+import { trackPageVisit } from "./middleware/trackvisit.js";
+
 
 // =====================================================
 // 🌍 Environment Setup
@@ -196,6 +198,8 @@ app.use("/api/auth", authRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/stories", storiesRoutes);
 app.use("/api/analytics", analyticsRoutesFactory(pool));
+app.use(trackPageVisit);
+
 
 // Catch-all for invalid API endpoints
 app.use("/api/*", (req, res) => {
