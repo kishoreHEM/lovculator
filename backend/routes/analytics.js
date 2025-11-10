@@ -1,5 +1,6 @@
 // backend/routes/analytics.js
 import express from "express";
+import { checkAdmin } from "../middleware/checkAdmin.js";
 
 const router = express.Router();
 
@@ -10,19 +11,19 @@ export default (pool) => {
    * Endpoint: GET /api/analytics/stats
    * ==============================================================
    */
-  router.get("/stats", async (req, res) => {
+  // 📊 Get total visits per page (Admin only)
+  router.get("/stats", checkAdmin, async (req, res) => {
     try {
       const result = await pool.query(`
         SELECT path, COUNT(*) AS total_visits
         FROM page_visits
         GROUP BY path
         ORDER BY total_visits DESC
-        LIMIT 10
       `);
       res.json(result.rows);
     } catch (err) {
-      console.error("⚠️ Analytics /stats error:", err.message);
-      res.status(500).json({ error: "Failed to fetch analytics stats" });
+      console.error("⚠️ Analytics fetch error:", err.message);
+      res.status(500).json({ error: "Failed to fetch analytics" });
     }
   });
 
@@ -32,20 +33,23 @@ export default (pool) => {
    * Endpoint: GET /api/analytics/recent
    * ==============================================================
    */
-  router.get("/recent", async (req, res) => {
+  // 🕒 Get latest 10 visits (Admin only)
+  router.get("/recent", checkAdmin, async (req, res) => {
     try {
       const result = await pool.query(`
-        SELECT path, ip_address, user_agent, visit_time
-        FROM page_visits
-        ORDER BY visit_time DESC
+        SELECT pv.path, pv.ip_address, pv.user_agent, pv.visit_time, u.username
+        FROM page_visits pv
+        LEFT JOIN users u ON pv.user_id = u.id
+        ORDER BY pv.visit_time DESC
         LIMIT 10
       `);
       res.json(result.rows);
     } catch (err) {
-      console.error("⚠️ Analytics /recent error:", err.message);
+      console.error("⚠️ Recent visits fetch error:", err.message);
       res.status(500).json({ error: "Failed to fetch recent visits" });
     }
   });
+
 
   /**
    * ==============================================================
