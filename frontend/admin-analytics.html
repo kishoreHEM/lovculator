@@ -4,9 +4,13 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>📊 Lovculator Analytics Dashboard</title>
-  
+
+  <!-- Chart.js for analytics visualization -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <!-- Optional: Use your global CSS -->
   <link rel="stylesheet" href="/css/style.css" />
+
   <style>
     body {
       max-width: 900px;
@@ -79,6 +83,12 @@
       margin-top: 30px;
       font-size: 0.85rem;
     }
+
+    .loading {
+      text-align: center;
+      color: #777;
+      margin-top: 20px;
+    }
   </style>
 </head>
 <body>
@@ -108,25 +118,32 @@
   </div>
 
   <script>
+    // -----------------------------------------
+    // API Base Setup
+    // -----------------------------------------
     const API_BASE = window.location.hostname.includes("localhost")
       ? "http://localhost:3001/api/analytics"
       : "https://lovculator.com/api/analytics";
 
+    // -----------------------------------------
+    // Load Analytics Function
+    // -----------------------------------------
     async function loadAnalytics() {
+      document.body.insertAdjacentHTML('beforeend', '<p class="loading">Loading analytics data...</p>');
       try {
         const [statsRes, recentRes, dailyRes] = await Promise.all([
-          fetch(`${API_BASE}/stats`),
-          fetch(`${API_BASE}/recent`),
-          fetch(`${API_BASE}/daily`)
+          fetch(`${API_BASE}/stats`, { credentials: 'include' }),
+          fetch(`${API_BASE}/recent`, { credentials: 'include' }),
+          fetch(`${API_BASE}/daily`, { credentials: 'include' })
         ]);
 
         const stats = await statsRes.json();
         const recent = await recentRes.json();
         const daily = await dailyRes.json();
 
-        /* -------------------------------
-         * 1️⃣ Daily Visits Chart (Line)
-         * ------------------------------- */
+        document.querySelector('.loading')?.remove();
+
+        /* 1️⃣ Daily Visits Chart (Line) */
         const dailyCtx = document.getElementById("dailyChart");
         new Chart(dailyCtx, {
           type: "line",
@@ -156,9 +173,7 @@
           }
         });
 
-        /* -------------------------------
-         * 2️⃣ Most Visited Pages Chart (Bar)
-         * ------------------------------- */
+        /* 2️⃣ Most Visited Pages Chart (Bar) */
         const pageCtx = document.getElementById("pageChart");
         new Chart(pageCtx, {
           type: "bar",
@@ -180,9 +195,7 @@
           }
         });
 
-        /* -------------------------------
-         * 3️⃣ Recent Visits List
-         * ------------------------------- */
+        /* 3️⃣ Recent Visits List */
         const list = document.getElementById("recentVisits");
         list.innerHTML = "";
         recent.forEach(v => {
@@ -201,7 +214,31 @@
       }
     }
 
-    loadAnalytics();
+    // -----------------------------------------
+    // ✅ Unified Admin Check + Load
+    // -----------------------------------------
+    document.addEventListener("DOMContentLoaded", async () => {
+      try {
+        const me = await fetch(
+          window.location.hostname.includes("localhost")
+            ? "http://localhost:3001/api/auth/me"
+            : "https://lovculator.com/api/auth/me",
+          { credentials: "include" }
+        ).then(r => r.json()).catch(() => null);
+
+        if (!me || !me.is_admin) {
+          alert("Access denied. Admins only.");
+          window.location.href = "/login.html";
+          return;
+        }
+
+        console.log("✅ Admin verified:", me.username);
+        await loadAnalytics();
+      } catch (err) {
+        console.error("❌ Admin check failed:", err);
+        alert("Something went wrong verifying admin access.");
+      }
+    });
   </script>
 </body>
 </html>

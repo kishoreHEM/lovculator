@@ -57,23 +57,23 @@ export default (pool) => {
    * Endpoint: GET /api/analytics/daily
    * ==============================================================
    */
-  router.get("/daily", async (req, res) => {
-    try {
-      const result = await pool.query(`
-        SELECT 
-          DATE(visit_time) AS visit_date,
-          COUNT(*) AS visits
-        FROM page_visits
-        WHERE visit_time > NOW() - INTERVAL '14 days'
-        GROUP BY visit_date
-        ORDER BY visit_date ASC
-      `);
-      res.json(result.rows);
-    } catch (err) {
-      console.error("⚠️ Analytics /daily error:", err.message);
-      res.status(500).json({ error: "Failed to fetch daily visits" });
-    }
-  });
+  // 📅 Get daily visits (last 14 days)
+router.get("/daily", async (req, res) => {
+  try {
+    const result = await pool.query(`
+      SELECT DATE(visit_time) AS visit_date, COUNT(*) AS visits
+      FROM page_visits
+      WHERE visit_time >= NOW() - INTERVAL '14 days'
+      GROUP BY visit_date
+      ORDER BY visit_date ASC
+    `);
+    res.json(result.rows);
+  } catch (err) {
+    console.error("⚠️ Daily visits fetch error:", err.message);
+    res.status(500).json({ error: "Failed to fetch daily visits" });
+  }
+});
+
 
   /**
    * ==============================================================

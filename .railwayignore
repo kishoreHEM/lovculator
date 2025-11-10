@@ -1,6 +1,31 @@
-# ✅ Correct .railwayignore
+# =====================================================
+# 🚀 Lovculator - Railway Ignore Configuration
+# =====================================================
+
+# 🧩 Git files (not needed in deployment)
 .git
 .gitignore
+
+# 📦 Node modules (Railway installs fresh)
 node_modules
+
+# 🧾 Logs
 npm-debug.log
+yarn-debug.log
+*.log
+
+# 🍎 macOS system junk
 .DS_Store
+Thumbs.db
+
+# 🧠 Local environment variables
+.env
+
+# ⚙️ Editor configs / local cache
+.vscode
+.idea
+
+# 🚀 Frontend source (optional — include only if your backend serves the built frontend)
+# Uncomment below if frontend is deployed separately
+# frontend/
+# build/

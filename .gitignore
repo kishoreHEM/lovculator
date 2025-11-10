@@ -1,4 +1,36 @@
+# =====================================================
+# 🚀 Lovculator Project - Git Ignore Rules
+# =====================================================
+
+# 🧩 Node dependencies
 node_modules/
+
+# 🔐 Environment variables
 .env
+
+# 🍎 macOS system files
 .DS_Store
+
+# 🧾 Logs
 *.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# 🧠 Build artifacts (if you use build steps later)
+dist/
+build/
+coverage/
+
+# ⚙️ Temporary editor settings / cache
+.vscode/
+.idea/
+*.swp
+
+# 🗂️ OS / system files
+Thumbs.db
+
+# 🚀 Railway / Deployment caches
+.vercel/
+.netlify/
+.railway/

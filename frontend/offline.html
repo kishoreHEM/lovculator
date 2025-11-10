@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>You're Offline 💔 | Lovculator</title>
+
+  <meta name="description" content="You’re offline! But love always finds a way. Reconnect to continue using Lovculator." />
+  <link rel="icon" href="/images/favicon.ico" type="image/x-icon" />
+  <link rel="manifest" href="/manifest.json" />
+  <meta name="theme-color" content="#ff4b8d" />
+
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: 'Poppins', sans-serif;
+      background: linear-gradient(135deg, #ff4b8d, #ff6b6b);
+      color: #fff;
+      text-align: center;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+    }
+
+    .offline-container {
+      background: #fff;
+      color: #333;
+      border-radius: 20px;
+      padding: 40px 30px;
+      max-width: 400px;
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+      text-align: center;
+    }
+
+    .emoji {
+      font-size: 4rem;
+      margin-bottom: 20px;
+    }
+
+    h1 {
+      color: #ff4b8d;
+      margin-bottom: 15px;
+      font-size: 1.8rem;
+    }
+
+    p {
+      color: #555;
+      font-size: 1rem;
+      line-height: 1.6;
+      margin-bottom: 25px;
+    }
+
+    .retry-btn {
+      background-color: #ff4b8d;
+      color: white;
+      border: none;
+      padding: 12px 30px;
+      border-radius: 25px;
+      font-size: 16px;
+      cursor: pointer;
+      transition: background-color 0.3s ease;
+    }
+
+    .retry-btn:hover {
+      background-color: #e03c7a;
+    }
+
+    footer {
+      position: absolute;
+      bottom: 15px;
+      width: 100%;
+      text-align: center;
+      font-size: 14px;
+      color: rgba(255, 255, 255, 0.8);
+    }
+
+    footer a {
+      color: #fff;
+      text-decoration: underline;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="offline-container">
+    <div class="emoji">💔</div>
+    <h1>You're Offline</h1>
+    <p>It looks like your internet connection is lost.<br>
+    But don’t worry — love always finds a way back online! 💖</p>
+    <button class="retry-btn" onclick="window.location.reload()">🔄 Try Again</button>
+  </div>
+
+  <footer>
+    💖 Lovculator • <a href="/">Return Home</a>
+  </footer>
+</body>
+</html>
