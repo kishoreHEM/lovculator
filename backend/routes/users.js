@@ -262,10 +262,9 @@ router.get("/:id/activity", async (req, res) => {
 
     const followerActivity = followersResult.rows.map(r => ({
       type: "new_follower",
-      actor_username: r.actor_username,
+      follower_username: r.actor_username, // ✅ FIXED: Changed from actor_username
       message: `@${r.actor_username} started following you.`,
-      date: r.date,
-      related_story_id: null
+      date: r.date
     }));
 
     const likesResult = await pool.query(`
@@ -280,9 +279,9 @@ router.get("/:id/activity", async (req, res) => {
     const likeActivity = likesResult.rows.map(r => ({
       type: "story_like",
       actor_username: r.actor_username,
+      story_id: r.related_story_id, // ✅ FIXED: Changed from related_story_id
       message: `@${r.actor_username} liked your story "${r.story_title}" 💖`,
-      date: r.date,
-      related_story_id: r.related_story_id
+      date: r.date
     }));
 
     const combined = [...followerActivity, ...likeActivity].sort(
