@@ -11,11 +11,13 @@
       background: #fafafa;
       font-family: "Poppins", Arial, sans-serif;
       color: #333;
+      margin: 0;
+      padding: 0;
     }
 
     .questions-container {
       max-width: 800px;
-      margin: 40px auto;
+      margin: 60px auto;
       background: #fff;
       border-radius: 12px;
       box-shadow: 0 0 10px rgba(0,0,0,0.05);
@@ -35,6 +37,10 @@
       color: #ff4b8d;
       font-size: 1.4rem;
       margin: 0;
+    }
+
+    #questionsList {
+      margin-top: 15px;
     }
 
     .question-card {
@@ -57,47 +63,35 @@
     .question-meta {
       font-size: 0.85rem;
       color: #888;
-      margin-bottom: 10px;
-    }
-
-    .question-actions {
       display: flex;
-      gap: 15px;
-      margin-top: 5px;
-    }
-
-    .question-btn {
-      border: none;
-      background: none;
-      color: #555;
-      cursor: pointer;
-      font-size: 0.9rem;
-      display: flex;
+      justify-content: space-between;
       align-items: center;
-      gap: 5px;
-      padding: 5px 8px;
+    }
+
+    .answer-btn {
+      background: #ff4b8d;
+      border: none;
+      color: white;
       border-radius: 6px;
-      transition: all 0.3s ease;
+      padding: 6px 12px;
+      font-size: 0.8rem;
+      cursor: pointer;
+      transition: all 0.2s ease;
     }
 
-    .question-btn:hover {
-      background: #f2f2f2;
-      color: #ff4b8d;
+    .answer-btn:hover {
+      background: #ff6b9d;
     }
 
-    .question-btn.liked {
-      color: #ff4b8d;
-    }
-
-    /* Answer Modal */
+    /* 🧠 Answer Modal */
     #answerModal {
       position: fixed;
       top: 0; left: 0; right: 0; bottom: 0;
-      background: rgba(0,0,0,0.5);
+      background: rgba(0,0,0,0.6);
       display: none;
       justify-content: center;
       align-items: center;
-      z-index: 1000;
+      z-index: 9999;
     }
 
     #answerModal .modal-box {
@@ -107,6 +101,12 @@
       width: 400px;
       max-width: 90%;
       box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+    }
+
+    #answerModal h3 {
+      margin-top: 0;
+      color: #ff4b8d;
+      text-align: center;
     }
 
     #answerModal textarea {
@@ -133,6 +133,7 @@
       cursor: pointer;
       font-weight: 600;
       border: none;
+      font-family: inherit;
     }
 
     .btn-primary {
@@ -152,19 +153,18 @@
     .btn-secondary:hover {
       background: #dee2e6;
     }
-
   </style>
 </head>
 
 <body>
   <div class="questions-container">
     <div class="questions-header">
-      <h2>💬 Questions Feed</h2>
+      <h2>💬 Community Questions</h2>
       <button id="askNewBtn" class="btn-primary">Ask Question</button>
     </div>
 
     <div id="questionsList">
-      <p>Loading questions...</p>
+      <p style="text-align:center;color:#777;">Loading questions...</p>
     </div>
   </div>
 
@@ -181,7 +181,5 @@
   </div>
 
   <script src="/js/questions.js"></script>
-
-
 </body>
 </html>
