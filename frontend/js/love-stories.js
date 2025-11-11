@@ -209,53 +209,50 @@ class LoveStories {
     }
 
     setupStoryDelegation() {
-        if (!this.storiesContainer) return;
+    if (!this.storiesContainer) return;
 
-        // Single consolidated event listener
-        this.storiesContainer.addEventListener('click', (e) => {
-            const storyCard = e.target.closest('.story-card');
-            if (!storyCard) return;
+    this.storiesContainer.addEventListener('click', (e) => {
+        const storyCard = e.target.closest('.story-card');
+        if (!storyCard) return;
 
-            const storyId = parseInt(storyCard.dataset.storyId);
-            const target = e.target.closest('button'); 
-            
-            console.log('Clicked button:', target?.className); // Debug log
-            
-            if (target) {
-                if (target.classList.contains('read-more')) {
-                    this.toggleReadMore(storyId);
-                } else if (target.classList.contains('like-button')) {
-                    this.toggleLike(storyId);
-                } else if (target.classList.contains('follow-btn')) {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    this.toggleFollow(target, storyCard); // Fixed: pass both button and story card
-                } else if (target.classList.contains('comment-toggle')) {
-                    this.toggleComments(storyId);
-                } else if (target.classList.contains('comment-submit')) {
-                    this.handleAddComment(storyId);
-                } else if (target.classList.contains('share-action-toggle')) {
-                    const { shareUrl, shareTitle, shareText } = target.dataset;
-                    this.handleNativeShare(shareUrl, shareTitle, shareText);
-                } else if (target.classList.contains('delete-story-button')) {
-                    this.handleDeleteStory(storyId);
-                } else if (target.classList.contains('report-story-button')) {
-                    this.openReportModal(storyId);
-                }
-            }
-        });
+        const storyId = parseInt(storyCard.dataset.storyId);
         
-        // Handle enter key in comment input
-        this.storiesContainer.addEventListener('keypress', (e) => {
-            if (e.key === 'Enter' && e.target.classList.contains('comment-input')) {
-                const storyCard = e.target.closest('.story-card');
-                if (storyCard) {
-                    const storyId = parseInt(storyCard.dataset.storyId);
-                    this.handleAddComment(storyId);
-                }
+        // Use more specific checks
+        if (e.target.closest('.read-more')) {
+            this.toggleReadMore(storyId);
+        } else if (e.target.closest('.like-button')) {
+            this.toggleLike(storyId);
+        } else if (e.target.closest('.follow-btn')) {
+            e.preventDefault();
+            const button = e.target.closest('.follow-btn');
+            this.toggleFollow(button);
+        } else if (e.target.closest('.comment-toggle')) {
+            this.toggleComments(storyId);
+        } else if (e.target.closest('.comment-submit')) {
+            this.handleAddComment(storyId);
+        } else if (e.target.closest('.share-action-toggle')) {
+            const button = e.target.closest('.share-action-toggle');
+            const { shareUrl, shareTitle, shareText } = button.dataset;
+            this.handleNativeShare(shareUrl, shareTitle, shareText);
+        } else if (e.target.closest('.delete-story-button')) {
+            this.handleDeleteStory(storyId);
+        } else if (e.target.closest('.report-story-button')) {
+            this.openReportModal(storyId);
+        }
+    });
+    
+    // Comment input enter key
+    this.storiesContainer.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter' && e.target.classList.contains('comment-input')) {
+            e.preventDefault();
+            const storyCard = e.target.closest('.story-card');
+            if (storyCard) {
+                const storyId = parseInt(storyCard.dataset.storyId);
+                this.handleAddComment(storyId);
             }
-        });
-    }
+        }
+    });
+}
 
 
     async loadStories(params = {}) {
@@ -469,25 +466,38 @@ class LoveStories {
     }
 
     toggleReadMore(storyId) {
-        const story = this.stories.find(s => s.id === storyId); 
-        if (!story) return;
-        
-        const storyCard = document.querySelector(`[data-story-id="${storyId}"]`);
-        const contentEl = storyCard?.querySelector('.story-content');
-        const buttonEl = storyCard?.querySelector('.read-more');
+    const story = this.stories.find(s => s.id === storyId); 
+    if (!story) return;
+    
+    const storyCard = document.querySelector(`[data-story-id="${storyId}"]`);
+    const contentEl = storyCard?.querySelector('.story-content');
+    const buttonEl = storyCard?.querySelector('.read-more');
 
-        if (contentEl && buttonEl) {
-            if (contentEl.classList.contains('expanded')) {
-                contentEl.classList.remove('expanded');
-                contentEl.textContent = story.love_story.substring(0, 200) + '...';
-                buttonEl.textContent = 'Read More';
-            } else {
-                contentEl.classList.add('expanded');
-                contentEl.textContent = story.love_story;
-                buttonEl.textContent = 'Read Less';
-            }
+    if (contentEl && buttonEl) {
+        const isExpanded = contentEl.classList.contains('expanded');
+        
+        if (isExpanded) {
+            // Collapse - show truncated version
+            contentEl.classList.remove('expanded');
+            const truncatedText = story.love_story.length > 200 
+                ? story.love_story.substring(0, 200) + '...' 
+                : story.love_story;
+            contentEl.innerHTML = truncatedText; // Use innerHTML to preserve formatting
+            buttonEl.textContent = 'Read More';
+        } else {
+            // Expand - show full story
+            contentEl.classList.add('expanded');
+            contentEl.innerHTML = story.love_story; // Use innerHTML to preserve formatting
+            buttonEl.textContent = 'Read Less';
         }
+        
+        console.log('📖 Read More toggled:', { 
+            storyId, 
+            isExpanded: !isExpanded,
+            storyLength: story.love_story.length 
+        });
     }
+}
 
     toggleComments(storyId) {
     console.log('💬 Toggling comments for story:', storyId);
@@ -714,8 +724,8 @@ class LoveStories {
     const canFollow = !story.anonymous_post && !isOwner && story.author_id;
     const isFollowing = story.is_following_author;
     
-    // 4. FIX: Override API's allow_comments - always enable comments for now
-    const allowComments = true; // Force enable comments
+    // Instead of forcing comments, use the API value:
+const allowComments = story.allow_comments !== false; // Use API value, default to true
     
     console.log('📝 Comments override:', {
         storyId: story.id,
@@ -1274,77 +1284,124 @@ fetch(`${window.API_BASE}/auth/me`, { credentials: 'include' })
     })
     .catch(() => (window.currentUserId = null));
 
-// ==============================================
-// ✨ Count-Up Animation for Stats
-// ==============================================
-function animateCountUp(elementId, targetValue, duration = 1000) {
-    const element = document.getElementById(elementId);
-    if (!element) return;
 
-    const cleanValue = parseInt(String(targetValue).replace(/\D/g, '')) || 0;
-    const startValue = 0;
-    const increment = cleanValue / (duration / 16);
+// ======================================================
+// 💬 Quora-Style Ask/Create Post + Love Story Modal Logic
+// ======================================================
 
-    let current = startValue;
+document.addEventListener("DOMContentLoaded", () => {
+  const askModal = document.getElementById("askCreateModal");
+  const storyModal = document.getElementById("storyModal");
 
-    const timer = setInterval(() => {
-        current += increment;
-        if (current >= cleanValue) {
-            clearInterval(timer);
-            element.textContent = cleanValue;
-        } else {
-            element.textContent = Math.floor(current);
-        }
-    }, 16);
+  // Ask/Post bar elements
+  const askTrigger = document.getElementById("askTrigger");
+  const askBtn = document.getElementById("askQuestionBtn");
+  const postBtn = document.getElementById("postStoryBtn");
+
+  // Ask modal elements
+  const tabQuestion = document.getElementById("tabAddQuestion");
+  const tabPost = document.getElementById("tabCreatePost");
+  const questionSection = document.getElementById("questionSection");
+  const postSection = document.getElementById("postSection");
+  const cancelAskCreate = document.getElementById("cancelAskCreate");
+  const cancelPostCreate = document.getElementById("cancelPostCreate");
+  const submitQuestion = document.getElementById("submitQuestion");
+  const submitPost = document.getElementById("submitPost");
+
+  // Close button in story modal
+  const closeStoryModal = document.getElementById("closeModal");
+
+  // Helper: Switch tabs
+  function switchTab(type) {
+    if (!tabQuestion || !tabPost || !questionSection || !postSection) return;
+    const isQuestion = type === "question";
+    tabQuestion.classList.toggle("active", isQuestion);
+    tabPost.classList.toggle("active", !isQuestion);
+    questionSection.classList.toggle("hidden", !isQuestion);
+    postSection.classList.toggle("hidden", isQuestion);
+  }
+
+  // Helper: Safe modal toggle
+  function showModal(modal) {
+    if (modal) modal.classList.remove("hidden");
+  }
+  function hideModal(modal) {
+    if (modal) modal.classList.add("hidden");
+  }
+
+  // 🧠 Open modal from Ask bar
+  askTrigger?.addEventListener("click", () => showModal(askModal));
+  askBtn?.addEventListener("click", () => {
+    showModal(askModal);
+    switchTab("question");
+  });
+  postBtn?.addEventListener("click", () => {
+    showModal(askModal);
+    switchTab("post");
+  });
+
+  // 🗂️ Tab switching
+  tabQuestion?.addEventListener("click", () => switchTab("question"));
+  tabPost?.addEventListener("click", () => switchTab("post"));
+
+  // ❌ Close Ask modal
+  cancelAskCreate?.addEventListener("click", () => hideModal(askModal));
+  cancelPostCreate?.addEventListener("click", () => hideModal(askModal));
+
+  // ✅ Submit Question
+  submitQuestion?.addEventListener("click", async () => {
+    const questionInput = document.getElementById("questionText");
+    const question = questionInput?.value.trim();
+    if (!question) return alert("Please enter your question.");
+
+    try {
+      const res = await fetch("/api/questions", {
+  method: "POST",
+  headers: { "Content-Type": "application/json" },
+  credentials: "include", // ✅ crucial for sending cookies/session
+  body: JSON.stringify({ question })
+});
+
+
+      if (res.ok) {
+  alert("✅ Question posted successfully!");
+  askInput.value = "";
+  localStorage.removeItem("draft_question");
+  askModal.style.display = "none";
+} else if (res.status === 401) {
+  alert("⚠️ Please log in to post a question.");
+  window.location.href = "/login.html";
+} else {
+  const data = await res.json().catch(() => ({}));
+  alert("❌ Failed to post question: " + (data.error || "Unknown error"));
 }
 
-// 🌸 Mini Ask Question Popup
-document.addEventListener("DOMContentLoaded", () => {
-  const askBtn = document.getElementById("askQuestionBtn");
-  const miniModal = document.getElementById("miniAskModal");
-  const cancelBtn = document.getElementById("cancelAsk");
-  const submitBtn = document.getElementById("submitAsk");
-  const input = document.getElementById("askQuestionInput");
-
-  if (!askBtn || !miniModal) return;
-
-  // Open the mini modal
-  askBtn.addEventListener("click", () => {
-    miniModal.classList.toggle("hidden");
-    if (!miniModal.classList.contains("hidden")) {
-      input.focus();
+    } catch (err) {
+      console.error("Error posting question:", err);
+      alert("⚠️ Something went wrong. Try again later.");
     }
   });
 
-  // Cancel and hide modal
-  cancelBtn?.addEventListener("click", () => {
-    miniModal.classList.add("hidden");
-    input.value = "";
+  // 🩷 Create Post (opens Love Story modal)
+  submitPost?.addEventListener("click", () => {
+    hideModal(askModal);
+    showModal(storyModal);
   });
 
-  // Submit handler (demo)
-  submitBtn?.addEventListener("click", async () => {
-    const question = input.value.trim();
-    if (!question) {
-      alert("Please type your question before posting!");
-      return;
-    }
+  // ✖️ Close Love Story modal
+  closeStoryModal?.addEventListener("click", () => hideModal(storyModal));
 
-    // You can later send this to your backend
-    console.log("📝 New Question:", question);
-
-    alert("Your question has been posted!");
-    input.value = "";
-    miniModal.classList.add("hidden");
+  // 🪄 Close modals when clicking outside
+  window.addEventListener("click", (e) => {
+    if (e.target === askModal) hideModal(askModal);
+    if (e.target === storyModal) hideModal(storyModal);
   });
 
-  // Also trigger modal when user clicks fake input
-  const askTrigger = document.getElementById("askTrigger");
-  askTrigger?.addEventListener("click", () => {
-    miniModal.classList.toggle("hidden");
-    input.focus();
-  });
+  console.log("✅ Ask/Post modal logic initialized successfully");
 });
+
+
+
 
 // ✏️ Edit Answer
 async function editAnswer(id, encodedText) {

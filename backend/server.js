@@ -1,5 +1,5 @@
 /**
- * 🚀 Lovculator - Production Server.js (Railway Ready)
+ * 🚀 Lovculator - Optimized & Fixed Server.js (Production + Local Friendly)
  * Author: Kishore M
  */
 
@@ -14,12 +14,14 @@ import cors from "cors";
 import { fileURLToPath } from "url";
 import compression from "compression";
 import helmet from "helmet";
+
 import analyticsRoutesFactory from "./routes/analytics.js";
 import { trackPageVisit } from "./middleware/trackVisit.js";
 import questionsRouter from "./routes/questions.js";
 import answersRouter from "./routes/answers.js";
-
-
+import authRoutes from "./routes/auth.js";
+import userRoutes from "./routes/users.js";
+import storiesRoutes from "./routes/stories.js";
 
 // =====================================================
 // 🌍 Environment Setup
@@ -30,12 +32,11 @@ const { Pool } = pg;
 const PgSession = connectPgSimple(session);
 
 // =====================================================
-// 📂 Path Resolution (ESM Safe)
+// 📂 Path Resolution
 // =====================================================
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Detect frontend path
 const possibleFrontendPaths = [
   path.join(__dirname, "../frontend"),
   path.join(process.cwd(), "frontend"),
@@ -58,7 +59,7 @@ if (!frontendPath) {
 }
 
 // =====================================================
-// 💽 Database Setup (PostgreSQL)
+// 💽 Database Setup
 // =====================================================
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
@@ -71,131 +72,105 @@ pool
   .catch((err) => console.error("❌ Database connection failed:", err.message));
 
 // =====================================================
-// 🔒 CORS Configuration (Frontend Communication)
+// 🧠 Core Middleware Order (CORS + Session + Helmet)
 // =====================================================
-app.use(
-  cors({
-    origin: ["https://lovculator.com", "http://localhost:3000"],
-    credentials: true, // allow cookies to be sent
-    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Authorization"],
-  })
-);
+app.set("trust proxy", 1);
 
-// =====================================================
-// 🧱 Security & Performance Middleware
-// =====================================================
-app.use(helmet());
-app.use(compression());
-app.disable("x-powered-by");
+app.use(cors({
+  origin: [
+    "https://lovculator.com",
+    "https://www.lovculator.com",
+    "http://localhost:3000",
+  ],
+  credentials: true,
+  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization"],
+}));
 
-// =====================================================
-// 🛡️ SECURITY BLOCKER MIDDLEWARE (NEW SECTION)
-// =====================================================
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 
-// NOTE: It is generally not recommended to block common crawlers (like CCBot)
-// unless they are causing a severe performance issue, as this hurts general SEO/indexing.
-// I have removed the CCBot IP and User Agent from the lists below.
-
-const BLOCKED_IPS = new Set([
-  '62.60.131.162',  // Config scanner
-  '159.89.127.165', // API/Swagger scanner
-  '162.241.224.32', // xmlrpc scanner
-  '122.45.51.68',   // xmlrpc scanner
-]);
-
-const MALICIOUS_USER_AGENTS = [
-  'Go-http-client',
-  'l9scan',
-  'Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:85.0)' 
-];
-
-// Block sensitive file patterns
-const SENSITIVE_PATHS = [
-  // Block common config/leakage paths
-  '.env', '.json', '/config/', '/appsettings', '/.git', '/.docker',
-  // Block API/dev tool discovery
-  '/swagger', '/graphql', '/actuator', '/v2/api-docs', '/v3/api-docs',
-  // Block exploit paths
-  '/xmlrpc', '.php', '/server-status'
-];
-
-
-app.use((req, res, next) => {
-  // Use the established method for getting the client IP from the proxy
-  const clientIP = req.headers['x-forwarded-for']?.split(',')[0]?.trim() || req.socket.remoteAddress;
-  const userAgent = req.headers['user-agent'] || '';
-  const path = req.path.toLowerCase();
-
-  // 🚫 Block by IP
-  if (BLOCKED_IPS.has(clientIP)) {
-    console.log(`🚨 BLOCKED: Malicious IP ${clientIP} accessing ${req.path}`);
-    return res.status(403).send('Access denied');
-  }
-
-  // 🚫 Block by User Agent
-  if (MALICIOUS_USER_AGENTS.some(ua => userAgent.includes(ua))) {
-    console.log(`🚨 BLOCKED: Suspicious User Agent "${userAgent}" from IP ${clientIP}`);
-    // Use 404/Not Found for the User Agent block as a non-committal response
-    return res.status(404).send('Not found'); 
-  }
-
-  // 🚫 Block sensitive file access
-  if (SENSITIVE_PATHS.some(sensitivePath => path.includes(sensitivePath))) {
-    console.log(`🚨 BLOCKED: Sensitive path access ${req.path} from IP ${clientIP}`);
-    return res.status(404).send('Not found'); // Return 404 to hide existence
-  }
-
-  // ✅ Allow legitimate requests
-  next();
-});
-
-// =====================================================
-// 🔁 HTTPS Redirect (Production Only)
-// =====================================================
-app.use((req, res, next) => {
-  if (process.env.NODE_ENV === "production" && req.headers["x-forwarded-proto"] !== "https") {
-    return res.redirect("https://" + req.headers.host + req.url);
-  }
-  next(); 
-});
-
-// =====================================================
-// 🍪 Session Store (PostgreSQL)
-// =====================================================
-app.set("trust proxy", 1); // ✅ Important for Railway behind HTTPS proxy
+const PgStore = new PgSession({ pool, tableName: "session_store" });
 
 app.use(
   session({
-    store: new PgSession({ pool, tableName: "session_store" }),
+    store: PgStore,
     secret: process.env.SESSION_SECRET || "lovculator_secret_key",
     resave: false,
     saveUninitialized: false,
     cookie: {
-      secure: process.env.NODE_ENV === "production", // true in prod (HTTPS)
+      secure: process.env.NODE_ENV === "production",
       httpOnly: true,
-      sameSite: process.env.NODE_ENV === "production" ? "none" : "lax", // ⚡ critical fix
+      sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
       maxAge: 1000 * 60 * 60 * 24 * 7, // 7 days
     },
   })
 );
 
+console.log("✅ Session configured with CORS and SameSite=None");
 
-console.log("✅ Session configured with trust proxy and SameSite=None");
+// Helmet AFTER session to avoid blocking cookies
+app.use(helmet({
+  crossOriginResourcePolicy: false,
+  crossOriginOpenerPolicy: false,
+  crossOriginEmbedderPolicy: false,
+}));
+app.use(compression());
+app.disable("x-powered-by");
 
 // =====================================================
-// 🧩 Core Middleware
+// 🛡️ Security Filters
 // =====================================================
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+const BLOCKED_IPS = new Set([
+  "62.60.131.162",
+  "159.89.127.165",
+  "162.241.224.32",
+  "122.45.51.68",
+]);
+
+const MALICIOUS_USER_AGENTS = ["Go-http-client", "l9scan"];
+
+const SENSITIVE_PATHS = [
+  ".env", ".json", "/config/", "/.git", "/swagger", "/graphql", ".php"
+];
+
+app.use((req, res, next) => {
+  const clientIP = req.headers["x-forwarded-for"]?.split(",")[0]?.trim() || req.socket.remoteAddress;
+  const userAgent = req.headers["user-agent"] || "";
+  const path = req.path.toLowerCase();
+
+  if (BLOCKED_IPS.has(clientIP)) {
+    console.log(`🚨 BLOCKED IP: ${clientIP}`);
+    return res.status(403).send("Access denied");
+  }
+
+  if (MALICIOUS_USER_AGENTS.some((ua) => userAgent.includes(ua))) {
+    console.log(`🚨 BLOCKED UA: ${userAgent}`);
+    return res.status(404).send("Not found");
+  }
+
+  if (SENSITIVE_PATHS.some((s) => path.includes(s))) {
+    console.log(`🚨 BLOCKED PATH: ${req.path}`);
+    return res.status(404).send("Not found");
+  }
+
+  next();
+});
+
+// =====================================================
+// 🔁 HTTPS Redirect
+// =====================================================
+app.use((req, res, next) => {
+  if (process.env.NODE_ENV === "production" && req.headers["x-forwarded-proto"] !== "https") {
+    return res.redirect("https://" + req.headers.host + req.url);
+  }
+  next();
+});
+
+// =====================================================
+// 🧩 Routes
+// =====================================================
 app.use(express.static(frontendPath));
-
-// =====================================================
-// 🧠 API Routes
-// =====================================================
-import authRoutes from "./routes/auth.js";
-import userRoutes from "./routes/users.js";
-import storiesRoutes from "./routes/stories.js";
 
 app.use("/api/auth", authRoutes);
 app.use("/api/users", userRoutes);
@@ -205,58 +180,35 @@ app.use(trackPageVisit);
 app.use("/api/questions", questionsRouter(pool));
 app.use("/api/answers", answersRouter(pool));
 
-
-// Catch-all for invalid API endpoints
-app.use("/api/*", (req, res) => {
-  res.status(404).json({ error: "API route not found" });
-});
+app.use("/api/*", (req, res) => res.status(404).json({ error: "API route not found" }));
 
 // =====================================================
-// 📊 Page View Logger (Analytics)
+// 📊 Analytics Logging
 // =====================================================
 app.use(async (req, res, next) => {
-  if (
-    // 1. Core exclusions (API, assets)
-    req.path.startsWith("/api") ||
-    req.path.includes("/js/") ||
-    req.path.includes("/css/") ||
-    req.path.includes("/images/") ||
-    
-    // 2. Added exclusions for malicious scanning 🛡️
-    req.path.includes(".json") ||         // Filter attempts to grab config files (appsettings.json, angular.json)
-    req.path.includes(".env") ||          // Filter attempts to grab environment files
-    req.path.includes("/xmlrpc.php") ||   // Filter common WordPress/exploit attempts
-    req.path.includes("/robots.txt") ||   // Filter standard bot checks
-    req.path.includes("/swagger") ||      // Filter API discovery attempts
-    req.path.includes("/api-docs") ||
-    req.path.includes("/graphql") ||
-    req.path.includes("/actuator")
-  ) {
+  if (req.path.startsWith("/api") || req.path.match(/\.(js|css|png|jpg|svg|json|ico)$/i)) {
     return next();
   }
 
   const timestamp = new Date().toISOString();
-  const clientIP =
-    req.headers["x-forwarded-for"]?.split(",")[0] || req.socket.remoteAddress;
+  const clientIP = req.headers["x-forwarded-for"]?.split(",")[0] || req.socket.remoteAddress;
   const userAgent = req.headers["user-agent"] || "Unknown device";
-
-  // Only log if it passes all filters
-  console.log(`📖 [${timestamp}] Page View: ${req.path} | IP: ${clientIP} | Device: ${userAgent}`);
+  console.log(`📖 [${timestamp}] Page View: ${req.path} | IP: ${clientIP} | UA: ${userAgent}`);
 
   try {
     await pool.query(
-      `INSERT INTO page_visits (path, ip_address, user_agent) VALUES ($1, $2, $3)`,
+      "INSERT INTO page_visits (path, ip_address, user_agent) VALUES ($1, $2, $3)",
       [req.path, clientIP, userAgent]
     );
   } catch (err) {
-    console.error("⚠️ Failed to log page visit:", err.message);
+    console.error("⚠️ Analytics error:", err.message);
   }
 
   next();
 });
 
 // =====================================================
-// 🌐 Static Frontend Routes (Clean URLs)
+// 🌐 Frontend Routes
 // =====================================================
 const validPages = [
   "index",
@@ -275,13 +227,12 @@ const validPages = [
 validPages.forEach((page) => {
   const routePath = page === "index" ? "/" : `/${page}`;
   app.get(routePath, (req, res) => {
-    const file = path.join(frontendPath, `${page}.html`);
-    res.sendFile(file);
+    res.sendFile(path.join(frontendPath, `${page}.html`));
   });
 });
 
 // =====================================================
-// 🚫 404 Fallback for Other Routes
+// 🚫 404 Fallback
 // =====================================================
 app.use((req, res) => {
   const file404 = path.join(frontendPath, "404.html");

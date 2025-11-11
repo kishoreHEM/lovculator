@@ -50,11 +50,6 @@
     }
     </script>
 
-    <!-- CSS -->
-    <!-- CSS -->
-<link rel="stylesheet" href="/css/style.css?v=3.0">
-
-
 </head>
 <body>
     <!-- Instagram Style Header -->
@@ -93,14 +88,58 @@
   </div>
 </div>
 
-<!-- 🌼 Mini Ask Modal (Inline Popup) -->
-<div class="mini-ask-modal hidden" id="miniAskModal">
-  <textarea id="askQuestionInput" placeholder="Type your question..." maxlength="180"></textarea>
-  <div class="ask-modal-actions">
-    <button id="cancelAsk" class="btn-secondary">Cancel</button>
-    <button id="submitAsk" class="btn-primary">Post</button>
+
+    <!-- 🧠 Quora-style Ask / Create Post Modal -->
+<div id="askCreateModal" class="modal-overlay hidden">
+  <div class="modal-box ask-modal">
+    
+    <!-- Tabs -->
+    <div class="modal-tabs">
+      <button class="tab-btn active" id="tabAddQuestion">Add Question</button>
+      <button class="tab-btn" id="tabCreatePost">Create Post</button>
+    </div>
+
+    <!-- Tips -->
+    <div class="tip-box">
+      <h4>💡 Tips on getting good answers quickly</h4>
+      <ul>
+        <li>✅ Make sure your question hasn’t been asked already</li>
+        <li>✍️ Keep your question short and to the point</li>
+        <li>🔍 Double-check grammar and spelling</li>
+      </ul>
+    </div>
+
+    <!-- Add Question Section -->
+    <div class="modal-section" id="questionSection">
+      <textarea
+        id="questionText"
+        class="question-input"
+        placeholder='Start your question with "What", "How", "Why", etc.'
+        maxlength="200"
+      ></textarea>
+      <div class="modal-footer">
+        <button id="cancelAskCreate" class="btn-secondary">Cancel</button>
+        <button id="submitQuestion" class="btn-primary">Add Question</button>
+      </div>
+    </div>
+
+    <!-- Create Post Section -->
+    <div class="modal-section hidden" id="postSection">
+      <textarea
+        id="postText"
+        class="question-input"
+        placeholder='Share your thoughts or love story...'
+        maxlength="500"
+      ></textarea>
+      <div class="modal-footer">
+        <button id="cancelPostCreate" class="btn-secondary">Cancel</button>
+        <button id="submitPost" class="btn-primary">Post</button>
+      </div>
+    </div>
   </div>
 </div>
+
+
 
 
     <div class="container">
@@ -299,19 +338,6 @@
             <button class="success-ok-btn" id="successOk">Share Another Story</button>
         </div>
     </div>
-
-    <!-- 🧠 Ask Question Modal -->
-<div id="askQuestionModal" class="modal-overlay">
-  <div class="modal-box small">
-    <h3>Ask a Question 💬</h3>
-    <textarea id="questionInput" placeholder="Type your question..." maxlength="180"></textarea>
-    <div class="modal-actions">
-      <button id="cancelAskBtn" class="btn-secondary">Cancel</button>
-      <button id="submitAskBtn" class="btn-primary">Post Question</button>
-    </div>
-  </div>
-</div>
-
 
     <!-- Install Prompt -->
     <div id="installPrompt" class="install-prompt hidden" role="dialog" aria-labelledby="installPromptTitle">
