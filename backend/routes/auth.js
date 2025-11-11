@@ -58,10 +58,7 @@ router.post("/signup", async (req, res) => {
 });
 
 // ===================================================
-// 2️⃣ LOGIN
-// ===================================================
-// ===================================================
-// 2️⃣ LOGIN — Supports Username OR Email
+// 2️⃣ LOGIN — Supports Username OR Email (Fixed)
 // ===================================================
 router.post("/login", async (req, res) => {
   try {
@@ -74,7 +71,7 @@ router.post("/login", async (req, res) => {
     // Normalize input
     email = email.trim().toLowerCase();
 
-    // ✅ Allow login by username OR email (case-insensitive)
+    // ✅ Allow login by username OR email
     const result = await pool.query(
       `SELECT id, username, email, password_hash
        FROM users
@@ -88,22 +85,31 @@ router.post("/login", async (req, res) => {
       return res.status(401).json({ error: "Invalid email/username or password." });
     }
 
-    // ✅ Verify password hash
+    // ✅ Verify password
     const validPassword = await bcrypt.compare(password, user.password_hash);
     if (!validPassword) {
       return res.status(401).json({ error: "Invalid email/username or password." });
     }
 
-    // ✅ Save minimal session
+    // ✅ Create session object
     req.session.user = {
       id: user.id,
       username: user.username,
       email: user.email,
     };
 
-    res.status(200).json({
-      message: "Login successful ✅",
-      user: req.session.user,
+    // ✅ Force session save before sending response
+    req.session.save((err) => {
+      if (err) {
+        console.error("❌ Session save failed:", err);
+        return res.status(500).json({ error: "Failed to save session." });
+      }
+
+      console.log(`✅ User logged in and session saved: ${user.username}`);
+      res.status(200).json({
+        message: "Login successful ✅",
+        user: req.session.user,
+      });
     });
 
   } catch (err) {

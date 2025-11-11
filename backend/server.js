@@ -99,11 +99,13 @@ app.use(
     resave: false,
     saveUninitialized: false,
     cookie: {
-      secure: process.env.NODE_ENV === "production",
-      httpOnly: true,
-      sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
-      maxAge: 1000 * 60 * 60 * 24 * 7, // 7 days
+    secure: process.env.NODE_ENV === "production", // true only on HTTPS
+    httpOnly: true,
+    sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+    domain: process.env.NODE_ENV === "production" ? ".lovculator.com" : undefined,
+    maxAge: 1000 * 60 * 60 * 24 * 7,
     },
+
   })
 );
 
