@@ -92,14 +92,30 @@ renderProfileDetails(user, isOwnProfile = true) {
     ? new Date(user.created_at).toLocaleDateString("en-US", { month: "long", year: "numeric" })
     : "Recently";
 
-  const avatar = user.avatar_url
-    ? `<img src="${user.avatar_url}" alt="${displayName}" class="profile-avatar-img" />`
-    : `<div class="profile-avatar-fallback">${displayName[0]?.toUpperCase() || "?"}</div>`;
+  const avatarUrl = user.avatar_url || "/images/default-avatar.png";
+
+  // ✅ Avatar section (includes upload only for your own profile)
+  const avatarSection = isOwnProfile
+    ? `
+      <div class="avatar-upload-section">
+      <div class="profile-avatar">
+        <img id="avatarImage" src="${avatarUrl}" alt="${displayName}" class="profile-avatar-img" />
+        <label class="avatar-upload-label">
+          📸 Change Photo
+          <input type="file" id="avatarInput" accept="image/*" hidden />
+        </label>
+      </div>
+    `
+    : `
+      <img id="avatarImage" src="${avatarUrl}" alt="${displayName}" class="profile-avatar-img" />
+    `;
 
   this.profileInfoContainer.innerHTML = `
     <div class="profile-header-card">
       <div class="profile-main-info">
-        <div class="profile-avatar">${avatar}</div>
+        <div class="profile-avatar">
+          ${avatarSection}
+        </div>
         <div class="profile-details">
           <h3 id="profileUsername">${displayName}</h3>
           <div class="social-stats">
@@ -126,14 +142,77 @@ renderProfileDetails(user, isOwnProfile = true) {
     </div>
   `;
 
-  // Reattach events
+  // ✅ Reattach actions after rendering
   if (isOwnProfile) {
     this.attachLogoutHandler();
     this.attachEditProfileHandlers();
+    this.attachAvatarUploadHandler(); // <-- 🟢 Important
   } else {
     this.attachFollowProfileHandler(user.id);
   }
 }
+
+
+// =====================================================
+// 🧁 Avatar Upload (with Preview & Upload)
+// =====================================================
+attachAvatarUploadHandler() {
+  const avatarInput = document.getElementById("avatarInput");
+  const avatarImage = document.getElementById("avatarImage");
+
+  if (!avatarInput || !avatarImage) return;
+
+  avatarInput.addEventListener("change", async (event) => {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    if (file.size > 2 * 1024 * 1024) {
+      alert("⚠️ Max file size is 2MB.");
+      return;
+    }
+
+    // Instant preview
+    const reader = new FileReader();
+    reader.onload = () => {
+      avatarImage.src = reader.result;
+    };
+    reader.readAsDataURL(file);
+
+    // Prepare FormData
+    const formData = new FormData();
+    formData.append("avatar", file);
+
+    try {
+      const res = await fetch(`${this.API_BASE}/users/${this.currentUser.id}/avatar`, {
+        method: "POST",
+        body: formData,
+        credentials: "include",
+      });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Upload failed");
+
+      // ✅ Force cache busting
+      const newAvatarURL = `${data.avatar_url}?t=${Date.now()}`;
+
+      // ✅ Update local user data
+      this.currentUser.avatar_url = newAvatarURL;
+
+      // ✅ Re-render profile immediately
+      this.renderProfileDetails(this.currentUser, true);
+
+      // ✅ Update <img> directly too
+      const newImg = document.getElementById("avatarImage");
+      if (newImg) newImg.src = newAvatarURL;
+
+      console.log("✅ Avatar updated to:", newAvatarURL);
+    } catch (err) {
+      console.error("❌ Avatar upload error:", err);
+      alert("Failed to upload avatar. Please try again.");
+    }
+  });
+}
+
 
 
 // =====================================================
@@ -293,6 +372,7 @@ populateEditForm() {
             saveBtn.disabled = false;
         }
     }
+
 
     // =====================================================
 // 6️⃣ Load User’s Stories (Fixed for both self/other)

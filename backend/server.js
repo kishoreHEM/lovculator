@@ -169,6 +169,9 @@ app.use((req, res, next) => {
 // =====================================================
 app.use(express.static(frontendPath));
 
+// ✅ Serve uploaded files (user avatars, images, etc.)
+app.use("/uploads", express.static(path.join(process.cwd(), "uploads")));
+
 app.use("/api/auth", authRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/stories", storiesRoutes);

@@ -12,6 +12,7 @@
     "bcryptjs": "^3.0.3",
     "compression": "^1.8.1",
     "helmet": "^8.1.0",
+    "multer": "^2.0.2",
     "nodemailer": "^7.0.10"
   }
 }

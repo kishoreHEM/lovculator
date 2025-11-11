@@ -7,46 +7,86 @@
   <meta name="description" content="View your Lovculator profile — love stories, followers, and connections." />
   <meta name="theme-color" content="#ff4b8d" />
 
-  <!-- Favicon Links -->
-    <link rel="apple-touch-icon" href="/images/apple-touch-icon.png">
+  <!-- Favicons -->
+  <link rel="apple-touch-icon" href="/images/apple-touch-icon.png">
+  <link rel="shortcut icon" href="/images/favicon-32x32.png" type="image/png">
+  <link rel="icon" href="/images/favicon.ico" sizes="any">
 
-    <link rel="shortcut icon" href="/images/favicon-32x32.png" type="image/png">
-
-    <link rel="icon" href="/images/favicon.ico" sizes="any">
-
-  <!-- Main Styles -->
+  <!-- Styles -->
   <link rel="stylesheet" href="/css/style.css" />
 </head>
+
 <body>
-<!-- Header -->
-<header class="header">
-  <nav class="navbar">
-    <div class="nav-brand">
-      <a href="/" class="logo" aria-label="Lovculator Home">💖 Lovculator</a>
-    </div>
+  <!-- Header -->
+  <header class="header">
+    <nav class="navbar">
+      <div class="nav-brand">
+        <a href="/" class="logo" aria-label="Lovculator Home">💖 Lovculator</a>
+      </div>
 
-    <!-- Desktop menu -->
-    <ul class="nav-menu">
-      <li class="nav-item"><a href="/signup" class="nav-link">Signup</a></li>
-      <li class="nav-item"><a href="/login" class="nav-link">Login</a></li>
-      <li class="nav-item"><a href="/love-calculator" class="nav-link active">Love Calculator</a></li>
-    </ul>
+      <!-- Desktop menu -->
+      <ul class="nav-menu">
+        <li class="nav-item"><a href="/signup" class="nav-link">Signup</a></li>
+        <li class="nav-item"><a href="/login" class="nav-link">Login</a></li>
+        <li class="nav-item"><a href="/love-calculator" class="nav-link active">Love Calculator</a></li>
+      </ul>
 
-    <!-- Mobile elements -->
-    <button class="menu-toggle" aria-label="Toggle menu">
-      <span></span><span></span><span></span>
-    </button>
-    <div class="mobile-menu-overlay"></div>
-  </nav>
-</header>
+      <!-- Mobile menu -->
+      <button class="menu-toggle" aria-label="Toggle menu">
+        <span></span><span></span><span></span>
+      </button>
+      <div class="mobile-menu-overlay"></div>
+    </nav>
+  </header>
 
   <!-- 🧠 Profile Container -->
   <div class="container">
     <main class="main-content">
-      <!-- Profile Info -->
+      <!-- Profile Header -->
       <section class="profile-hero" id="profileInfoContainer">
-        <div class="loading-profile">
-          <p>Loading Profile...</p>
+        <div class="user-profile-card enhanced">
+          <div class="profile-cover"></div>
+
+          <div class="avatar-section">
+            <div class="avatar-upload-container">
+              <input type="file" id="avatarInput" accept="image/*" hidden />
+              <label for="avatarInput" class="avatar-upload-label">
+                <img id="avatarImage" src="/images/default-avatar.png" alt="Profile" class="profile-avatar" />
+                <div class="avatar-hover-overlay">📸 Change</div>
+              </label>
+            </div>
+
+            <div class="profile-actions">
+              <button id="editProfileBtn" class="btn btn-outline">✏️ Edit</button>
+              <button id="logoutBtn" class="btn btn-primary">🚪 Logout</button>
+            </div>
+          </div>
+
+          <div class="profile-info">
+            <h2 id="profileDisplayName">Loading...</h2>
+            <p class="username" id="profileUsername">@user</p>
+            <p class="user-bio" id="profileBio">No bio yet.</p>
+
+            <div class="profile-details">
+              <div class="detail">📍 <span id="profileLocation">Unknown</span></div>
+              <div class="detail">💞 <span id="profileRelationship">Single</span></div>
+            </div>
+          </div>
+
+          <div class="profile-stats">
+            <div class="stat">
+              <span class="number" id="followersCount">0</span>
+              <span class="label">Followers</span>
+            </div>
+            <div class="stat">
+              <span class="number" id="followingCount">0</span>
+              <span class="label">Following</span>
+            </div>
+            <div class="stat">
+              <span class="number" id="storiesCount">0</span>
+              <span class="label">Stories</span>
+            </div>
+          </div>
         </div>
       </section>
 
@@ -61,24 +101,20 @@
           <button class="tab-btn" data-tab="activity">Activity</button>
         </div>
 
-        <!-- Tab Contents -->
+        <!-- Tab Content -->
         <div class="tab-content">
-          <!-- Stories Tab -->
           <div id="stories-tab" class="tab-pane active">
             <div class="stories-grid" id="userStoriesContainer"></div>
           </div>
 
-          <!-- Followers Tab -->
           <div id="followers-tab" class="tab-pane">
             <div class="users-list" id="followersContainer"></div>
           </div>
 
-          <!-- Following Tab -->
           <div id="following-tab" class="tab-pane">
             <div class="users-list" id="followingContainer"></div>
           </div>
 
-          <!-- Activity Tab -->
           <div id="activity-tab" class="tab-pane">
             <div class="activity-feed" id="userActivityContainer">
               <p class="empty-state">Loading your activity... 🚀</p>
@@ -91,47 +127,48 @@
 
   <!-- 🌸 Edit Profile Modal -->
   <div id="editProfileModal" class="modal">
-  <div class="modal-dialog">
-    <div class="modal-header">
-      <h3>✏️ Edit Your Profile</h3>
-      <span class="close-btn" id="closeModalBtn">&times;</span>
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <h3>✏️ Edit Your Profile</h3>
+        <span class="close-btn" id="closeModalBtn">&times;</span>
+      </div>
+
+      <form id="editProfileForm" class="modal-form">
+        <div class="form-group">
+          <label for="editDisplayName">Display Name</label>
+          <input type="text" id="editDisplayName" name="display_name" maxlength="50" required />
+        </div>
+
+        <div class="form-group">
+          <label for="editBio">Bio</label>
+          <textarea id="editBio" name="bio" rows="3" maxlength="300"></textarea>
+        </div>
+
+        <div class="form-group">
+          <label for="editLocation">Location</label>
+          <input type="text" id="editLocation" name="location" maxlength="50" />
+        </div>
+
+        <div class="form-group">
+          <label for="editRelationshipStatus">Relationship Status</label>
+          <select id="editRelationshipStatus" name="relationship_status">
+            <option value="Single">Single</option>
+            <option value="In a Relationship">In a Relationship</option>
+            <option value="Married">Married</option>
+            <option value="It's Complicated">It's Complicated</option>
+          </select>
+        </div>
+
+        <div class="modal-footer">
+          <button type="submit" id="saveProfileBtn" class="btn btn-primary">💾 Save Changes</button>
+          <button type="button" class="btn btn-secondary" id="cancelEditBtn">Cancel</button>
+        </div>
+
+        <p id="editProfileMessage" class="edit-message"></p>
+      </form>
     </div>
-
-    <form id="editProfileForm" class="modal-form">
-      <div class="form-group">
-        <label for="editDisplayName">Display Name</label>
-        <input type="text" id="editDisplayName" name="display_name" maxlength="50" required />
-      </div>
-
-      <div class="form-group">
-        <label for="editBio">Bio</label>
-        <textarea id="editBio" name="bio" rows="3" maxlength="300"></textarea>
-      </div>
-
-      <div class="form-group">
-        <label for="editLocation">Location</label>
-        <input type="text" id="editLocation" name="location" maxlength="50" />
-      </div>
-
-      <div class="form-group">
-        <label for="editRelationshipStatus">Relationship Status</label>
-        <select id="editRelationshipStatus" name="relationship_status">
-          <option value="Single">Single</option>
-          <option value="In a Relationship">In a Relationship</option>
-          <option value="Married">Married</option>
-          <option value="It's Complicated">It's Complicated</option>
-        </select>
-      </div>
-
-      <div class="modal-footer">
-        <button type="submit" id="saveProfileBtn" class="btn btn-primary">💾 Save Changes</button>
-        <button type="button" class="btn btn-secondary" id="cancelEditBtn">Cancel</button>
-      </div>
-
-      <p id="editProfileMessage" class="edit-message"></p>
-    </form>
   </div>
-</div>
+
   <!-- Footer -->
   <footer class="footer"></footer>
 

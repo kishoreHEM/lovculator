@@ -1,6 +1,9 @@
 // backend/routes/users.js
 import express from "express";
 import pool from "../db.js";
+import multer from "multer";
+import path from "path";
+import fs from "fs";
 
 const router = express.Router();
 
@@ -15,6 +18,32 @@ const isAuthenticated = (req, res, next) => {
   }
   res.status(401).json({ error: "Unauthorized: Please log in." });
 };
+
+/* ======================================================
+   🧠 AVATAR UPLOAD CONFIGURATION (New)
+====================================================== */
+const avatarDir = path.join(process.cwd(), "uploads", "avatars");
+if (!fs.existsSync(avatarDir)) fs.mkdirSync(avatarDir, { recursive: true });
+
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => cb(null, avatarDir),
+  filename: (req, file, cb) => {
+    const ext = path.extname(file.originalname);
+    cb(null, `avatar-${Date.now()}${ext}`);
+  },
+});
+
+const upload = multer({
+  storage,
+  limits: { fileSize: 2 * 1024 * 1024 }, // 2MB
+  fileFilter: (req, file, cb) => {
+    const allowed = ["image/jpeg", "image/png", "image/webp"];
+    if (!allowed.includes(file.mimetype)) {
+      return cb(new Error("Only JPG, PNG, or WebP allowed"));
+    }
+    cb(null, true);
+  },
+});
 
 /* ======================================================
    1️⃣ FETCH ALL USERS (Public Info Only)
@@ -36,7 +65,6 @@ router.get("/", async (req, res) => {
 
 /* ======================================================
    2️⃣ FETCH SINGLE USER PROFILE (with counts)
-   ✅ FIX: Use /profile/:username to prevent conflicts
 ====================================================== */
 router.get("/profile/:username", async (req, res) => {
   try {
@@ -57,8 +85,6 @@ router.get("/profile/:username", async (req, res) => {
     if (rows.length === 0) return res.status(404).json({ error: "User not found" });
 
     const user = rows[0];
-
-    // Check if logged-in user is following this user
     const currentUserId = req.session?.user?.id || req.session?.userId;
     if (currentUserId && currentUserId !== user.id) {
       const followCheck = await pool.query(
@@ -106,7 +132,37 @@ router.put("/:id", isAuthenticated, async (req, res) => {
 });
 
 /* ======================================================
-   4️⃣ FOLLOW / UNFOLLOW TOGGLE (Enhanced with Live Counts)
+   4️⃣ UPLOAD PROFILE AVATAR (NEW FEATURE)
+====================================================== */
+// backend/routes/users.js
+router.post("/:id/avatar", upload.single("avatar"), async (req, res) => {
+  try {
+    const userId = parseInt(req.params.id);
+    const avatarPath = `/uploads/avatars/${req.file.filename}`;
+    const fullUrl = `${req.protocol}://${req.get("host")}${avatarPath}`;
+
+    // Update in DB
+    const result = await pool.query(
+      `UPDATE users SET avatar_url = $1 WHERE id = $2
+       RETURNING id, username, display_name, bio, location, relationship_status,
+                 follower_count, following_count, avatar_url, created_at`,
+      [fullUrl, userId]
+    );
+
+    res.json({
+      success: true,
+      message: "Avatar updated successfully.",
+      user: result.rows[0],
+    });
+  } catch (err) {
+    console.error("❌ Avatar upload error:", err);
+    res.status(500).json({ error: "Failed to upload avatar." });
+  }
+});
+
+
+/* ======================================================
+   5️⃣ FOLLOW / UNFOLLOW TOGGLE (Enhanced)
 ====================================================== */
 router.post("/:targetId/follow", isAuthenticated, async (req, res) => {
   const followerId = req.user.id;
@@ -120,23 +176,19 @@ router.post("/:targetId/follow", isAuthenticated, async (req, res) => {
   try {
     await client.query("BEGIN");
 
-    // Check if already following
     const check = await client.query(
       "SELECT 1 FROM follows WHERE follower_id = $1 AND target_id = $2",
       [followerId, targetId]
     );
 
     let isFollowing;
-
     if (check.rowCount > 0) {
-      // 🩶 Unfollow
       await client.query(
         "DELETE FROM follows WHERE follower_id = $1 AND target_id = $2",
         [followerId, targetId]
       );
       isFollowing = false;
     } else {
-      // ❤️ Follow
       await client.query(
         "INSERT INTO follows (follower_id, target_id, created_at) VALUES ($1, $2, NOW())",
         [followerId, targetId]
@@ -144,7 +196,6 @@ router.post("/:targetId/follow", isAuthenticated, async (req, res) => {
       isFollowing = true;
     }
 
-    // 🔄 Update both users' counts
     await client.query(`
       UPDATE users
       SET follower_count = (SELECT COUNT(*) FROM follows WHERE target_id = users.id),
@@ -152,7 +203,6 @@ router.post("/:targetId/follow", isAuthenticated, async (req, res) => {
       WHERE id IN ($1, $2);
     `, [followerId, targetId]);
 
-    // ✅ Get latest counts
     const { rows: targetUser } = await client.query(
       "SELECT follower_count FROM users WHERE id = $1",
       [targetId]
@@ -171,7 +221,6 @@ router.post("/:targetId/follow", isAuthenticated, async (req, res) => {
       target_follower_count: targetUser[0]?.follower_count || 0,
       follower_following_count: followerUser[0]?.following_count || 0,
     });
-
   } catch (err) {
     await client.query("ROLLBACK");
     console.error("❌ Follow/Unfollow transaction error:", err);
@@ -181,9 +230,8 @@ router.post("/:targetId/follow", isAuthenticated, async (req, res) => {
   }
 });
 
-
 /* ======================================================
-   5️⃣ FETCH FOLLOWERS LIST
+   6️⃣ FETCH FOLLOWERS LIST
 ====================================================== */
 router.get("/:userId/followers", async (req, res) => {
   try {
@@ -204,7 +252,7 @@ router.get("/:userId/followers", async (req, res) => {
 });
 
 /* ======================================================
-   6️⃣ FETCH FOLLOWING LIST
+   7️⃣ FETCH FOLLOWING LIST
 ====================================================== */
 router.get("/:userId/following", async (req, res) => {
   try {
@@ -225,7 +273,7 @@ router.get("/:userId/following", async (req, res) => {
 });
 
 /* ======================================================
-   7️⃣ CHECK FOLLOW STATUS
+   8️⃣ CHECK FOLLOW STATUS
 ====================================================== */
 router.get("/:targetId/is-following", async (req, res) => {
   const followerId = req.session?.userId;
@@ -246,7 +294,7 @@ router.get("/:targetId/is-following", async (req, res) => {
 });
 
 /* ======================================================
-   8️⃣ USER ACTIVITY FEED (Followers + Likes)
+   9️⃣ USER ACTIVITY FEED
 ====================================================== */
 router.get("/:id/activity", async (req, res) => {
   const targetId = parseInt(req.params.id);
@@ -262,7 +310,7 @@ router.get("/:id/activity", async (req, res) => {
 
     const followerActivity = followersResult.rows.map(r => ({
       type: "new_follower",
-      follower_username: r.actor_username, // ✅ FIXED: Changed from actor_username
+      follower_username: r.actor_username,
       message: `@${r.actor_username} started following you.`,
       date: r.date
     }));
@@ -279,7 +327,7 @@ router.get("/:id/activity", async (req, res) => {
     const likeActivity = likesResult.rows.map(r => ({
       type: "story_like",
       actor_username: r.actor_username,
-      story_id: r.related_story_id, // ✅ FIXED: Changed from related_story_id
+      story_id: r.related_story_id,
       message: `@${r.actor_username} liked your story "${r.story_title}" 💖`,
       date: r.date
     }));
@@ -296,13 +344,11 @@ router.get("/:id/activity", async (req, res) => {
 });
 
 /* ======================================================
-   9️⃣ FETCH STORIES BY USER (Accepts ID or Username)
+   🔟 FETCH STORIES BY USER (Accepts ID or Username)
 ====================================================== */
 router.get("/:identifier/stories", async (req, res) => {
   try {
     const { identifier } = req.params;
-
-    // Detect whether it's a number or a username
     const userRes = await pool.query(
       isNaN(identifier)
         ? `SELECT id FROM users WHERE LOWER(username) = LOWER($1)`
@@ -345,7 +391,5 @@ router.get("/:identifier/stories", async (req, res) => {
     res.status(500).json({ error: "Failed to load user's stories" });
   }
 });
-
-
 
 export default router;
