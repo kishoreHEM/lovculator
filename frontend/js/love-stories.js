@@ -1349,38 +1349,38 @@ document.addEventListener("DOMContentLoaded", () => {
   cancelPostCreate?.addEventListener("click", () => hideModal(askModal));
 
   // ✅ Submit Question
-  submitQuestion?.addEventListener("click", async () => {
-    const questionInput = document.getElementById("questionText");
-    const question = questionInput?.value.trim();
-    if (!question) return alert("Please enter your question.");
+submitQuestion?.addEventListener("click", async () => {
+  const questionInput = document.getElementById("questionText");
+  const question = questionInput?.value.trim();
+  if (!question) return alert("Please enter your question.");
 
-    try {
-      const res = await fetch("/api/questions", {
-  method: "POST",
-  headers: { "Content-Type": "application/json" },
-  credentials: "include", // ✅ crucial for sending cookies/session
-  body: JSON.stringify({ question })
+  try {
+    const res = await fetch("/api/questions", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      credentials: "include", // ✅ sends session cookie
+      body: JSON.stringify({ question })
+    });
+
+    if (res.ok) {
+      alert("✅ Question posted successfully!");
+      questionInput.value = "";
+      localStorage.removeItem("draft_question");
+      hideModal(askModal);
+    } else if (res.status === 401) {
+      alert("⚠️ Please log in to post a question.");
+      window.location.href = "/login.html";
+    } else {
+      const data = await res.json().catch(() => ({}));
+      alert("❌ Failed to post question: " + (data.error || "Unknown error"));
+    }
+
+  } catch (err) {
+    console.error("Error posting question:", err);
+    alert("⚠️ Something went wrong. Try again later.");
+  }
 });
 
-
-      if (res.ok) {
-  alert("✅ Question posted successfully!");
-  askInput.value = "";
-  localStorage.removeItem("draft_question");
-  askModal.style.display = "none";
-} else if (res.status === 401) {
-  alert("⚠️ Please log in to post a question.");
-  window.location.href = "/login.html";
-} else {
-  const data = await res.json().catch(() => ({}));
-  alert("❌ Failed to post question: " + (data.error || "Unknown error"));
-}
-
-    } catch (err) {
-      console.error("Error posting question:", err);
-      alert("⚠️ Something went wrong. Try again later.");
-    }
-  });
 
   // 🩷 Create Post (opens Love Story modal)
   submitPost?.addEventListener("click", () => {
