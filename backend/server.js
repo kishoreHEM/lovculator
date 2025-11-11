@@ -18,7 +18,6 @@ import helmet from "helmet";
 import analyticsRoutesFactory from "./routes/analytics.js";
 import { trackPageVisit } from "./middleware/trackVisit.js";
 import questionsRouter from "./routes/questions.js";
-import answersRouter from "./routes/answers.js";
 import authRoutes from "./routes/auth.js";
 import userRoutes from "./routes/users.js";
 import storiesRoutes from "./routes/stories.js";
@@ -99,13 +98,12 @@ app.use(
     resave: false,
     saveUninitialized: false,
     cookie: {
-    secure: process.env.NODE_ENV === "production", // true only on HTTPS
-    httpOnly: true,
-    sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
-    domain: process.env.NODE_ENV === "production" ? ".lovculator.com" : undefined,
-    maxAge: 1000 * 60 * 60 * 24 * 7,
+      secure: process.env.NODE_ENV === "production", // true only on HTTPS
+      httpOnly: true,
+      sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+      domain: process.env.NODE_ENV === "production" ? ".lovculator.com" : undefined,
+      maxAge: 1000 * 60 * 60 * 24 * 7,
     },
-
   })
 );
 
@@ -131,15 +129,12 @@ const BLOCKED_IPS = new Set([
 ]);
 
 const MALICIOUS_USER_AGENTS = ["Go-http-client", "l9scan"];
-
-const SENSITIVE_PATHS = [
-  ".env", ".json", "/config/", "/.git", "/swagger", "/graphql", ".php"
-];
+const SENSITIVE_PATHS = [".env", ".json", "/config/", "/.git", "/swagger", "/graphql", ".php"];
 
 app.use((req, res, next) => {
   const clientIP = req.headers["x-forwarded-for"]?.split(",")[0]?.trim() || req.socket.remoteAddress;
   const userAgent = req.headers["user-agent"] || "";
-  const path = req.path.toLowerCase();
+  const reqPath = req.path.toLowerCase();
 
   if (BLOCKED_IPS.has(clientIP)) {
     console.log(`🚨 BLOCKED IP: ${clientIP}`);
@@ -151,7 +146,7 @@ app.use((req, res, next) => {
     return res.status(404).send("Not found");
   }
 
-  if (SENSITIVE_PATHS.some((s) => path.includes(s))) {
+  if (SENSITIVE_PATHS.some((s) => reqPath.includes(s))) {
     console.log(`🚨 BLOCKED PATH: ${req.path}`);
     return res.status(404).send("Not found");
   }
@@ -160,7 +155,7 @@ app.use((req, res, next) => {
 });
 
 // =====================================================
-// 🔁 HTTPS Redirect
+// 🔁 HTTPS Redirect (Production)
 // =====================================================
 app.use((req, res, next) => {
   if (process.env.NODE_ENV === "production" && req.headers["x-forwarded-proto"] !== "https") {
@@ -170,7 +165,7 @@ app.use((req, res, next) => {
 });
 
 // =====================================================
-// 🧩 Routes
+// 🧩 API Routes
 // =====================================================
 app.use(express.static(frontendPath));
 
@@ -180,8 +175,8 @@ app.use("/api/stories", storiesRoutes);
 app.use("/api/analytics", analyticsRoutesFactory(pool));
 app.use(trackPageVisit);
 app.use("/api/questions", questionsRouter(pool));
-app.use("/api/answers", answersRouter(pool));
 
+// Handle missing API routes gracefully
 app.use("/api/*", (req, res) => res.status(404).json({ error: "API route not found" }));
 
 // =====================================================
@@ -210,7 +205,7 @@ app.use(async (req, res, next) => {
 });
 
 // =====================================================
-// 🌐 Frontend Routes
+// 🌐 Frontend Page Routes
 // =====================================================
 const validPages = [
   "index",
@@ -231,6 +226,11 @@ validPages.forEach((page) => {
   app.get(routePath, (req, res) => {
     res.sendFile(path.join(frontendPath, `${page}.html`));
   });
+});
+
+// 🧠 Serve SEO-friendly question page (like Quora)
+app.get("/questions/:slug", (req, res) => {
+  res.sendFile(path.join(frontendPath, "question.html"));
 });
 
 // =====================================================

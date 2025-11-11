@@ -39,172 +39,139 @@
     <div class="mobile-menu-overlay"></div>
   </nav>
 </header>
-
-
   <style>
     body {
-      background: #fff;
       font-family: "Poppins", sans-serif;
-      max-width: 850px;
+      background: #fff;
+      max-width: 800px;
       margin: 0 auto;
       padding: 20px;
       color: #333;
     }
 
-    h2.page-title {
-      text-align: center;
+    h2 {
       color: #ff4b8d;
-      font-size: 1.8rem;
-      margin-bottom: 25px;
+      text-align: center;
       font-weight: 700;
+      margin-bottom: 20px;
     }
 
-    /* Question Cards */
-    .question-card {
+    .question-container {
       background: #fafafa;
       border: 1px solid #eee;
-      border-radius: 14px;
+      border-radius: 12px;
       padding: 20px;
       margin-bottom: 25px;
-      box-shadow: 0 1px 5px rgba(0,0,0,0.04);
-      transition: transform 0.1s ease;
+      box-shadow: 0 1px 5px rgba(0,0,0,0.05);
     }
 
-    .question-card:hover {
-      transform: translateY(-2px);
-    }
-
-    .question-title {
-      font-size: 1.1rem;
+    .question-text {
+      font-size: 1.3rem;
       font-weight: 600;
-      margin-bottom: 6px;
-      color: #222;
-    }
-
-    .question-meta {
-      font-size: 0.8rem;
-      color: #777;
+      color: #111;
       margin-bottom: 10px;
     }
 
-    /* Answers */
-    .answers-list {
-      background: #fff;
-      border: 1px solid #eee;
-      border-radius: 10px;
-      padding: 12px;
-      margin-top: 10px;
+    .question-meta {
+      font-size: 0.85rem;
+      color: #999;
+      margin-bottom: 5px;
+    }
+
+    .answers-section {
+      margin-top: 25px;
     }
 
     .answer-card {
       background: #f8f9fa;
       border: 1px solid #eee;
       border-radius: 10px;
-      padding: 10px 15px;
-      margin-bottom: 10px;
-      font-size: 0.95rem;
-      line-height: 1.4;
+      padding: 15px;
+      margin-bottom: 15px;
     }
 
-    .answer-time {
-      display: block;
-      text-align: right;
+    .answer-text {
+      font-size: 1rem;
+      color: #333;
+      line-height: 1.5;
+    }
+
+    .answer-meta {
+      font-size: 0.8rem;
       color: #888;
-      font-size: 0.75rem;
+      margin-top: 8px;
+      text-align: right;
     }
 
-    /* Answer Form */
     .answer-form {
-      margin-top: 12px;
-      border-top: 1px solid #eee;
-      padding-top: 10px;
+      background: #fff;
+      border: 1px solid #eee;
+      border-radius: 12px;
+      padding: 15px;
+      margin-top: 20px;
+      box-shadow: 0 1px 5px rgba(0,0,0,0.05);
     }
 
-    .answer-input {
+    .answer-form textarea {
       width: 100%;
-      min-height: 80px;
+      min-height: 100px;
       border: 1px solid #ddd;
-      border-radius: 8px;
+      border-radius: 10px;
       padding: 10px;
       font-family: inherit;
-      font-size: 0.95rem;
+      font-size: 1rem;
       resize: vertical;
       margin-bottom: 10px;
-      outline: none;
-      transition: border 0.2s;
     }
 
-    .answer-input:focus {
+    .answer-form textarea:focus {
       border-color: #ff4b8d;
+      outline: none;
     }
 
-    .answer-submit-btn {
+    .submit-btn {
       background: #ff4b8d;
       color: #fff;
       border: none;
-      padding: 8px 16px;
+      padding: 10px 18px;
       border-radius: 20px;
       font-weight: 600;
       cursor: pointer;
-      font-size: 0.9rem;
       transition: background 0.2s ease;
     }
 
-    .answer-submit-btn:hover {
+    .submit-btn:hover {
       background: #ff6b9d;
     }
 
     .answered-msg {
+      background: #f1f1f1;
+      color: #666;
       text-align: center;
-      background: #eafaf1;
-      border: 1px solid #d5f0dc;
-      color: #2f9e44;
-      border-radius: 10px;
+      border-radius: 8px;
       padding: 10px;
-      font-size: 0.9rem;
-      margin-top: 8px;
-    }
-
-    .no-answers {
-      text-align: center;
-      color: #999;
-      font-size: 0.9rem;
-      padding: 10px;
-    }
-
-    .loading-stories {
-      text-align: center;
-      color: #777;
-      font-size: 1rem;
-    }
-
-    .loading-spinner {
-      width: 28px;
-      height: 28px;
-      border: 3px solid #eee;
-      border-top: 3px solid #ff4b8d;
-      border-radius: 50%;
-      animation: spin 0.8s linear infinite;
-      margin: 0 auto 10px;
-    }
-
-    @keyframes spin {
-      from { transform: rotate(0deg); }
-      to { transform: rotate(360deg); }
+      margin-top: 15px;
+      font-size: 0.95rem;
     }
   </style>
 </head>
 <body>
-  <h2 class="page-title">💬 Community Questions</h2>
+  <h2>💬 Question Details</h2>
 
-  <!-- Container where JS dynamically injects Q&A feed -->
-  <div id="storiesContainer">
-    <div class="loading-stories">
-      <div class="loading-spinner"></div>
-      <p>Loading questions...</p>
+  <div id="questionContainer" class="question-container">
+    <p>Loading question...</p>
+  </div>
+
+  <div class="answers-section">
+    <h3>Answers</h3>
+    <div id="answersContainer">
+      <p>Loading answers...</p>
     </div>
   </div>
 
-  <script src="/js/answers.js"></script>
+  <div id="answerFormContainer"></div>
+
+  <script src="/js/question.js"></script>
+
 </body>
 </html>
