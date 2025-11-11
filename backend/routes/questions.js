@@ -7,7 +7,8 @@ export default (pool) => {
 router.post("/", async (req, res) => {
   try {
     const { question } = req.body;
-    const userId = req.session?.userId;
+    const userId = req.session?.user?.id;
+
 
     if (!userId) {
       return res.status(401).json({ error: "Please login to post a question." });
