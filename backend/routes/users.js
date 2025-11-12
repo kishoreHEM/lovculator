@@ -137,37 +137,29 @@ router.put("/:id", isAuthenticated, async (req, res) => {
 router.post("/:id/avatar", upload.single("avatar"), async (req, res) => {
   try {
     const userId = parseInt(req.params.id);
+    const avatarPath = `/uploads/avatars/${req.file.filename}`;
 
-    // ✅ Always store relative path for CSP compatibility
-    const relativePath = `/uploads/avatars/${req.file.filename}`;
-
-    // ✅ Full URL for client display (not stored in DB)
-    const fullUrl = `${req.protocol}://${req.get("host")}${relativePath}`;
-
-    // ✅ Save only relative path in DB
+    // 🟢 Save ONLY relative path in DB (not full localhost URL)
     const result = await pool.query(
-      `UPDATE users 
-       SET avatar_url = $1 
-       WHERE id = $2
+      `UPDATE users SET avatar_url = $1 WHERE id = $2
        RETURNING id, username, display_name, bio, location, relationship_status,
                  follower_count, following_count, avatar_url, created_at`,
-      [relativePath, userId]
+      [avatarPath, userId]
     );
 
-    // ✅ Return both safe URL (DB) & full URL (client preview)
+    // 🟢 Respond with both relative and absolute URL for frontend use
     res.json({
       success: true,
       message: "Avatar updated successfully.",
-      avatar_url: fullUrl,
+      avatar_url: `${req.protocol}://${req.get("host")}${avatarPath}`,
       user: result.rows[0],
     });
+
   } catch (err) {
     console.error("❌ Avatar upload error:", err);
     res.status(500).json({ error: "Failed to upload avatar." });
   }
 });
-
-
 
 /* ======================================================
    5️⃣ FOLLOW / UNFOLLOW TOGGLE (Enhanced)
