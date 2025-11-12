@@ -1,6 +1,11 @@
 /**
- * 🚀 Lovculator - Optimized & Fixed Server.js (Production + Local Friendly)
+ * 🚀 Lovculator - Final Optimized Server.js
  * Author: Kishore M
+ * Features:
+ *  - Secure CSP (Helmet) allowing uploads + images
+ *  - Session, Analytics, Questions, Stories, Auth, Users
+ *  - Compression, CORS, HTTPS redirect (prod)
+ *  - Works both locally and on lovculator.com
  */
 
 import express from "express";
@@ -51,7 +56,7 @@ let frontendPath = possibleFrontendPaths.find((p) => {
 });
 
 if (!frontendPath) {
-  console.warn("⚠️ No frontend folder found in expected paths. Using fallback /frontend");
+  console.warn("⚠️ No frontend folder found. Using fallback /frontend");
   frontendPath = "/frontend";
 } else {
   console.log(`🌍 Frontend served from: ${frontendPath}`);
@@ -67,28 +72,33 @@ const pool = new Pool({
 
 pool
   .connect()
-  .then(() => console.log("✅ Connected to PostgreSQL database"))
+  .then(() => console.log("✅ Connected to PostgreSQL"))
   .catch((err) => console.error("❌ Database connection failed:", err.message));
 
 // =====================================================
-// 🧠 Core Middleware Order (CORS + Session + Helmet)
+// 🧠 Core Middleware (Order Matters)
 // =====================================================
 app.set("trust proxy", 1);
 
-app.use(cors({
-  origin: [
-    "https://lovculator.com",
-    "https://www.lovculator.com",
-    "http://localhost:3000",
-  ],
-  credentials: true,
-  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-  allowedHeaders: ["Content-Type", "Authorization"],
-}));
+app.use(
+  cors({
+    origin: [
+      "https://lovculator.com",
+      "https://www.lovculator.com",
+      "http://localhost:3000",
+    ],
+    credentials: true,
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization"],
+  })
+);
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+// =====================================================
+// 🍪 Sessions
+// =====================================================
 const PgStore = new PgSession({ pool, tableName: "session_store" });
 
 app.use(
@@ -98,36 +108,64 @@ app.use(
     resave: false,
     saveUninitialized: false,
     cookie: {
-      secure: process.env.NODE_ENV === "production", // true only on HTTPS
+      secure: process.env.NODE_ENV === "production",
       httpOnly: true,
       sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
       domain: process.env.NODE_ENV === "production" ? ".lovculator.com" : undefined,
-      maxAge: 1000 * 60 * 60 * 24 * 7,
+      maxAge: 1000 * 60 * 60 * 24 * 7, // 7 days
     },
   })
 );
 
-console.log("✅ Session configured with CORS and SameSite=None");
+console.log("✅ Session configured successfully");
 
-// Helmet AFTER session to avoid blocking cookies
-app.use(helmet({
-  crossOriginResourcePolicy: false,
-  crossOriginOpenerPolicy: false,
-  crossOriginEmbedderPolicy: false,
-}));
+// =====================================================
+// 🛡️ Helmet (Unified Configuration)
+// =====================================================
+app.use(
+  helmet({
+    crossOriginResourcePolicy: false,
+    crossOriginOpenerPolicy: false,
+    crossOriginEmbedderPolicy: false,
+    contentSecurityPolicy: {
+      directives: {
+        defaultSrc: ["'self'"],
+        scriptSrc: ["'self'", "'unsafe-inline'"],
+        styleSrc: ["'self'", "'unsafe-inline'"],
+        imgSrc: [
+          "'self'",
+          "data:",
+          "blob:",
+          "https://lovculator.com",
+          "https://www.lovculator.com",
+          "http://localhost:3001",
+        ],
+        connectSrc: [
+          "'self'",
+          "https://lovculator.com",
+          "https://www.lovculator.com",
+          "http://localhost:3001",
+        ],
+        mediaSrc: [
+          "'self'",
+          "data:",
+          "https://lovculator.com",
+          "https://www.lovculator.com",
+        ],
+        frameSrc: ["'self'"],
+        fontSrc: ["'self'", "data:"],
+      },
+    },
+  })
+);
+
 app.use(compression());
 app.disable("x-powered-by");
 
 // =====================================================
-// 🛡️ Security Filters
+// 🚫 IP & UA Filtering
 // =====================================================
-const BLOCKED_IPS = new Set([
-  "62.60.131.162",
-  "159.89.127.165",
-  "162.241.224.32",
-  "122.45.51.68",
-]);
-
+const BLOCKED_IPS = new Set(["62.60.131.162", "159.89.127.165", "162.241.224.32", "122.45.51.68"]);
 const MALICIOUS_USER_AGENTS = ["Go-http-client", "l9scan"];
 const SENSITIVE_PATHS = [".env", ".json", "/config/", "/.git", "/swagger", "/graphql", ".php"];
 
@@ -169,7 +207,7 @@ app.use((req, res, next) => {
 // =====================================================
 app.use(express.static(frontendPath));
 
-// ✅ Serve uploaded files (user avatars, images, etc.)
+// ✅ Serve user-uploaded avatars & media
 app.use("/uploads", express.static(path.join(process.cwd(), "uploads")));
 
 app.use("/api/auth", authRoutes);
@@ -182,21 +220,8 @@ app.use("/api/questions", questionsRouter(pool));
 // Handle missing API routes gracefully
 app.use("/api/*", (req, res) => res.status(404).json({ error: "API route not found" }));
 
-app.use(
-  helmet({
-    contentSecurityPolicy: {
-      directives: {
-        defaultSrc: ["'self'"],
-        imgSrc: ["'self'", "data:", "https://lovculator.com", "http://localhost:3001"],
-        mediaSrc: ["'self'", "data:", "https://lovculator.com"],
-        connectSrc: ["'self'", "https://lovculator.com", "http://localhost:3001"],
-      },
-    },
-  })
-);
-
 // =====================================================
-// 📊 Analytics Logging
+// 📊 Analytics Logging (Non-blocking)
 // =====================================================
 app.use(async (req, res, next) => {
   if (req.path.startsWith("/api") || req.path.match(/\.(js|css|png|jpg|svg|json|ico)$/i)) {
@@ -244,7 +269,7 @@ validPages.forEach((page) => {
   });
 });
 
-// 🧠 Serve SEO-friendly question page (like Quora)
+// 🧠 Serve SEO-friendly question pages
 app.get("/questions/:slug", (req, res) => {
   res.sendFile(path.join(frontendPath, "question.html"));
 });
