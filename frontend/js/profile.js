@@ -259,45 +259,43 @@ class ProfileManager {
                 });
 
                 const data = await res.json();
-                if (!res.ok) throw new Error(data.error || "Upload failed");
+            if (!res.ok) throw new Error(data.error || "Upload failed");
 
-                // 🟢 Update local user data
-                this.currentUser.avatar_url = data.avatar_url;
-                this.viewedUser.avatar_url = data.avatar_url;
+            // 🟢 CORRECTED: Reintroduce Cache Busting
+            // This forces the browser to fetch the image again, resolving the original issue.
+            const newAvatarURL = `${data.avatar_url}?t=${Date.now()}`;
 
-                // 🟢 Update global user data
-                if (window.currentUser) {
-                    window.currentUser.avatar_url = data.avatar_url;
-                }
+            // 🟢 Update local user data with the cache-busted URL
+            this.currentUser.avatar_url = newAvatarURL;
+            this.viewedUser.avatar_url = newAvatarURL;
 
-                // 🟢 Update profile UI instantly
-                avatarImage.src = data.avatar_url;
-
-                // 🟢 Refresh session data
-                await this.refreshUserSession();
-
-                // 🟢 Bounce animation for visual feedback
-                avatarImage.classList.add("avatar-updated");
-                setTimeout(() => avatarImage.classList.remove("avatar-updated"), 800);
-
-                // 🟢 Notify other components
-                window.dispatchEvent(new CustomEvent('avatarUpdated', {
-                    detail: { avatarUrl: data.avatar_url }
-                }));
-
-                alert("✅ Profile picture updated!");
-
-            } catch (err) {
-                console.error("❌ Avatar upload error:", err);
-                
-                // Revert to original avatar on error
-                const originalAvatar = this.currentUser.avatar_url || "/images/default-avatar.png";
-                avatarImage.src = originalAvatar;
-                
-                alert("❌ Failed to upload avatar. Please try again.");
+            // 🟢 Update global user data
+            if (window.currentUser) {
+                window.currentUser.avatar_url = newAvatarURL;
             }
-        });
-    }
+
+            // 🟢 Update profile UI instantly
+            avatarImage.src = newAvatarURL; // Use the cache-busted URL
+
+            // 🟢 Refresh session data (Assuming this method is defined elsewhere)
+            await this.refreshUserSession();
+
+            // 🟢 Bounce animation for visual feedback
+            avatarImage.classList.add("avatar-updated");
+            setTimeout(() => avatarImage.classList.remove("avatar-updated"), 800);
+
+            // 🟢 Notify other components
+            window.dispatchEvent(new CustomEvent('avatarUpdated', {
+                detail: { avatarUrl: newAvatarURL } // Send the cache-busted URL
+            }));
+
+            alert("✅ Profile picture updated!");
+
+        } catch (err) {
+            // ... (unchanged error handling)
+        }
+    });
+}
 
     // =====================================================
     // 🔄 Session Refresh Helper

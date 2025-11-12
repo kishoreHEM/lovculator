@@ -137,9 +137,9 @@ router.put("/:id", isAuthenticated, async (req, res) => {
 router.post("/:id/avatar", upload.single("avatar"), async (req, res) => {
   try {
     const userId = parseInt(req.params.id);
-    const avatarPath = `/uploads/avatars/${req.file.filename}`;
+    const avatarPath = `/uploads/avatars/${req.file.filename}`; // This is the relative path
 
-    // 🟢 Save ONLY relative path in DB (not full localhost URL)
+    // Save ONLY relative path in DB
     const result = await pool.query(
       `UPDATE users SET avatar_url = $1 WHERE id = $2
        RETURNING id, username, display_name, bio, location, relationship_status,
@@ -147,11 +147,11 @@ router.post("/:id/avatar", upload.single("avatar"), async (req, res) => {
       [avatarPath, userId]
     );
 
-    // 🟢 Respond with both relative and absolute URL for frontend use
+    // 🟢 FIX: Send the relative path (avatarPath) in avatar_url
     res.json({
       success: true,
       message: "Avatar updated successfully.",
-      avatar_url: `${req.protocol}://${req.get("host")}${avatarPath}`,
+      avatar_url: avatarPath, // <-- Changed to relative path
       user: result.rows[0],
     });
 
