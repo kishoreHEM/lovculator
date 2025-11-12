@@ -132,26 +132,33 @@ router.put("/:id", isAuthenticated, async (req, res) => {
 });
 
 /* ======================================================
-   4️⃣ UPLOAD PROFILE AVATAR (NEW FEATURE)
+   4️⃣ UPLOAD PROFILE AVATAR (CSP + CDN Safe)
 ====================================================== */
-// backend/routes/users.js
 router.post("/:id/avatar", upload.single("avatar"), async (req, res) => {
   try {
     const userId = parseInt(req.params.id);
-    const avatarPath = `/uploads/avatars/${req.file.filename}`;
-    const fullUrl = `${req.protocol}://${req.get("host")}${avatarPath}`;
 
-    // Update in DB
+    // ✅ Always store relative path for CSP compatibility
+    const relativePath = `/uploads/avatars/${req.file.filename}`;
+
+    // ✅ Full URL for client display (not stored in DB)
+    const fullUrl = `${req.protocol}://${req.get("host")}${relativePath}`;
+
+    // ✅ Save only relative path in DB
     const result = await pool.query(
-      `UPDATE users SET avatar_url = $1 WHERE id = $2
+      `UPDATE users 
+       SET avatar_url = $1 
+       WHERE id = $2
        RETURNING id, username, display_name, bio, location, relationship_status,
                  follower_count, following_count, avatar_url, created_at`,
-      [fullUrl, userId]
+      [relativePath, userId]
     );
 
+    // ✅ Return both safe URL (DB) & full URL (client preview)
     res.json({
       success: true,
       message: "Avatar updated successfully.",
+      avatar_url: fullUrl,
       user: result.rows[0],
     });
   } catch (err) {
@@ -159,6 +166,7 @@ router.post("/:id/avatar", upload.single("avatar"), async (req, res) => {
     res.status(500).json({ error: "Failed to upload avatar." });
   }
 });
+
 
 
 /* ======================================================
