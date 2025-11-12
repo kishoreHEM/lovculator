@@ -147,7 +147,8 @@ class ProfileManager {
         const avatarSection = isOwnProfile
             ? `
                 <div class="avatar-upload-section">
-                    <img id="avatarImage" src="${avatarUrl}" alt="${displayName}" class="profile-avatar-img" />
+                    <img id="avatarImage" src="${avatarUrl.startsWith('http') ? avatarUrl : this.BASE_URL + avatarUrl}" alt="${displayName}" class="profile-avatar-img" />
+
                     <label class="avatar-upload-label">
                         📸 Change Photo
                         <input type="file" id="avatarInput" accept="image/*" hidden />
@@ -156,7 +157,8 @@ class ProfileManager {
             `
             : `
                 <div class="avatar-view-section">
-                    <img id="avatarImage" src="${avatarUrl}" alt="${displayName}" class="profile-avatar-img" />
+                    <img id="avatarImage" src="${avatarUrl.startsWith('http') ? avatarUrl : this.BASE_URL + avatarUrl}" alt="${displayName}" class="profile-avatar-img" />
+
                 </div>
             `;
 
