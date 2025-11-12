@@ -182,6 +182,19 @@ app.use("/api/questions", questionsRouter(pool));
 // Handle missing API routes gracefully
 app.use("/api/*", (req, res) => res.status(404).json({ error: "API route not found" }));
 
+app.use(
+  helmet({
+    contentSecurityPolicy: {
+      directives: {
+        defaultSrc: ["'self'"],
+        imgSrc: ["'self'", "data:", "https://lovculator.com", "http://localhost:3001"],
+        mediaSrc: ["'self'", "data:", "https://lovculator.com"],
+        connectSrc: ["'self'", "https://lovculator.com", "http://localhost:3001"],
+      },
+    },
+  })
+);
+
 // =====================================================
 // 📊 Analytics Logging
 // =====================================================
