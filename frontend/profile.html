@@ -8,12 +8,60 @@
   <meta name="theme-color" content="#ff4b8d" />
 
   <!-- Favicons -->
-  <link rel="apple-touch-icon" href="/images/apple-touch-icon.png">
-  <link rel="shortcut icon" href="/images/favicon-32x32.png" type="image/png">
-  <link rel="icon" href="/images/favicon.ico" sizes="any">
+  <link rel="apple-touch-icon" href="/images/apple-touch-icon.png" />
+  <link rel="shortcut icon" href="/images/favicon-32x32.png" type="image/png" />
+  <link rel="icon" href="/images/favicon.ico" sizes="any" />
 
   <!-- Styles -->
   <link rel="stylesheet" href="/css/style.css" />
+
+  <style>
+    /* 💎 Smooth shimmer skeleton loader */
+    .profile-skeleton {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 50px 0;
+    }
+    .avatar-skeleton {
+      width: 120px;
+      height: 120px;
+      border-radius: 50%;
+      background: #eee;
+      margin-bottom: 15px;
+    }
+    .line-skeleton {
+      height: 14px;
+      background: #eee;
+      border-radius: 6px;
+      margin: 8px 0;
+    }
+    .shimmer {
+      background: linear-gradient(
+        to right,
+        #eeeeee 8%,
+        #f5f5f5 18%,
+        #eeeeee 33%
+      );
+      background-size: 1200px 100%;
+      animation: shimmer 1.3s infinite linear;
+    }
+    @keyframes shimmer {
+      0% { background-position: -1200px 0; }
+      100% { background-position: 1200px 0; }
+    }
+
+    /* ✨ Fade-in for profile card */
+    .profile-header-card {
+      opacity: 0;
+      transform: translateY(10px);
+      transition: opacity 0.3s ease, transform 0.3s ease;
+    }
+    .profile-header-card.loaded {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  </style>
 </head>
 
 <body>
@@ -42,51 +90,12 @@
   <!-- 🧠 Profile Container -->
   <div class="container">
     <main class="main-content">
-      <!-- Profile Header -->
+      <!-- Profile Header (dynamic) -->
       <section class="profile-hero" id="profileInfoContainer">
-        <div class="user-profile-card enhanced">
-          <div class="profile-cover"></div>
-
-          <div class="avatar-section">
-            <div class="avatar-upload-container">
-              <input type="file" id="avatarInput" accept="image/*" hidden />
-              <label for="avatarInput" class="avatar-upload-label">
-                <img id="avatarImage" src="/images/default-avatar.png" alt="Profile" class="profile-avatar" />
-                <div class="avatar-hover-overlay">📸 Change</div>
-              </label>
-            </div>
-
-            <div class="profile-actions">
-              <button id="editProfileBtn" class="btn btn-outline">✏️ Edit</button>
-              <button id="logoutBtn" class="btn btn-primary">🚪 Logout</button>
-            </div>
-          </div>
-
-          <div class="profile-info">
-            <h2 id="profileDisplayName">Loading...</h2>
-            <p class="username" id="profileUsername">@user</p>
-            <p class="user-bio" id="profileBio">No bio yet.</p>
-
-            <div class="profile-details">
-              <div class="detail">📍 <span id="profileLocation">Unknown</span></div>
-              <div class="detail">💞 <span id="profileRelationship">Single</span></div>
-            </div>
-          </div>
-
-          <div class="profile-stats">
-            <div class="stat">
-              <span class="number" id="followersCount">0</span>
-              <span class="label">Followers</span>
-            </div>
-            <div class="stat">
-              <span class="number" id="followingCount">0</span>
-              <span class="label">Following</span>
-            </div>
-            <div class="stat">
-              <span class="number" id="storiesCount">0</span>
-              <span class="label">Stories</span>
-            </div>
-          </div>
+        <div class="profile-skeleton">
+          <div class="avatar-skeleton shimmer"></div>
+          <div class="line-skeleton shimmer" style="width: 60%;"></div>
+          <div class="line-skeleton shimmer" style="width: 40%;"></div>
         </div>
       </section>
 
