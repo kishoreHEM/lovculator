@@ -11,6 +11,12 @@ class ProfileManager {
             (window.location.hostname.includes("localhost")
                 ? "http://localhost:3001/api"
                 : "https://lovculator.com/api");
+        
+        // 🟢 Add base URL for assets (without /api)
+        this.BASE_URL = window.location.hostname.includes("localhost")
+            ? "http://localhost:3001"
+            : "https://lovculator.com";
+        
         this.profileInfoContainer = document.getElementById("profileInfoContainer");
         this.storiesContainer = document.getElementById("userStoriesContainer");
         this.currentUser = null;
