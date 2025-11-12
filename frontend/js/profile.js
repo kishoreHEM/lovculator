@@ -112,115 +112,131 @@ class ProfileManager {
     }
 
     // =====================================================
-    // 2️⃣ Render Profile Details (Optimized)
-    // =====================================================
-    renderProfileDetails(user, isOwnProfile = true) {
-        if (!this.profileInfoContainer) return;
+// 2️⃣ Render Profile Details (Optimized) - FINAL FIX
+// =====================================================
+renderProfileDetails(user, isOwnProfile = true) {
+    if (!this.profileInfoContainer) return;
 
-        const followerCount = user.follower_count ?? 0;
-        const followingCount = user.following_count ?? 0;
-        const displayName = user.display_name || user.username || "User";
-        const joinedDate = user.created_at
-            ? new Date(user.created_at).toLocaleDateString("en-US", {
-                month: "long",
-                year: "numeric",
-            })
-            : "Recently";
+    const followerCount = user.follower_count ?? 0;
+    const followingCount = user.following_count ?? 0;
+    const displayName = user.display_name || user.username || "User";
+    const joinedDate = user.created_at
+        ? new Date(user.created_at).toLocaleDateString("en-US", {
+            month: "long",
+            year: "numeric",
+        })
+        : "Recently";
 
-        // Robust avatar URL handling
-        const getValidAvatarUrl = (avatar) => {
-            if (!avatar || avatar === 'null' || avatar === 'undefined' || avatar.trim() === '') {
-                return "/images/default-avatar.png";
-            }
-            return avatar;
-        };
+    // Robust avatar URL handling
+    const getValidAvatarUrl = (avatar) => {
+        if (!avatar || avatar === 'null' || avatar === 'undefined' || avatar.trim() === '') {
+            return "/images/default-avatar.png";
+        }
+        return avatar;
+    };
 
-        const avatarUrl = getValidAvatarUrl(user.avatar_url);
-        const bioHTML = user.bio
-            ? `<p class="bio-text">${user.bio}</p>`
-            : `<p class="bio-text empty">No bio set yet.</p>`;
-        const locationHTML = user.location
-            ? `<span class="location">📍 ${user.location}</span>`
-            : "";
+    let avatarUrl = getValidAvatarUrl(user.avatar_url); // Initialize with the stored URL
 
-        // ✅ Corrected Avatar Rendering Logic (Assumes avatarUrl is cleaned or relative)
-const avatarSection = isOwnProfile
-    ? `
-        <div class="avatar-upload-section">
-            <img id="avatarImage" src="${avatarUrl}" alt="${displayName}" class="profile-avatar-img" />
+    // 🛑 CRITICAL FIX: Strip any hardcoded host (like localhost) from the URL
+    if (avatarUrl && avatarUrl.includes('localhost')) {
+        try {
+            // Use URL object to reliably extract the path only
+            const url = new URL(avatarUrl, window.location.origin);
+            avatarUrl = url.pathname; // This sets it to the safe relative path: /uploads/avatars/...
+        } catch (e) {
+            console.error("Failed to parse and clean avatar URL:", e);
+        }
+    }
+    
+    // Optional: Add a cache-buster even on initial load for consistency
+    avatarUrl = `${avatarUrl}?t=${Date.now()}`;
 
-            <label class="avatar-upload-label">
-                📸 Change Photo
-                <input type="file" id="avatarInput" accept="image/*" hidden />
-            </label>
-        </div>
-    `
-    : `
-        <div class="avatar-view-section">
-            <img id="avatarImage" src="${avatarUrl}" alt="${displayName}" class="profile-avatar-img" />
 
-        </div>
-    `;
+    const bioHTML = user.bio
+        ? `<p class="bio-text">${user.bio}</p>`
+        : `<p class="bio-text empty">No bio set yet.</p>`;
+    const locationHTML = user.location
+        ? `<span class="location">📍 ${user.location}</span>`
+        : "";
 
-        // ✅ Profile layout with cover, avatar, details, and actions
-        this.profileInfoContainer.innerHTML = `
-            <div class="profile-header-card">
-                <div class="profile-cover"></div>
+    // ✅ CORRECTED TEMPLATE: Now using the cleaned 'avatarUrl' directly.
+    const avatarSection = isOwnProfile
+        ? `
+            <div class="avatar-upload-section">
+                <img id="avatarImage" src="${avatarUrl}" alt="${displayName}" class="profile-avatar-img" />
 
-                <div class="profile-main-info">
-                    <div class="profile-avatar-wrapper">
-                        ${avatarSection}
-                    </div>
+                <label class="avatar-upload-label">
+                    📸 Change Photo
+                    <input type="file" id="avatarInput" accept="image/*" hidden />
+                </label>
+            </div>
+        `
+        : `
+            <div class="avatar-view-section">
+                <img id="avatarImage" src="${avatarUrl}" alt="${displayName}" class="profile-avatar-img" />
 
-                    <div class="profile-details">
-                        <h3 id="profileUsername">${displayName}</h3>
-                        <div class="social-stats">
-                            <span id="profileFollowers">${followerCount} Followers</span>
-                            <span class="separator">·</span>
-                            <span id="profileFollowing">${followingCount} Following</span>
-                        </div>
-                        <p id="profileJoined" class="joined-date">Joined ${joinedDate}</p>
-                        <div class="profile-bio-summary">
-                            ${bioHTML}
-                            ${locationHTML}
-                        </div>
-                    </div>
-                </div>
-
-                <div class="profile-actions-bar">
-                    ${
-                        isOwnProfile
-                            ? `
-                                <button id="editProfileBtn" class="btn btn-secondary btn-small">✏️ Edit Profile</button>
-                                <button id="logoutBtn" class="btn btn-secondary btn-small">🚪 Logout</button>
-                            `
-                            : `
-                                <button id="followProfileBtn" class="btn btn-primary btn-small">
-                                    ${user.is_following_author ? "Following" : "+ Follow"}
-                                </button>
-                            `
-                    }
-                </div>
             </div>
         `;
 
-        // ✅ Smooth fade-in effect for UI polish
-        const headerCard = this.profileInfoContainer.querySelector(".profile-header-card");
-        if (headerCard) {
-            requestAnimationFrame(() => {
-                headerCard.classList.add("loaded");
-            });
-        }
+    // ✅ Profile layout with cover, avatar, details, and actions
+    this.profileInfoContainer.innerHTML = `
+        <div class="profile-header-card">
+            <div class="profile-cover"></div>
 
-        // ✅ Reattach event handlers after rendering
-        if (isOwnProfile) {
-            this.attachLogoutHandler();
-            this.attachEditProfileHandlers();
-            this.attachAvatarUploadHandler();
-        } else {
-            this.attachFollowProfileHandler(user.id);
-        }
+            <div class="profile-main-info">
+                <div class="profile-avatar-wrapper">
+                    ${avatarSection}
+                </div>
+
+                <div class="profile-details">
+                    <h3 id="profileUsername">${displayName}</h3>
+                    <div class="social-stats">
+                        <span id="profileFollowers">${followerCount} Followers</span>
+                        <span class="separator">·</span>
+                        <span id="profileFollowing">${followingCount} Following</span>
+                    </div>
+                    <p id="profileJoined" class="joined-date">Joined ${joinedDate}</p>
+                    <div class="profile-bio-summary">
+                        ${bioHTML}
+                        ${locationHTML}
+                    </div>
+                </div>
+            </div>
+
+            <div class="profile-actions-bar">
+                ${
+                    isOwnProfile
+                        ? `
+                            <button id="editProfileBtn" class="btn btn-secondary btn-small">✏️ Edit Profile</button>
+                            <button id="logoutBtn" class="btn btn-secondary btn-small">🚪 Logout</button>
+                        `
+                        : `
+                            <button id="followProfileBtn" class="btn btn-primary btn-small">
+                                ${user.is_following_author ? "Following" : "+ Follow"}
+                            </button>
+                        `
+                }
+            </div>
+        </div>
+    `;
+
+    // ✅ Smooth fade-in effect for UI polish
+    const headerCard = this.profileInfoContainer.querySelector(".profile-header-card");
+    if (headerCard) {
+        requestAnimationFrame(() => {
+            headerCard.classList.add("loaded");
+        });
     }
+
+    // ✅ Reattach event handlers after rendering
+    if (isOwnProfile) {
+        this.attachLogoutHandler();
+        this.attachEditProfileHandlers();
+        this.attachAvatarUploadHandler();
+    } else {
+        this.attachFollowProfileHandler(user.id);
+    }
+}
 
 // =====================================================
 // 🧁 Avatar Upload (with Preview & Upload - Final Corrected)
