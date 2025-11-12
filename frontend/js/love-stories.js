@@ -1,9 +1,17 @@
 // ==============================================
-// 🌍 Global API Base URL (Single Definition)
+// 🌍 Global Base URLs (Corrected)
 // ==============================================
+
+// 1. API Base (For JSON endpoints)
 window.API_BASE = window.location.hostname.includes("localhost")
   ? "http://localhost:3001/api"
   : "https://lovculator.com/api";
+
+// 2. ASSET Base (For static files like Avatars)
+// On localhost, the API server handles assets. In production, the main domain handles them.
+window.ASSET_BASE = window.location.hostname.includes("localhost")
+  ? "http://localhost:3001" // Point to the backend host (without /api)
+  : "https://lovculator.com"; // Point to the secure production domain host
 
 // ==============================================
 // 1. UTILITY CLASS: NotificationService
