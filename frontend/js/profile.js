@@ -143,24 +143,24 @@ class ProfileManager {
             ? `<span class="location">📍 ${user.location}</span>`
             : "";
 
-        // ✅ Avatar section (includes upload only for own profile)
-        const avatarSection = isOwnProfile
-            ? `
-                <div class="avatar-upload-section">
-                    <img id="avatarImage" src="${avatarUrl.startsWith('http') ? avatarUrl : this.BASE_URL + avatarUrl}" alt="${displayName}" class="profile-avatar-img" />
+        // ✅ Corrected Avatar Rendering Logic (Assumes avatarUrl is cleaned or relative)
+const avatarSection = isOwnProfile
+    ? `
+        <div class="avatar-upload-section">
+            <img id="avatarImage" src="${avatarUrl}" alt="${displayName}" class="profile-avatar-img" />
 
-                    <label class="avatar-upload-label">
-                        📸 Change Photo
-                        <input type="file" id="avatarInput" accept="image/*" hidden />
-                    </label>
-                </div>
-            `
-            : `
-                <div class="avatar-view-section">
-                    <img id="avatarImage" src="${avatarUrl.startsWith('http') ? avatarUrl : this.BASE_URL + avatarUrl}" alt="${displayName}" class="profile-avatar-img" />
+            <label class="avatar-upload-label">
+                📸 Change Photo
+                <input type="file" id="avatarInput" accept="image/*" hidden />
+            </label>
+        </div>
+    `
+    : `
+        <div class="avatar-view-section">
+            <img id="avatarImage" src="${avatarUrl}" alt="${displayName}" class="profile-avatar-img" />
 
-                </div>
-            `;
+        </div>
+    `;
 
         // ✅ Profile layout with cover, avatar, details, and actions
         this.profileInfoContainer.innerHTML = `
