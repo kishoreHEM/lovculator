@@ -138,13 +138,11 @@ app.use(
           "blob:",
           "https://lovculator.com",
           "https://www.lovculator.com",
-          "http://localhost:3001",
         ],
         connectSrc: [
           "'self'",
           "https://lovculator.com",
-          "https://www.lovculator.com",
-          "http://localhost:3001",
+          "https://www.lovculator.com"
         ],
         mediaSrc: [
           "'self'",
