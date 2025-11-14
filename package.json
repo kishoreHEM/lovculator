@@ -13,6 +13,7 @@
     "compression": "^1.8.1",
     "helmet": "^8.1.0",
     "multer": "^2.0.2",
-    "nodemailer": "^7.0.10"
+    "nodemailer": "^7.0.10",
+    "ws": "^8.18.3"
   }
 }

@@ -32,6 +32,8 @@
     
     <!-- CSS -->
     <link rel="stylesheet" href="/css/style.css">
+    <!-- In head -->
+<link rel="stylesheet" href="/css/messages.css">
     
     <!-- Schema Markup -->
     <script type="application/ld+json">
@@ -67,6 +69,11 @@
                 <li class="nav-item"><a href="love-calculator" class="nav-link active">Love Calculator</a></li>
                 <li class="nav-item"><a href="/signup" class="nav-link">Signup</a></li>
                 <li class="nav-item"><a href="/login" class="nav-link">Login</a></li>
+                <a href="#" id="messagesNavLink" class="nav-link">
+        💌 Messages
+        <span id="messagesBadge" class="nav-badge" style="display: none;"></span>
+    </a>
+</li>
             </ul>
 
             <!-- Mobile elements -->
@@ -353,5 +360,9 @@
     <script src="js/love-stories.js"></script>
     <script src="js/fab-notifications.js"></script>
     <script src="js/simple-stats.js"></script>
+    
+
+<!-- Before closing body -->
+<script src="/js/messages.js"></script>
 </body>
 </html>

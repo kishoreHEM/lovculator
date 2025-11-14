@@ -14,6 +14,8 @@
 
   <!-- Styles -->
   <link rel="stylesheet" href="/css/style.css" />
+  <link rel="stylesheet" href="/css/messages.css" />
+
 
   <style>
     /* 💎 Smooth shimmer skeleton loader */
@@ -181,12 +183,18 @@
   <!-- Footer -->
   <footer class="footer"></footer>
 
-  <!-- JS Files -->
-  <script src="/js/navigation.js"></script>
-  <script src="/js/auth.js"></script>
-  <script src="/js/love-stories.js"></script>
-  <script src="/js/profile.js"></script>
-  <script src="/js/social-features.js"></script>
-  <script src="/js/pwa.js"></script>
+  <script src="/js/navigation.js" defer></script>
+<script src="/js/auth.js" defer></script>
+<script src="/js/love-stories.js" defer></script>
+
+<!-- MUST load first -->
+<script src="/js/messages.js" defer></script>
+
+<!-- profile.js uses messagesManager → must load after -->
+<script src="/js/profile.js" defer></script>
+
+<script src="/js/social-features.js" defer></script>
+<script src="/js/pwa.js" defer></script>
+
 </body>
 </html>

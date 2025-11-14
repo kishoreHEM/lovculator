@@ -111,7 +111,7 @@ class ProfileManager {
         }
     }
 
-    // =====================================================
+// =====================================================
 // 2️⃣ Render Profile Details (Optimized) - FINAL FIX
 // =====================================================
 renderProfileDetails(user, isOwnProfile = true) {
@@ -135,22 +135,24 @@ renderProfileDetails(user, isOwnProfile = true) {
         return avatar;
     };
 
-    let avatarUrl = getValidAvatarUrl(user.avatar_url); // Initialize with the stored URL
+    let avatarUrl = getValidAvatarUrl(user.avatar_url);
 
-    // 🛑 CRITICAL FIX: Strip any hardcoded host (like localhost) from the URL
+    // Clean localhost URLs
     if (avatarUrl && avatarUrl.includes('localhost')) {
         try {
-            // Use URL object to reliably extract the path only
             const url = new URL(avatarUrl, window.location.origin);
-            avatarUrl = url.pathname; // This sets it to the safe relative path: /uploads/avatars/...
+            avatarUrl = url.pathname;
         } catch (e) {
             console.error("Failed to parse and clean avatar URL:", e);
         }
     }
     
-    // Optional: Add a cache-buster even on initial load for consistency
-    avatarUrl = `${avatarUrl}?t=${Date.now()}`;
-
+    // Add cache-buster
+    if (avatarUrl && !avatarUrl.includes('?')) {
+        avatarUrl = `${avatarUrl}?t=${Date.now()}`;
+    } else if (avatarUrl) {
+        avatarUrl = `${avatarUrl}&t=${Date.now()}`;
+    }
 
     const bioHTML = user.bio
         ? `<p class="bio-text">${user.bio}</p>`
@@ -159,12 +161,11 @@ renderProfileDetails(user, isOwnProfile = true) {
         ? `<span class="location">📍 ${user.location}</span>`
         : "";
 
-    // ✅ CORRECTED TEMPLATE: Now using the cleaned 'avatarUrl' directly.
+    // Avatar section
     const avatarSection = isOwnProfile
         ? `
             <div class="avatar-upload-section">
                 <img id="avatarImage" src="${avatarUrl}" alt="${displayName}" class="profile-avatar-img" />
-
                 <label class="avatar-upload-label">
                     📸 Change Photo
                     <input type="file" id="avatarInput" accept="image/*" hidden />
@@ -174,11 +175,10 @@ renderProfileDetails(user, isOwnProfile = true) {
         : `
             <div class="avatar-view-section">
                 <img id="avatarImage" src="${avatarUrl}" alt="${displayName}" class="profile-avatar-img" />
-
             </div>
         `;
 
-    // ✅ Profile layout with cover, avatar, details, and actions
+    // Profile layout
     this.profileInfoContainer.innerHTML = `
         <div class="profile-header-card">
             <div class="profile-cover"></div>
@@ -214,13 +214,40 @@ renderProfileDetails(user, isOwnProfile = true) {
                             <button id="followProfileBtn" class="btn btn-primary btn-small">
                                 ${user.is_following_author ? "Following" : "+ Follow"}
                             </button>
+                            <button id="messageUserBtn" class="btn btn-primary btn-small message-user-btn" data-user-id="${user.id}">
+                                💌 Message
+                            </button>
                         `
                 }
             </div>
         </div>
     `;
 
-    // ✅ Smooth fade-in effect for UI polish
+    if (!isOwnProfile) {
+    const messageBtn = document.getElementById('messageUserBtn');
+    if (messageBtn) {
+        messageBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            console.log('💌 Profile message button clicked directly');
+            console.log('🔍 messagesManager available:', !!window.messagesManager);
+            console.log('🔍 messagesManager type:', typeof window.messagesManager);
+            
+            const userId = messageBtn.dataset.userId;
+            if (userId) {
+                if (window.messagesManager) {
+                    console.log('🚀 Calling openMessagesModal...');
+                    window.messagesManager.openMessagesModal(userId);
+                } else {
+                    console.log('❌ messagesManager is not available');
+                    alert('Messaging system is not loaded yet. Please refresh the page.');
+                }
+            }
+        });
+    }
+}
+
+    // Smooth fade-in effect
     const headerCard = this.profileInfoContainer.querySelector(".profile-header-card");
     if (headerCard) {
         requestAnimationFrame(() => {
@@ -228,7 +255,7 @@ renderProfileDetails(user, isOwnProfile = true) {
         });
     }
 
-    // ✅ Reattach event handlers after rendering
+    // Reattach event handlers
     if (isOwnProfile) {
         this.attachLogoutHandler();
         this.attachEditProfileHandlers();
@@ -236,7 +263,26 @@ renderProfileDetails(user, isOwnProfile = true) {
     } else {
         this.attachFollowProfileHandler(user.id);
     }
-}
+
+    // Debug code
+    console.log('👤 Profile rendered for user:', user.username);
+    console.log('📝 Message button should be available for user ID:', user.id);
+
+    // Test if button exists after a short delay
+    setTimeout(() => {
+        const messageBtn = document.getElementById('messageUserBtn');
+        console.log('🔍 Message button found:', messageBtn);
+        if (messageBtn) {
+            console.log('📋 Message button attributes:', {
+                id: messageBtn.id,
+                userId: messageBtn.dataset.userId,
+                classes: messageBtn.className
+            });
+        } else {
+            console.log('❌ Message button NOT found - this is expected for own profile');
+        }
+    }, 100);
+} // ✅ END OF METHOD - IMPORTANT CLOSING BRACE
 
 // =====================================================
 // 🧁 Avatar Upload (with Preview & Upload - Final Corrected)
@@ -844,3 +890,19 @@ window.addEventListener('avatarUpdated', (event) => {
     const { avatarUrl } = event.detail;
     console.log('✅ Avatar updated globally:', avatarUrl);
 });
+
+// Global handler for Message button clicks on profiles
+document.addEventListener(
+    "click",
+    (e) => {
+        const btn = e.target.closest("#messageUserBtn, .message-user-btn");
+        if (btn) {
+            console.log("💌 Global handler → Message button clicked");
+            const userId = btn.dataset.userId;
+            if (userId) {
+                window.messagesManager?.openMessagesModal(userId);
+            }
+        }
+    },
+    true // capture mode
+);
