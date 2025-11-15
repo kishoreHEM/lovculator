@@ -933,15 +933,15 @@ class StoryModal {
         const count = this.loveStory.value.length;
         this.charCounter.textContent = count;
         
-        if (count > 900) {
+        if (count > 9000) {
             this.charCounter.classList.add('warning');
         } else {
             this.charCounter.classList.remove('warning');
         }
         
-        if (count > 1000) {
-            this.loveStory.value = this.loveStory.value.substring(0, 1000);
-            this.charCounter.textContent = '1000';
+        if (count > 10000) {
+            this.loveStory.value = this.loveStory.value.substring(0, 10000);
+            this.charCounter.textContent = '10000';
             this.charCounter.classList.add('warning');
         }
     }
