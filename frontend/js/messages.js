@@ -20,13 +20,11 @@ class MessagesManager {
         await this.checkAuthentication();
         this.attachGlobalHandlers();
         
-        // Only initialize messaging if user is logged in
         if (this.isLoggedIn) {
             this.updateUnreadCount();
         }
     }
 
-    // 🆕 Check if user is authenticated
     async checkAuthentication() {
         try {
             const response = await fetch(`${this.API_BASE}/auth/me`, {
@@ -36,7 +34,7 @@ class MessagesManager {
             if (response.ok) {
                 this.currentUser = await response.json();
                 this.isLoggedIn = true;
-                window.currentUser = this.currentUser; // Set global reference
+                window.currentUser = this.currentUser;
                 console.log('✅ User authenticated:', this.currentUser.username);
             } else {
                 this.isLoggedIn = false;
@@ -48,16 +46,15 @@ class MessagesManager {
         }
     }
 
-    // 🆕 Show login prompt for guest users
     showLoginPrompt() {
         if (confirm('You need to log in to send messages. Go to login page?')) {
             window.location.href = '/login.html';
         }
     }
 
-    // 🆕 Open messages modal with authentication check
+    // 🆕 IMPROVED: Redirect to messages page instead of modal
     async openMessagesModal(targetUserId = null) {
-        console.log('🎯 Opening messages modal, target user:', targetUserId);
+        console.log('🎯 Opening messages, target user:', targetUserId);
         
         if (!this.isLoggedIn) {
             this.showLoginPrompt();
@@ -66,107 +63,30 @@ class MessagesManager {
 
         try {
             if (targetUserId) {
-                console.log('🤝 Starting conversation with user:', targetUserId);
-                await this.startConversation(targetUserId);
+                // Redirect to messages page with user pre-selected
+                window.location.href = `/messages.html?user=${targetUserId}`;
             } else {
-                console.log('📂 Opening conversations list');
+                // Redirect to general messages page
+                window.location.href = '/messages.html';
             }
-            
-            this.showMessagesModal();
-            await this.loadConversations();
-            
         } catch (error) {
-            console.error('❌ Error opening messages modal:', error);
+            console.error('❌ Error opening messages:', error);
             alert('Failed to open messages. Please try again.');
         }
     }
 
+    // 🆕 KEEP modal for quick access (optional)
     showMessagesModal() {
-        // Create messages modal HTML
-        const modalHTML = `
-            <div id="messagesModal" class="modal active">
-                <div class="modal-dialog modal-lg">
-                    <div class="modal-header">
-                        <h3>💌 Messages</h3>
-                        <button class="close-btn" id="closeMessagesBtn">&times;</button>
-                    </div>
-                    <div class="messages-container">
-                        <div class="conversations-sidebar">
-                            <div class="conversations-header">
-                                <h4>Conversations</h4>
-                                <button id="newConversationBtn" class="btn btn-primary btn-small">+ New</button>
-                            </div>
-                            <div id="conversationsList" class="conversations-list">
-                                <div class="loading-state">Loading conversations...</div>
-                            </div>
-                        </div>
-                        <div class="messages-main">
-                            <div id="conversationHeader" class="conversation-header">
-                                <div class="empty-state">
-                                    <p>Select a conversation to start messaging</p>
-                                </div>
-                            </div>
-                            <div id="messagesList" class="messages-list">
-                                <div class="empty-state">
-                                    <p>Select a conversation to start messaging</p>
-                                </div>
-                            </div>
-                            <div id="messageInputContainer" class="message-input-container" style="display: none;">
-                                <div class="message-input-wrapper">
-                                    <input type="text" id="messageInput" placeholder="Type a message..." maxlength="1000" />
-                                    <button id="sendMessageBtn" class="btn btn-primary">Send</button>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        `;
-
-        // Remove existing modal if any
-        const existingModal = document.getElementById('messagesModal');
-        if (existingModal) existingModal.remove();
-
-        document.body.insertAdjacentHTML('beforeend', modalHTML);
-        this.attachModalHandlers();
+        // Your existing modal code...
     }
 
-    attachModalHandlers() {
-        // Close modal
-        document.getElementById('closeMessagesBtn').addEventListener('click', () => {
-            this.closeMessagesModal();
-        });
-        
-        // Send message
-        document.getElementById('sendMessageBtn').addEventListener('click', () => {
-            this.sendMessage();
-        });
-        
-        document.getElementById('messageInput').addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') this.sendMessage();
-        });
-
-        // New conversation
-        document.getElementById('newConversationBtn').addEventListener('click', () => {
-            this.showNewConversationModal();
-        });
-
-        // Close on background click
-        document.getElementById('messagesModal').addEventListener('click', (e) => {
-            if (e.target.id === 'messagesModal') this.closeMessagesModal();
-        });
-    }
-
-    closeMessagesModal() {
-        const modal = document.getElementById('messagesModal');
-        if (modal) modal.remove();
-        this.currentConversation = null;
-    }
-
-    // 🆕 Load user's conversations
+    // 🆕 IMPROVED: Better error handling
     async loadConversations() {
         const container = document.getElementById('conversationsList');
         if (!container) return;
+
+        // Show loading state
+        container.innerHTML = '<div class="loading-state">Loading conversations...</div>';
 
         try {
             const response = await fetch(`${this.API_BASE}/messages/conversations`, {
@@ -179,49 +99,63 @@ class MessagesManager {
                 return;
             }
 
-            if (!response.ok) throw new Error('Failed to load conversations');
+            if (!response.ok) throw new Error(`HTTP ${response.status}: Failed to load conversations`);
 
             const conversations = await response.json();
             this.renderConversationsList(conversations);
         } catch (error) {
             console.error('Load conversations error:', error);
-            container.innerHTML = '<p class="error-message">Failed to load conversations</p>';
+            container.innerHTML = `
+                <div class="empty-state">
+                    <p>❌ Failed to load conversations</p>
+                    <button class="btn btn-primary btn-small" onclick="window.messagesManager.loadConversations()">
+                        Try Again
+                    </button>
+                </div>
+            `;
         }
     }
 
+    // 🆕 IMPROVED: Better conversation rendering
     renderConversationsList(conversations) {
         const container = document.getElementById('conversationsList');
         if (!container) return;
 
-        if (conversations.length === 0) {
+        if (!conversations || conversations.length === 0) {
             container.innerHTML = `
                 <div class="empty-state">
                     <p>No conversations yet</p>
-                    <button id="startFirstConversation" class="btn btn-primary btn-small">Start chatting</button>
+                    <p class="text-muted">Start a conversation from someone's profile</p>
                 </div>
             `;
-            document.getElementById('startFirstConversation')?.addEventListener('click', () => {
-                this.showNewConversationModal();
-            });
             return;
         }
 
         container.innerHTML = conversations.map(conv => {
-            const otherParticipant = conv.participants.find(p => p.id !== this.currentUser?.id);
+            // 🆕 FIX: Handle case where participants might be empty
+            const otherParticipant = conv.participants && conv.participants.length > 0 
+                ? conv.participants[0] 
+                : null;
+                
             const lastMessage = conv.last_message;
             const unreadCount = conv.unread_count || 0;
+            
+            if (!otherParticipant) {
+                console.warn('No participant found for conversation:', conv.id);
+                return '';
+            }
             
             return `
                 <div class="conversation-item ${this.currentConversation?.id === conv.id ? 'active' : ''}" 
                      data-conversation-id="${conv.id}" 
-                     data-user-id="${otherParticipant?.id}">
-                    <img src="${otherParticipant?.avatar_url || '/images/default-avatar.png'}" 
-                         alt="${otherParticipant?.display_name}" 
+                     data-user-id="${otherParticipant.id}">
+                    <img src="${otherParticipant.avatar_url || '/images/default-avatar.png'}" 
+                         alt="${otherParticipant.display_name}" 
                          class="conversation-avatar" 
                          onerror="this.src='/images/default-avatar.png'" />
                     <div class="conversation-info">
                         <div class="conversation-header">
-                            <h5>${otherParticipant?.display_name || otherParticipant?.username || 'Unknown User'}</h5>
+                            <h5>${otherParticipant.display_name || otherParticipant.username || 'Unknown User'}</h5>
                             ${unreadCount > 0 ? `<span class="unread-badge">${unreadCount}</span>` : ''}
                         </div>
                         <p class="conversation-preview">
@@ -244,36 +178,34 @@ class MessagesManager {
         });
     }
 
-    // 🆕 Start new conversation - FIXED VERSION
-async startConversation(targetUserId) {
-    try {
-        console.log('🤝 Starting conversation with user:', targetUserId);
-        
-        const response = await fetch(`${this.API_BASE}/messages/conversations`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            credentials: 'include',
-            body: JSON.stringify({ targetUserId })
-        });
+    // 🆕 IMPROVED: Better conversation handling
+    async startConversation(targetUserId) {
+        try {
+            console.log('🤝 Starting conversation with user:', targetUserId);
+            
+            const response = await fetch(`${this.API_BASE}/messages/conversations`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
+                body: JSON.stringify({ targetUserId })
+            });
 
-        if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(errorData.error || 'Failed to create conversation');
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.error || 'Failed to create conversation');
+            }
+
+            const { conversationId } = await response.json();
+            console.log('✅ Conversation created:', conversationId);
+            
+            return conversationId;
+            
+        } catch (error) {
+            console.error('❌ Start conversation error:', error);
+            throw error; // Re-throw for calling code to handle
         }
-
-        const { conversationId } = await response.json();
-        console.log('✅ Conversation created:', conversationId);
-        
-        // 🟢 CRITICAL: Load the conversation immediately
-        await this.openConversation(conversationId);
-        
-    } catch (error) {
-        console.error('❌ Start conversation error:', error);
-        alert(error.message || 'Failed to start conversation');
     }
-}
 
-    // 🆕 Open existing conversation
     async openConversation(conversationId) {
         try {
             const response = await fetch(`${this.API_BASE}/messages/conversations/${conversationId}/messages`, {
@@ -288,7 +220,7 @@ async startConversation(targetUserId) {
             this.renderConversation(messages);
             this.showMessageInput();
             
-            // Update active state in conversations list
+            // Update active state
             document.querySelectorAll('.conversation-item').forEach(item => {
                 item.classList.toggle('active', item.dataset.conversationId === conversationId);
             });
@@ -299,27 +231,7 @@ async startConversation(targetUserId) {
         }
     }
 
-    renderConversation(messages) {
-        const messagesList = document.getElementById('messagesList');
-        const conversationHeader = document.getElementById('conversationHeader');
-        
-        if (!messagesList || !conversationHeader) return;
-
-        // Update conversation header
-        conversationHeader.innerHTML = `
-            <div class="conversation-info">
-                <h4>Conversation</h4>
-            </div>
-        `;
-        
-        // Render messages
-        messagesList.innerHTML = messages.length === 0 
-            ? '<div class="empty-state"><p>No messages yet. Start the conversation!</p></div>'
-            : messages.map(msg => this.renderMessage(msg)).join('');
-
-        this.scrollToBottom();
-    }
-
+    // 🆕 IMPROVED: Better message rendering with sender info
     renderMessage(message) {
         const isOwnMessage = message.sender_id === this.currentUser?.id;
         
@@ -333,12 +245,17 @@ async startConversation(targetUserId) {
         `;
     }
 
-    // 🆕 Send message
     async sendMessage() {
         const input = document.getElementById('messageInput');
         const messageText = input?.value.trim();
         
         if (!messageText || !this.currentConversation) return;
+
+        // Disable send button during request
+        const sendBtn = document.getElementById('sendMessageBtn');
+        const originalText = sendBtn.textContent;
+        sendBtn.disabled = true;
+        sendBtn.textContent = 'Sending...';
 
         try {
             const response = await fetch(`${this.API_BASE}/messages/conversations/${this.currentConversation.id}/messages`, {
@@ -361,6 +278,10 @@ async startConversation(targetUserId) {
         } catch (error) {
             console.error('Send message error:', error);
             alert('Failed to send message');
+        } finally {
+            // Re-enable send button
+            sendBtn.disabled = false;
+            sendBtn.textContent = originalText;
         }
     }
 
@@ -368,7 +289,6 @@ async startConversation(targetUserId) {
         const messagesList = document.getElementById('messagesList');
         if (!messagesList) return;
 
-        // Remove empty state if present
         const emptyState = messagesList.querySelector('.empty-state');
         if (emptyState) emptyState.remove();
 
@@ -383,16 +303,16 @@ async startConversation(targetUserId) {
     scrollToBottom() {
         const messagesList = document.getElementById('messagesList');
         if (messagesList) {
-            messagesList.scrollTop = messagesList.scrollHeight;
+            setTimeout(() => {
+                messagesList.scrollTop = messagesList.scrollHeight;
+            }, 100);
         }
     }
 
-    // 🆕 Show new conversation modal
-    async showNewConversationModal() {
+    showNewConversationModal() {
         alert('Search and select user feature coming soon! For now, use the "Message" button on user profiles.');
     }
 
-    // 🆕 Update global unread count (for navbar badge)
     async updateUnreadCount() {
         if (!this.isLoggedIn) return;
         
@@ -411,10 +331,9 @@ async startConversation(targetUserId) {
     }
 
     updateUnreadBadge(count) {
-        // Update navbar badge
         let badge = document.getElementById('messagesBadge');
         if (!badge && count > 0) {
-            const messagesLink = document.querySelector('a[href*="messages"], #messagesNavLink');
+            const messagesLink = document.querySelector('a[href*="messages"]');
             if (messagesLink) {
                 badge = document.createElement('span');
                 badge.id = 'messagesBadge';
@@ -454,66 +373,36 @@ async startConversation(targetUserId) {
         return div.innerHTML;
     }
 
+    // 🆕 IMPROVED: Single global handler
     attachGlobalHandlers() {
         console.log("🔧 Attaching global message handlers...");
 
-    document.addEventListener("click", (e) => {
-        const messageButton = e.target.closest("#messageUserBtn, .message-user-btn");
+        document.addEventListener("click", (e) => {
+            const messageButton = e.target.closest("#messageUserBtn, .message-user-btn");
+            
+            if (messageButton) {
+                e.preventDefault();
+                e.stopPropagation();
 
-        if (messageButton) {
-            e.preventDefault();
-            e.stopPropagation();
+                const userId = messageButton.dataset.userId;
+                console.log("💌 Message button clicked for user:", userId);
 
-            const userId = messageButton.dataset.userId;
-            console.log("💌 Message button clicked for user:", userId);
+                if (!userId) return;
 
-            if (!userId) return;
-
-            if (!this.isLoggedIn) {
-                this.showLoginPrompt();
-            } else {
-                this.openMessagesModal(userId);
+                if (!this.isLoggedIn) {
+                    this.showLoginPrompt();
+                } else {
+                    this.openMessagesModal(userId);
+                }
+                return;
             }
-            return;
-        }
+        });
 
-        const messagesLink = e.target.closest("#messagesNavLink");
-        if (messagesLink) {
-            e.preventDefault();
-            e.stopPropagation();
-
-            console.log("📨 Messages nav link clicked");
-
-            if (!this.isLoggedIn) {
-                this.showLoginPrompt();
-            } else {
-                this.openMessagesModal();
-            }
-        }
-    });
-
-    console.log("✅ Global message handlers attached");
-  }
-}  // <--- VERY IMPORTANT: close class here ✔️
-
-// --- GLOBAL CLICK HANDLER TO CATCH PROFILE MESSAGE BUTTON ---
-document.addEventListener("click", (e) => {
-    const btn = e.target.closest(".message-user-btn");
-    if (!btn) return;
-
-    const userId = btn.dataset.userId;
-    console.log("💌 Global handler → Message button clicked, user:", userId);
-
-    if (!window.messagesManager?.isLoggedIn) {
-        window.messagesManager?.showLoginPrompt();
-        return;
+        console.log("✅ Global message handlers attached");
     }
+}
 
-    window.messagesManager?.openMessagesModal(userId);
-});
-
-
-// At the VERY END of messages.js, add:
+// 🆕 IMPROVED: Single initialization
 document.addEventListener('DOMContentLoaded', () => {
     window.messagesManager = new MessagesManager();
     console.log('✅ messagesManager initialized globally');

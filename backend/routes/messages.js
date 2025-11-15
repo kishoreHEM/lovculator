@@ -13,50 +13,51 @@ router.get("/conversations", auth, async (req, res) => {
     const userId = req.user.id;
 
     const { rows } = await pool.query(
-      `
-      SELECT 
-        c.id,
-        c.updated_at,
-        ARRAY_AGG(
-          JSON_BUILD_OBJECT(
-            'id', u.id,
-            'username', u.username,
-            'display_name', u.display_name,
-            'avatar_url', u.avatar_url
-          )
-        ) AS participants,
-        (
-          SELECT JSON_BUILD_OBJECT(
-            'id', m.id,
-            'message_text', m.message_text,
-            'created_at', m.created_at,
-            'sender_id', m.sender_id
-          )
-          FROM messages m
-          WHERE m.conversation_id = c.id
-          ORDER BY m.created_at DESC
-          LIMIT 1
-        ) AS last_message,
-        (
-          SELECT COUNT(*)
-          FROM messages m
-          WHERE m.conversation_id = c.id 
-          AND m.sender_id != $1
-          AND m.is_read = false
-        ) AS unread_count
-      FROM conversations c
-      JOIN conversation_participants cp ON c.id = cp.conversation_id
-      JOIN users u ON cp.user_id = u.id
-      WHERE c.id IN (
-        SELECT conversation_id 
-        FROM conversation_participants 
-        WHERE user_id = $1
+  `
+  SELECT 
+    c.id,
+    c.updated_at,
+    ARRAY(
+      SELECT JSON_BUILD_OBJECT(
+        'id', u.id,
+        'username', u.username,
+        'display_name', u.display_name,
+        'avatar_url', u.avatar_url
       )
-      GROUP BY c.id
-      ORDER BY c.updated_at DESC
-      `,
-      [userId]
-    );
+      FROM conversation_participants cp
+      JOIN users u ON cp.user_id = u.id
+      WHERE cp.conversation_id = c.id AND u.id != $1
+    ) AS participants,
+    -- rest remains the same
+    (
+      SELECT JSON_BUILD_OBJECT(
+        'id', m.id,
+        'message_text', m.message_text,
+        'created_at', m.created_at,
+        'sender_id', m.sender_id
+      )
+      FROM messages m
+      WHERE m.conversation_id = c.id
+      ORDER BY m.created_at DESC
+      LIMIT 1
+    ) AS last_message,
+    (
+      SELECT COUNT(*)
+      FROM messages m
+      WHERE m.conversation_id = c.id 
+      AND m.sender_id != $1
+      AND m.is_read = false
+    ) AS unread_count
+  FROM conversations c
+  WHERE c.id IN (
+    SELECT conversation_id 
+    FROM conversation_participants 
+    WHERE user_id = $1
+  )
+  ORDER BY c.updated_at DESC
+  `,
+  [userId]
+);
 
     res.json(rows);
   } catch (error) {
