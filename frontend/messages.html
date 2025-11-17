@@ -2,9 +2,9 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
     <title>Messages - Lovculator 💖</title>
-    <meta name="description" content="Connect and chat with your matches on Lovculator" />
+    <meta name="description" content="Connect and chat with your matches on Lovculator - Real-time messaging with your connections" />
     <meta name="theme-color" content="#ff4b8d" />
 
     <!-- Favicons -->
@@ -16,13 +16,270 @@
     <link rel="stylesheet" href="/css/style.css" />
     <link rel="stylesheet" href="/css/messages.css"/>
 
+    <!-- Additional styles for enhanced features -->
+    <style>
+        /* Enhanced connection status indicator */
+        .connection-status {
+            position: fixed;
+            top: 70px;
+            right: 20px;
+            padding: 6px 12px;
+            border-radius: 16px;
+            font-size: 12px;
+            font-weight: 600;
+            z-index: 1000;
+            background: rgba(0,0,0,0.8);
+            color: white;
+            transition: all 0.3s ease;
+            display: none;
+        }
+
+        .connection-status.connected {
+            background: #4CAF50;
+            display: block;
+        }
+
+        .connection-status.disconnected {
+            background: #ff4444;
+            display: block;
+        }
+
+        .connection-status.reconnecting {
+            background: #ff9800;
+            display: block;
+        }
+
+        .connection-status.error {
+            background: #ff4444;
+            display: block;
+        }
+
+        /* Enhanced notification styles */
+        .reconnect-notification {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #ff9800;
+            color: white;
+            padding: 12px 20px;
+            border-radius: 8px;
+            z-index: 10000;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            max-width: 90%;
+            text-align: center;
+        }
+
+        .notification-content {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .notification-content button {
+            background: none;
+            border: none;
+            color: white;
+            font-size: 18px;
+            cursor: pointer;
+            padding: 0;
+            width: 20px;
+            height: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* Enhanced message status */
+        .message-status {
+            font-size: 12px;
+            opacity: 0.7;
+        }
+
+        .edited-tag {
+            font-size: 11px;
+            opacity: 0.6;
+            font-style: italic;
+        }
+
+        .deleted-message {
+            opacity: 0.6;
+            font-style: italic;
+        }
+
+        /* Enhanced attachment styles */
+        .attachment-link {
+            color: inherit;
+            text-decoration: none;
+            padding: 4px 8px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 4px;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .attachment-link:hover {
+            background: rgba(255,255,255,0.2);
+        }
+
+        /* Enhanced loading states */
+        .loading-spinner {
+            width: 16px;
+            height: 16px;
+            border: 2px solid transparent;
+            border-top: 2px solid currentColor;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .uploading-indicator {
+            position: absolute;
+            top: -25px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #ff4b8d;
+            color: white;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 12px;
+            white-space: nowrap;
+        }
+
+        /* Enhanced search results */
+        .search-highlight {
+            background: rgba(255, 75, 141, 0.2);
+            padding: 1px 2px;
+            border-radius: 2px;
+        }
+
+        /* Enhanced empty states */
+        .empty-conversations {
+            text-align: center;
+            padding: 40px 20px;
+            color: #666;
+        }
+
+        .empty-icon {
+            font-size: 64px;
+            margin-bottom: 16px;
+            opacity: 0.7;
+        }
+
+        .empty-conversations h3 {
+            margin: 0 0 8px 0;
+            font-size: 18px;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .empty-conversations p {
+            margin: 0 0 20px 0;
+            font-size: 14px;
+            line-height: 1.4;
+        }
+
+        .start-chatting-btn {
+            background: linear-gradient(135deg, #ff4b8d, #ff6b9d);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .start-chatting-btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(255, 75, 141, 0.3);
+        }
+
+        /* Enhanced typing indicator */
+        .chat-user-status.typing {
+            color: #ff4b8d;
+            font-weight: 600;
+        }
+
+        /* Enhanced message animations */
+        @keyframes messageSlideIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px) scale(0.95);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
+        }
+
+        .message {
+            animation: messageSlideIn 0.3s ease-out;
+        }
+
+        /* Enhanced mobile optimizations */
+        @media (max-width: 768px) {
+            .connection-status {
+                top: 60px;
+                right: 10px;
+                font-size: 11px;
+                padding: 4px 10px;
+            }
+
+            .reconnect-notification {
+                top: 10px;
+                left: 10px;
+                right: 10px;
+                transform: none;
+                max-width: none;
+            }
+        }
+
+        /* Enhanced accessibility */
+        .sr-only {
+            position: absolute;
+            width: 1px;
+            height: 1px;
+            padding: 0;
+            margin: -1px;
+            overflow: hidden;
+            clip: rect(0, 0, 0, 0);
+            white-space: nowrap;
+            border: 0;
+        }
+
+        /* Enhanced focus styles */
+        .conversation-item:focus,
+        .chat-action-btn:focus,
+        .search-input:focus,
+        #messageInput:focus {
+            outline: 2px solid #ff4b8d;
+            outline-offset: 2px;
+        }
+
+        /* Enhanced dark mode support */
+        @media (prefers-color-scheme: dark) {
+            .connection-status {
+                background: rgba(255,255,255,0.1);
+                backdrop-filter: blur(10px);
+            }
+        }
+    </style>
 </head>
 <body class="messages-page">
-    <!-- Header -->
+    <!-- Enhanced Header with Connection Status -->
     <header class="header">
         <nav class="navbar">
             <div class="nav-brand">
-                <a href="/" class="logo" aria-label="Lovculator Home">💖 Lovculator</a>
+                <a href="/" class="logo" aria-label="Lovculator Home">
+                    💖 Lovculator
+                </a>
             </div>
 
             <!-- Desktop menu -->
@@ -31,7 +288,12 @@
                 <li class="nav-item"><a href="/login" class="nav-link">Login</a></li>
                 <li class="nav-item"><a href="/love-calculator" class="nav-link">Love Calculator</a></li>
                 <li class="nav-item"><a href="/profile.html" class="nav-link">Profile</a></li>
-                <li class="nav-item"><a href="/messages.html" class="nav-link active">Messages</a></li>
+                <li class="nav-item">
+                    <a href="/messages.html" class="nav-link active">
+                        Messages
+                        <span id="messagesBadge" class="nav-badge" style="display: none;"></span>
+                    </a>
+                </li>
             </ul>
 
             <!-- Mobile menu -->
@@ -42,20 +304,31 @@
         </nav>
     </header>
 
+    <!-- Connection Status Indicator -->
+    <div id="connectionStatus" class="connection-status" aria-live="polite">
+        Connected
+    </div>
+
     <!-- Main Messages Container -->
     <div class="messages-container">
-        <!-- Conversations Sidebar -->
+        <!-- Enhanced Conversations Sidebar -->
         <div class="conversations-sidebar">
             <div class="conversations-header">
                 <h1>Messages</h1>
                 <div class="search-container">
-                    <input type="text" class="search-input" placeholder="Search conversations..." id="searchConversations">
-                    <span class="search-icon">🔍</span>
+                    <input 
+                        type="text" 
+                        class="search-input" 
+                        placeholder="Search conversations..." 
+                        id="searchConversations"
+                        aria-label="Search conversations"
+                    >
+                    <span class="search-icon" aria-hidden="true">🔍</span>
                 </div>
             </div>
 
-            <div class="conversations-list" id="conversationsList">
-                <!-- Loading State -->
+            <div class="conversations-list" id="conversationsList" role="list" aria-label="Conversations list">
+                <!-- Loading state will be populated by JavaScript -->
                 <div class="loading-conversations">
                     <div class="conversation-skeleton">
                         <div class="avatar-skeleton"></div>
@@ -71,15 +344,27 @@
                             <div class="line-skeleton short"></div>
                         </div>
                     </div>
+                    <div class="conversation-skeleton">
+                        <div class="avatar-skeleton"></div>
+                        <div class="info-skeleton">
+                            <div class="line-skeleton"></div>
+                            <div class="line-skeleton short"></div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
 
-        <!-- Messages Main Area -->
-        <div class="messages-main" id="messagesMain">
+        <!-- Enhanced Messages Main Area -->
+        <div class="messages-main" id="messagesMain" aria-live="polite">
             <div class="messages-header">
                 <div class="current-chat-info">
-                    <img src="/images/default-avatar.png" alt="User" class="current-chat-avatar" id="currentChatAvatar">
+                    <img 
+                        src="/images/default-avatar.png" 
+                        alt="User avatar" 
+                        class="current-chat-avatar" 
+                        id="currentChatAvatar"
+                    >
                     <div class="chat-user-info">
                         <h3 id="currentChatName">Select a conversation</h3>
                         <div class="chat-user-status" id="currentChatStatus">
@@ -89,14 +374,45 @@
                 </div>
                 <div class="chat-actions">
                     <!-- Back button (shown only on mobile via CSS) -->
-                    <button id="backToList" class="back-btn" title="Back to chats">←</button>
-                    <button class="chat-action-btn" title="User profile">👤</button>
-                    <button class="chat-action-btn" title="Search messages">🔍</button>
-                    <button class="chat-action-btn" title="More options">⋯</button>
+                    <button 
+                        id="backToList" 
+                        class="back-btn" 
+                        title="Back to chats"
+                        aria-label="Back to conversations list"
+                    >
+                        ←
+                    </button>
+                    <button 
+                        class="chat-action-btn" 
+                        title="User profile"
+                        aria-label="View user profile"
+                    >
+                        👤
+                    </button>
+                    <button 
+                        class="chat-action-btn" 
+                        title="Search messages"
+                        aria-label="Search in conversation"
+                    >
+                        🔍
+                    </button>
+                    <button 
+                        class="chat-action-btn" 
+                        title="More options"
+                        aria-label="More options"
+                    >
+                        ⋯
+                    </button>
                 </div>
             </div>
 
-            <div class="messages-list" id="messagesList">
+            <div 
+                class="messages-list" 
+                id="messagesList" 
+                role="log" 
+                aria-label="Messages"
+                aria-live="polite"
+            >
                 <div class="empty-conversations">
                     <div class="empty-icon">💌</div>
                     <h3>No conversation selected</h3>
@@ -106,22 +422,251 @@
 
             <div class="message-input-container" id="messageInputContainer" style="display: none;">
                 <div class="message-input-wrapper">
-                    <button id="emojiBtn" type="button" title="Emoji" class="chat-action-btn">😊</button>
-                    <button id="attachBtn" type="button" title="Attach" class="chat-action-btn">📎</button>
-                    <input type="file" id="attachInput" accept="image/*,audio/*,video/*,.pdf,.doc,.docx" style="display:none" />
-                    <textarea id="messageInput" placeholder="Type a message..." rows="1"></textarea>
-                    <button id="micBtn" type="button" title="Voice note" class="chat-action-btn">🎤</button>
-                    <button id="sendMessageBtn" title="Send message">
+                    <button 
+                        id="emojiBtn" 
+                        type="button" 
+                        title="Emoji" 
+                        class="chat-action-btn"
+                        aria-label="Open emoji picker"
+                    >
+                        😊
+                    </button>
+                    
+                    <button 
+                        id="attachBtn" 
+                        type="button" 
+                        title="Attach file" 
+                        class="chat-action-btn"
+                        aria-label="Attach file"
+                    >
+                        📎
+                    </button>
+                    
+                    <input 
+                        type="file" 
+                        id="attachInput" 
+                        accept="image/*,audio/*,video/*,.pdf,.doc,.docx,.txt" 
+                        style="display:none" 
+                        aria-label="File attachment"
+                    />
+                    
+                    <textarea 
+                        id="messageInput" 
+                        placeholder="Type a message..." 
+                        rows="1"
+                        aria-label="Type your message"
+                        maxlength="1000"
+                    ></textarea>
+                    
+                    <button 
+                        id="micBtn" 
+                        type="button" 
+                        title="Voice note" 
+                        class="chat-action-btn"
+                        aria-label="Record voice message"
+                    >
+                        🎤
+                    </button>
+                    
+                    <button 
+                        id="sendMessageBtn" 
+                        title="Send message"
+                        aria-label="Send message"
+                    >
                         <span style="font-size: 18px;">➤</span>
                     </button>
+                </div>
+                
+                <!-- Character counter (optional) -->
+                <div class="message-input-meta" style="display: none;">
+                    <span id="charCount">0/1000</span>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Scripts -->
+    <!-- Enhanced Offline Indicator -->
+    <div id="offlineIndicator" class="offline-indicator" style="display: none;">
+        <div class="offline-content">
+            <span>You are currently offline</span>
+            <button id="retryConnection">Retry</button>
+        </div>
+    </div>
+
+    <!-- Enhanced Scripts -->
     <script src="/js/navigation.js"></script>
     <script src="/js/auth.js"></script>
     <script src="/js/messages.js"></script>
+
+    <!-- Additional JavaScript for enhanced features -->
+    <script>
+        // Enhanced offline detection
+        window.addEventListener('online', () => {
+            console.log('✅ Connection restored');
+            const offlineIndicator = document.getElementById('offlineIndicator');
+            if (offlineIndicator) offlineIndicator.style.display = 'none';
+            
+            // Reload conversations if we're on messages page
+            if (window.messagesPage) {
+                window.messagesPage.loadConversations();
+            }
+        });
+
+        window.addEventListener('offline', () => {
+            console.log('❌ Connection lost');
+            const offlineIndicator = document.getElementById('offlineIndicator');
+            if (offlineIndicator) offlineIndicator.style.display = 'block';
+        });
+
+        // Enhanced retry connection handler
+        document.addEventListener('DOMContentLoaded', () => {
+            const retryBtn = document.getElementById('retryConnection');
+            if (retryBtn) {
+                retryBtn.addEventListener('click', () => {
+                    if (navigator.onLine) {
+                        window.location.reload();
+                    }
+                });
+            }
+
+            // Enhanced character counter for message input
+            const messageInput = document.getElementById('messageInput');
+            const charCount = document.getElementById('charCount');
+            const messageMeta = document.querySelector('.message-input-meta');
+
+            if (messageInput && charCount && messageMeta) {
+                messageInput.addEventListener('input', () => {
+                    const length = messageInput.value.length;
+                    charCount.textContent = `${length}/1000`;
+                    
+                    if (length > 0) {
+                        messageMeta.style.display = 'block';
+                    } else {
+                        messageMeta.style.display = 'none';
+                    }
+
+                    // Warning at 900 characters
+                    if (length > 900) {
+                        charCount.style.color = '#ff9800';
+                    } else if (length > 950) {
+                        charCount.style.color = '#ff4444';
+                    } else {
+                        charCount.style.color = '';
+                    }
+                });
+            }
+
+            // Enhanced keyboard shortcuts
+            document.addEventListener('keydown', (e) => {
+                // Ctrl/Cmd + K to focus search
+                if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+                    e.preventDefault();
+                    const searchInput = document.getElementById('searchConversations');
+                    if (searchInput) {
+                        searchInput.focus();
+                    }
+                }
+
+                // Escape to close current chat on mobile
+                if (e.key === 'Escape') {
+                    const messagesMain = document.getElementById('messagesMain');
+                    if (messagesMain && messagesMain.classList.contains('active')) {
+                        const backBtn = document.getElementById('backToList');
+                        if (backBtn) backBtn.click();
+                    }
+                }
+            });
+
+            // Enhanced service worker registration for offline support
+            if ('serviceWorker' in navigator) {
+                navigator.serviceWorker.register('/sw.js')
+                    .then(registration => {
+                        console.log('✅ Service Worker registered:', registration);
+                    })
+                    .catch(error => {
+                        console.log('❌ Service Worker registration failed:', error);
+                    });
+            }
+
+            // Enhanced page visibility handling
+            document.addEventListener('visibilitychange', () => {
+                if (document.hidden) {
+                    // Page is hidden - stop any ongoing activities
+                    if (window.messagesPage) {
+                        window.messagesPage.stopTypingIndicator();
+                    }
+                } else {
+                    // Page is visible - refresh data
+                    if (window.messagesPage) {
+                        window.messagesPage.loadConversations();
+                    }
+                }
+            });
+
+            // Enhanced error boundary
+            window.addEventListener('error', (event) => {
+                console.error('Global error:', event.error);
+                // You could send this to an error tracking service
+            });
+
+            window.addEventListener('unhandledrejection', (event) => {
+                console.error('Unhandled promise rejection:', event.reason);
+                event.preventDefault();
+            });
+        });
+
+        // Enhanced performance monitoring
+        if ('performance' in window) {
+            // Measure page load time
+            window.addEventListener('load', () => {
+                const loadTime = performance.timing.loadEventEnd - performance.timing.navigationStart;
+                console.log(`📊 Page loaded in ${loadTime}ms`);
+                
+                if (loadTime > 3000) {
+                    console.warn('⚠️ Page load time is slow:', loadTime + 'ms');
+                }
+            });
+        }
+
+        // Enhanced analytics for messaging interactions
+        function trackMessageEvent(action, data = {}) {
+            if (typeof gtag !== 'undefined') {
+                gtag('event', action, {
+                    event_category: 'messaging',
+                    ...data
+                });
+            }
+            
+            // Custom analytics
+            console.log(`📈 Messaging Event: ${action}`, data);
+        }
+
+        // Export for global access
+        window.trackMessageEvent = trackMessageEvent;
+    </script>
+
+    <!-- Enhanced Structured Data -->
+    <script type="application/ld+json">
+    {
+        "@context": "https://schema.org",
+        "@type": "WebApplication",
+        "name": "Lovculator Messages",
+        "description": "Real-time messaging platform for Lovculator users to connect and chat",
+        "url": "https://lovculator.com/messages.html",
+        "applicationCategory": "CommunicationApplication",
+        "operatingSystem": "Any",
+        "permissions": ["microphone", "camera", "notifications"],
+        "creator": {
+            "@type": "Organization",
+            "name": "Lovculator",
+            "url": "https://lovculator.com"
+        },
+        "offers": {
+            "@type": "Offer",
+            "price": "0",
+            "priceCurrency": "USD"
+        }
+    }
+    </script>
 </body>
 </html>
