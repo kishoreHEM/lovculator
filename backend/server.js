@@ -185,6 +185,11 @@ pages.forEach((p) =>
   )
 );
 
+// 🧠 Serve SEO-friendly question page (like Quora)
+app.get("/questions/:slug", (req, res) => {
+  res.sendFile(path.join(frontendPath, "question.html"));
+});
+
 // 404 Handler
 app.use((req, res) => {
   const f = path.join(frontendPath, "404.html");
