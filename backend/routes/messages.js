@@ -1,6 +1,6 @@
 // backend/routes/messages.js
 import express from "express";
-import pool from '../db.js';
+import pool from "../db.js";
 import auth from "../middleware/auth.js";
 
 const router = express.Router();
@@ -13,51 +13,52 @@ router.get("/conversations", auth, async (req, res) => {
     const userId = req.user.id;
 
     const { rows } = await pool.query(
-  `
-  SELECT 
-    c.id,
-    c.updated_at,
-    ARRAY(
-      SELECT JSON_BUILD_OBJECT(
-        'id', u.id,
-        'username', u.username,
-        'display_name', u.display_name,
-        'avatar_url', u.avatar_url
+      `
+      SELECT 
+        c.id,
+        c.updated_at,
+        ARRAY(
+          SELECT JSON_BUILD_OBJECT(
+            'id', u.id,
+            'username', u.username,
+            'display_name', u.display_name,
+            'avatar_url', u.avatar_url
+          )
+          FROM conversation_participants cp
+          JOIN users u ON cp.user_id = u.id
+          WHERE cp.conversation_id = c.id AND u.id != $1
+        ) AS participants,
+        (
+  SELECT row_to_json(msg)
+  FROM (
+    SELECT 
+      m.id,
+      m.message_text,
+      m.created_at,
+      m.sender_id
+    FROM messages m
+    WHERE m.conversation_id = c.id AND m.deleted_at IS NULL
+    ORDER BY m.created_at DESC
+    LIMIT 1
+  ) msg
+) AS last_message,
+        (
+          SELECT COUNT(*)
+          FROM messages m
+          WHERE m.conversation_id = c.id 
+            AND m.sender_id != $1
+            AND m.is_read = false
+        ) AS unread_count
+      FROM conversations c
+      WHERE c.id IN (
+        SELECT conversation_id 
+        FROM conversation_participants 
+        WHERE user_id = $1
       )
-      FROM conversation_participants cp
-      JOIN users u ON cp.user_id = u.id
-      WHERE cp.conversation_id = c.id AND u.id != $1
-    ) AS participants,
-    -- rest remains the same
-    (
-      SELECT JSON_BUILD_OBJECT(
-        'id', m.id,
-        'message_text', m.message_text,
-        'created_at', m.created_at,
-        'sender_id', m.sender_id
-      )
-      FROM messages m
-      WHERE m.conversation_id = c.id
-      ORDER BY m.created_at DESC
-      LIMIT 1
-    ) AS last_message,
-    (
-      SELECT COUNT(*)
-      FROM messages m
-      WHERE m.conversation_id = c.id 
-      AND m.sender_id != $1
-      AND m.is_read = false
-    ) AS unread_count
-  FROM conversations c
-  WHERE c.id IN (
-    SELECT conversation_id 
-    FROM conversation_participants 
-    WHERE user_id = $1
-  )
-  ORDER BY c.updated_at DESC
-  `,
-  [userId]
-);
+      ORDER BY c.updated_at DESC
+      `,
+      [userId]
+    );
 
     res.json(rows);
   } catch (error) {
@@ -78,16 +79,15 @@ router.post("/conversations", auth, async (req, res) => {
       return res.status(400).json({ error: "Target user ID is required" });
     }
 
-    if (userId === parseInt(targetUserId)) {
+    if (userId === parseInt(targetUserId, 10)) {
       return res.status(400).json({ error: "Cannot start conversation with yourself" });
     }
 
-    // Check if target user exists
     const userCheck = await pool.query(
       "SELECT id FROM users WHERE id = $1",
       [targetUserId]
     );
-    
+
     if (userCheck.rows.length === 0) {
       return res.status(404).json({ error: "User not found" });
     }
@@ -130,24 +130,26 @@ router.post("/conversations", auth, async (req, res) => {
 });
 
 /* ======================================================
-   📜 3️⃣ Get all messages for a conversation
+   📜 3️⃣ Get messages with pagination
 ====================================================== */
 router.get("/conversations/:conversationId/messages", auth, async (req, res) => {
   try {
     const userId = req.user.id;
     const { conversationId } = req.params;
+    const limit = parseInt(req.query.limit, 10) || 30;
+    const before = req.query.before || null;
 
     const participantCheck = await pool.query(
       "SELECT 1 FROM conversation_participants WHERE conversation_id = $1 AND user_id = $2",
       [conversationId, userId]
     );
-    
+
     if (participantCheck.rows.length === 0) {
       return res.status(403).json({ error: "Access denied" });
     }
 
-    const { rows } = await pool.query(
-      `
+    const params = [conversationId];
+    let sql = `
       SELECT 
         m.*,
         u.username AS sender_username,
@@ -156,24 +158,31 @@ router.get("/conversations/:conversationId/messages", auth, async (req, res) => 
       FROM messages m
       JOIN users u ON m.sender_id = u.id
       WHERE m.conversation_id = $1
-      ORDER BY m.created_at ASC
-      `,
-      [conversationId]
-    );
+        AND m.deleted_at IS NULL
+    `;
 
-    // Mark messages as read
+    if (before) {
+      params.push(before);
+      sql += ` AND m.created_at < $2 `;
+    }
+
+    params.push(limit);
+    sql += `ORDER BY m.created_at DESC LIMIT $${params.length}`;
+
+    const { rows } = await pool.query(sql, params);
+
     await pool.query(
       `
       UPDATE messages 
       SET is_read = true 
       WHERE conversation_id = $1 
-      AND sender_id != $2 
-      AND is_read = false
+        AND sender_id != $2 
+        AND is_read = false
       `,
       [conversationId, userId]
     );
 
-    res.json(rows);
+    res.json(rows.reverse());
   } catch (error) {
     console.error("❌ Get messages error:", error);
     res.status(500).json({ error: "Failed to fetch messages" });
@@ -181,7 +190,7 @@ router.get("/conversations/:conversationId/messages", auth, async (req, res) => 
 });
 
 /* ======================================================
-   ✉️ 4️⃣ Send a new message
+   ✉️ 4️⃣ Send new message
 ====================================================== */
 router.post("/conversations/:conversationId/messages", auth, async (req, res) => {
   try {
@@ -193,15 +202,11 @@ router.post("/conversations/:conversationId/messages", auth, async (req, res) =>
       return res.status(400).json({ error: "Message text is required" });
     }
 
-    if (message_text.trim().length > 1000) {
-      return res.status(400).json({ error: "Message too long (max 1000 characters)" });
-    }
-
     const participantCheck = await pool.query(
       "SELECT 1 FROM conversation_participants WHERE conversation_id = $1 AND user_id = $2",
       [conversationId, userId]
     );
-    
+
     if (participantCheck.rows.length === 0) {
       return res.status(403).json({ error: "Access denied" });
     }
@@ -218,13 +223,28 @@ router.post("/conversations/:conversationId/messages", auth, async (req, res) =>
       [conversationId, userId, message_text.trim()]
     );
 
-    // Update conversation timestamp
+    const message = rows[0];
+
     await pool.query(
-      "UPDATE conversations SET updated_at = CURRENT_TIMESTAMP WHERE id = $1", 
+      "UPDATE conversations SET updated_at = CURRENT_TIMESTAMP WHERE id = $1",
       [conversationId]
     );
 
-    res.json(rows[0]);
+    const { rows: others } = await pool.query(
+      `
+      SELECT user_id 
+      FROM conversation_participants 
+      WHERE conversation_id = $1 AND user_id <> $2
+      `,
+      [conversationId, userId]
+    );
+
+    const broadcastFn = req.app.get("broadcastNewMessage");
+    if (broadcastFn) {
+      broadcastFn(message, others.map((r) => r.user_id));
+    }
+
+    res.json(message);
   } catch (error) {
     console.error("❌ Send message error:", error);
     res.status(500).json({ error: "Failed to send message" });
@@ -232,7 +252,143 @@ router.post("/conversations/:conversationId/messages", auth, async (req, res) =>
 });
 
 /* ======================================================
-   🔔 5️⃣ Get unread message count
+   👁‍🗨 5️⃣ Mark messages as seen
+====================================================== */
+router.post("/conversations/:conversationId/seen", auth, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { conversationId } = req.params;
+
+    const participantCheck = await pool.query(
+      "SELECT 1 FROM conversation_participants WHERE conversation_id = $1 AND user_id = $2",
+      [conversationId, userId]
+    );
+
+    if (participantCheck.rows.length === 0) {
+      return res.status(403).json({ error: "Access denied" });
+    }
+
+    const { rows } = await pool.query(
+      `
+      UPDATE messages
+      SET is_read = true
+      WHERE conversation_id = $1
+        AND sender_id != $2
+        AND is_read = false
+      RETURNING id, sender_id
+      `,
+      [conversationId, userId]
+    );
+
+    const broadcastSeen = req.app.get("broadcastSeenMessage");
+    if (broadcastSeen) {
+      rows.forEach((row) => {
+        broadcastSeen(conversationId, row.id, row.sender_id);
+      });
+    }
+
+    res.json({ updated: rows.length });
+  } catch (error) {
+    console.error("❌ Seen error:", error);
+    res.status(500).json({ error: "Failed to mark seen" });
+  }
+});
+
+/* ======================================================
+   ✏️ 6️⃣ Edit a message
+====================================================== */
+router.put("/messages/:messageId", auth, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { messageId } = req.params;
+    const { message_text } = req.body;
+
+    if (!message_text?.trim()) {
+      return res.status(400).json({ error: "Message text is required" });
+    }
+
+    const { rows } = await pool.query(
+      `
+      UPDATE messages
+      SET message_text = $1, edited_at = NOW()
+      WHERE id = $2 AND sender_id = $3
+      RETURNING *
+      `,
+      [message_text.trim(), messageId, userId]
+    );
+
+    if (rows.length === 0) {
+      return res.status(404).json({ error: "Not found or unauthorized" });
+    }
+
+    const message = rows[0];
+
+    const { rows: others } = await pool.query(
+      `
+      SELECT user_id FROM conversation_participants
+      WHERE conversation_id = $1 AND user_id <> $2
+      `,
+      [message.conversation_id, userId]
+    );
+
+    const broadcastEdit = req.app.get("broadcastEditedMessage");
+    if (broadcastEdit) {
+      broadcastEdit(message, others.map((u) => u.user_id));
+    }
+
+    res.json(message);
+  } catch (error) {
+    console.error("❌ Edit message error:", error);
+    res.status(500).json({ error: "Failed to edit message" });
+  }
+});
+
+/* ======================================================
+   🗑 7️⃣ Delete a message
+====================================================== */
+router.delete("/messages/:messageId", auth, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { messageId } = req.params;
+
+    const { rows } = await pool.query(
+      `
+      UPDATE messages
+      SET deleted_at = NOW(), message_text = '[deleted]'
+      WHERE id = $1 AND sender_id = $2
+      RETURNING *
+      `,
+      [messageId, userId]
+    );
+
+    if (rows.length === 0) {
+      return res.status(404).json({ error: "Not found or unauthorized" });
+    }
+
+    const message = rows[0];
+
+    const { rows: others } = await pool.query(
+      `
+      SELECT user_id FROM conversation_participants
+      WHERE conversation_id = $1 AND user_id <> $2
+      `,
+      [message.conversation_id, userId]
+    );
+
+    const broadcastDelete = req.app.get("broadcastDeletedMessage");
+    if (broadcastDelete) {
+      broadcastDelete(message.id, others.map((u) => u.user_id));
+    }
+
+    res.json({ success: true });
+  } catch (error) {
+    console.error("❌ Delete message error:", error);
+    res.status(500).json({ error: "Failed to delete message" });
+  }
+});
+
+/* ======================================================
+   🔔 8️⃣ Global unread count
 ====================================================== */
 router.get("/unread-count", auth, async (req, res) => {
   try {
@@ -250,50 +406,10 @@ router.get("/unread-count", auth, async (req, res) => {
       [userId]
     );
 
-    res.json({ count: parseInt(rows[0].count) });
+    res.json({ count: parseInt(rows[0].count, 10) });
   } catch (error) {
     console.error("❌ Get unread count error:", error);
-    res.status(500).json({ error: "Failed to get unread count" });
-  }
-});
-
-/* ======================================================
-   👥 6️⃣ Get conversation participants
-====================================================== */
-router.get("/conversations/:conversationId/participants", auth, async (req, res) => {
-  try {
-    const userId = req.user.id;
-    const { conversationId } = req.params;
-
-    // Verify user is participant
-    const participantCheck = await pool.query(
-      "SELECT 1 FROM conversation_participants WHERE conversation_id = $1 AND user_id = $2",
-      [conversationId, userId]
-    );
-    
-    if (participantCheck.rows.length === 0) {
-      return res.status(403).json({ error: "Access denied" });
-    }
-
-    const { rows } = await pool.query(
-      `
-      SELECT 
-        u.id,
-        u.username,
-        u.display_name,
-        u.avatar_url,
-        u.bio
-      FROM conversation_participants cp
-      JOIN users u ON cp.user_id = u.id
-      WHERE cp.conversation_id = $1 AND u.id != $2
-      `,
-      [conversationId, userId]
-    );
-
-    res.json(rows[0] || null); // Return the other participant
-  } catch (error) {
-    console.error("❌ Get participants error:", error);
-    res.status(500).json({ error: "Failed to fetch participants" });
+    res.status(500).json({ error: "Failed" });
   }
 });
 
