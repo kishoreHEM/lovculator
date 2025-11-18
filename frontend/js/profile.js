@@ -111,275 +111,264 @@ class ProfileManager {
         }
     }
 
-// =====================================================
-// 2️⃣ Render Profile Details (Optimized) - FINAL FIX
-// =====================================================
-renderProfileDetails(user, isOwnProfile = true) {
-    if (!this.profileInfoContainer) return;
+    // =====================================================
+    // 2️⃣ Render Profile Details (Optimized) - FIXED MESSAGE BUTTON
+    // =====================================================
+    renderProfileDetails(user, isOwnProfile = true) {
+        if (!this.profileInfoContainer) return;
 
-    const followerCount = user.follower_count ?? 0;
-    const followingCount = user.following_count ?? 0;
-    const displayName = user.display_name || user.username || "User";
-    const joinedDate = user.created_at
-        ? new Date(user.created_at).toLocaleDateString("en-US", {
-            month: "long",
-            year: "numeric",
-        })
-        : "Recently";
+        const followerCount = user.follower_count ?? 0;
+        const followingCount = user.following_count ?? 0;
+        const displayName = user.display_name || user.username || "User";
+        const joinedDate = user.created_at
+            ? new Date(user.created_at).toLocaleDateString("en-US", {
+                month: "long",
+                year: "numeric",
+            })
+            : "Recently";
 
-    // Robust avatar URL handling
-    const getValidAvatarUrl = (avatar) => {
-        if (!avatar || avatar === 'null' || avatar === 'undefined' || avatar.trim() === '') {
-            return "/images/default-avatar.png";
+        // Robust avatar URL handling
+        const getValidAvatarUrl = (avatar) => {
+            if (!avatar || avatar === 'null' || avatar === 'undefined' || avatar.trim() === '') {
+                return "/images/default-avatar.png";
+            }
+            return avatar;
+        };
+
+        let avatarUrl = getValidAvatarUrl(user.avatar_url);
+
+        // Clean localhost URLs
+        if (avatarUrl && avatarUrl.includes('localhost')) {
+            try {
+                const url = new URL(avatarUrl, window.location.origin);
+                avatarUrl = url.pathname;
+            } catch (e) {
+                console.error("Failed to parse and clean avatar URL:", e);
+            }
         }
-        return avatar;
-    };
-
-    let avatarUrl = getValidAvatarUrl(user.avatar_url);
-
-    // Clean localhost URLs
-    if (avatarUrl && avatarUrl.includes('localhost')) {
-        try {
-            const url = new URL(avatarUrl, window.location.origin);
-            avatarUrl = url.pathname;
-        } catch (e) {
-            console.error("Failed to parse and clean avatar URL:", e);
+        
+        // Add cache-buster
+        if (avatarUrl && !avatarUrl.includes('?')) {
+            avatarUrl = `${avatarUrl}?t=${Date.now()}`;
+        } else if (avatarUrl) {
+            avatarUrl = `${avatarUrl}&t=${Date.now()}`;
         }
-    }
-    
-    // Add cache-buster
-    if (avatarUrl && !avatarUrl.includes('?')) {
-        avatarUrl = `${avatarUrl}?t=${Date.now()}`;
-    } else if (avatarUrl) {
-        avatarUrl = `${avatarUrl}&t=${Date.now()}`;
-    }
 
-    const bioHTML = user.bio
-        ? `<p class="bio-text">${user.bio}</p>`
-        : `<p class="bio-text empty">No bio set yet.</p>`;
-    const locationHTML = user.location
-        ? `<span class="location">📍 ${user.location}</span>`
-        : "";
+        const bioHTML = user.bio
+            ? `<p class="bio-text">${user.bio}</p>`
+            : `<p class="bio-text empty">No bio set yet.</p>`;
+        const locationHTML = user.location
+            ? `<span class="location">📍 ${user.location}</span>`
+            : "";
 
-    // Avatar section
-    const avatarSection = isOwnProfile
-        ? `
-            <div class="avatar-upload-section">
-                <img id="avatarImage" src="${avatarUrl}" alt="${displayName}" class="profile-avatar-img" />
-                <label class="avatar-upload-label">
-                    📸 Change Photo
-                    <input type="file" id="avatarInput" accept="image/*" hidden />
-                </label>
-            </div>
-        `
-        : `
-            <div class="avatar-view-section">
-                <img id="avatarImage" src="${avatarUrl}" alt="${displayName}" class="profile-avatar-img" />
+        // Avatar section
+        const avatarSection = isOwnProfile
+            ? `
+                <div class="avatar-upload-section">
+                    <img id="avatarImage" src="${avatarUrl}" alt="${displayName}" class="profile-avatar-img" />
+                    <label class="avatar-upload-label">
+                        📸 Change Photo
+                        <input type="file" id="avatarInput" accept="image/*" hidden />
+                    </label>
+                </div>
+            `
+            : `
+                <div class="avatar-view-section">
+                    <img id="avatarImage" src="${avatarUrl}" alt="${displayName}" class="profile-avatar-img" />
+                </div>
+            `;
+
+        // Profile layout
+        this.profileInfoContainer.innerHTML = `
+            <div class="profile-header-card">
+                <div class="profile-cover"></div>
+
+                <div class="profile-main-info">
+                    <div class="profile-avatar-wrapper">
+                        ${avatarSection}
+                    </div>
+
+                    <div class="profile-details">
+                        <h3 id="profileUsername">${displayName}</h3>
+                        <div class="social-stats">
+                            <span id="profileFollowers">${followerCount} Followers</span>
+                            <span class="separator">·</span>
+                            <span id="profileFollowing">${followingCount} Following</span>
+                        </div>
+                        <p id="profileJoined" class="joined-date">Joined ${joinedDate}</p>
+                        <div class="profile-bio-summary">
+                            ${bioHTML}
+                            ${locationHTML}
+                        </div>
+                    </div>
+                </div>
+
+                <div class="profile-actions-bar">
+                    ${
+                        isOwnProfile
+                            ? `
+                                <button id="editProfileBtn" class="btn btn-secondary btn-small">✏️ Edit Profile</button>
+                                <button id="logoutBtn" class="btn btn-secondary btn-small">🚪 Logout</button>
+                            `
+                            : `
+                                <button id="followProfileBtn" class="btn btn-primary btn-small">
+                                    ${user.is_following_author ? "Following" : "+ Follow"}
+                                </button>
+                                <button id="messageUserBtn" class="btn btn-primary btn-small message-user-btn" data-user-id="${user.id}">
+                                    💌 Message
+                                </button>
+                            `
+                    }
+                </div>
             </div>
         `;
 
-    // Profile layout
-    this.profileInfoContainer.innerHTML = `
-        <div class="profile-header-card">
-            <div class="profile-cover"></div>
-
-            <div class="profile-main-info">
-                <div class="profile-avatar-wrapper">
-                    ${avatarSection}
-                </div>
-
-                <div class="profile-details">
-                    <h3 id="profileUsername">${displayName}</h3>
-                    <div class="social-stats">
-                        <span id="profileFollowers">${followerCount} Followers</span>
-                        <span class="separator">·</span>
-                        <span id="profileFollowing">${followingCount} Following</span>
-                    </div>
-                    <p id="profileJoined" class="joined-date">Joined ${joinedDate}</p>
-                    <div class="profile-bio-summary">
-                        ${bioHTML}
-                        ${locationHTML}
-                    </div>
-                </div>
-            </div>
-
-            <div class="profile-actions-bar">
-                ${
-                    isOwnProfile
-                        ? `
-                            <button id="editProfileBtn" class="btn btn-secondary btn-small">✏️ Edit Profile</button>
-                            <button id="logoutBtn" class="btn btn-secondary btn-small">🚪 Logout</button>
-                        `
-                        : `
-                            <button id="followProfileBtn" class="btn btn-primary btn-small">
-                                ${user.is_following_author ? "Following" : "+ Follow"}
-                            </button>
-                            <button id="messageUserBtn" class="btn btn-primary btn-small message-user-btn" data-user-id="${user.id}">
-                                💌 Message
-                            </button>
-                        `
-                }
-            </div>
-        </div>
-    `;
-
-    if (!isOwnProfile) {
-    const messageBtn = document.getElementById('messageUserBtn');
-    if (messageBtn) {
-        messageBtn.addEventListener('click', (e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            console.log('💌 Profile message button clicked directly');
-            console.log('🔍 messagesManager available:', !!window.messagesManager);
-            console.log('🔍 messagesManager type:', typeof window.messagesManager);
-            
-            const userId = messageBtn.dataset.userId;
-            if (userId) {
-                if (window.messagesManager) {
-                    console.log('🚀 Calling openMessagesModal...');
-                    window.messagesManager.openMessagesModal(userId);
-                } else {
-                    console.log('❌ messagesManager is not available');
-                    alert('Messaging system is not loaded yet. Please refresh the page.');
-                }
-            }
-        });
-    }
-}
-
-    // Smooth fade-in effect
-    const headerCard = this.profileInfoContainer.querySelector(".profile-header-card");
-    if (headerCard) {
-        requestAnimationFrame(() => {
-            headerCard.classList.add("loaded");
-        });
-    }
-
-    // Reattach event handlers
-    if (isOwnProfile) {
-        this.attachLogoutHandler();
-        this.attachEditProfileHandlers();
-        this.attachAvatarUploadHandler();
-    } else {
-        this.attachFollowProfileHandler(user.id);
-    }
-
-    // Debug code
-    console.log('👤 Profile rendered for user:', user.username);
-    console.log('📝 Message button should be available for user ID:', user.id);
-
-    // Test if button exists after a short delay
-    setTimeout(() => {
-        const messageBtn = document.getElementById('messageUserBtn');
-        console.log('🔍 Message button found:', messageBtn);
-        if (messageBtn) {
-            console.log('📋 Message button attributes:', {
-                id: messageBtn.id,
-                userId: messageBtn.dataset.userId,
-                classes: messageBtn.className
+        // Smooth fade-in effect
+        const headerCard = this.profileInfoContainer.querySelector(".profile-header-card");
+        if (headerCard) {
+            requestAnimationFrame(() => {
+                headerCard.classList.add("loaded");
             });
-        } else {
-            console.log('❌ Message button NOT found - this is expected for own profile');
         }
-    }, 100);
-} // ✅ END OF METHOD - IMPORTANT CLOSING BRACE
 
-// =====================================================
-// 🧁 Avatar Upload (with Preview & Upload - Final Corrected)
-// =====================================================
-attachAvatarUploadHandler() {
-    const avatarInput = document.getElementById("avatarInput");
-    const avatarImage = document.getElementById("avatarImage");
+        // Reattach event handlers
+        if (isOwnProfile) {
+            this.attachLogoutHandler();
+            this.attachEditProfileHandlers();
+            this.attachAvatarUploadHandler();
+        } else {
+            this.attachFollowProfileHandler(user.id);
+        }
 
-    if (!avatarInput || !avatarImage || !this.currentUser) return;
+        // Debug code - check message button state
+        console.log('👤 Profile rendered for user:', user.username);
+        console.log('📝 Message button should be available for user ID:', user.id);
 
-    avatarInput.addEventListener("change", async (event) => {
-        const file = event.target.files[0];
-        if (!file) return;
+        // Test if button exists after a short delay
+        setTimeout(() => {
+            if (!isOwnProfile) {
+                this.debugMessageButton();
+            }
+        }, 100);
+    }
 
-        if (file.size > 2 * 1024 * 1024) {
-            alert("⚠️ Max file size is 2MB.");
+    // =====================================================
+    // 🧩 Debug Helper for Message Button
+    // =====================================================
+    debugMessageButton() {
+        const messageBtn = document.getElementById('messageUserBtn');
+        if (!messageBtn) {
+            console.log('❌ Message button not found in DOM');
             return;
         }
 
-        // 1. Preview instantly (using data URL, which is CSP compliant)
-        const reader = new FileReader();
-        reader.onload = () => {
-            avatarImage.src = reader.result;
-        };
-        reader.readAsDataURL(file);
-
-        // Upload to server
-        const formData = new FormData();
-        formData.append("avatar", file);
-
-        try {
-            const res = await fetch(`${this.API_BASE}/users/${this.currentUser.id}/avatar`, {
-                method: "POST",
-                body: formData,
-                credentials: "include",
-            });
-
-            const data = await res.json();
-            if (!res.ok) throw new Error(data.error || "Upload failed");
-
-            // 2. 🛑 DEFENSIVE STRIPPING: Ensure URL is relative (e.g., /uploads/avatars/...)
-            let cleanAvatarURL = data.avatar_url;
-
-            if (cleanAvatarURL && (cleanAvatarURL.includes('localhost') || !cleanAvatarURL.startsWith('/'))) {
-                // Use URL object to reliably extract the path, ensuring no host is left
-                try {
-                    // Prepend window.location.origin to handle cases where backend sends only the path
-                    const url = new URL(cleanAvatarURL, window.location.origin);
-                    cleanAvatarURL = url.pathname;
-                } catch (e) {
-                    console.error("URL parsing failed, falling back to original data.");
-                    cleanAvatarURL = data.avatar_url;
-                }
-            }
-
-            // 3. ✅ CACHE BUSTING: Append timestamp to the clean, relative URL
-            const newAvatarURL = `${cleanAvatarURL}?t=${Date.now()}`;
-
-            // 4. Update UI and State
-            
-            // Update UI instantly
-            avatarImage.src = newAvatarURL; 
-            
-            // Update local state objects
-            this.currentUser.avatar_url = newAvatarURL;
-            this.viewedUser.avatar_url = newAvatarURL;
-
-            // Update global state
-            if (window.currentUser) {
-                window.currentUser.avatar_url = newAvatarURL;
-            }
-
-            // Refresh session data (assuming this method is defined elsewhere)
-            await this.refreshUserSession();
-
-            // Bounce animation for visual feedback
-            avatarImage.classList.add("avatar-updated");
-            setTimeout(() => avatarImage.classList.remove("avatar-updated"), 800);
-
-            // Notify other components
-            window.dispatchEvent(new CustomEvent('avatarUpdated', {
-                detail: { avatarUrl: newAvatarURL }
-            }));
-
-            alert("✅ Profile picture updated!");
-
-        } catch (err) {
-            console.error("❌ Avatar upload error:", err);
-            
-            // Revert to original avatar on error
-            const originalAvatar = this.currentUser.avatar_url || "/images/default-avatar.png";
-            avatarImage.src = originalAvatar;
-            
-            alert("❌ Failed to upload avatar. Please try again.");
+        console.group('🔍 Message Button Debug');
+        console.log('Button found:', messageBtn);
+        console.log('User ID:', messageBtn.dataset.userId);
+        console.log('messagesManager available:', !!window.messagesManager);
+        
+        if (window.messagesManager) {
+            console.log('openMessagesModal function:', typeof window.messagesManager.openMessagesModal);
         }
-    });
-}
+        console.groupEnd();
+    }
+
+    // =====================================================
+    // 🧁 Avatar Upload (with Preview & Upload - Final Corrected)
+    // =====================================================
+    attachAvatarUploadHandler() {
+        const avatarInput = document.getElementById("avatarInput");
+        const avatarImage = document.getElementById("avatarImage");
+
+        if (!avatarInput || !avatarImage || !this.currentUser) return;
+
+        avatarInput.addEventListener("change", async (event) => {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            if (file.size > 2 * 1024 * 1024) {
+                alert("⚠️ Max file size is 2MB.");
+                return;
+            }
+
+            // 1. Preview instantly (using data URL, which is CSP compliant)
+            const reader = new FileReader();
+            reader.onload = () => {
+                avatarImage.src = reader.result;
+            };
+            reader.readAsDataURL(file);
+
+            // Upload to server
+            const formData = new FormData();
+            formData.append("avatar", file);
+
+            try {
+                const res = await fetch(`${this.API_BASE}/users/${this.currentUser.id}/avatar`, {
+                    method: "POST",
+                    body: formData,
+                    credentials: "include",
+                });
+
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.error || "Upload failed");
+
+                // 2. 🛑 DEFENSIVE STRIPPING: Ensure URL is relative (e.g., /uploads/avatars/...)
+                let cleanAvatarURL = data.avatar_url;
+
+                if (cleanAvatarURL && (cleanAvatarURL.includes('localhost') || !cleanAvatarURL.startsWith('/'))) {
+                    // Use URL object to reliably extract the path, ensuring no host is left
+                    try {
+                        // Prepend window.location.origin to handle cases where backend sends only the path
+                        const url = new URL(cleanAvatarURL, window.location.origin);
+                        cleanAvatarURL = url.pathname;
+                    } catch (e) {
+                        console.error("URL parsing failed, falling back to original data.");
+                        cleanAvatarURL = data.avatar_url;
+                    }
+                }
+
+                // 3. ✅ CACHE BUSTING: Append timestamp to the clean, relative URL
+                const newAvatarURL = `${cleanAvatarURL}?t=${Date.now()}`;
+
+                // 4. Update UI and State
+                
+                // Update UI instantly
+                avatarImage.src = newAvatarURL; 
+                
+                // Update local state objects
+                this.currentUser.avatar_url = newAvatarURL;
+                this.viewedUser.avatar_url = newAvatarURL;
+
+                // Update global state
+                if (window.currentUser) {
+                    window.currentUser.avatar_url = newAvatarURL;
+                }
+
+                // Refresh session data (assuming this method is defined elsewhere)
+                await this.refreshUserSession();
+
+                // Bounce animation for visual feedback
+                avatarImage.classList.add("avatar-updated");
+                setTimeout(() => avatarImage.classList.remove("avatar-updated"), 800);
+
+                // Notify other components
+                window.dispatchEvent(new CustomEvent('avatarUpdated', {
+                    detail: { avatarUrl: newAvatarURL }
+                }));
+
+                alert("✅ Profile picture updated!");
+
+            } catch (err) {
+                console.error("❌ Avatar upload error:", err);
+                
+                // Revert to original avatar on error
+                const originalAvatar = this.currentUser.avatar_url || "/images/default-avatar.png";
+                avatarImage.src = originalAvatar;
+                
+                alert("❌ Failed to upload avatar. Please try again.");
+            }
+        });
+    }
 
     // =====================================================
     // 🔄 Session Refresh Helper
@@ -891,16 +880,48 @@ window.addEventListener('avatarUpdated', (event) => {
     console.log('✅ Avatar updated globally:', avatarUrl);
 });
 
-// Global handler for Message button clicks on profiles
+// =====================================================
+// 💌 ENHANCED GLOBAL MESSAGE BUTTON HANDLER
+// =====================================================
 document.addEventListener(
     "click",
     (e) => {
         const btn = e.target.closest("#messageUserBtn, .message-user-btn");
         if (btn) {
+            e.preventDefault();
+            e.stopPropagation();
+            
             console.log("💌 Global handler → Message button clicked");
             const userId = btn.dataset.userId;
-            if (userId) {
-                window.messagesManager?.openMessagesModal(userId);
+            
+            if (!userId) {
+                console.error('❌ No user ID found on message button');
+                return;
+            }
+
+            console.log('🔍 Opening messages for user ID:', userId);
+            console.log('📱 messagesManager available:', !!window.messagesManager);
+
+            if (window.messagesManager && typeof window.messagesManager.openMessagesModal === 'function') {
+                console.log('🚀 Calling openMessagesModal with user ID:', userId);
+                window.messagesManager.openMessagesModal(parseInt(userId)); // Ensure it's a number
+            } else {
+                console.error('❌ messagesManager not available or openMessagesModal not a function');
+                
+                // Fallback: redirect to messages page
+                setTimeout(() => {
+                    window.location.href = `/messages.html?user=${userId}`;
+                }, 500);
+                
+                // Show user feedback
+                const toast = document.createElement('div');
+                toast.innerHTML = `
+                    <div style="position: fixed; top: 20px; right: 20px; background: #ff9800; color: white; padding: 12px 20px; border-radius: 8px; z-index: 10000;">
+                        💬 Opening messages...
+                    </div>
+                `;
+                document.body.appendChild(toast);
+                setTimeout(() => toast.remove(), 3000);
             }
         }
     },

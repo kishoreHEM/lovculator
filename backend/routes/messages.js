@@ -148,7 +148,7 @@ router.get("/conversations", auth, async (req, res) => {
 });
 
 /* ======================================================
-   💬 2️⃣ Get or create conversation with another user
+   💬 2️⃣ Get or create conversation with another user (FIXED - removed deleted_at)
 ====================================================== */
 router.post("/conversations", auth, conversationLimiter, validateConversation, async (req, res) => {
   const client = await pool.connect();
@@ -171,19 +171,19 @@ router.post("/conversations", auth, conversationLimiter, validateConversation, a
     const userCheck = await client.query(
       `SELECT id, username, display_name, avatar_url 
        FROM users 
-       WHERE id = $1 AND deleted_at IS NULL`,
+       WHERE id = $1`,
       [targetUserIdInt]
     );
 
     if (userCheck.rows.length === 0) {
       await client.query('ROLLBACK');
       return res.status(404).json({ 
-        error: "User not found or account deleted",
+        error: "User not found",
         code: "USER_NOT_FOUND"
       });
     }
 
-    // Check for existing conversation
+    // Check for existing conversation using conversation_participants
     const existing = await client.query(
       `
       SELECT c.id
@@ -200,18 +200,26 @@ router.post("/conversations", auth, conversationLimiter, validateConversation, a
 
     if (existing.rows.length > 0) {
       conversationId = existing.rows[0].id;
+      
+      // Update conversation timestamp
+      await client.query(
+        "UPDATE conversations SET updated_at = CURRENT_TIMESTAMP WHERE id = $1",
+        [conversationId]
+      );
     } else {
-      // Create new conversation
+      // Create new conversation WITHOUT deleted_at
       const newConv = await client.query(
-        "INSERT INTO conversations DEFAULT VALUES RETURNING id"
+        `INSERT INTO conversations (created_at, updated_at) 
+         VALUES (NOW(), NOW()) 
+         RETURNING id`,
+        []
       );
       conversationId = newConv.rows[0].id;
 
+      // Add both users as participants
       await client.query(
-        `
-        INSERT INTO conversation_participants (conversation_id, user_id) 
-        VALUES ($1, $2), ($1, $3)
-        `,
+        `INSERT INTO conversation_participants (conversation_id, user_id, joined_at) 
+         VALUES ($1, $2, NOW()), ($1, $3, NOW())`,
         [conversationId, userId, targetUserIdInt]
       );
     }
