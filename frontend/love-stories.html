@@ -328,8 +328,25 @@
 <script src="/js/notifications.js"></script>
 <script src="/js/social-features.js"></script>
 <script src="js/love-stories.js"></script>
+<script src="/js/story-modal.js"></script>
+<script src="/js/fab-manager.js"></script>
+<script src="/js/ask-modal.js"></script>
 <script src="js/fab-notifications.js"></script>
 <script src="js/simple-stats.js"></script>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Initialize core functionality
+    initializeLoveStories();
+    
+    // Initialize modals and FAB for stories page
+    if (window.loveStories && window.notificationService) {
+        window.storyModal = new StoryModal(window.loveStories, window.notificationService);
+    }
+    
+    window.fabManager = new FabManager();
+});
+</script>
 
 </body>
 </html>

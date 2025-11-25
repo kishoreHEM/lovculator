@@ -1194,23 +1194,39 @@
 
 .post-actions {
     display: flex;
-    justify-content: space-around;
-    margin-top: 12px;
-    border-top: 1px solid #eee;
-    padding-top: 10px;
+    justify-content: space-between;
+    gap: 10px;
+    margin-top: 10px;
 }
 
+
 .post-action {
-    background: none;
-    border: none;
+    flex: 1;                      /* makes each button equal width */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 12px 0;
+    border-radius: 12px;
+    border: 1px solid #eee;
+    background: #ffffff;
     cursor: pointer;
-    font-size: 15px;    
-    padding: 6px 10px;
-    border-radius: 8px;
+    font-weight: 600;
+    transition: 0.2s ease;
 }
 
 .post-action:hover {
-    background: #f2f2f2;
+    background: #f5f5f5;
+}
+
+.post-action svg {
+    width: 20px;
+    height: 20px;
+}
+
+.like-btn.liked svg {
+    fill: #ff4d6d;
+    stroke: #ff4d6d;
 }
 
 /* Upload Section */

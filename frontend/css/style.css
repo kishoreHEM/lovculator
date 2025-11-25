@@ -824,10 +824,10 @@ body {
 
 /* Individual Share Buttons */
 .share-btn {
-  background: #f9f9f9;
-  border: none;
+  background: #ffffff;
+  border: 1px solid #eee;
   padding: 14px 26px;
-  border-radius: 50px;
+  border-radius: 12px;
   font-weight: 700;
   font-size: 15px;
   cursor: pointer;
@@ -852,22 +852,6 @@ body {
   width: 18px;
   height: 18px;
   flex-shrink: 0;
-}
-
-.share-btn.facebook {
-  color: #1877f2;
-}
-
-.share-btn.twitter {
-  color: #000;
-}
-
-.share-btn.whatsapp {
-  color: #25d366;
-}
-
-.share-btn.instagram {
-  color: #c13584;
 }
 
 
@@ -4976,25 +4960,5 @@ body.modal-open {
     justify-content: space-around;
     padding-top: 10px;
     margin-top: 12px;
-}
-
-.post-action {
-    /* Remove default button padding added in other components */
-    padding: 8px 0;
-    
-    /* Ensure text is part of the action */
-    font-weight: 600;
-    color: #65676b; 
-    flex-grow: 1; /* Stretch buttons evenly */
-    justify-content: center; /* Center content within the stretched button */
-}
-
-.post-action svg {
-    margin-right: 5px; /* Spacing between icon and text */
-}
-
-.post-action:hover {
-    background: #f0f2f5;
-    border-radius: 6px;
 }
 
