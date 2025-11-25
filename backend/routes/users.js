@@ -4,6 +4,7 @@ import pool from "../db.js";
 import multer from "multer";
 import path from "path";
 import fs from "fs";
+import { notifyFollow } from './notifications.js';
 
 const router = express.Router();
 
@@ -104,32 +105,57 @@ router.get("/profile/:username", async (req, res) => {
 });
 
 /* ======================================================
-   3️⃣ UPDATE USER PROFILE (Requires Auth)
+   3️⃣ UPDATE USER PROFILE (Requires Auth) - EXTENDED & SAFE
 ====================================================== */
 router.put("/:id", isAuthenticated, async (req, res) => {
   try {
     const { id } = req.params;
-    const { display_name, bio, location, relationship_status, avatar_url } = req.body;
     const sessionUserId = req.user.id;
+
+    const {
+      display_name, bio, location, relationship_status, avatar_url,
+      gender, date_of_birth, work, education
+    } = req.body;
 
     if (parseInt(id) !== sessionUserId) {
       return res.status(403).json({ error: "Unauthorized action" });
     }
 
-    const result = await pool.query(`
+    const result = await pool.query(
+      `
       UPDATE users
-      SET display_name = $1, bio = $2, location = $3, relationship_status = $4, avatar_url = $5
-      WHERE id = $6
+      SET display_name = COALESCE($1, display_name),
+          bio = COALESCE($2, bio),
+          location = COALESCE($3, location),
+          relationship_status = COALESCE($4, relationship_status),
+          avatar_url = COALESCE($5, avatar_url),
+          gender = COALESCE($6, gender),
+          date_of_birth = COALESCE($7, date_of_birth),
+          work = COALESCE($8, work),
+          education = COALESCE($9, education),
+          updated_at = NOW()
+      WHERE id = $10
       RETURNING id, username, display_name, bio, location, relationship_status,
-                follower_count, following_count, avatar_url, created_at
-    `, [display_name, bio, location, relationship_status, avatar_url, id]);
+                gender, date_of_birth, work, education,
+                follower_count, following_count, avatar_url, created_at;
+      `,
+      [
+        display_name, bio, location, relationship_status, avatar_url,
+        gender, date_of_birth, work, education, id
+      ]
+    );
 
-    res.json(result.rows[0]);
+    res.json({
+      success: true,
+      user: result.rows[0],
+    });
+
   } catch (err) {
     console.error("❌ Error updating profile:", err);
     res.status(500).json({ error: "Profile update failed" });
   }
 });
+
 
 /* ======================================================
    4️⃣ UPLOAD PROFILE AVATAR (CSP + CDN Safe)
@@ -182,6 +208,7 @@ router.post("/:targetId/follow", isAuthenticated, async (req, res) => {
     );
 
     let isFollowing;
+
     if (check.rowCount > 0) {
       await client.query(
         "DELETE FROM follows WHERE follower_id = $1 AND target_id = $2",
@@ -203,28 +230,22 @@ router.post("/:targetId/follow", isAuthenticated, async (req, res) => {
       WHERE id IN ($1, $2);
     `, [followerId, targetId]);
 
-    const { rows: targetUser } = await client.query(
-      "SELECT follower_count FROM users WHERE id = $1",
-      [targetId]
-    );
-    const { rows: followerUser } = await client.query(
-      "SELECT following_count FROM users WHERE id = $1",
-      [followerId]
-    );
-
     await client.query("COMMIT");
 
-    res.json({
+    // call notify only AFTER COMMIT
+    if (isFollowing) {
+      await notifyFollow(targetId, followerId, req); // <-- correct usage
+    }
+
+    return res.json({
       success: true,
-      is_following: isFollowing,
-      message: isFollowing ? "Followed successfully." : "Unfollowed successfully.",
-      target_follower_count: targetUser[0]?.follower_count || 0,
-      follower_following_count: followerUser[0]?.following_count || 0,
+      is_following: isFollowing
     });
+
   } catch (err) {
     await client.query("ROLLBACK");
     console.error("❌ Follow/Unfollow transaction error:", err);
-    res.status(500).json({ error: "Failed to toggle follow status." });
+    return res.status(500).json({ error: "Failed to toggle follow status." });
   } finally {
     client.release();
   }

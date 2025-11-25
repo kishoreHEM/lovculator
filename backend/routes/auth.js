@@ -120,40 +120,55 @@ router.post("/login", async (req, res) => {
 
 
 // ===================================================
-// 3️⃣ AUTH CHECK (/api/auth/me) — FIXED VERSION
+// 3️⃣ AUTH CHECK (/api/auth/me) — FINAL FIXED VERSION
 // ===================================================
 router.get("/me", async (req, res) => {
-  const userId = req.session?.user?.id;
-
-  if (!userId) {
-    return res.status(401).json({ error: "Not logged in." });
-  }
-
   try {
-    // Fetch latest user data from DB
+    const userId = req.session?.user?.id;
+
+    if (!userId) {
+      return res.status(401).json({ success: false, user: null });
+    }
+
     const result = await pool.query(
-      `SELECT id, username, email, display_name, bio, location, relationship_status,
-              follower_count, following_count, created_at
+      `SELECT 
+          id,
+          username,
+          display_name,
+          email,
+          avatar_url,
+          follower_count,
+          following_count,
+          created_at
        FROM users
        WHERE id = $1`,
       [userId]
     );
 
     if (result.rowCount === 0) {
-      return res.status(404).json({ error: "User not found." });
+      return res.status(404).json({ success: false, user: null });
     }
 
     const user = result.rows[0];
 
-    // Optionally, refresh session cache too
-    req.session.user = user;
+    // Update session with new avatar
+    req.session.user = { id: user.id };
 
-    res.json(user);
+    res.json({
+      success: true,
+      user: {
+        ...user,
+        avatar_url: user.avatar_url && user.avatar_url !== "null" ? user.avatar_url : "/images/default-avatar.png",
+      }
+    });
+
   } catch (err) {
-    console.error("❌ Error in /auth/me:", err);
-    res.status(500).json({ error: "Failed to fetch user details." });
+    console.error("❌ /api/auth/me error:", err);
+    res.status(500).json({ success: false, error: "Failed to load user info" });
   }
 });
+
+
 
 // ===================================================
 // 4️⃣ LOGOUT

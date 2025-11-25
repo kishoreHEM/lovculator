@@ -6,7 +6,7 @@
 
 body {
     font-family: -apple-system,system-ui,BlinkMacSystemFont,'Segoe UI',Roboto,Oxygen-Sans,Ubuntu,Cantarell,'Helvetica Neue',sans-serif;
-    background: #fafafa;
+    background: #f0f2f5; /* Changed from #fafafa to match layout.css */
     min-height: 100vh;
     line-height: 1.6;
     padding: 0;
@@ -14,7 +14,6 @@ body {
     margin: 0;
     overflow-x: hidden;
     width: 100%;
-    background-color: #f6f7f8;
 }
 
 .container {
@@ -871,20 +870,12 @@ body {
   color: #c13584;
 }
 
-/* Love Stories Gallery */
-.stories-gallery {
-    background: white;
-    border: 1px solid #dbdbdb;
-    border-radius: 12px;
-    padding: 30px;
-    margin: 0 auto 30px;
-    max-width: 600px;
-    width: 100%;
-}
+
 
 .stories-header {
-    text-align: center;
-    margin-bottom: 30px;
+    display: flex;
+    align-items: center;
+    margin-bottom: 10px;
 }
 
 .stories-header h2 {
@@ -899,12 +890,6 @@ body {
     font-size: 1rem;
 }
 
-.stories-container {
-    display: flex;
-    flex-direction: column;
-    gap: 20px;
-    margin-bottom: 30px;
-}
 
 /* =========================================
    💬 Comment Section — Lovculator v2 (Clean)
@@ -2277,13 +2262,14 @@ body {
 }
 
 /* Footer */
-.footer {
+footer {
     background: white;
     border-top: 1px solid #e8e8e8;
     padding: 2rem 20px;
     margin-top: auto;
     width: 100%;
-    max-width: 600px;
+    /* 🟢 Crucial for aligning with main content area */
+    max-width: 680px; 
     margin-left: auto;
     margin-right: auto;
     box-sizing: border-box;
@@ -2291,7 +2277,8 @@ body {
 
 .footer-content {
     max-width: 100%;
-    margin: 0 auto;
+    /* 🟢 CLEANUP: Removed redundant margin-left: auto */
+    margin: 0 auto; 
     text-align: center;
 }
 
@@ -2305,7 +2292,7 @@ body {
 .footer-links {
     display: flex;
     justify-content: center;
-    gap: 1.5rem;
+    gap: 1rem;
     margin-top: 1.25rem;
     flex-wrap: wrap;
 }
@@ -2313,7 +2300,7 @@ body {
 .footer-links a {
     color: #262626;
     text-decoration: none;
-    font-size: 14px;
+    font-size: 10px;
     font-weight: 500;
     transition: all 0.3s ease;
     padding: 4px 8px;
@@ -2538,11 +2525,6 @@ body {
         justify-content: center;
     }
 
-    .footer {
-        padding: 1.5rem 15px;
-        max-width: 100%;
-    }
-
     .install-prompt {
         bottom: 80px;
         width: 95%;
@@ -2720,10 +2702,6 @@ body {
 
     .gender-option {
         padding: 10px;
-    }
-
-    .footer {
-        padding: 1rem 10px;
     }
 
     .about-content {
@@ -3657,18 +3635,22 @@ body {
 
 /* Feed container - centers all posts */
 .feed-container {
-  max-width: 720px;
-  margin: 40px auto;
-  padding: 0 16px;
+    max-width: 680px; /* Match main-content-area max-width */
+    margin: 0 auto;
+    padding: 0;
+    width: 100%;
 }
 
 /* Adjust card spacing */
 .story-card {
-  background: transparent;
-  border: none;
-  border-bottom: 1px solid #eaeaea;
-  padding: 22px 0;
-  transition: background 0.2s ease;
+  background: #fff;
+    border-radius: 12px;
+    padding: 16px;
+    margin: 15px auto;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.06);
+    width: 100%;
+    max-width: 680px;
+
 }
 
 .story-card:hover {
@@ -4695,7 +4677,7 @@ body {
 /* 🌸 Ask/Post Trigger Bar (Top Section Like Quora) */
 .ask-post-bar {
   width: 100%;
-  max-width: 650px;
+  max-width: 680px;
   margin: 80px auto 20px;
   display: flex;
   justify-content: space-between;
@@ -4794,7 +4776,7 @@ body {
   text-align: center;
   background: none;
   border: none;
-  padding: 10px;
+  padding: 5px;
   font-weight: 600;
   font-size: 1rem;
   cursor: pointer;
@@ -4802,7 +4784,7 @@ body {
 }
 
 .tab-btn.active {
-  color: #ff4b8d;
+  color: white;
   border-bottom: 3px solid #ff4b8d;
 }
 
@@ -4945,5 +4927,74 @@ body {
 /* Prevent background scrolling when modal is open */
 body.modal-open {
   overflow: hidden;
+}
+
+/* Add to your components.css file */
+
+.post-header {
+    /* 🟢 Set container for absolute positioning */
+    position: relative;
+    /* Ensure user details are aligned */
+    align-items: center; 
+    margin-bottom: 10px;
+}
+
+.post-user {
+    /* Ensures the user name and time are side-by-side with other post header elements */
+    flex-grow: 1; 
+}
+
+/* 🟢 Style and position the Follow Button */
+.follow-author-btn {
+    position: absolute;
+    top: 5px; /* Adjust as needed */
+    right: 0;
+    background: none;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    padding: 4px 10px;
+    font-size: 13px;
+    font-weight: 600;
+    color: #ff4b8d;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.follow-author-btn.following {
+    background: #f0f2f5;
+    color: #65676b;
+    border-color: #f0f2f5;
+}
+
+.follow-author-btn:hover:not(.following) {
+    background: #e6f1ff;
+}
+
+/* 🟢 Ensure the post-action buttons are compact and look like tabs */
+.post-actions {
+    display: flex;
+    justify-content: space-around;
+    padding-top: 10px;
+    margin-top: 12px;
+}
+
+.post-action {
+    /* Remove default button padding added in other components */
+    padding: 8px 0;
+    
+    /* Ensure text is part of the action */
+    font-weight: 600;
+    color: #65676b; 
+    flex-grow: 1; /* Stretch buttons evenly */
+    justify-content: center; /* Center content within the stretched button */
+}
+
+.post-action svg {
+    margin-right: 5px; /* Spacing between icon and text */
+}
+
+.post-action:hover {
+    background: #f0f2f5;
+    border-radius: 6px;
 }
 

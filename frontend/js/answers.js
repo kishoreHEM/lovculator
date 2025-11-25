@@ -4,13 +4,19 @@
 // Date: 2025-11-11
 // =========================================================
 
-const API_BASE = window.location.hostname.includes("localhost")
+// Use a fallback API_BASE based on application configuration
+const API_BASE = window.ROOT_API_BASE || (window.location.hostname.includes("localhost")
   ? "http://localhost:3001/api"
-  : "https://lovculator.com/api";
+  : "https://lovculator.com/api");
 
 const feedContainer = document.getElementById("storiesContainer");
 const submitQuestionBtn = document.getElementById("submitQuestion");
 const questionInput = document.getElementById("questionText");
+
+// Make key functions globally available for inline HTML handlers (onClick)
+window.postAnswer = postAnswer;
+window.postQuestion = postQuestion;
+window.shareQuestion = shareQuestion;
 
 // =========================================================
 // 🚀 Load All Questions + Top 5 Answers
@@ -25,7 +31,7 @@ async function loadQuestions() {
   `;
 
   try {
-    const res = await fetch(`${API_BASE}/questions/latest`);
+    const res = await fetch(`${API_BASE}/questions/latest`, { credentials: 'include' });
     if (!res.ok) throw new Error("Failed to load questions");
     const questions = await res.json();
 
@@ -45,7 +51,7 @@ async function loadQuestions() {
   } catch (err) {
     console.error("❌ Error loading questions:", err);
     feedContainer.innerHTML = `
-      <p style="color:red;text-align:center;">⚠️ Failed to load questions.</p>
+      <p style="color:red;text-align:center;">⚠️ Failed to load questions. Check network/server console.</p>
     `;
   }
 }
@@ -123,6 +129,7 @@ async function postQuestion() {
     const res = await fetch(`${API_BASE}/questions`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
+      credentials: 'include', // Ensure credentials are sent
       body: JSON.stringify({ question }),
     });
 
@@ -164,6 +171,7 @@ async function postAnswer(questionId) {
     const res = await fetch(`${API_BASE}/questions/${questionId}/answer`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
+      credentials: 'include', // Ensure credentials are sent
       body: JSON.stringify({ answer }),
     });
 
@@ -195,9 +203,10 @@ function shareQuestion(url, e) {
 }
 
 // =========================================================
-// 🍬 Floating Toast Message (Animated)
+// 🍬 Floating Toast Message
 // =========================================================
 function showToast(message) {
+  // Use a simple function and rely on external CSS for styling
   let toast = document.createElement("div");
   toast.className = "toast-message";
   toast.textContent = message;
@@ -218,39 +227,6 @@ if (submitQuestionBtn) {
 document.addEventListener("DOMContentLoaded", loadQuestions);
 
 // =========================================================
-// 💅 Inline Toast + Share Styling (Auto Injected)
+// 💅 REMOVED INLINE STYLING - Use layout.css for:
+// .toast-message, .toast-message.show, .share-container a
 // =========================================================
-const style = document.createElement("style");
-style.innerHTML = `
-.toast-message {
-  position: fixed;
-  bottom: 40px;
-  left: 50%;
-  transform: translateX(-50%) scale(0.9);
-  background: #ff4b8d;
-  color: #fff;
-  padding: 10px 20px;
-  border-radius: 30px;
-  font-weight: 600;
-  font-size: 0.95rem;
-  opacity: 0;
-  transition: all 0.4s ease;
-  z-index: 9999;
-}
-.toast-message.show {
-  opacity: 1;
-  transform: translateX(-50%) scale(1);
-}
-
-.share-container a {
-  color: #0077ff;
-  font-weight: 500;
-  text-decoration: none;
-  margin: 0 3px;
-  transition: color 0.2s;
-}
-.share-container a:hover {
-  color: #ff4b8d;
-}
-`;
-document.head.appendChild(style);

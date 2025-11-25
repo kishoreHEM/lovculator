@@ -29,7 +29,7 @@ class ProfileManager {
     }
 
     // =====================================================
-    // 1️⃣ Initialize Profile (Optimized for avatar loading)
+    // 1️⃣ Initialize Profile (FIXED: Handles nested API response)
     // =====================================================
     async init() {
         this.showLoading("profileInfoContainer");
@@ -49,14 +49,20 @@ class ProfileManager {
                         'Pragma': 'no-cache'
                     }
                 });
+                
                 if (meRes.ok) {
-                    currentUser = await meRes.json();
-                    this.currentUser = currentUser;
-                    window.currentUserId = currentUser.id;
-                    window.currentUser = currentUser;
+                    const data = await meRes.json();
+                    
+                    // 🟢 FIX 1: Check for success and access the nested 'user' object
+                    if (data.success && data.user) { 
+                        currentUser = data.user;
+                        this.currentUser = currentUser;
+                        window.currentUserId = currentUser.id;
+                        window.currentUser = currentUser;
+                    }
                 }
-            } catch {
-                console.warn("⚠️ No active session found");
+            } catch (err) {
+                console.warn("⚠️ No active session found or parsing error:", err);
             }
 
             // Step 2️⃣: Determine whose profile to load
@@ -287,7 +293,7 @@ class ProfileManager {
             if (!file) return;
 
             if (file.size > 2 * 1024 * 1024) {
-                alert("⚠️ Max file size is 2MB.");
+                this.showToast("⚠️ Max file size is 2MB.", "warning");
                 return;
             }
 
@@ -371,7 +377,7 @@ class ProfileManager {
     }
 
     // =====================================================
-    // 🔄 Session Refresh Helper
+    // 🔄 Session Refresh Helper (FIXED: Handles nested API response)
     // =====================================================
     async refreshUserSession() {
         try {
@@ -384,11 +390,16 @@ class ProfileManager {
             });
             
             if (meRes.ok) {
-                const freshUser = await meRes.json();
-                this.currentUser = freshUser;
-                this.viewedUser = freshUser;
-                window.currentUser = freshUser;
-                return freshUser;
+                const data = await meRes.json();
+                
+                // 🟢 FIX 2: Check for success and access the nested 'user' object
+                if (data.success && data.user) { 
+                    const freshUser = data.user;
+                    this.currentUser = freshUser;
+                    this.viewedUser = freshUser;
+                    window.currentUser = freshUser;
+                    return freshUser;
+                }
             }
         } catch (error) {
             console.warn("⚠️ Session refresh failed:", error);
@@ -461,97 +472,110 @@ class ProfileManager {
     }
 
     // =====================================================
-    // 6️⃣ Edit Profile Handlers
-    // =====================================================
-    attachEditProfileHandlers() {
-        const editBtn = document.getElementById("editProfileBtn");
-        const modal = document.getElementById("editProfileModal");
-        const closeBtn = modal?.querySelector(".close-btn");
-        const cancelBtn = document.getElementById("cancelEditBtn");
-        const form = document.getElementById("editProfileForm");
+// 6️⃣ Edit Profile Handlers (UPDATED WITH NEW FIELDS)
+// =====================================================
+attachEditProfileHandlers() {
+    const editBtn = document.getElementById("editProfileBtn");
+    const modal = document.getElementById("editProfileModal");
+    const closeBtn = modal?.querySelector(".close-btn");
+    const cancelBtn = document.getElementById("cancelEditBtn");
+    const form = document.getElementById("editProfileForm");
 
-        // 🟢 Open modal
-        if (editBtn) {
-            editBtn.addEventListener("click", () => {
-                this.populateEditForm();
-                if (modal) {
-                    modal.style.display = "flex";
-                    setTimeout(() => modal.classList.add("active"), 10);
-                }
-            });
-        }
-
-        // 🔴 Close modal helper
-        const closeModal = () => {
+    // 🟢 Open modal
+    if (editBtn) {
+        editBtn.addEventListener("click", () => {
+            this.populateEditForm();
             if (modal) {
-                modal.classList.remove("active");
-                setTimeout(() => (modal.style.display = "none"), 300);
+                modal.style.display = "flex";
+                setTimeout(() => modal.classList.add("active"), 10);
             }
-        };
+        });
+    }
 
-        // Close on X or Cancel
-        if (closeBtn) closeBtn.addEventListener("click", closeModal);
-        if (cancelBtn) cancelBtn.addEventListener("click", closeModal);
+    // 🔴 Close modal helper
+    const closeModal = () => {
+        if (modal) {
+            modal.classList.remove("active");
+            setTimeout(() => (modal.style.display = "none"), 300);
+        }
+    };
 
-        // Close when clicking outside modal dialog
-        window.addEventListener("click", (e) => {
-            if (e.target === modal) closeModal();
+    // Close on X or Cancel
+    if (closeBtn) closeBtn.addEventListener("click", closeModal);
+    if (cancelBtn) cancelBtn.addEventListener("click", closeModal);
+
+    // Click outside closes modal
+    window.addEventListener("click", (e) => {
+        if (e.target === modal) closeModal();
+    });
+
+    // 📝 Submit form
+    if (form) form.addEventListener("submit", this.handleEditProfile.bind(this));
+}
+
+populateEditForm() {
+    if (!this.currentUser) return;
+
+    document.getElementById("editDisplayName").value =
+        this.currentUser.display_name || "";
+    document.getElementById("editBio").value =
+        this.currentUser.bio || "";
+    document.getElementById("editLocation").value =
+        this.currentUser.location || "";
+    document.getElementById("editRelationshipStatus").value =
+        this.currentUser.relationship_status || "Single";
+
+    // 🆕 NEW FIELDS
+    document.getElementById("editGender").value =
+        this.currentUser.gender || "";
+    document.getElementById("editDOB").value =
+        this.currentUser.date_of_birth || "";
+    document.getElementById("editWork").value =
+        this.currentUser.work_and_education || "";
+
+    document.getElementById("editProfileMessage").textContent = "";
+}
+
+async handleEditProfile(e) {
+    e.preventDefault();
+
+    const saveBtn = document.getElementById("saveProfileBtn");
+    const messageEl = document.getElementById("editProfileMessage");
+    const modal = document.getElementById("editProfileModal");
+
+    saveBtn.disabled = true;
+    messageEl.textContent = "Saving...";
+
+    const formData = new FormData(e.target);
+    const updatedData = Object.fromEntries(formData.entries());
+            delete updatedData.avatar_url;
+
+    try {
+        const updatedUser = await this.api.request(`/users/${this.currentUser.id}`, {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(updatedData),
         });
 
-        // 📝 Handle form submit
-        if (form) form.addEventListener("submit", this.handleEditProfile.bind(this));
+        this.currentUser = { ...this.currentUser, ...updatedUser };
+        this.viewedUser = { ...this.viewedUser, ...updatedUser };
+        this.renderProfileDetails(this.currentUser);
+
+        messageEl.textContent = "✅ Profile updated successfully!";
+        messageEl.style.color = "green";
+
+        setTimeout(() => {
+            if (modal) modal.style.display = "none";
+        }, 1500);
+    } catch (err) {
+        console.error("❌ Profile update failed:", err);
+        const errorMsg = err.data?.error || "Failed to save changes. Please try again.";
+        messageEl.textContent = `❌ ${errorMsg}`;
+        messageEl.style.color = "red";
+    } finally {
+        saveBtn.disabled = false;
     }
-
-    populateEditForm() {
-        if (!this.currentUser) return;
-
-        document.getElementById("editDisplayName").value = this.currentUser.display_name || "";
-        document.getElementById("editBio").value = this.currentUser.bio || "";
-        document.getElementById("editLocation").value = this.currentUser.location || "";
-        document.getElementById("editRelationshipStatus").value =
-            this.currentUser.relationship_status || "Single";
-        document.getElementById("editProfileMessage").textContent = "";
-    }
-
-    async handleEditProfile(e) {
-        e.preventDefault();
-
-        const saveBtn = document.getElementById("saveProfileBtn");
-        const messageEl = document.getElementById("editProfileMessage");
-        const modal = document.getElementById("editProfileModal");
-        
-        saveBtn.disabled = true;
-        messageEl.textContent = "Saving...";
-
-        const formData = new FormData(e.target);
-        const updatedData = Object.fromEntries(formData.entries());
-
-        try {
-            const updatedUser = await this.api.request(`/users/${this.currentUser.id}`, {
-                method: "PUT",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(updatedData),
-            });
-
-            this.currentUser = { ...this.currentUser, ...updatedUser };
-            this.viewedUser = { ...this.viewedUser, ...updatedUser };
-            this.renderProfileDetails(this.currentUser);
-
-            messageEl.textContent = "✅ Profile updated successfully!";
-            messageEl.style.color = "green";
-
-            setTimeout(() => {
-                if (modal) modal.style.display = "none";
-            }, 1500);
-        } catch (err) {
-            console.error("❌ Profile update failed:", err);
-            const errorMsg = err.data?.error || "Failed to save changes. Please try again.";
-            messageEl.textContent = `❌ ${errorMsg}`;
-            messageEl.style.color = "red";
-        } finally {
-            saveBtn.disabled = false;
-        }
-    }
+}
 
     // =====================================================
     // 7️⃣ Load User's Stories

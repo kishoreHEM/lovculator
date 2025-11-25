@@ -82,12 +82,13 @@ class AuthManager {
   }
 
   static async getProfile() {
-    const res = await fetch(`${AUTH_API_BASE}/me`, {
-      method: "GET",
-      credentials: "include",
-    });
-    return safeParseResponse(res);
-  }
+  const res = await fetch(`${AUTH_API_BASE}/me`, {
+    method: "GET",
+    credentials: "include",
+  });
+  return safeParseResponse(res).then((data) => ({ res, data }));
+}
+
 
   static async logout() {
     const res = await fetch(`${AUTH_API_BASE}/logout`, {

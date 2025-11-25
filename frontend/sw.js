@@ -48,7 +48,7 @@ self.addEventListener('activate', event => {
   );
 });
 
-// FETCH HANDLER
+// FETCH HANDLER (UPDATED for robustness)
 self.addEventListener('fetch', event => {
   const request = event.request;
   const url = new URL(request.url);
@@ -56,14 +56,23 @@ self.addEventListener('fetch', event => {
   // Ignore non-GET or cross-origin requests
   if (request.method !== 'GET' || url.origin !== location.origin) return;
 
-  // Network-first for HTML pages
+  // Network-first for HTML pages (UPDATED)
   if (request.destination === 'document') {
     event.respondWith(
       fetch(request)
-        .then(response => response)
-        .catch(() => caches.match(request, { ignoreSearch: true })
-          .then(res => res || caches.match('/offline.html')))
-
+        .then(response => {
+          // If the fetch succeeds, return the fresh response.
+          if (response.ok) return response;
+          
+          // If fetch fails with a non-network error (e.g., 404), try cache.
+          throw new Error('Non-network fetch error: ' + response.status); 
+        })
+        .catch(error => {
+          // 🚨 CATCHES THE NETWORK FAILURE (TypeError: Failed to fetch) 
+          console.warn('HTML Fetch failed. Serving from cache or offline page:', error.message);
+          return caches.match(request, { ignoreSearch: true })
+            .then(res => res || caches.match('/offline.html'));
+        })
     );
     return;
   }
@@ -92,6 +101,7 @@ self.addEventListener('fetch', event => {
     event.respondWith(
       fetch(request)
         .then(res => {
+          // Stale-While-Revalidate pattern (updates cache on success)
           if (res.status === 200) {
             const clone = res.clone();
             caches.open(API_CACHE_NAME).then(cache => cache.put(request, clone));
@@ -103,7 +113,7 @@ self.addEventListener('fetch', event => {
     return;
   }
 
-  // Default
+  // Default (Cache-first, falling back to network)
   event.respondWith(
     caches.match(request, { ignoreSearch: true }).then(res => res || fetch(request))
   );

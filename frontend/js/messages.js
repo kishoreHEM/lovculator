@@ -10,6 +10,8 @@
      • Unread badge in navbar
      • Real-time notifications
 ====================================================== */
+this.replyToMessage = null;
+
 class MessagesManager {
   constructor() {
     this.API_BASE =
@@ -442,6 +444,8 @@ class MessagesPage {
 
   async init() {
     await this.checkAuth();
+    window.currentUserId = this.currentUser.id;
+    console.log("⚡ Current user set:", window.currentUserId);
     await this.loadConversations();
     this.attachEventListeners();
     this.connectWebSocket();
@@ -462,22 +466,39 @@ class MessagesPage {
   }
 
   async checkAuth() {
-    try {
-      const response = await fetch(`${this.API_BASE}/auth/me`, {
-        credentials: "include",
-      });
-      
-      if (response.ok) {
-        this.currentUser = await response.json();
-        console.log("✅ Messages page user:", this.currentUser.username);
-      } else {
-        window.location.href = "/login.html?redirect=" + encodeURIComponent(window.location.pathname);
-      }
-    } catch (error) {
-      console.error("Auth check failed:", error);
-      window.location.href = "/login.html?redirect=" + encodeURIComponent(window.location.pathname);
+  try {
+    const response = await fetch(`${this.API_BASE}/auth/me`, {
+      credentials: "include",
+      cache: "no-store"
+    });
+
+    if (response.ok) {
+      const data = await response.json(); 
+      this.currentUser = data.user;   // 🔥 Correct extraction
+      window.currentUser = this.currentUser;
+
+      console.log("⚡ Current user set:", this.currentUser);
+
+      return true;
     }
+
+    window.location.href =
+      "/login.html?redirect=" +
+      encodeURIComponent(window.location.pathname + window.location.search);
+
+    return false;
+
+  } catch (error) {
+    console.error("❌ Auth check failed:", error);
+    window.location.href =
+      "/login.html?redirect=" +
+      encodeURIComponent(window.location.pathname + window.location.search);
+
+    return false;
   }
+}
+
+
 
   /* 🔌 Enhanced WebSocket connection */
   connectWebSocket() {
@@ -1092,47 +1113,40 @@ class MessagesPage {
     messagesList.scrollTop = newScrollHeight - oldScrollHeight;
   }
 
+
   renderMessage(message) {
-    const isOwnMessage = message.sender_id === this.currentUser?.id;
-    const deleted = !!message.deleted_at;
-    const edited = !!message.edited_at;
-    const hasAttachment = !!message.attachment_url;
+  const currentUserId = window.currentUser?.id || this.currentUser?.id;
 
-    const safeText = deleted
-      ? '<span class="deleted-message">[deleted]</span>'
-      : this.escapeHtml(message.message_text || "");
+  const senderId =
+    message.sender_id ??
+    message.senderId ??
+    message.sender?.id;
 
-    const editedTag = edited ? '<small class="edited-tag">(edited)</small>' : '';
+  console.log("🧪 message test", {
+    id: message.id,
+    sender_id: message.sender_id,
+    senderId: message.senderId,
+    nestedSender: message.sender?.id,
+    currentUserId,
+    isOwn: String(senderId) === String(currentUserId)
+  });
 
-    const attachmentHtml = hasAttachment
-      ? `<div class="attachment">
-          <a href="${message.attachment_url}" target="_blank" class="attachment-link">
-            📎 Attachment
-          </a>
-        </div>`
-      : '';
+  const isOwnMessage = String(senderId) === String(currentUserId);
 
-    const messageTime = this.formatTime(message.created_at);
-    const messageStatus = isOwnMessage ? 
-      (message.is_read ? 
-        '<span class="message-status" title="Read">✓✓</span>' : 
-        '<span class="message-status" title="Sent">✓</span>') : 
-      '';
-
-    return `
-      <div class="message ${isOwnMessage ? "own-message" : "other-message"}" 
-           data-message-id="${message.id}">
-        <div class="message-bubble">
-          ${attachmentHtml}
-          <p class="message-text">${safeText} ${editedTag}</p>
-          <div class="message-meta">
-            <span class="message-time">${messageTime}</span>
-            ${messageStatus}
-          </div>
+  return `
+    <div class="message ${isOwnMessage ? "own-message" : "other-message"}"
+         data-message-id="${message.id}">
+      <div class="message-bubble">
+        <p class="message-text">${this.escapeHtml(message.message_text || "")}</p>
+        <div class="message-meta">
+          <span class="message-time">${this.formatTime(message.created_at)}</span>
+          ${isOwnMessage ? '<span class="message-status">✓</span>' : ""}
         </div>
       </div>
-    `;
-  }
+    </div>
+  `;
+}
+
 
   /* ✉️ Enhanced message sending */
   async sendMessage(attachmentMeta = null) {
@@ -1173,6 +1187,7 @@ class MessagesPage {
       if (!response.ok) throw new Error("Failed to send message");
 
       const newMessage = await response.json();
+      newMessage.sender_id = this.currentUser.id; // 🔥 ensures correct alignment
       this.appendMessage(newMessage);
       
       if (input) {
@@ -1237,6 +1252,15 @@ class MessagesPage {
     if (sendBtn) {
       sendBtn.addEventListener("click", () => this.sendMessage());
     }
+
+    document.getElementById("messagesList").addEventListener("contextmenu", (e) => {
+  const msg = e.target.closest(".message");
+  if (!msg) return;
+
+  e.preventDefault();
+  this.startReply(msg.dataset);
+});
+
 
     // Message input handling
     const messageInput = document.getElementById("messageInput");
@@ -1657,7 +1681,10 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 });
 
+
+
 // Export for module usage if needed
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = { MessagesManager, MessagesPage };
 }
+

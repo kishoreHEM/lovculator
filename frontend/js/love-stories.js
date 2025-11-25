@@ -232,8 +232,9 @@ class LoveStories {
             this.toggleLike(storyId);
         } else if (e.target.closest('.follow-btn')) {
             e.preventDefault();
+            e.stopPropagation(); // 🔥 ADD THIS LINE
             const button = e.target.closest('.follow-btn');
-            this.toggleFollow(button);
+            this.toggleFollow(button); // 🔥 Pass only the button, not storyCard
         } else if (e.target.closest('.comment-toggle')) {
             this.toggleComments(storyId);
         } else if (e.target.closest('.comment-submit')) {
@@ -383,95 +384,106 @@ class LoveStories {
     // =====================================================
     // FIXED: Follow/Unfollow User
     // =====================================================
-    async toggleFollow(button, storyCard) {
-        console.log('Toggle follow called', button, storyCard); // Debug log
-        
-        if (!window.currentUserId) {
-            this.notifications.showError("Please log in to follow users.");
-            return;
-        }
-
-        // Get the target user ID from the button's data attribute
-        const targetUserId = button.dataset.userId;
-        console.log('Target user ID:', targetUserId); // Debug log
-        
-        if (!targetUserId) {
-            console.error("❌ Could not find author ID for follow action.");
-            this.notifications.showError("Unable to follow user: missing user ID.");
-            return;
-        }
-        
-        button.disabled = true;
-        const originalText = button.textContent;
-        const originalClass = button.className;
-
-        try {
-            // Get current state from the button
-            const isCurrentlyFollowing = button.classList.contains('following');
-            console.log('Current follow state:', isCurrentlyFollowing); // Debug log
-            
-            // Optimistic UI update - immediately change the button appearance
-            if (isCurrentlyFollowing) {
-                // Currently following, so unfollow
-                button.classList.remove('following');
-                button.textContent = '+ Follow';
-                button.style.opacity = '0.7';
-            } else {
-                // Currently not following, so follow
-                button.classList.add('following');
-                button.textContent = 'Following';
-                button.style.opacity = '0.9';
-            }
-
-            // Make API call to toggle follow status
-            console.log(`Making API call to follow user ${targetUserId}`); // Debug log
-            const response = await fetch(`${window.API_BASE}/users/${targetUserId}/follow`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                credentials: 'include' // Important for authentication
-            });
-
-            if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(errorData.error || `HTTP ${response.status}: Failed to update follow status`);
-            }
-
-            const result = await response.json();
-            console.log('API response:', result); // Debug log
-
-            // Update UI based on API response
-            if (result.is_following) {
-                button.classList.add('following');
-                button.textContent = 'Following';
-                this.notifications.showSuccess(`You're now following this user!`);
-            } else {
-                button.classList.remove('following');
-                button.textContent = '+ Follow';
-                this.notifications.showSuccess(`Unfollowed user.`);
-            }
-
-        } catch (error) {
-            console.error("❌ Follow toggle failed:", error);
-            
-            // Revert optimistic update on error
-            button.classList = originalClass;
-            button.textContent = originalText;
-            
-            if (error.message.includes('401') || error.message.includes('Unauthorized')) {
-                this.notifications.showError('Please log in to follow users.');
-                setTimeout(() => {
-                    window.location.href = '/login.html';
-                }, 1500);
-            } else {
-                this.notifications.showError(error.message || "Failed to update follow status. Please try again.");
-            }
-        } finally {
-            button.disabled = false;
-            button.style.opacity = '1';
-        }
+    async toggleFollow(button) {
+    console.log('🔗 Toggle follow called', button);
+    
+    if (!window.currentUserId) {
+        this.notifications.showError("Please log in to follow users.");
+        return;
     }
+
+    // Get the target user ID from the button's data attribute
+    const targetUserId = button.dataset.userId;
+    console.log('🎯 Target user ID:', targetUserId, 'Current user ID:', window.currentUserId);
+    
+    if (!targetUserId) {
+        console.error("❌ Could not find author ID for follow action.");
+        this.notifications.showError("Unable to follow user: missing user ID.");
+        return;
+    }
+    
+    // Prevent self-follow
+    if (parseInt(targetUserId) === window.currentUserId) {
+        this.notifications.showError("You cannot follow yourself.");
+        return;
+    }
+    
+    button.disabled = true;
+    const originalText = button.textContent;
+    const originalClass = button.className;
+
+    try {
+        // Get current state from the button
+        const isCurrentlyFollowing = button.classList.contains('following');
+        console.log('📊 Current follow state:', isCurrentlyFollowing);
+        
+        // Optimistic UI update
+        if (isCurrentlyFollowing) {
+            button.classList.remove('following');
+            button.textContent = '+ Follow';
+        } else {
+            button.classList.add('following');
+            button.textContent = 'Following';
+        }
+
+        // Make API call to toggle follow status
+        console.log(`📡 Making API call to follow user ${targetUserId}`);
+        const response = await fetch(`${window.API_BASE}/users/${targetUserId}/follow`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            credentials: 'include' // Important for session cookies
+        });
+
+        if (!response.ok) {
+            let errorMessage = `HTTP ${response.status}: Failed to update follow status`;
+            try {
+                const errorData = await response.json();
+                errorMessage = errorData.error || errorMessage;
+            } catch (parseError) {
+                // If response isn't JSON, use status text
+                errorMessage = response.statusText || errorMessage;
+            }
+            throw new Error(errorMessage);
+        }
+
+        const result = await response.json();
+        console.log('✅ API response:', result);
+
+        // Update UI based on API response
+        if (result.is_following) {
+            button.classList.add('following');
+            button.textContent = 'Following';
+            this.notifications.showSuccess(`You're now following this user!`);
+        } else {
+            button.classList.remove('following');
+            button.textContent = '+ Follow';
+            this.notifications.showSuccess(`Unfollowed user.`);
+        }
+
+    } catch (error) {
+        console.error("❌ Follow toggle failed:", error);
+        
+        // Revert optimistic update on error
+        button.className = originalClass;
+        button.textContent = originalText;
+        
+        if (error.message.includes('401') || error.message.includes('Unauthorized')) {
+            this.notifications.showError('Please log in to follow users.');
+            setTimeout(() => {
+                window.location.href = '/login.html';
+            }, 1500);
+        } else if (error.message.includes('500')) {
+            this.notifications.showError('Server error. Please try again later.');
+        } else {
+            this.notifications.showError(error.message || "Failed to update follow status. Please try again.");
+        }
+    } finally {
+        button.disabled = false;
+    }
+}
+
 
     toggleReadMore(storyId) {
     const story = this.stories.find(s => s.id === storyId); 
@@ -1282,15 +1294,18 @@ if (document.readyState === 'loading') {
 
 // ✅ Get logged-in user ID globally
 fetch(`${window.API_BASE}/auth/me`, { credentials: 'include' })
-    .then(res => res.ok ? res.json() : null)
-    .then(data => {
-        if (data?.id) {
-            window.currentUserId = data.id;
-        } else {
-            window.currentUserId = null;
-        }
-    })
-    .catch(() => (window.currentUserId = null));
+  .then(res => res.ok ? res.json() : null)
+  .then(data => {
+    if (data && data.success && data.user && data.user.id) {
+      window.currentUserId = data.user.id;
+    } else {
+      window.currentUserId = null;
+    }
+  })
+  .catch(() => {
+    window.currentUserId = null;
+  });
+
 
 
 // ======================================================

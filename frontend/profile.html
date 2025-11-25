@@ -32,7 +32,6 @@
     .profile-hero {
       background: linear-gradient(135deg, #fff5f7 0%, #f8f9fa 100%);
       border-radius: 16px;
-      padding: 40px 30px;
       margin-bottom: 30px;
       box-shadow: 0 4px 20px rgba(0,0,0,0.08);
     }
@@ -597,7 +596,7 @@
       }
 
       .profile-hero {
-        padding: 30px 20px;
+        padding: 0px;
         margin-bottom: 20px;
       }
 
@@ -807,51 +806,80 @@
   </div>
 
   <!-- 🌸 Edit Profile Modal -->
-  <div id="editProfileModal" class="modal">
-    <div class="modal-dialog">
-      <div class="modal-header">
-        <h3>✏️ Edit Your Profile</h3>
-        <button class="close-btn" id="closeModalBtn" aria-label="Close modal">&times;</button>
+<div id="editProfileModal" class="modal">
+  <div class="modal-dialog">
+    <div class="modal-header">
+      <h3>✏️ Edit Your Profile</h3>
+      <button class="close-btn" id="closeModalBtn" aria-label="Close modal">&times;</button>
+    </div>
+
+    <form id="editProfileForm" class="modal-form">
+      <!-- Display Name -->
+      <div class="form-group">
+        <label for="editDisplayName">Display Name</label>
+        <input type="text" id="editDisplayName" name="display_name" maxlength="50" required 
+               placeholder="Enter your display name" />
       </div>
 
-      <form id="editProfileForm" class="modal-form">
-        <div class="form-group">
-          <label for="editDisplayName">Display Name</label>
-          <input type="text" id="editDisplayName" name="display_name" maxlength="50" required 
-                 placeholder="Enter your display name" />
-        </div>
+      <!-- Bio -->
+      <div class="form-group">
+        <label for="editBio">Bio</label>
+        <textarea id="editBio" name="bio" rows="3" maxlength="300" 
+                  placeholder="Tell everyone about yourself..."></textarea>
+      </div>
 
-        <div class="form-group">
-          <label for="editBio">Bio</label>
-          <textarea id="editBio" name="bio" rows="3" maxlength="300" 
-                    placeholder="Tell everyone about yourself..."></textarea>
-        </div>
+      <!-- Location -->
+      <div class="form-group">
+        <label for="editLocation">Location</label>
+        <input type="text" id="editLocation" name="location" maxlength="50" 
+               placeholder="Where are you from?" />
+      </div>
 
-        <div class="form-group">
-          <label for="editLocation">Location</label>
-          <input type="text" id="editLocation" name="location" maxlength="50" 
-                 placeholder="Where are you from?" />
-        </div>
+      <!-- Relationship Status -->
+      <div class="form-group">
+        <label for="editRelationshipStatus">Relationship Status</label>
+        <select id="editRelationshipStatus" name="relationship_status">
+          <option value="Single">Single</option>
+          <option value="In a Relationship">In a Relationship</option>
+          <option value="Married">Married</option>
+          <option value="It's Complicated">It's Complicated</option>
+        </select>
+      </div>
 
-        <div class="form-group">
-          <label for="editRelationshipStatus">Relationship Status</label>
-          <select id="editRelationshipStatus" name="relationship_status">
-            <option value="Single">Single</option>
-            <option value="In a Relationship">In a Relationship</option>
-            <option value="Married">Married</option>
-            <option value="It's Complicated">It's Complicated</option>
-          </select>
-        </div>
+      <!-- NEW: Gender -->
+      <div class="form-group">
+        <label for="editGender">Gender</label>
+        <select id="editGender" name="gender">
+          <option value="">Select gender</option>
+          <option value="Male">Male</option>
+          <option value="Female">Female</option>
+          <option value="Other">Other</option>
+          <option value="Prefer not to say">Prefer not to say</option>
+        </select>
+      </div>
 
-        <div class="modal-footer">
-          <button type="submit" id="saveProfileBtn" class="btn btn-primary">💾 Save Changes</button>
-          <button type="button" class="btn btn-secondary" id="cancelEditBtn">Cancel</button>
-        </div>
+      <!-- NEW: Date of Birth -->
+      <div class="form-group">
+        <label for="editDOB">Date of Birth</label>
+        <input type="date" id="editDOB" name="date_of_birth" />
+      </div>
 
-        <p id="editProfileMessage" class="edit-message" aria-live="polite"></p>
-      </form>
-    </div>
+      <!-- NEW: Work & Education -->
+      <div class="form-group">
+        <label for="editWork">Work & Education</label>
+        <textarea id="editWork" name="work_and_education" rows="2" maxlength="200"
+                  placeholder="Your job, studies, degree, college..."></textarea>
+      </div>
+
+      <div class="modal-footer">
+        <button type="submit" id="saveProfileBtn" class="btn btn-primary">💾 Save Changes</button>
+        <button type="button" class="btn btn-secondary" id="cancelEditBtn">Cancel</button>
+      </div>
+
+      <p id="editProfileMessage" class="edit-message" aria-live="polite"></p>
+    </form>
   </div>
+</div>
 
   <!-- Footer -->
   <footer class="footer"></footer>

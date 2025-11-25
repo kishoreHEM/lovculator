@@ -1,31 +1,23 @@
 // backend/middleware/auth.js
-// 🔒 Authentication middleware for Lovculator.com
 
 export default function auth(req, res, next) {
   try {
-    // Your session system stores user in either:
-    //    req.session.user  (object with {id,...})
-    //    req.session.userId (plain integer)
-    const sessionUser = req.session?.user || null;
-    const sessionId = req.session?.userId || null;
-
-    // Determine final user ID
-    const userId = sessionUser?.id ?? sessionId;
+    const userSession = req.session?.user;
+    const userId = userSession?.id;
 
     if (!userId) {
       return res.status(401).json({ error: "Unauthorized. Please log in." });
     }
 
-    // Attach to req.user for downstream routes
     req.user = {
       id: userId,
-      username: sessionUser?.username,
-      display_name: sessionUser?.display_name,
+      username: userSession?.username,
+      display_name: userSession?.display_name,
     };
 
-    return next();
+    next();
   } catch (err) {
     console.error("❌ Auth middleware error:", err);
-    return res.status(500).json({ error: "Authentication failed internally." });
+    res.status(500).json({ error: "Internal authentication error" });
   }
 }

@@ -1,5 +1,6 @@
 import express from "express";
 import pool from "../db.js";
+import { notifyLike, notifyComment } from './notifications.js';
 
 const router = express.Router();
 
@@ -173,6 +174,9 @@ router.post("/:id/like", isAuthenticated, async (req, res) => {
       [userId, storyId]
     );
 
+    // When someone likes a story
+await notifyLike(storyAuthorId, likerId, 'story', storyId);
+
     let action = "liked";
     if (existing.rowCount > 0) {
       await client.query(
@@ -236,6 +240,9 @@ router.post("/:storyId/comments", isAuthenticated, async (req, res) => {
        RETURNING id, story_id, user_id, comment_text, created_at`,
       [storyId, userId, text.trim()]
     );
+
+    // When someone comments on a story  
+await notifyComment(storyAuthorId, commenterId, 'story', storyId);
 
     const updateRes = await client.query(
       `UPDATE stories
