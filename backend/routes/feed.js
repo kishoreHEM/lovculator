@@ -27,7 +27,7 @@ router.get("/", auth, async (req, res) => {
                 u.id AS user_id,
                 u.username,
                 u.display_name,
-                COALESCE(u.avatar_url, '/images/default-avatar.png') AS avatar_url,
+                COALESCE(NULLIF(NULLIF(u.avatar_url, ''), 'null'), '/images/default-avatar.png') AS avatar_url,
 
                 -- ❤️ LIKE COUNT
                 (SELECT COUNT(*) FROM post_likes WHERE post_id = p.id) AS like_count,
@@ -38,7 +38,16 @@ router.get("/", auth, async (req, res) => {
                 -- 👆 CURRENT USER LIKED?
                 EXISTS (
                     SELECT 1 FROM post_likes WHERE post_id = p.id AND user_id = $1
-                ) AS is_liked
+                ) AS is_liked,
+
+                -- 🤝 IS OWNER?
+                p.user_id = $1 AS is_owner,
+
+                -- 🟣 FOLLOW STATUS
+                EXISTS (
+                    SELECT 1 FROM follows 
+                    WHERE follower_id = $1 AND target_id = p.user_id
+                ) AS is_following
 
             FROM posts p
             JOIN users u ON p.user_id = u.id

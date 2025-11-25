@@ -140,6 +140,7 @@ app.use(
     contentSecurityPolicy: {
       directives: {
         defaultSrc: ["'self'"],
+
         imgSrc: [
           "'self'",
           "blob:",
@@ -149,16 +150,40 @@ app.use(
           "http://localhost:3001",
           "https://lovculator.com/uploads",
         ],
-        scriptSrc: ["'self'", "'unsafe-inline'", "https://lovculator.com"],
-        styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
+
+        // Allow scripts from same origin + inline (for now) + prod host
+        scriptSrc: [
+          "'self'",
+          "'unsafe-inline'",
+          "https://lovculator.com",
+          "https://www.lovculator.com",
+          "http://localhost:3001",
+        ],
+
+        // ❗ Important: allow inline event handlers (onclick, etc.)
+        // Otherwise you get: "script-src-attr 'none'" errors
+        scriptSrcAttr: ["'self'", "'unsafe-inline'"],
+
+        styleSrc: [
+          "'self'",
+          "'unsafe-inline'",
+          "https://fonts.googleapis.com",
+        ],
+
+        // Allow inline style attributes set by JS
+        styleSrcAttr: ["'self'", "'unsafe-inline'"],
+
         fontSrc: ["'self'", "https://fonts.gstatic.com"],
+
         connectSrc: [
           "'self'",
           "https://lovculator.com",
+          "https://www.lovculator.com",
           "wss://lovculator.com",
           "ws://localhost:3001",
           process.env.FRONTEND_URL,
         ].filter(Boolean),
+
         frameSrc: ["'self'"],
         objectSrc: ["'none'"],
       },
@@ -213,6 +238,7 @@ app.use(
   })
 );
 
+// Serve /uploads (avatars, posts, etc.)
 app.use(
   "/uploads",
   express.static(path.join(process.cwd(), "uploads"), {

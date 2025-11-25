@@ -1,4 +1,5 @@
 // backend/routes/notifications.js
+
 import express from "express";
 import pool from "../db.js";
 import auth from "../middleware/auth.js";
@@ -14,7 +15,6 @@ router.get("/", auth, async (req, res) => {
         const { filter = "all", page = 1, limit = 20 } = req.query;
         const offset = (page - 1) * limit;
 
-        // 1. Initial query and parameters setup
         let baseQuery = `
             SELECT 
                 n.id,
@@ -32,58 +32,44 @@ router.get("/", auth, async (req, res) => {
         `;
 
         let countQuery = `SELECT COUNT(*) FROM notifications WHERE user_id = $1`;
-        let queryParams = [userId];
-        
-        // 2. Add filter conditions dynamically
+        let params = [userId];
+
         if (filter === "unread") {
             baseQuery += ` AND n.is_read = false`;
             countQuery += ` AND is_read = false`;
         } else if (filter !== "all") {
-            // Add the filter condition. 
-            // The filter string itself becomes the next parameter ($2)
-            queryParams.push(filter);
-            baseQuery += ` AND n.type = $${queryParams.length}`; 
-            countQuery += ` AND type = $${queryParams.length}`;
+            params.push(filter);
+            baseQuery += ` AND n.type = $${params.length}`;
+            countQuery += ` AND type = $${params.length}`;
         }
-        
-        // 3. Add LIMIT and OFFSET parameters
-        queryParams.push(Number(limit));
-        queryParams.push(Number(offset));
-        
-        baseQuery += ` ORDER BY n.created_at DESC LIMIT $${queryParams.length - 1} OFFSET $${queryParams.length}`;
 
-        // 4. Run queries
+        params.push(Number(limit), Number(offset));
+        baseQuery += ` ORDER BY n.created_at DESC LIMIT $${params.length - 1} OFFSET $${params.length}`;
+
         const [notificationsResult, countResult] = await Promise.all([
-            // Pass the first part of the array (up to the limit/offset) for notifications
-            pool.query(baseQuery, queryParams),
-            // Pass only the first parameter (userId) and the type filter (if present) for the count
-            pool.query(countQuery, queryParams.slice(0, queryParams.length - 2)) 
+            pool.query(baseQuery, params),
+            pool.query(countQuery, params.slice(0, params.length - 2))
         ]);
-
-        const notifications = notificationsResult.rows;
-        const totalCount = Number(countResult.rows[0].count);
 
         res.json({
             success: true,
-            notifications,
+            notifications: notificationsResult.rows,
             pagination: {
                 page: Number(page),
-                total: totalCount,
-                totalPages: Math.ceil(totalCount / limit),
-                hasMore: Number(page) < Math.ceil(totalCount / limit)
+                total: Number(countResult.rows[0].count),
+                totalPages: Math.ceil(Number(countResult.rows[0].count) / limit),
+                hasMore: Number(page) < Math.ceil(Number(countResult.rows[0].count) / limit)
             }
         });
 
     } catch (error) {
         console.error("❌ Get notifications error:", error);
-        // Log the filter values for debugging
-        console.error("DEBUG: Filter/Page/Limit:", req.query); 
         res.status(500).json({ error: "Failed to fetch notifications" });
     }
 });
 
 /* ======================================================
-   👁 2️⃣ Mark notification as read
+   👁 2️⃣ Mark as read
 ====================================================== */
 router.post("/:id/read", auth, async (req, res) => {
     try {
@@ -91,8 +77,8 @@ router.post("/:id/read", auth, async (req, res) => {
             "UPDATE notifications SET is_read = true WHERE id = $1 AND user_id = $2",
             [req.params.id, req.user.id]
         );
-
         res.json({ success: true });
+
     } catch (error) {
         console.error("❌ Mark read error:", error);
         res.status(500).json({ error: "Failed to mark read" });
@@ -100,7 +86,7 @@ router.post("/:id/read", auth, async (req, res) => {
 });
 
 /* ======================================================
-   🗑 3️⃣ Clear all notifications
+   🗑 3️⃣ Clear all
 ====================================================== */
 router.delete("/clear-all", auth, async (req, res) => {
     try {
@@ -142,14 +128,14 @@ router.get("/unread-count", auth, async (req, res) => {
 });
 
 /* ======================================================
-   🎯 5️⃣ Create notification helper
+   🎯 Helper: Create notification
 ====================================================== */
 export const createNotification = async ({
     userId,
+    actorId,
     type,
     message,
-    link = null,
-    actorId = null
+    link = null
 }) => {
     const result = await pool.query(
         `INSERT INTO notifications (user_id, actor_id, type, message, link, is_read, created_at)
@@ -162,9 +148,9 @@ export const createNotification = async ({
 };
 
 /* ======================================================
-   🔔 6️⃣ Notify functions with WS broadcast
+   🔔 Notify functions (broadcast fixed)
 ====================================================== */
-export const notifyLike = async (targetUserId, actorId, postType, postId, req) => {
+export const notifyLike = async (req, targetUserId, actorId, postType, postId) => {
     const actor = await pool.query("SELECT display_name, username FROM users WHERE id = $1", [actorId]);
     if (!actor.rows.length) return;
 
@@ -179,12 +165,12 @@ export const notifyLike = async (targetUserId, actorId, postType, postId, req) =
     });
 
     const broadcast = req.app.get("broadcastNotification");
-    if (broadcast) broadcast([targetUserId], { message: notification.message });
-
-    return notification;
+    if (broadcast) {
+        broadcast({ type: "NEW_NOTIFICATION", message: notification.message }, [targetUserId]);
+    }
 };
 
-export const notifyComment = async (targetUserId, actorId, postType, postId, req) => {
+export const notifyComment = async (req, targetUserId, actorId, postType, postId) => {
     const actor = await pool.query("SELECT display_name, username FROM users WHERE id = $1", [actorId]);
     if (!actor.rows.length) return;
 
@@ -199,12 +185,12 @@ export const notifyComment = async (targetUserId, actorId, postType, postId, req
     });
 
     const broadcast = req.app.get("broadcastNotification");
-    if (broadcast) broadcast([targetUserId], { message: notification.message });
-
-    return notification;
+    if (broadcast) {
+        broadcast({ type: "NEW_NOTIFICATION", message: notification.message }, [targetUserId]);
+    }
 };
 
-export const notifyFollow = async (targetUserId, actorId, req) => {
+export const notifyFollow = async (req, targetUserId, actorId) => {
     const actor = await pool.query("SELECT display_name, username FROM users WHERE id = $1", [actorId]);
     if (!actor.rows.length) return;
 
@@ -219,34 +205,29 @@ export const notifyFollow = async (targetUserId, actorId, req) => {
     });
 
     const broadcast = req.app.get("broadcastNotification");
-    if (broadcast) broadcast([targetUserId], { message: notification.message });
-
-    return notification;
+    if (broadcast) {
+        broadcast({ type: "NEW_NOTIFICATION", message: notification.message }, [targetUserId]);
+    }
 };
 
 export const notifyMessage = async (req, targetUserId, actorId) => {
-  const actor = await pool.query(
-    "SELECT display_name, username FROM users WHERE id = $1",
-    [actorId]
-  );
+    const actor = await pool.query("SELECT display_name, username FROM users WHERE id = $1", [actorId]);
+    if (!actor.rows.length) return;
 
-  if (!actor.rows.length) return;
+    const name = actor.rows[0].display_name || actor.rows[0].username;
 
-  const name = actor.rows[0].display_name || actor.rows[0].username;
+    const notification = await createNotification({
+        userId: targetUserId,
+        actorId,
+        type: "message",
+        message: `${name} sent you a message`,
+        link: `/messages.html`
+    });
 
-  const notification = await createNotification({
-    userId: targetUserId,
-    actorId,
-    type: "message",
-    message: `${name} sent you a message`,
-    link: `/messages.html`
-  });
-
-  const broadcast = req.app.get("broadcastNotification");
-  if (broadcast) broadcast([targetUserId], { message: notification.message });
-
-  return notification;
+    const broadcast = req.app.get("broadcastNotification");
+    if (broadcast) {
+        broadcast({ type: "NEW_NOTIFICATION", message: notification.message }, [targetUserId]);
+    }
 };
-
 
 export default router;

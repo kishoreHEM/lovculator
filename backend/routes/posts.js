@@ -63,64 +63,67 @@ router.post("/", auth, upload.single("image"), async (req, res) => {
 });
 
 /* ======================================================
-   ❤️ LIKE / UNLIKE POST + NOTIFY + REALTIME
+   ❤️ LIKE / UNLIKE POST + NOTIFY + REALTIME BROADCAST
 ====================================================== */
 router.post("/:postId/like", auth, async (req, res) => {
     try {
         const postId = req.params.postId;
         const userId = req.user.id;
 
-        // Check existing like
+        // Check if already liked
         const check = await pool.query(
             `SELECT 1 FROM post_likes WHERE post_id = $1 AND user_id = $2`,
             [postId, userId]
         );
 
+        let is_liked = false;
+
         if (check.rows.length > 0) {
-            // 🔁 Unlike
+            // UNLIKE
             await pool.query(
                 `DELETE FROM post_likes WHERE post_id = $1 AND user_id = $2`,
                 [postId, userId]
             );
         } else {
-            // ❤️ Like
+            // LIKE
             await pool.query(
                 `INSERT INTO post_likes (post_id, user_id) VALUES ($1, $2)`,
                 [postId, userId]
             );
+            is_liked = true;
         }
 
-        // Updated count
+        // Current LIKE count
         const { rows } = await pool.query(
             `SELECT COUNT(*) AS like_count FROM post_likes WHERE post_id = $1`,
             [postId]
         );
-
         const like_count = Number(rows[0].like_count);
 
-        // Find post owner
+        // Post owner details
         const ownerResult = await pool.query(
             `SELECT user_id FROM posts WHERE id = $1`,
             [postId]
         );
         const postOwnerId = ownerResult.rows[0]?.user_id;
 
-        // Prevent notifying yourself
-        if (postOwnerId && postOwnerId !== userId && check.rows.length === 0) {
-            await notifyLike(postOwnerId, userId, "post", postId);
+        // Notify only when liking, not unliking – and not your own post
+        if (postOwnerId && postOwnerId !== userId && is_liked) {
+            await notifyLike(req, userId, postOwnerId, postId);
+
             const broadcastNotify = req.app.get("broadcastNotification");
             if (broadcastNotify) {
                 broadcastNotify({ type: "NEW_NOTIFICATION" }, [postOwnerId]);
             }
         }
 
-        // 🔥 realtime broadcast LIKE count
+        // 🔥 Real-time LIKE broadcast
         const broadcast = req.app.get("broadcastLike");
         if (broadcast) {
-            broadcast({ type: "LIKE_UPDATED", postId, like_count });
+            broadcast({ type: "LIKE_UPDATED", postId, like_count, is_liked });
         }
 
-        res.json({ success: true, like_count });
+        res.json({ success: true, like_count, is_liked });
 
     } catch (error) {
         console.error("❌ Like Error:", error);
@@ -137,7 +140,7 @@ router.post("/:postId/comments", auth, async (req, res) => {
         const userId = req.user.id;
         const { content } = req.body;
 
-        if (!content || content.trim() === "") {
+        if (!content || !content.trim()) {
             return res.status(400).json({ error: "Comment cannot be empty" });
         }
 
@@ -154,7 +157,6 @@ router.post("/:postId/comments", auth, async (req, res) => {
 
         const commentCount = Number(countResult.rows[0].commentCount);
 
-        // Find post owner
         const ownerResult = await pool.query(
             `SELECT user_id FROM posts WHERE id = $1`,
             [postId]
@@ -162,7 +164,7 @@ router.post("/:postId/comments", auth, async (req, res) => {
         const postOwnerId = ownerResult.rows[0]?.user_id;
 
         if (postOwnerId && postOwnerId !== userId) {
-            await notifyComment(postOwnerId, userId, "post", postId);
+            await notifyComment(req, userId, postOwnerId, postId);
 
             const broadcastNotify = req.app.get("broadcastNotification");
             if (broadcastNotify) {
@@ -170,7 +172,6 @@ router.post("/:postId/comments", auth, async (req, res) => {
             }
         }
 
-        // Broadcast realtime
         const broadcast = req.app.get("broadcastComment");
         if (broadcast) {
             broadcast({
@@ -189,7 +190,7 @@ router.post("/:postId/comments", auth, async (req, res) => {
 });
 
 /* ======================================================
-   📘 GET COMMENTS FOR POST
+   📘 GET COMMENTS ONLY
 ====================================================== */
 router.get("/:postId/comments", auth, async (req, res) => {
     try {

@@ -1,200 +1,272 @@
-// js/social-features.js
-
-// Assuming socialAPI and authManager are globally available
-const api = window.socialAPI;
+/**
+ * frontend/js/social-features.js — Lovculator 💖
+ * Unified Social Logic: Follow, Like, Message, and User Cards.
+ * Replaces duplicate logic in feed.js and love-stories.js
+ */
 
 class SocialFeatures {
     constructor() {
-        this.init();
+        this.apiBase = window.API_BASE || '/api';
+        this.currentUser = window.currentUserId || null;
+        
+        // Wait for DOM to be ready before attaching global listeners
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', () => this.init());
+        } else {
+            this.init();
+        }
     }
 
     init() {
-        this.setupEventListeners();
-        console.log('👥 Social Features initialized: Action handlers ready.');
+        console.log('👥 Social Features Initializing...');
+        this.setupGlobalListeners();
+        this.checkAuth();
     }
 
-    setupEventListeners() {
-        // Global click handlers for social actions
-        document.addEventListener('click', (e) => {
-            const target = e.target.closest('button');
+    async checkAuth() {
+        try {
+            const res = await fetch(`${this.apiBase}/auth/me`, { credentials: 'include' });
+            if (res.ok) {
+                const data = await res.json();
+                this.currentUser = data.user?.id || data.id;
+                window.currentUserId = this.currentUser;
+            }
+        } catch (e) { console.warn("Auth check failed in SocialFeatures"); }
+    }
 
-            if (target && target.classList.contains('follow-btn')) {
-                this.handleFollow(target);
+    // ============================================================
+    // 👂 GLOBAL EVENT LISTENERS (The "Magic" Glue)
+    // ============================================================
+    setupGlobalListeners() {
+        document.body.addEventListener('click', (e) => {
+            // 1. FOLLOW BUTTONS
+            const followBtn = e.target.closest('.follow-toggle-btn, .follow-btn, .action-btn.follow-btn');
+            if (followBtn) {
+                e.preventDefault();
+                e.stopPropagation();
+                this.handleFollowClick(followBtn);
             }
-            if (target && target.classList.contains('message-btn')) {
-                this.handleMessage(target);
+
+            // 2. LIKE BUTTONS
+            const likeBtn = e.target.closest('.like-btn, .like-button, .story-action.like-button');
+            if (likeBtn) {
+                // Determine type based on data attributes or context
+                const isStory = likeBtn.closest('.story-card');
+                const type = isStory ? 'story' : 'post';
+                const id = likeBtn.dataset.id || likeBtn.dataset.storyId || likeBtn.closest('[data-id]')?.dataset.id || likeBtn.closest('[data-story-id]')?.dataset.storyId;
+                
+                if (id) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    this.handleLikeClick(id, type, likeBtn);
+                }
             }
-            // Add other handlers here (e.g., friend-request-btn)
+
+            // 3. MESSAGE BUTTONS
+            const msgBtn = e.target.closest('.message-btn, [data-action="message-user"]');
+            if (msgBtn) {
+                e.preventDefault();
+                this.handleMessageClick(msgBtn.dataset.userId);
+            }
         });
     }
 
-    // ========================
-    // PROFILE DISPLAY (Used by ProfileManager)
-    // ========================
+    // ============================================================
+    // 🔗 FOLLOW LOGIC
+    // ============================================================
+    async handleFollowClick(btn) {
+        if (!this.currentUser) return this.requireLogin();
 
-    displayUserProfile(profile, isCurrentUser) {
-        const container = document.getElementById('userProfileContainer');
-        if (!container) return;
+        const targetId = btn.dataset.userId || btn.dataset.authorId;
+        if (!targetId) return console.error("No user ID on follow button");
 
-        // NOTE: This render output should be uniform across SocialFeatures and ProfileManager's initial structure
-        container.innerHTML = `
-            <div class="user-profile-card enhanced" data-user-id="${profile.id}">
-                <div class="profile-cover" style="background: linear-gradient(135deg, #667eea, #764ba2); height: 120px; border-radius: 12px 12px 0 0;"></div>
-                
-                <div class="profile-header">
-                    <div class="avatar-section">
-                        <div class="profile-avatar">${profile.avatar_url || '💖'}</div>
-                        <div class="profile-actions">
-                            ${!isCurrentUser ? `
-                                <button class="action-btn message-btn" data-user-id="${profile.id}">
-                                    💌 Message
-                                </button>
-                                <button class="action-btn follow-btn ${this.isFollowing(profile.id) ? 'following' : ''}" 
-                                        data-user-id="${profile.id}">
-                                    ${this.isFollowing(profile.id) ? 'Following' : 'Follow'}
-                                </button>
-                            ` : ''}
-                            </div>
-                    </div>
-                    
-                    <div class="profile-info">
-                        <h2>${profile.display_name || profile.username}</h2>
-                        <p class="username">@${profile.username}</p>
-                        <p class="user-bio">${profile.bio || 'No bio yet'}</p>
-                        
-                        <div class="profile-details">
-                            ${profile.location ? `<span class="detail">📍 ${profile.location}</span>` : ''}
-                            ${profile.relationship_status ? `<span class="detail">💕 ${profile.relationship_status}</span>` : ''}
-                            <span class="detail">📅 Joined ${new Date(profile.created_at).toLocaleDateString()}</span>
-                        </div>
-                    </div>
-                </div>
+        // Prevent self-follow
+        if (String(targetId) === String(this.currentUser)) {
+            return this.showNotification("You cannot follow yourself.", "warning");
+        }
 
-                <div class="profile-stats">
-                    <div class="stat">
-                        <span class="number" data-stat="stories">${profile.story_count || 0}</span>
-                        <span class="label">Love Stories</span>
-                    </div>
-                    <div class="stat">
-                        <span class="number" data-stat="followers">${profile.follower_count || 0}</span>
-                        <span class="label">Followers</span>
-                    </div>
-                    <div class="stat">
-                        <span class="number" data-stat="following">${profile.following_count || 0}</span>
-                        <span class="label">Following</span>
-                    </div>
-                </div>
-                
-                </div>
-        `;
-
-        // ProfileManager handles tab setup
-    }
-
-    // ========================
-    // FOLLOW SYSTEM
-    // ========================
-
-    async handleFollow(button) {
-        const userId = button.dataset.userId;
-        const isFollowing = button.classList.contains('following');
+        // Get state from button class/text
+        const isFollowing = btn.classList.contains('following') || 
+                            btn.textContent.toLowerCase().includes('following');
+        
+        // Optimistic UI Update
+        btn.disabled = true;
+        const originalText = btn.textContent;
+        
+        btn.classList.toggle('following');
+        btn.classList.toggle('btn-primary'); // Toggle styles if used
+        btn.classList.toggle('btn-secondary');
+        btn.textContent = isFollowing ? '+ Follow' : 'Following';
 
         try {
-            if (isFollowing) {
-                await api.unfollowUser(userId);
-                button.classList.remove('following');
-                button.textContent = 'Follow';
-                // Update stat count in UI
-                this.updateStatCount('followers', -1);
-                this.showNotification('Unfollowed user', 'success');
-            } else {
-                await api.followUser(userId);
-                button.classList.add('following');
-                button.textContent = 'Following';
-                // Update stat count in UI
-                this.updateStatCount('followers', 1);
-                this.showNotification('Now following user', 'success');
+            const method = isFollowing ? 'DELETE' : 'POST';
+            const res = await fetch(`${this.apiBase}/users/${targetId}/follow`, {
+                method: method,
+                credentials: 'include'
+            });
+
+            if (!res.ok) throw new Error('Request failed');
+            
+            const data = await res.json();
+            
+            // Update all other follow buttons for this same user on the page
+            this.syncFollowButtons(targetId, !isFollowing);
+            this.showNotification(isFollowing ? 'Unfollowed user.' : 'Following user!', 'success');
+
+        } catch (error) {
+            console.error("Follow error:", error);
+            // Revert UI
+            btn.textContent = originalText;
+            btn.classList.toggle('following');
+            this.showNotification("Action failed. Please try again.", "error");
+        } finally {
+            btn.disabled = false;
+        }
+    }
+
+    syncFollowButtons(userId, isFollowing) {
+        const allButtons = document.querySelectorAll(`[data-user-id="${userId}"], [data-author-id="${userId}"]`);
+        allButtons.forEach(b => {
+            if (b.classList.contains('follow-toggle-btn') || b.classList.contains('follow-btn')) {
+                b.classList.toggle('following', isFollowing);
+                b.textContent = isFollowing ? 'Following' : '+ Follow';
             }
-        } catch (error) {
-            console.error('Error following user:', error);
-            this.showNotification('Failed to follow user', 'error');
-        }
+        });
     }
 
-    isFollowing(userId) {
-        // Placeholder: Replace with logic to check local user state
-        return false;
-    }
+    // ============================================================
+    // ❤️ LIKE LOGIC
+    // ============================================================
+    async handleLikeClick(id, type, btn) {
+        if (!this.currentUser) return this.requireLogin();
 
-    async getFollowers(userId) {
-        // Uses SocialAPI to fetch data
+        // Debounce/Disable
+        if (btn.disabled) return;
+        btn.disabled = true;
+
         try {
-            const followers = await api.getFollowers(userId);
-            this.displayUsers(followers, document.getElementById('followersContainer'), 'followers');
+            // API: /api/posts/123/like OR /api/stories/123/like
+            // Note: Ensure backend supports plural (posts/stories)
+            const endpoint = type === 'story' ? 'stories' : 'posts';
+            
+            const res = await fetch(`${this.apiBase}/${endpoint}/${id}/like`, {
+                method: 'POST',
+                credentials: 'include'
+            });
+
+            if (!res.ok) throw new Error('Like failed');
+
+            const data = await res.json();
+            const newCount = data.like_count || data.likes_count || 0;
+            const isLiked = data.is_liked || data.user_liked;
+
+            // Update UI
+            btn.classList.toggle('liked', isLiked);
+            
+            // Update count span inside button
+            const countSpan = btn.querySelector('span.count, .like-count');
+            if (countSpan) countSpan.textContent = newCount;
+
+            // Optional: Animation effect
+            if (isLiked) this.animateHeart(btn);
+
         } catch (error) {
-            this.displayEmptyState(document.getElementById('followersContainer'), 'Failed to load followers.');
+            console.error("Like error:", error);
+        } finally {
+            setTimeout(() => btn.disabled = false, 500); // Small delay to prevent spam
         }
     }
 
-    async getFollowing(userId) {
-        // Uses SocialAPI to fetch data
-        try {
-            const following = await api.getFollowing(userId);
-            this.displayUsers(following, document.getElementById('followingContainer'), 'following');
-        } catch (error) {
-            this.displayEmptyState(document.getElementById('followingContainer'), 'Failed to load who this user follows.');
+    animateHeart(btn) {
+        const icon = btn.querySelector('svg');
+        if (icon) {
+            icon.style.transform = 'scale(1.3)';
+            setTimeout(() => icon.style.transform = 'scale(1)', 200);
         }
     }
-    
-    // ... (Add direct message handlers, etc.) ...
-    
-    // ========================
-    // UI HELPERS (Moved from ProfileManager)
-    // ========================
 
-    displayUsers(users, container, listType) {
-        if (!users || users.length === 0) {
-            const message = listType === 'followers' ? 'No followers yet.' : 'Not following anyone yet.';
-            return this.displayEmptyState(container, message);
-        }
+    // ============================================================
+    // 💌 MESSAGING LOGIC
+    // ============================================================
+    handleMessageClick(userId) {
+        if (!this.currentUser) return this.requireLogin();
+        
+        // Redirect to messages page with user selected
+        window.location.href = `/messages.html?user=${userId}`;
+    }
 
-        container.innerHTML = users.map(user => `
-            <div class="user-card">
-                <div class="user-avatar">${user.avatar_url || '💖'}</div>
-                <div class="user-info">
-                    <h4>${user.display_name || user.username}</h4>
-                    <p class="user-bio">${user.bio || 'No bio'}</p>
+    // ============================================================
+    // 🎨 UI HELPERS (The "Renderers")
+    // ============================================================
+    
+    /**
+     * Generates the User Header HTML (Avatar, Name, Date, Follow Btn)
+     * Used by both Feed Cards and Story Cards.
+     */
+    renderUserHeader(user, dateStr, options = {}) {
+        const { isOwner, isFollowing } = options;
+        const timeAgo = this.timeSince(new Date(dateStr));
+        const avatar = user.avatar_url || '/images/default-avatar.png';
+        const name = user.display_name || user.username || 'User';
+        const profileLink = `/profile.html?user=${encodeURIComponent(user.username)}`;
+
+        // Follow button HTML (only if not owner)
+        const followBtn = (!isOwner && this.currentUser) ? `
+            <button class="follow-toggle-btn ${isFollowing ? 'following' : ''}" 
+                    data-user-id="${user.id}">
+                ${isFollowing ? 'Following' : '+ Follow'}
+            </button>
+        ` : '';
+
+        return `
+            <div class="unified-user-header">
+                <a href="${profileLink}" class="avatar-link">
+                    <img src="${avatar}" alt="${name}" class="user-avatar-img" onerror="this.src='/images/default-avatar.png'"/>
+                </a>
+                <div class="user-meta">
+                    <a href="${profileLink}" class="user-name-link">
+                        <h4>${name}</h4>
+                    </a>
+                    <span class="post-time">${timeAgo}</span>
                 </div>
-                <button class="action-btn follow-btn ${this.isFollowing(user.id) ? 'following' : ''}" 
-                        data-user-id="${user.id}">
-                    ${this.isFollowing(user.id) ? 'Following' : 'Follow'}
-                </button>
+                ${followBtn}
             </div>
-        `).join('');
+        `;
     }
-    
-    updateStatCount(statName, delta) {
-        const statSpan = document.querySelector(`.profile-stats [data-stat="${statName}"]`);
-        if (statSpan) {
-            statSpan.textContent = parseInt(statSpan.textContent) + delta;
+
+    // ============================================================
+    // 🛠 UTILS
+    // ============================================================
+    requireLogin() {
+        this.showNotification("Please log in to continue.", "warning");
+        setTimeout(() => window.location.href = '/login.html', 1500);
+    }
+
+    showNotification(msg, type = 'info') {
+        // Use existing notification service if available, else alert
+        if (window.notificationService) {
+            type === 'error' ? window.notificationService.showError(msg) : window.notificationService.showSuccess(msg);
+        } else {
+            console.log(`[${type.toUpperCase()}] ${msg}`);
+            // Optional: Create a simple toast if none exists
         }
     }
-    
-    displayEmptyState(container, message) {
-         container.innerHTML = `<div class="empty-state"><p>${message}</p></div>`;
-    }
 
-    showNotification(message, type = 'info') {
-        // Assuming ProfileManager's notification system is global or easy to access
-        window.profileManager?.showNotification(message, type);
-    }
-
-    // Placeholder for other interaction handlers (e.g., messages)
-    handleMessage(button) {
-        this.showNotification(`Opening message modal for user ${button.dataset.userId}`, 'info');
-        // Implement modal logic here
+    timeSince(date) {
+        const seconds = Math.floor((new Date() - date) / 1000);
+        let interval = seconds / 31536000;
+        if (interval > 1) return Math.floor(interval) + "y";
+        interval = seconds / 2592000;
+        if (interval > 1) return Math.floor(interval) + "mo";
+        interval = seconds / 86400;
+        if (interval > 1) return Math.floor(interval) + "d";
+        interval = seconds / 3600;
+        if (interval > 1) return Math.floor(interval) + "h";
+        interval = seconds / 60;
+        if (interval > 1) return Math.floor(interval) + "m";
+        return "Just now";
     }
 }
 
-const socialFeatures = new SocialFeatures();
-window.socialFeatures = socialFeatures; // Make global for ProfileManager access
+// Initialize Global Instance
+window.socialFeatures = new SocialFeatures();

@@ -1,28 +1,11 @@
 /**
  * backend/ws.js — Lovculator Real-Time Layer (WebSocket + Optional Redis)
- *
- * Responsibilities:
- * - WebSocket server (messages, presence, likes, comments, notifications)
- * - Broadcast helpers (to all / specific users)
- * - Presence map with lastSeen & isOnline
- * - Typing indicators
- * - HEARTBEAT (ping/pong) + cleanup
- * - /api/ws/stats endpoint
- * - Graceful shutdown + SERVER_SHUTDOWN event
- * - Optional Redis Pub/Sub for multi-instance scaling
- *
- * WebSocket event types sent to frontend:
- * - NEW_MESSAGE
- * - MESSAGE_EDITED
- * - MESSAGE_DELETED
- * - MESSAGE_SEEN
- * - TYPING
- * - PRESENCE
- * - BULK_PRESENCE
- * - NEW_NOTIFICATION
- * - LIKE_UPDATE
- * - NEW_COMMENT
- * - SERVER_SHUTDOWN
+ * 
+ * ENHANCED VERSION with:
+ * - Fixed broadcast function signatures
+ * - Enhanced connection tracking and debugging
+ * - Better error handling and logging
+ * - WebSocket stats exposure for debugging
  */
 
 import * as ws from "ws";
@@ -38,7 +21,7 @@ function createNodeId() {
 }
 
 export function initWebSocketLayer({ app, server, sessionMiddleware }) {
-  console.log("⚡ Initializing WebSocket layer...");
+  console.log("⚡ Initializing ENHANCED WebSocket layer...");
 
   const nodeId = createNodeId();
 
@@ -71,6 +54,8 @@ export function initWebSocketLayer({ app, server, sessionMiddleware }) {
    *   value: { connectionCount: number, lastSeen: Date, isOnline: boolean }
    */
   const onlineUsers = new Map();
+  const connectionDebug = new Map(); // Enhanced: userId -> { connectedAt, lastActivity, userAgent, ip }
+  
   const connectionStats = {
     totalConnections: 0,
     activeConnections: 0,
@@ -129,7 +114,7 @@ export function initWebSocketLayer({ app, server, sessionMiddleware }) {
     }
   }
 
-  // Fire & forget (don’t block startup if Redis fails)
+  // Fire & forget (don't block startup if Redis fails)
   setupRedis();
 
   //
@@ -179,6 +164,7 @@ export function initWebSocketLayer({ app, server, sessionMiddleware }) {
   function localBroadcastToAll(payload) {
     const str = JSON.stringify(payload);
     let sentCount = 0;
+    let errorCount = 0;
 
     userSockets.forEach((sockets, userId) => {
       sockets.forEach((wsSocket) => {
@@ -187,6 +173,7 @@ export function initWebSocketLayer({ app, server, sessionMiddleware }) {
             wsSocket.send(str);
             sentCount++;
           } catch (error) {
+            errorCount++;
             console.error(`Error broadcasting to user ${userId}:`, error.message);
           }
         }
@@ -200,39 +187,40 @@ export function initWebSocketLayer({ app, server, sessionMiddleware }) {
     const userIdArray = Array.isArray(userIds) ? userIds : [userIds];
     const str = JSON.stringify(payload);
     let sentCount = 0;
+    let errorCount = 0;
 
-    console.log(
-      `📡 Local broadcast to users:`,
-      userIdArray,
-      "Payload type:",
-      payload?.type
-    );
+    console.log(`📡 LOCAL BROADCAST: Type ${payload.type} to ${userIdArray.length} users:`, userIdArray);
 
     userIdArray.forEach((userId) => {
       const sockets = userSockets.get(Number(userId));
       if (sockets) {
+        console.log(`✅ User ${userId} has ${sockets.size} active socket(s)`);
         sockets.forEach((wsSocket) => {
           if (wsSocket.readyState === ws.OPEN) {
             try {
               wsSocket.send(str);
               sentCount++;
-              console.log(`✅ Sent to user ${userId}`);
+              console.log(`✅ Sent to user ${userId} (socket ready)`);
             } catch (error) {
-              console.error(
-                `Error sending to user ${userId}:`,
-                error.message
-              );
+              errorCount++;
+              console.error(`❌ Error sending to user ${userId}:`, error.message);
             }
+          } else {
+            console.log(`⚠️ User ${userId} socket not OPEN (state: ${wsSocket.readyState})`);
           }
         });
       } else {
-        console.log(`⚠️ User ${userId} not connected (no sockets found)`);
+        console.log(`❌ User ${userId} not connected (no sockets in userSockets map)`);
       }
     });
 
-    console.log(
-      `📊 Local broadcast done: ${sentCount} messages sent to ${userIdArray.length} users`
-    );
+    console.log(`📊 LOCAL BROADCAST COMPLETE: ${sentCount} sent, ${errorCount} errors, ${userIdArray.length} targets`);
+    
+    // Log currently connected users for debugging
+    if (sentCount === 0 && userIdArray.length > 0) {
+      console.log(`🔍 Currently connected users:`, Array.from(userSockets.keys()));
+    }
+
     return sentCount;
   }
 
@@ -285,9 +273,9 @@ export function initWebSocketLayer({ app, server, sessionMiddleware }) {
   }
 
   //
-  // 6️⃣ PRESENCE & SOCKET REGISTRATION
+  // 6️⃣ PRESENCE & SOCKET REGISTRATION (ENHANCED)
   //
-  function registerSocket(userId, wsSocket) {
+  function registerSocket(userId, wsSocket, req) {
     if (!userSockets.has(userId)) {
       userSockets.set(userId, new Set());
     }
@@ -298,6 +286,15 @@ export function initWebSocketLayer({ app, server, sessionMiddleware }) {
     wsSocket.userId = userId;
     wsSocket.connectedAt = Date.now();
     wsSocket.isAlive = true;
+    wsSocket.userAgent = req.headers['user-agent'];
+
+    // Enhanced debug tracking
+    connectionDebug.set(userId, {
+      connectedAt: new Date().toISOString(),
+      lastActivity: new Date().toISOString(),
+      userAgent: wsSocket.userAgent,
+      ip: req.headers['x-forwarded-for'] || req.socket.remoteAddress
+    });
 
     // Online map
     const userData =
@@ -320,7 +317,7 @@ export function initWebSocketLayer({ app, server, sessionMiddleware }) {
     );
 
     console.log(
-      `🔗 User ${userId} connected. Active: ${connectionStats.activeConnections}`
+      `🔗 User ${userId} connected. Active: ${connectionStats.activeConnections}, Total Sockets: ${userSocketsSet.size}`
     );
 
     // Notify others this user is online
@@ -344,6 +341,12 @@ export function initWebSocketLayer({ app, server, sessionMiddleware }) {
       `🔌 User ${userId} disconnected. Active: ${connectionStats.activeConnections}`
     );
 
+    // Clean up debug info if no more sockets
+    if (userSocketsSet.size === 0) {
+      userSockets.delete(userId);
+      connectionDebug.delete(userId);
+    }
+
     const userData =
       onlineUsers.get(userId) || {
         connectionCount: 0,
@@ -357,10 +360,6 @@ export function initWebSocketLayer({ app, server, sessionMiddleware }) {
       userData.isOnline = false;
     }
     onlineUsers.set(userId, userData);
-
-    if (userSocketsSet.size === 0) {
-      userSockets.delete(userId);
-    }
 
     // Broadcast offline (but lastSeen preserved in map)
     if (!userData.isOnline) {
@@ -396,12 +395,23 @@ export function initWebSocketLayer({ app, server, sessionMiddleware }) {
       });
 
       if (presenceData.length > 0 && wsSocket.readyState === ws.OPEN) {
+        // Send both event types for compatibility
         wsSocket.send(
           JSON.stringify({
             type: "BULK_PRESENCE",
             users: presenceData,
           })
         );
+        
+        // Also send as PRESENCE_INITIAL for broader compatibility
+        wsSocket.send(
+          JSON.stringify({
+            type: "PRESENCE_INITIAL", 
+            users: presenceData,
+          })
+        );
+        
+        console.log(`📊 Sent initial presence data to user ${userId}: ${presenceData.length} contacts`);
       }
     } catch (error) {
       console.error("Error sending initial presence data:", error);
@@ -455,40 +465,50 @@ export function initWebSocketLayer({ app, server, sessionMiddleware }) {
   }
 
   //
-  // 8️⃣ REAL-TIME EVENT EXPORTS (for routes to call)
+  // 8️⃣ REAL-TIME EVENT EXPORTS (FIXED SIGNATURES)
   //
-  app.set("broadcastNewMessage", (message, recipients) => {
+  
+  // 🟢 FIXED: Correct function signatures for routes compatibility
+  app.set("broadcastNewMessage", (data, recipients) => {
     connectionStats.totalMessages++;
+    console.log(`🎯 WebSocket: Broadcasting NEW_MESSAGE to ${recipients.length} recipients`, {
+      messageId: data.id,
+      conversationId: data.conversation_id,
+      recipients: recipients
+    });
     return broadcastToUsers(recipients, {
       type: "NEW_MESSAGE",
-      message,
-      conversationId: message.conversation_id,
+      message: data, // Keep as 'message' for frontend compatibility
+      conversationId: data.conversation_id,
     });
   });
 
-  app.set("broadcastEditedMessage", (message, recipients) =>
-    broadcastToUsers(recipients, {
+  app.set("broadcastEditedMessage", (data, recipients) => {
+    console.log(`🎯 WebSocket: Broadcasting MESSAGE_EDITED to ${recipients.length} recipients`);
+    return broadcastToUsers(recipients, {
       type: "MESSAGE_EDITED",
-      message,
-      conversationId: message.conversation_id,
-    })
-  );
+      message: data,
+      conversationId: data.conversation_id,
+    });
+  });
 
-  app.set("broadcastDeletedMessage", (messageId, recipients) =>
-    broadcastToUsers(recipients, {
+  app.set("broadcastDeletedMessage", (messageId, recipients) => {
+    console.log(`🎯 WebSocket: Broadcasting MESSAGE_DELETED to ${recipients.length} recipients`);
+    return broadcastToUsers(recipients, {
       type: "MESSAGE_DELETED",
-      messageId,
-    })
-  );
+      messageId: messageId,
+    });
+  });
 
-  app.set("broadcastSeenMessage", (conversationId, messageIds, toUserId) =>
-    broadcastToUsers([toUserId], {
+  app.set("broadcastSeenMessage", (conversationId, messageIds, toUserId) => {
+    console.log(`🎯 WebSocket: Broadcasting MESSAGE_SEEN to user ${toUserId}`);
+    return broadcastToUsers([toUserId], {
       type: "MESSAGE_SEEN",
       conversationId,
       messageIds,
       seenAt: new Date().toISOString(),
-    })
-  );
+    });
+  });
 
   /**
    * 🔔 Notifications broadcast
@@ -540,7 +560,7 @@ export function initWebSocketLayer({ app, server, sessionMiddleware }) {
   );
 
   //
-  // 9️⃣ WEBSOCKET CONNECTION HANDLER
+  // 9️⃣ WEBSOCKET CONNECTION HANDLER (ENHANCED)
   //
   wss.on("connection", (wsSocket, req) => {
     const uid = req.session?.user?.id;
@@ -549,7 +569,7 @@ export function initWebSocketLayer({ app, server, sessionMiddleware }) {
       return wsSocket.close(1008, "Authentication required");
     }
 
-    registerSocket(uid, wsSocket);
+    registerSocket(uid, wsSocket, req);
     setupHeartbeat(wsSocket);
 
     wsSocket.on("message", (raw) => {
@@ -557,17 +577,31 @@ export function initWebSocketLayer({ app, server, sessionMiddleware }) {
       try {
         data = JSON.parse(raw.toString());
         connectionStats.totalMessages++;
+        
+        // Update last activity
+        if (connectionDebug.has(uid)) {
+          const debugInfo = connectionDebug.get(uid);
+          debugInfo.lastActivity = new Date().toISOString();
+          connectionDebug.set(uid, debugInfo);
+        }
       } catch (error) {
-        console.log("❌ Invalid WebSocket message format");
+        console.log("❌ Invalid WebSocket message format from user", uid);
         return;
       }
 
       // Any message = still alive
       wsSocket.isAlive = true;
 
+      console.log(`📨 WebSocket message from user ${uid}:`, {
+        type: data.type,
+        conversationId: data.conversationId,
+        isTyping: data.isTyping
+      });
+
       switch (data.type) {
         case "TYPING":
           if (data.toUserId && data.conversationId) {
+            console.log(`⌨️ Typing indicator from ${uid} to ${data.toUserId}`);
             broadcastToUsers([data.toUserId], {
               type: "TYPING",
               conversationId: data.conversationId,
@@ -583,19 +617,31 @@ export function initWebSocketLayer({ app, server, sessionMiddleware }) {
           break;
 
         case "PRESENCE_UPDATE": {
-          const userData =
-            onlineUsers.get(uid) || {
-              connectionCount: 0,
-              lastSeen: null,
-              isOnline: false,
-            };
+          const userData = onlineUsers.get(uid) || {
+            connectionCount: 0,
+            lastSeen: null,
+            isOnline: false,
+          };
           userData.lastSeen = new Date();
           onlineUsers.set(uid, userData);
           break;
         }
 
+        case "DEBUG_REQUEST":
+          // Handle debug requests from frontend
+          if (wsSocket.readyState === ws.OPEN) {
+            wsSocket.send(JSON.stringify({
+              type: "DEBUG_RESPONSE",
+              userId: uid,
+              connectionCount: userSockets.get(uid)?.size || 0,
+              online: onlineUsers.get(uid)?.isOnline || false,
+              timestamp: new Date().toISOString()
+            }));
+          }
+          break;
+
         default:
-          console.log(`Unknown WebSocket message type: ${data.type}`);
+          console.log(`Unknown WebSocket message type from user ${uid}: ${data.type}`);
       }
     });
 
@@ -639,7 +685,7 @@ export function initWebSocketLayer({ app, server, sessionMiddleware }) {
   });
 
   //
-  // 1️⃣1️⃣ PERIODIC WS CLEANUP & MONITORING
+  // 1️⃣1️⃣ PERIODIC WS CLEANUP & MONITORING (ENHANCED)
   //
   setInterval(() => {
     wss.clients.forEach((wsSocket) => {
@@ -652,39 +698,72 @@ export function initWebSocketLayer({ app, server, sessionMiddleware }) {
     });
   }, 30000);
 
+  // Enhanced WebSocket stats function
+  function getWebSocketStats() {
+    return {
+      activeConnections: connectionStats.activeConnections,
+      totalConnections: connectionStats.totalConnections,
+      maxConcurrent: connectionStats.maxConcurrent,
+      totalMessages: connectionStats.totalMessages,
+      onlineUsers: Array.from(onlineUsers.entries()).map(([userId, data]) => ({
+        userId,
+        isOnline: data.isOnline,
+        connectionCount: data.connectionCount,
+        lastSeen: data.lastSeen
+      })),
+      userSockets: Array.from(userSockets.entries()).map(([userId, sockets]) => ({
+        userId,
+        socketCount: sockets.size,
+        connectionInfo: connectionDebug.get(userId) || null
+      })),
+      totalWebSocketClients: wss.clients.size,
+      redisEnabled: redisReady,
+      nodeId: nodeId,
+      timestamp: new Date().toISOString()
+    };
+  }
+
+  // Expose WebSocket stats to the app
+  app.set("getWebSocketStats", getWebSocketStats);
+
   // Monitoring endpoint for WebSocket stats
   app.get("/api/ws/stats", (req, res) => {
     if (process.env.NODE_ENV !== "development" && !req.session?.user?.isAdmin) {
       return res.status(403).json({ error: "Access denied" });
     }
 
-    const stats = {
-      ...connectionStats,
-      onlineUsers: Array.from(onlineUsers.entries()).map(
-        ([userId, data]) => ({
-          userId,
-          isOnline: data.isOnline,
-          lastSeen: data.lastSeen,
-        })
-      ),
-      userSocketCount: userSockets.size,
-      totalWebSocketClients: wss.clients.size,
-      uptime: process.uptime(),
-      memory: process.memoryUsage(),
-      timestamp: new Date().toISOString(),
-      nodeId,
-      redisEnabled: redisReady,
-    };
-
+    const stats = getWebSocketStats();
     res.json(stats);
   });
 
-  // Log basic WS stats every minute (if there are connections)
+  // Enhanced WebSocket health check
+  app.get("/api/ws/health", (req, res) => {
+    res.json({
+      status: "healthy",
+      nodeId: nodeId,
+      activeConnections: connectionStats.activeConnections,
+      onlineUsers: onlineUsers.size,
+      redis: redisReady ? "connected" : "disabled",
+      uptime: process.uptime(),
+      timestamp: new Date().toISOString()
+    });
+  });
+
+  // Log comprehensive WS stats every minute
   setInterval(() => {
     if (connectionStats.activeConnections > 0) {
       console.log(
-        `📊 WS Stats - Active: ${connectionStats.activeConnections}, Online Users Map Size: ${onlineUsers.size}, Total Clients: ${wss.clients.size}, Total Messages: ${connectionStats.totalMessages}`
+        `📊 ENHANCED WS Stats - Active: ${connectionStats.activeConnections}, ` +
+        `Online Users: ${onlineUsers.size}, ` +
+        `Total Clients: ${wss.clients.size}, ` +
+        `Total Messages: ${connectionStats.totalMessages}, ` +
+        `Redis: ${redisReady ? '✅' : '❌'}`
       );
+      
+      // Log connected users for debugging
+      if (userSockets.size > 0) {
+        console.log(`👥 Connected users:`, Array.from(userSockets.keys()));
+      }
     }
   }, 60000);
 
@@ -751,5 +830,6 @@ export function initWebSocketLayer({ app, server, sessionMiddleware }) {
     console.error("🆘 Unhandled Rejection at:", promise, "reason:", reason);
   });
 
-  console.log("✅ WebSocket layer initialized (node:", nodeId, ")");
+  console.log("✅ ENHANCED WebSocket layer initialized (node:", nodeId, ")");
+  console.log("🔧 Features: Fixed signatures, Enhanced debugging, Better error handling");
 }

@@ -280,101 +280,90 @@ class ProfileManager {
     }
 
     // =====================================================
-    // 🧁 Avatar Upload (with Preview & Upload - Final Corrected)
-    // =====================================================
-    attachAvatarUploadHandler() {
-        const avatarInput = document.getElementById("avatarInput");
-        const avatarImage = document.getElementById("avatarImage");
+// 🧁 Avatar Upload (with Preview & Upload - Final Corrected)
+// =====================================================
+attachAvatarUploadHandler() {
+    const avatarInput = document.getElementById("avatarInput");
+    const avatarImage = document.getElementById("avatarImage");
 
-        if (!avatarInput || !avatarImage || !this.currentUser) return;
+    if (!avatarInput || !avatarImage || !this.currentUser) return;
 
-        avatarInput.addEventListener("change", async (event) => {
-            const file = event.target.files[0];
-            if (!file) return;
+    avatarInput.addEventListener("change", async (event) => {
+        const file = event.target.files[0];
+        if (!file) return;
 
-            if (file.size > 2 * 1024 * 1024) {
-                this.showToast("⚠️ Max file size is 2MB.", "warning");
-                return;
+        if (file.size > 2 * 1024 * 1024) {
+            this.showToast("⚠️ Max file size is 2MB.", "warning");
+            return;
+        }
+
+        // 1. Instant Preview (local only, safe for CSP)
+        const reader = new FileReader();
+        reader.onload = () => (avatarImage.src = reader.result);
+        reader.readAsDataURL(file);
+
+        // 2. Upload to server
+        const formData = new FormData();
+        formData.append("avatar", file);
+
+        try {
+            const res = await fetch(`${this.API_BASE}/users/${this.currentUser.id}/avatar`, {
+                method: "POST",
+                body: formData,
+                credentials: "include",
+            });
+
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error || "Upload failed");
+
+            // Ensure URL is relative
+            let cleanAvatarURL = data.avatar_url;
+            if (cleanAvatarURL && (cleanAvatarURL.includes("localhost") || !cleanAvatarURL.startsWith("/"))) {
+                try {
+                    const urlObj = new URL(cleanAvatarURL, window.location.origin);
+                    cleanAvatarURL = urlObj.pathname;
+                } catch (parseErr) {
+                    console.warn("⚠️ URL parsing failed, fallback used");
+                }
             }
 
-            // 1. Preview instantly (using data URL, which is CSP compliant)
-            const reader = new FileReader();
-            reader.onload = () => {
-                avatarImage.src = reader.result;
-            };
-            reader.readAsDataURL(file);
+            // Cache busting
+            const newAvatarURL = `${cleanAvatarURL}?t=${Date.now()}`;
 
-            // Upload to server
-            const formData = new FormData();
-            formData.append("avatar", file);
+            // Update local profile UI
+            avatarImage.src = newAvatarURL;
 
-            try {
-                const res = await fetch(`${this.API_BASE}/users/${this.currentUser.id}/avatar`, {
-                    method: "POST",
-                    body: formData,
-                    credentials: "include",
-                });
+            // Update internal state
+            this.currentUser.avatar_url = newAvatarURL;
+            this.viewedUser.avatar_url = newAvatarURL;
+            if (window.currentUser) window.currentUser.avatar_url = newAvatarURL;
 
-                const data = await res.json();
-                if (!res.ok) throw new Error(data.error || "Upload failed");
+            // 🔁 Refresh session globally
+            await this.refreshUserSession();
 
-                // 2. 🛑 DEFENSIVE STRIPPING: Ensure URL is relative (e.g., /uploads/avatars/...)
-                let cleanAvatarURL = data.avatar_url;
+            // 🔥 Update avatars in header & UI globally (safe optional chaining)
+            document.getElementById("userAvatar")?.setAttribute("src", newAvatarURL);
+            document.getElementById("sidebarAvatar")?.setAttribute("src", newAvatarURL);
+            document.getElementById("creatorAvatar")?.setAttribute("src", newAvatarURL);
+            document.getElementById("modalPostAvatar")?.setAttribute("src", newAvatarURL);
 
-                if (cleanAvatarURL && (cleanAvatarURL.includes('localhost') || !cleanAvatarURL.startsWith('/'))) {
-                    // Use URL object to reliably extract the path, ensuring no host is left
-                    try {
-                        // Prepend window.location.origin to handle cases where backend sends only the path
-                        const url = new URL(cleanAvatarURL, window.location.origin);
-                        cleanAvatarURL = url.pathname;
-                    } catch (e) {
-                        console.error("URL parsing failed, falling back to original data.");
-                        cleanAvatarURL = data.avatar_url;
-                    }
-                }
+            // 🛰 Broadcast event
+            window.dispatchEvent(new CustomEvent("avatarUpdated", { detail: { avatarUrl: newAvatarURL }}));
 
-                // 3. ✅ CACHE BUSTING: Append timestamp to the clean, relative URL
-                const newAvatarURL = `${cleanAvatarURL}?t=${Date.now()}`;
+            // Animation feedback
+            avatarImage.classList.add("avatar-updated");
+            setTimeout(() => avatarImage.classList.remove("avatar-updated"), 800);
 
-                // 4. Update UI and State
-                
-                // Update UI instantly
-                avatarImage.src = newAvatarURL; 
-                
-                // Update local state objects
-                this.currentUser.avatar_url = newAvatarURL;
-                this.viewedUser.avatar_url = newAvatarURL;
+            alert("✅ Profile picture updated!");
 
-                // Update global state
-                if (window.currentUser) {
-                    window.currentUser.avatar_url = newAvatarURL;
-                }
+        } catch (err) {
+            console.error("❌ Avatar upload error:", err);
+            avatarImage.src = this.currentUser.avatar_url || "/images/default-avatar.png";
+            alert("❌ Failed to upload avatar. Please try again.");
+        }
+    });
+}
 
-                // Refresh session data (assuming this method is defined elsewhere)
-                await this.refreshUserSession();
-
-                // Bounce animation for visual feedback
-                avatarImage.classList.add("avatar-updated");
-                setTimeout(() => avatarImage.classList.remove("avatar-updated"), 800);
-
-                // Notify other components
-                window.dispatchEvent(new CustomEvent('avatarUpdated', {
-                    detail: { avatarUrl: newAvatarURL }
-                }));
-
-                alert("✅ Profile picture updated!");
-
-            } catch (err) {
-                console.error("❌ Avatar upload error:", err);
-                
-                // Revert to original avatar on error
-                const originalAvatar = this.currentUser.avatar_url || "/images/default-avatar.png";
-                avatarImage.src = originalAvatar;
-                
-                alert("❌ Failed to upload avatar. Please try again.");
-            }
-        });
-    }
 
     // =====================================================
     // 🔄 Session Refresh Helper (FIXED: Handles nested API response)

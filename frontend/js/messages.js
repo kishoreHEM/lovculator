@@ -442,28 +442,40 @@ class MessagesPage {
     this.init();
   }
 
-  async init() {
-    await this.checkAuth();
-    window.currentUserId = this.currentUser.id;
-    console.log("⚡ Current user set:", window.currentUserId);
-    await this.loadConversations();
-    this.attachEventListeners();
-    this.connectWebSocket();
+  // ✅ ENHANCED initialization
+async init() {
+  await this.checkAuth();
+  
+  // Ensure currentUserId is properly set
+  window.currentUserId = this.currentUser?.id;
+  console.log("⚡ MessagesPage initialized:", {
+    currentUser: this.currentUser,
+    currentUserId: window.currentUserId
+  });
+  
+  await this.loadConversations();
+  this.attachEventListeners();
+  this.connectWebSocket();
 
-    // Pre-select user from URL parameters
-    const urlParams = new URLSearchParams(window.location.search);
-    const targetUser = urlParams.get("user");
-    const targetConversation = urlParams.get("conversation");
-    
-    if (targetConversation) {
-      await this.openConversation(targetConversation);
-    } else if (targetUser) {
-      await this.startConversationWithUser(targetUser);
-    }
-
-    // Initialize notification permission
-    this.initializeNotifications();
+  // Pre-select user from URL parameters
+  const urlParams = new URLSearchParams(window.location.search);
+  const targetUser = urlParams.get("user");
+  const targetConversation = urlParams.get("conversation");
+  
+  console.log("🎯 URL parameters:", { targetUser, targetConversation });
+  
+  if (targetConversation) {
+    await this.openConversation(targetConversation);
+  } else if (targetUser) {
+    await this.startConversationWithUser(targetUser);
   }
+
+  // Initialize notification permission
+  this.initializeNotifications();
+  
+  // Test WebSocket after a delay
+  setTimeout(() => this.testWebSocketConnection(), 2000);
+}
 
   async checkAuth() {
   try {
@@ -497,6 +509,7 @@ class MessagesPage {
     return false;
   }
 }
+
 
 
 
@@ -1115,32 +1128,27 @@ class MessagesPage {
 
 
   renderMessage(message) {
-  const currentUserId = window.currentUser?.id || this.currentUser?.id;
+  // ✅ Now this.currentUser is properly set from data.user
+  const currentUserId = this.currentUser?.id;
+  
+  // Simple and reliable comparison
+  const isOwnMessage = parseInt(message.sender_id) === parseInt(currentUserId);
 
-  const senderId =
-    message.sender_id ??
-    message.senderId ??
-    message.sender?.id;
-
-  console.log("🧪 message test", {
-    id: message.id,
-    sender_id: message.sender_id,
-    senderId: message.senderId,
-    nestedSender: message.sender?.id,
-    currentUserId,
-    isOwn: String(senderId) === String(currentUserId)
-  });
-
-  const isOwnMessage = String(senderId) === String(currentUserId);
+  const messageTime = this.formatTime(message.created_at);
+  const messageStatus = isOwnMessage ? 
+    (message.is_read ? 
+      '<span class="message-status" title="Read">✓✓</span>' : 
+      '<span class="message-status" title="Sent">✓</span>') : 
+    '';
 
   return `
-    <div class="message ${isOwnMessage ? "own-message" : "other-message"}"
+    <div class="message ${isOwnMessage ? "own-message" : "other-message"}" 
          data-message-id="${message.id}">
       <div class="message-bubble">
         <p class="message-text">${this.escapeHtml(message.message_text || "")}</p>
         <div class="message-meta">
-          <span class="message-time">${this.formatTime(message.created_at)}</span>
-          ${isOwnMessage ? '<span class="message-status">✓</span>' : ""}
+          <span class="message-time">${messageTime}</span>
+          ${messageStatus}
         </div>
       </div>
     </div>
@@ -1149,72 +1157,87 @@ class MessagesPage {
 
 
   /* ✉️ Enhanced message sending */
-  async sendMessage(attachmentMeta = null) {
-    const input = document.getElementById("messageInput");
-    const sendBtn = document.getElementById("sendMessageBtn");
-    const messageText = input?.value.trim();
+  // ✅ ENHANCED message sending
+async sendMessage(attachmentMeta = null) {
+  const input = document.getElementById("messageInput");
+  const sendBtn = document.getElementById("sendMessageBtn");
+  const messageText = input?.value.trim();
+  
+  if (!messageText && !attachmentMeta) return;
+  if (!this.currentConversation) return;
+
+  console.log("🚀 Sending message:", {
+    conversationId: this.currentConversation.id,
+    currentUser: this.currentUser?.id,
+    messageLength: messageText?.length
+  });
+
+  // Disable send button during sending
+  if (sendBtn) {
+    sendBtn.disabled = true;
+    sendBtn.innerHTML = '<div class="loading-spinner"></div>';
+  }
+
+  const body = {
+    message_text: messageText || null,
+    message_type: attachmentMeta ? 'attachment' : 'text'
+  };
+
+  if (attachmentMeta) {
+    body.attachment_type = attachmentMeta.type;
+    body.attachment_url = attachmentMeta.url;
+  }
+
+  try {
+    const response = await fetch(
+      `${this.API_BASE}/messages/conversations/${this.currentConversation.id}/messages`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify(body),
+      }
+    );
+
+    if (!response.ok) throw new Error("Failed to send message");
+
+    const newMessage = await response.json();
     
-    if (!messageText && !attachmentMeta) return;
-    if (!this.currentConversation) return;
+    // Debug the received message
+    console.log("✅ Message sent successfully:", {
+      messageId: newMessage.id,
+      senderId: newMessage.sender_id,
+      currentUserId: this.currentUser?.id,
+      alignment: String(newMessage.sender_id) === String(this.currentUser?.id) ? "OWN" : "OTHER"
+    });
 
-    // Disable send button during sending
+    this.appendMessage(newMessage);
+    
+    if (input) {
+      input.value = "";
+      this.autoResizeTextarea(input);
+    }
+    
+    this.scrollToBottom();
+    
+    if (this.currentConversation?.messages) {
+      this.currentConversation.messages.push(newMessage);
+    }
+
+    // Refresh conversations list to update last message
+    this.loadConversations();
+
+  } catch (error) {
+    console.error("❌ Send message error:", error);
+    this.showError("Failed to send message. Please try again.");
+  } finally {
+    // Re-enable send button
     if (sendBtn) {
-      sendBtn.disabled = true;
-      sendBtn.innerHTML = '<div class="loading-spinner"></div>';
-    }
-
-    const body = {
-      message_text: messageText || null,
-      message_type: attachmentMeta ? 'attachment' : 'text'
-    };
-
-    if (attachmentMeta) {
-      body.attachment_type = attachmentMeta.type;
-      body.attachment_url = attachmentMeta.url;
-    }
-
-    try {
-      const response = await fetch(
-        `${this.API_BASE}/messages/conversations/${this.currentConversation.id}/messages`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          credentials: "include",
-          body: JSON.stringify(body),
-        }
-      );
-
-      if (!response.ok) throw new Error("Failed to send message");
-
-      const newMessage = await response.json();
-      newMessage.sender_id = this.currentUser.id; // 🔥 ensures correct alignment
-      this.appendMessage(newMessage);
-      
-      if (input) {
-        input.value = "";
-        this.autoResizeTextarea(input);
-      }
-      
-      this.scrollToBottom();
-      
-      if (this.currentConversation?.messages) {
-        this.currentConversation.messages.push(newMessage);
-      }
-
-      // Refresh conversations list to update last message
-      this.loadConversations();
-
-    } catch (error) {
-      console.error("Send message error:", error);
-      this.showError("Failed to send message. Please try again.");
-    } finally {
-      // Re-enable send button
-      if (sendBtn) {
-        sendBtn.disabled = false;
-        sendBtn.innerHTML = '<span style="font-size: 18px;">➤</span>';
-      }
+      sendBtn.disabled = false;
+      sendBtn.innerHTML = '<span style="font-size: 18px;">➤</span>';
     }
   }
+}
 
   appendMessage(message) {
     const messagesList = document.getElementById("messagesList");
@@ -1252,14 +1275,6 @@ class MessagesPage {
     if (sendBtn) {
       sendBtn.addEventListener("click", () => this.sendMessage());
     }
-
-    document.getElementById("messagesList").addEventListener("contextmenu", (e) => {
-  const msg = e.target.closest(".message");
-  if (!msg) return;
-
-  e.preventDefault();
-  this.startReply(msg.dataset);
-});
 
 
     // Message input handling
