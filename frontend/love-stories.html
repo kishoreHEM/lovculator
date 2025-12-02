@@ -320,33 +320,133 @@
     </button>
 </div>
 
+<!-- Story Creation Modal -->
+<div id="storyModal" class="modal-overlay hidden">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3>Share Your Love Story 💖</h3>
+            <button class="close-modal" id="closeModal" aria-label="Close">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+            </button>
+        </div>
+        
+        <form id="storyForm" class="story-form">
+            <div class="form-group">
+                <label for="coupleNames">Your Names</label>
+                <input type="text" id="coupleNames" placeholder="e.g., Alex & Taylor">
+            </div>
+            
+            <div class="form-group">
+                <label for="storyTitle">Story Title *</label>
+                <input type="text" id="storyTitle" placeholder="Give your story a beautiful title" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="togetherSince">Together Since</label>
+                <input type="date" id="togetherSince">
+            </div>
+            
+            <div class="form-group">
+                <label for="loveStory">Love Story *</label>
+                <textarea id="loveStory" placeholder="Share your beautiful love story..." maxlength="10000" required></textarea>
+                <div class="char-count">
+                    <span id="charCounter">0</span>/10000
+                </div>
+            </div>
+            
+            <div class="form-group">
+                <label for="storyCategory">Category</label>
+                <select id="storyCategory">
+                    <option value="romantic">💖 Romantic Moment</option>
+                    <option value="proposal">💍 Marriage Proposal</option>
+                    <option value="journey">🛤️ Love Journey</option>
+                    <option value="challenge">🛡️ Overcoming Challenges</option>
+                    <option value="special">🌟 Special Memory</option>
+                    <option value="longdistance">✈️ Long Distance Love</option>
+                    <option value="secondchance">🔁 Second Chance</option>
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label>Mood</label>
+                <div class="mood-options">
+                    <div class="mood-option selected" data-mood="romantic">
+                        💖 Romantic
+                    </div>
+                    <div class="mood-option" data-mood="emotional">
+                        😢 Emotional
+                    </div>
+                    <div class="mood-option" data-mood="funny">
+                        😂 Funny
+                    </div>
+                    <div class="mood-option" data-mood="inspiring">
+                        ✨ Inspiring
+                    </div>
+                    <div class="mood-option" data-mood="dramatic">
+                        🎭 Dramatic
+                    </div>
+                </div>
+                <input type="hidden" id="selectedMood" value="romantic">
+            </div>
+            
+            <div class="form-group" style="display: flex; flex-direction: column; gap: 12px;">
+                <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; margin-bottom: 0;">
+                    <input type="checkbox" id="allowComments" checked>
+                    <span>Allow Comments</span>
+                </label>
+                
+                <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; margin-bottom: 0;">
+                    <input type="checkbox" id="anonymousPost">
+                    <span>Post Anonymously</span>
+                </label>
+            </div>
+            
+            <button type="submit" class="submit-story-btn">
+                <span class="btn-text">Share Your Story</span>
+                <span class="btn-loading" style="display: none;">
+                    <div class="spinner" style="display: inline-block; width: 16px; height: 16px; border: 2px solid rgba(255,255,255,0.3); border-radius: 50%; border-top-color: white; animation: spin 0.8s linear infinite;"></div>
+                </span>
+            </button>
+        </form>
+    </div>
+</div>
+
+<!-- Success Message Modal -->
+<div id="successMessage" class="success-message hidden">
+    <div class="success-content">
+        <span class="success-icon">🎉</span>
+        <h4>Story Shared Successfully!</h4>
+        <p>Your love story is now live for everyone to see!</p>
+        <button id="successOk" class="success-ok-btn">OK</button>
+    </div>
+</div>
+
+<!-- Add this to your existing CSS or as inline style -->
+<style>
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+.btn-loading {
+    display: none;
+}
+
+.hidden {
+    display: none !important;
+}
+</style>
+
 
 <script src="/js/layout-manager.js"></script>
-<script src="js/navigation.js"></script>
+<script src="/js/navigation.js"></script>
 <script src="/js/auth.js"></script>
 <script src="/js/messages.js"></script>
 <script src="/js/notifications.js"></script>
 <script src="/js/social-features.js"></script>
-<script src="js/love-stories.js"></script>
-<script src="/js/story-modal.js"></script>
-<script src="/js/fab-manager.js"></script>
-<script src="/js/ask-modal.js"></script>
-<script src="js/fab-notifications.js"></script>
-<script src="js/simple-stats.js"></script>
-
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-    // Initialize core functionality
-    initializeLoveStories();
-    
-    // Initialize modals and FAB for stories page
-    if (window.loveStories && window.notificationService) {
-        window.storyModal = new StoryModal(window.loveStories, window.notificationService);
-    }
-    
-    window.fabManager = new FabManager();
-});
-</script>
+<script src="/js/love-stories.js"></script>
 
 </body>
 </html>

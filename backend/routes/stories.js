@@ -159,7 +159,7 @@ router.post("/", isAuthenticated, async (req, res) => {
 });
 
 /* -------------------------------------------
-   3) Like / Unlike (auth)
+   3) Like / Unlike (auth) - FIXED NOTIFICATION
 ------------------------------------------- */
 router.post("/:id/like", isAuthenticated, async (req, res) => {
   const client = await pool.connect();
@@ -169,13 +169,23 @@ router.post("/:id/like", isAuthenticated, async (req, res) => {
     const storyId = parseInt(req.params.id, 10);
     const userId = req.user.id;
 
+    // First, get the story author ID
+    const storyRes = await client.query(
+      `SELECT user_id FROM stories WHERE id = $1`,
+      [storyId]
+    );
+    
+    if (storyRes.rowCount === 0) {
+      await client.query("ROLLBACK");
+      return res.status(404).json({ error: "Story not found." });
+    }
+    
+    const storyAuthorId = storyRes.rows[0].user_id;
+
     const existing = await client.query(
       `SELECT 1 FROM story_likes WHERE user_id = $1 AND story_id = $2 FOR UPDATE`,
       [userId, storyId]
     );
-
-    // When someone likes a story
-await notifyLike(storyAuthorId, likerId, 'story', storyId);
 
     let action = "liked";
     if (existing.rowCount > 0) {
@@ -191,7 +201,17 @@ await notifyLike(storyAuthorId, likerId, 'story', storyId);
          ON CONFLICT (story_id, user_id) DO NOTHING`,
         [userId, storyId]
       );
+      
+      // Send notification only when liking (not unliking)
+      if (storyAuthorId !== userId) {
+    try {
+        await notifyLike(storyAuthorId, userId, 'story', storyId);
+    } catch (notifyError) {
+        console.error("Failed to send notification, but continuing:", notifyError);
+        // Don't fail the whole like operation if notification fails
     }
+  }
+}
 
     const countRes = await client.query(
       `SELECT COUNT(*) AS likes_count FROM story_likes WHERE story_id = $1`,
@@ -214,7 +234,7 @@ await notifyLike(storyAuthorId, likerId, 'story', storyId);
 });
 
 /* -------------------------------------------
-   4) Add Comment (auth)
+   4) Add Comment (auth) - FIXED NOTIFICATION
 ------------------------------------------- */
 router.post("/:storyId/comments", isAuthenticated, async (req, res) => {
   const client = await pool.connect();
@@ -228,11 +248,17 @@ router.post("/:storyId/comments", isAuthenticated, async (req, res) => {
     if (!text || !text.trim())
       return res.status(400).json({ error: "Comment text cannot be empty." });
 
-    const exists = await client.query(`SELECT id FROM stories WHERE id = $1`, [
-      storyId,
-    ]);
-    if (exists.rowCount === 0)
+    // First, get the story and its author
+    const storyRes = await client.query(
+      `SELECT id, user_id FROM stories WHERE id = $1`,
+      [storyId]
+    );
+    if (storyRes.rowCount === 0) {
+      await client.query("ROLLBACK");
       return res.status(404).json({ error: "Story not found." });
+    }
+    
+    const storyAuthorId = storyRes.rows[0].user_id;
 
     const commentRes = await client.query(
       `INSERT INTO story_comments (story_id, user_id, comment_text, created_at)
@@ -241,8 +267,15 @@ router.post("/:storyId/comments", isAuthenticated, async (req, res) => {
       [storyId, userId, text.trim()]
     );
 
-    // When someone comments on a story  
-await notifyComment(storyAuthorId, commenterId, 'story', storyId);
+    // Send notification only if commenter is not the story author
+    if (storyAuthorId !== userId) {
+    try {
+        await notifyComment(storyAuthorId, userId, 'story', storyId);
+    } catch (notifyError) {
+        console.error("Failed to send notification, but continuing:", notifyError);
+        // Don't fail the whole comment operation if notification fails
+    }
+}
 
     const updateRes = await client.query(
       `UPDATE stories

@@ -1,5 +1,5 @@
 // ==============================================
-// 🌍 Global Base URLs (Corrected)
+// 🌍 Global Base URLs
 // ==============================================
 
 // 1. API Base (For JSON endpoints)
@@ -8,91 +8,28 @@ window.API_BASE = window.location.hostname.includes("localhost")
   : "https://lovculator.com/api";
 
 // 2. ASSET Base (For static files like Avatars)
-// On localhost, the API server handles assets. In production, the main domain handles them.
 window.ASSET_BASE = window.location.hostname.includes("localhost")
-  ? "http://localhost:3001" // Point to the backend host (without /api)
-  : "https://lovculator.com"; // Point to the secure production domain host
+  ? "http://localhost:3001" 
+  : "https://lovculator.com"; 
 
 // ==============================================
-// 1. UTILITY CLASS: NotificationService
-// ==============================================
-class NotificationService {
-    show(message, type = 'success') {
-        const notification = document.createElement('div');
-        notification.className = `notification ${type}`;
-        notification.textContent = message;
-        
-        notification.style.cssText = `
-            position: fixed; top: 20px; right: 20px;
-            background: ${type === 'error' ? '#ff6b6b' : '#4CAF50'};
-            color: white; padding: 15px 20px; border-radius: 8px;
-            z-index: 3000; opacity: 0; transition: opacity 0.3s ease-out;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-        `;
-        
-        document.body.appendChild(notification);
-        setTimeout(() => notification.style.opacity = '1', 10);
-        setTimeout(() => {
-            notification.style.opacity = '0';
-            setTimeout(() => notification.remove(), 300); 
-        }, 3000);
-    }
-    showError(message) { this.show(message, 'error'); }
-    showSuccess(message) { this.show(message, 'success'); }
-}
-
-// ==============================================
-// 2. UTILITY CLASS: AnonUserTracker
-// ==============================================
-class AnonUserTracker {
-    constructor() {
-        this.STORAGE_KEY = 'lovculator_anon_id';
-    }
-
-    generateAnonId() {
-        return 'anon-' + Math.random().toString(36).substring(2, 15) + 
-               Math.random().toString(36).substring(2, 15);
-    }
-
-    getAnonId() {
-        let anonId = localStorage.getItem(this.STORAGE_KEY);
-        
-        if (!anonId) {
-            anonId = this.generateAnonId();
-            localStorage.setItem(this.STORAGE_KEY, anonId);
-        }
-        
-        return anonId;
-    }
-}
-
-// ==============================================
-// 3. DATA LAYER: LoveStoriesAPI Manager
+// 1. DATA LAYER: LoveStoriesAPI Manager
 // ==============================================
 class LoveStoriesAPI {
-  constructor(anonTracker) {
-    this.apiBase = window.API_BASE; // Use global definition
+  constructor() {
+    this.apiBase = window.API_BASE;
     this.timeout = 10000;
-    this.anonTracker = anonTracker;
   }
 
   async request(endpoint, options = {}) {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), this.timeout);
 
-    let anonymousId;
-    try {
-      anonymousId = this.anonTracker?.getAnonId?.() || "anonymous_fallback";
-    } catch {
-      anonymousId = "anonymous_fallback";
-    }
-
     try {
       const response = await fetch(`${this.apiBase}${endpoint}`, {
         method: options.method || "GET",
         headers: {
           "Content-Type": "application/json",
-          "X-Anon-ID": anonymousId,
           ...options.headers,
         },
         credentials: "include",
@@ -104,30 +41,7 @@ class LoveStoriesAPI {
 
       if (!response.ok) {
         const errorText = await response.text();
-        let errorData;
-        try {
-          errorData = JSON.parse(errorText);
-        } catch {
-          errorData = { error: errorText };
-        }
-
-        if (response.status === 401) {
-          if (!window.location.pathname.includes("login")) {
-            alert("Please log in to continue 💖");
-            window.location.href = "/login.html";
-          }
-          throw new Error("Unauthorized: Please log in.");
-        }
-
-        if (response.status === 403 || response.status === 409) {
-          const serverErrorMsg = errorData.error || errorData.message; 
-          if (serverErrorMsg) {
-              throw new Error(serverErrorMsg);
-          }
-          throw new Error("Action not allowed on this device or unauthorized access.");
-        }
-
-        throw new Error(`HTTP error ${response.status}: ${errorData.error || errorData.message || "Unknown error"}`);
+        throw new Error(`HTTP error ${response.status}: ${errorText}`);
       }
 
       return response.status === 204 ? {} : await response.json();
@@ -146,65 +60,23 @@ class LoveStoriesAPI {
   }
 
   async createStory(storyData) {
-    const required = ["story_title", "love_story", "category", "mood"];
-    const missing = required.filter((field) => !storyData[field]);
-    if (missing.length > 0)
-      throw new Error(`Missing required fields: ${missing.join(", ")}`);
-
     return this.request("/stories", {
       method: "POST",
       body: JSON.stringify(storyData),
     });
   }
 
-  async toggleLike(storyId) {
-    if (!storyId || isNaN(storyId)) throw new Error("Invalid story ID");
-    return this.request(`/stories/${storyId}/like`, { method: "POST" });
-  }
-
-  async addComment(storyId, commentData) {
-    if (!storyId || isNaN(storyId)) throw new Error("Invalid story ID");
-    if (!commentData.text?.trim()) throw new Error("Comment text is required");
-
-    const dataToSend = { text: commentData.text.trim() };
-    return this.request(`/stories/${storyId}/comments`, {
-      method: "POST",
-      body: JSON.stringify(dataToSend),
-    });
-  }
-
-  async getComments(storyId) {
-    if (!storyId || isNaN(storyId)) throw new Error("Invalid story ID");
-    return this.request(`/stories/${storyId}/comments`);
-  }
-
-  async trackShareClick(storyId) {
-    if (!storyId || isNaN(storyId)) throw new Error("Invalid story ID");
-    return this.request(`/stories/${storyId}/share`, { method: "POST" });
-  }
-  
   async deleteStory(storyId) {
-    if (!storyId || isNaN(storyId)) throw new Error("Invalid story ID");
     return this.request(`/stories/${storyId}`, { method: "DELETE" }); 
-  }
-  
-  async reportStory(storyId, reportData) {
-    if (!storyId || isNaN(storyId)) throw new Error("Invalid story ID");
-    if (!reportData.reason) throw new Error("Report reason is required");
-    return this.request(`/stories/${storyId}/report`, { 
-        method: "POST",
-        body: JSON.stringify(reportData)
-    });
   }
 }
 
 // ==============================================
-// 4. CORE CLASS: LoveStories Manager (FIXED Follow Button)
+// 2. CORE CLASS: LoveStories Manager (RENDERING ONLY)
 // ==============================================
 class LoveStories {
-    constructor(notificationService, anonTracker) {
-        this.api = new LoveStoriesAPI(anonTracker);
-        this.notifications = notificationService;
+    constructor() {
+        this.api = new LoveStoriesAPI();
         this.stories = [];
         this.storiesContainer = document.getElementById('storiesContainer');
         this.loadMoreBtn = document.getElementById('loadMoreStories');
@@ -213,56 +85,7 @@ class LoveStories {
 
     async init() {
         this.bindEvents(); 
-        this.setupStoryDelegation(); 
     }
-
-    setupStoryDelegation() {
-    if (!this.storiesContainer) return;
-
-    this.storiesContainer.addEventListener('click', (e) => {
-        const storyCard = e.target.closest('.story-card');
-        if (!storyCard) return;
-
-        const storyId = parseInt(storyCard.dataset.storyId);
-        
-        // Use more specific checks
-        if (e.target.closest('.read-more')) {
-            this.toggleReadMore(storyId);
-        } else if (e.target.closest('.like-button')) {
-            this.toggleLike(storyId);
-        } else if (e.target.closest('.follow-btn')) {
-            e.preventDefault();
-            e.stopPropagation(); // 🔥 ADD THIS LINE
-            const button = e.target.closest('.follow-btn');
-            this.toggleFollow(button); // 🔥 Pass only the button, not storyCard
-        } else if (e.target.closest('.comment-toggle')) {
-            this.toggleComments(storyId);
-        } else if (e.target.closest('.comment-submit')) {
-            this.handleAddComment(storyId);
-        } else if (e.target.closest('.share-action-toggle')) {
-            const button = e.target.closest('.share-action-toggle');
-            const { shareUrl, shareTitle, shareText } = button.dataset;
-            this.handleNativeShare(shareUrl, shareTitle, shareText);
-        } else if (e.target.closest('.delete-story-button')) {
-            this.handleDeleteStory(storyId);
-        } else if (e.target.closest('.report-story-button')) {
-            this.openReportModal(storyId);
-        }
-    });
-    
-    // Comment input enter key
-    this.storiesContainer.addEventListener('keypress', (e) => {
-        if (e.key === 'Enter' && e.target.classList.contains('comment-input')) {
-            e.preventDefault();
-            const storyCard = e.target.closest('.story-card');
-            if (storyCard) {
-                const storyId = parseInt(storyCard.dataset.storyId);
-                this.handleAddComment(storyId);
-            }
-        }
-    });
-}
-
 
     async loadStories(params = {}) {
         const queryString = new URLSearchParams(params).toString();
@@ -279,15 +102,19 @@ class LoveStories {
     }
 
     bindEvents() {
-        document.querySelectorAll('.mood-option').forEach(option => {
-            option.addEventListener('click', () => {
-                document.querySelectorAll('.mood-option').forEach(opt => 
-                    opt.classList.remove('selected'));
-                option.classList.add('selected');
-                document.getElementById('selectedMood').value = 
-                    option.dataset.mood;
+        // Only bind form/UI events, NOT social interactions
+        const moodOptions = document.querySelectorAll('.mood-option');
+        if (moodOptions.length > 0) {
+            moodOptions.forEach(option => {
+                option.addEventListener('click', () => {
+                    document.querySelectorAll('.mood-option').forEach(opt => 
+                        opt.classList.remove('selected'));
+                    option.classList.add('selected');
+                    document.getElementById('selectedMood').value = 
+                        option.dataset.mood;
+                });
             });
-        });
+        }
     }
 
     async addStory(storyData) {
@@ -302,13 +129,20 @@ class LoveStories {
             }
             
             window.simpleStats?.trackStory();
-            this.notifications.showSuccess('Your love story has been shared with everyone! 🌍');
+            
+            // Use global notification
+            if (window.showNotification) {
+                window.showNotification('Your love story has been shared with everyone! 🌍', 'success');
+            }
+            
             document.dispatchEvent(new CustomEvent('storyShared'));
             
             return newStory;
         } catch (error) {
             console.error('Error creating story:', error);
-            this.notifications.showError('Failed to share story. ' + error.message);
+            if (window.showNotification) {
+                window.showNotification('Failed to share story. ' + error.message, 'error');
+            }
             throw error;
         }
     }
@@ -338,423 +172,32 @@ class LoveStories {
         }
     }
 
-    async toggleLike(storyId) {
-        const btn = document.querySelector(`[data-story-id="${storyId}"] .like-button`);
-        if (btn) btn.disabled = true;
-
-        try {
-            const result = await this.api.toggleLike(storyId);
-
-            const storyIndex = this.stories.findIndex(s => s.id === storyId);
-            if (storyIndex !== -1) {
-                this.stories[storyIndex].likes_count = result.likes_count;
-                this.stories[storyIndex].user_liked = result.is_liked;
-            }
-
-            if (result.is_liked) {
-                this.notifications.showSuccess('Story Liked! ❤️');
-                window.simpleStats?.trackLike();
-            } else {
-                this.notifications.showSuccess('Story Unliked 💔');
-            }
-
-            if (window.loveStoriesPage) {
-                window.loveStoriesPage.renderStories();
-                window.loveStoriesPage.updateStats();
-            } else {
-                this.renderStories();
-            }
-
-        } catch (error) {
-            console.error('❌ Error toggling like:', error);
-            const isUnauthorized = error?.message?.includes('401') || error?.data?.error?.includes('Unauthorized');
-            
-            if (isUnauthorized) {
-                this.notifications.showError('❤️ Please log in to like stories!');
-                setTimeout(() => (window.location.href = '/login.html'), 1200);
-                return;
-            }
-            
-            this.notifications.showError('Failed to update like. Please try again.');
-        } finally {
-            if (btn) btn.disabled = false;
-        }
-    }
-
-    // =====================================================
-    // FIXED: Follow/Unfollow User
-    // =====================================================
-    async toggleFollow(button) {
-    console.log('🔗 Toggle follow called', button);
-    
-    if (!window.currentUserId) {
-        this.notifications.showError("Please log in to follow users.");
-        return;
-    }
-
-    // Get the target user ID from the button's data attribute
-    const targetUserId = button.dataset.userId;
-    console.log('🎯 Target user ID:', targetUserId, 'Current user ID:', window.currentUserId);
-    
-    if (!targetUserId) {
-        console.error("❌ Could not find author ID for follow action.");
-        this.notifications.showError("Unable to follow user: missing user ID.");
-        return;
-    }
-    
-    // Prevent self-follow
-    if (parseInt(targetUserId) === window.currentUserId) {
-        this.notifications.showError("You cannot follow yourself.");
-        return;
-    }
-    
-    button.disabled = true;
-    const originalText = button.textContent;
-    const originalClass = button.className;
-
-    try {
-        // Get current state from the button
-        const isCurrentlyFollowing = button.classList.contains('following');
-        console.log('📊 Current follow state:', isCurrentlyFollowing);
-        
-        // Optimistic UI update
-        if (isCurrentlyFollowing) {
-            button.classList.remove('following');
-            button.textContent = '+ Follow';
-        } else {
-            button.classList.add('following');
-            button.textContent = 'Following';
-        }
-
-        // Make API call to toggle follow status
-        console.log(`📡 Making API call to follow user ${targetUserId}`);
-        const response = await fetch(`${window.API_BASE}/users/${targetUserId}/follow`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            credentials: 'include' // Important for session cookies
-        });
-
-        if (!response.ok) {
-            let errorMessage = `HTTP ${response.status}: Failed to update follow status`;
-            try {
-                const errorData = await response.json();
-                errorMessage = errorData.error || errorMessage;
-            } catch (parseError) {
-                // If response isn't JSON, use status text
-                errorMessage = response.statusText || errorMessage;
-            }
-            throw new Error(errorMessage);
-        }
-
-        const result = await response.json();
-        console.log('✅ API response:', result);
-
-        // Update UI based on API response
-        if (result.is_following) {
-            button.classList.add('following');
-            button.textContent = 'Following';
-            this.notifications.showSuccess(`You're now following this user!`);
-        } else {
-            button.classList.remove('following');
-            button.textContent = '+ Follow';
-            this.notifications.showSuccess(`Unfollowed user.`);
-        }
-
-    } catch (error) {
-        console.error("❌ Follow toggle failed:", error);
-        
-        // Revert optimistic update on error
-        button.className = originalClass;
-        button.textContent = originalText;
-        
-        if (error.message.includes('401') || error.message.includes('Unauthorized')) {
-            this.notifications.showError('Please log in to follow users.');
-            setTimeout(() => {
-                window.location.href = '/login.html';
-            }, 1500);
-        } else if (error.message.includes('500')) {
-            this.notifications.showError('Server error. Please try again later.');
-        } else {
-            this.notifications.showError(error.message || "Failed to update follow status. Please try again.");
-        }
-    } finally {
-        button.disabled = false;
-    }
-}
-
-
-    toggleReadMore(storyId) {
-    const story = this.stories.find(s => s.id === storyId); 
-    if (!story) return;
-    
-    const storyCard = document.querySelector(`[data-story-id="${storyId}"]`);
-    const contentEl = storyCard?.querySelector('.story-content');
-    const buttonEl = storyCard?.querySelector('.read-more');
-
-    if (contentEl && buttonEl) {
-        const isExpanded = contentEl.classList.contains('expanded');
-        
-        if (isExpanded) {
-            // Collapse - show truncated version
-            contentEl.classList.remove('expanded');
-            const truncatedText = story.love_story.length > 200 
-                ? story.love_story.substring(0, 200) + '...' 
-                : story.love_story;
-            contentEl.innerHTML = truncatedText; // Use innerHTML to preserve formatting
-            buttonEl.textContent = 'Read More';
-        } else {
-            // Expand - show full story
-            contentEl.classList.add('expanded');
-            contentEl.innerHTML = story.love_story; // Use innerHTML to preserve formatting
-            buttonEl.textContent = 'Read Less';
-        }
-        
-        console.log('📖 Read More toggled:', { 
-            storyId, 
-            isExpanded: !isExpanded,
-            storyLength: story.love_story.length 
-        });
-    }
-}
-
-    toggleComments(storyId) {
-    console.log('💬 Toggling comments for story:', storyId);
-    
-    const commentsSection = document.getElementById(`comments-${storyId}`);
-    if (!commentsSection) {
-        console.error('❌ Comments section not found for ID:', `comments-${storyId}`);
-        return;
-    }
-    
-    // Toggle visibility
-    const isHidden = commentsSection.classList.contains('hidden');
-    
-    if (isHidden) {
-        // Show comments
-        commentsSection.classList.remove('hidden');
-        console.log('✅ Comments section shown');
-        
-        // Load comments if not already loaded
-        const commentsList = document.getElementById(`comments-list-${storyId}`);
-        if (commentsList && commentsList.children.length === 0) {
-            this.loadComments(storyId);
-        }
-    } else {
-        // Hide comments
-        commentsSection.classList.add('hidden');
-        console.log('❌ Comments section hidden');
-    }
-}
-
-    async loadComments(storyId) {
-        const commentsList = document.getElementById(`comments-list-${storyId}`);
-        if (!commentsList) return;
-
-        commentsList.innerHTML = '<p style="text-align:center; padding: 10px;">Loading comments...</p>';
-
-        try {
-            const comments = await this.api.getComments(storyId); 
-            
-            if (!comments.length) {
-                 commentsList.innerHTML = '<p class="empty-state-comment">Be the first to comment!</p>';
-                 return;
-            }
-
-            commentsList.innerHTML = comments.map(comment => `
-                <div class="comment">
-                    <img src="${comment.author_avatar || '/images/default-avatar.png'}" 
-                         alt="${comment.author_name}" class="comment-avatar" />
-                    <div class="comment-content-wrapper">
-                        <div class="comment-author-info">
-                            <span class="comment-author-name">${comment.author_name || 'Anonymous User'}</span>
-                            <span class="comment-time">${new Date(comment.created_at).toLocaleDateString()}</span>
-                        </div>
-                        <p class="comment-text">${comment.comment_text}</p>
-                    </div>
-                </div>
-            `).join('');
-        } catch (error) {
-            console.error('❌ Error loading comments:', error);
-            this.notifications.showError('Failed to load comments.'); 
-            commentsList.innerHTML = `<p style="color:red; text-align:center;">Failed to load comments.</p>`;
-        }
-    }
-
-    async handleAddComment(storyId) {
-        const storyCard = document.querySelector(`[data-story-id="${storyId}"]`);
-        if (!storyCard || !window.currentUserId) {
-             this.notifications.showError('Please log in to comment!');
-             return;
-        }
-
-        const input = storyCard.querySelector('.comment-input');
-        const text = input?.value.trim();
-        
-        if (!text) {
-            this.notifications.showError('Comment cannot be empty.');
-            return;
-        }
-
-        const submitButton = storyCard.querySelector('.comment-submit');
-        submitButton.disabled = true;
-
-        try {
-            const result = await this.api.addComment(storyId, { text: text });
-
-            const storyIndex = this.stories.findIndex(s => s.id === storyId);
-            if (storyIndex !== -1) {
-                this.stories[storyIndex].comments_count = result.comments_count;
-            }
-
-            this.loadComments(storyId);
-            
-            const countSpan = storyCard.querySelector('.comment-toggle span');
-            if (countSpan) {
-                countSpan.textContent = result.comments_count;
-            }
-
-            input.value = '';
-            window.simpleStats?.trackComment();
-            this.notifications.showSuccess('Comment added!');
-        } catch (error) {
-            console.error('❌ Error adding comment:', error);
-            
-            if (error?.message?.includes('401') || (error.data && error.data.error.includes('Unauthorized'))) {
-                this.notifications.showError('🔐 Please log in to comment!');
-                setTimeout(() => (window.location.href = '/login.html'), 1200);
-            } else {
-                this.notifications.showError('Failed to add comment. Please try again.');
-            }
-        } finally {
-            submitButton.disabled = false;
-        }
-    }
-    
-    updateShareCountUI(storyId, count) {
-        const storyCard = document.querySelector(`[data-story-id="${storyId}"]`);
-        const countEl = storyCard?.querySelector('.share-count');
-        if (countEl) {
-            countEl.textContent = count;
-        }
-    }
-
-    async handleNativeShare(url, title, text) {
-        let shareAttempted = false;
-
-        if (navigator.share) {
-            shareAttempted = true;
-            try {
-                await navigator.share({
-                    title: title,
-                    text: text,
-                    url: url,
-                });
-            } catch (error) {
-                if (error.name !== 'AbortError') {
-                    console.error('Error sharing:', error);
-                    this.notifications.showError('Failed to share story.');
-                }
-            }
-        } else {
-            this.notifications.showError('Native sharing not supported. Please use a mobile device or copy the URL.');
-        }
-
-        if (shareAttempted || !navigator.share) { 
-            try {
-                const storyId = parseInt(url.split('/').pop()); 
-                if (isNaN(storyId)) throw new Error("Could not parse story ID for tracking.");
-                
-                const result = await this.api.trackShareClick(storyId);
-
-                const storyIndex = this.stories.findIndex(s => s.id === storyId);
-                if (storyIndex !== -1) {
-                    this.stories[storyIndex].shares_count = result.shares_count;
-                }
-
-                this.updateShareCountUI(storyId, result.shares_count);
-                window.simpleStats?.trackShare();
-
-            } catch (error) {
-                console.error('Error tracking share click:', error);
-            }
-        }
-    }
-    
-    async handleDeleteStory(storyId) {
-        if (!confirm("Are you sure you want to permanently delete this story? This action cannot be undone.")) {
-            return;
-        }
-
-        try {
-            await this.api.deleteStory(storyId);
-            
-            const storyIndex = this.stories.findIndex(s => s.id === storyId);
-            if (storyIndex !== -1) {
-                this.stories.splice(storyIndex, 1);
-            }
-
-            if (window.loveStoriesPage) {
-                window.loveStoriesPage.renderStories();
-                window.loveStoriesPage.updateStats();
-            } else {
-                this.renderStories();
-            }
-
-            this.notifications.showSuccess('Story deleted successfully. 🗑️');
-            
-        } catch (error) {
-            console.error('Error deleting story:', error);
-            this.notifications.showError('Failed to delete story: ' + (error.message || 'Check permissions or try again.'));
-        }
-    }
-
-    openReportModal(storyId) {
-        this.notifications.show('Reporting feature is coming soon! Story ID: ' + storyId, 'error');
-        console.log(`Open report modal for story ${storyId}`);
-    }
-
-    loadMoreStories() {
-        // Handled by LoveStoriesPage
-    }
-
-    // Story HTML template method (keep your existing getStoryHTML method)
+    // Story HTML template method
     getStoryHTML(story) {
-    const date = new Date(story.created_at).toLocaleDateString();
-    const isLong = story.love_story.length > 200;
+        const date = new Date(story.created_at).toLocaleDateString();
+        const isLong = story.love_story.length > 200;
 
-    const shareUrl = `https://lovculator.com/stories/${story.id}`; 
-    const shareTitle = story.story_title;
-    const shareText = `Read this beautiful love story: ${story.story_title}`;
-    
-    // 1. Author and Avatar Logic
-    const authorName = story.anonymous_post
-      ? "Anonymous User"
-      : story.author_display_name || story.author_username || "User";
+        const shareUrl = `https://lovculator.com/stories/${story.id}`; 
+        const shareTitle = story.story_title;
+        const shareText = `Read this beautiful love story: ${story.story_title}`;
+        
+        // Author and Avatar Logic
+        const authorName = story.anonymous_post
+          ? "Anonymous User"
+          : story.author_display_name || story.author_username || "User";
 
-    const authorUsername = story.author_username || '';
-    const authorAvatar = story.author_avatar_url || "/images/default-avatar.png"; 
-    
-    // 2. Ownership Check (Use user_id)
-    const ownerId = story.user_id; 
-    const isOwner = window.currentUserId && ownerId === window.currentUserId;
+        const authorUsername = story.author_username || '';
+        const authorAvatar = story.author_avatar_url || "/images/default-avatar.png"; 
+        
+        // Ownership Check
+        const ownerId = story.user_id; 
+        const isOwner = window.currentUserId && ownerId === window.currentUserId;
 
-    // 3. Follow button logic
-    const canFollow = !story.anonymous_post && !isOwner && story.author_id;
-    const isFollowing = story.is_following_author;
-    
-    // Instead of forcing comments, use the API value:
-const allowComments = story.allow_comments !== false; // Use API value, default to true
-    
-    console.log('📝 Comments override:', {
-        storyId: story.id,
-        apiAllowComments: story.allow_comments,
-        frontendAllowComments: allowComments
-    });
+        // Follow button logic
+        const canFollow = !story.anonymous_post && !isOwner && story.author_id;
+        const isFollowing = story.is_following_author;
 
-    // 5. HTML Structure - Comments always enabled
-    return `
+        return `
         <div class="story-card" data-story-id="${story.id}">
             <div class="story-card-header">
                 <div class="story-user-info">
@@ -779,7 +222,7 @@ const allowComments = story.allow_comments !== false; // Use API value, default 
             </div>
             
             <h3 class="story-title">${story.story_title}</h3>
-            <div class="story-content ${isLong ? '' : 'expanded'}">
+            <div class="story-content ${isLong ? '' : 'expanded'}" ${isLong ? `data-full-text="${story.love_story}"` : ''}>
                 ${isLong ? story.love_story.substring(0, 200) + '...' : story.love_story}
             </div>
             ${isLong ? `<button class="read-more">Read More</button>` : ''}
@@ -826,7 +269,7 @@ const allowComments = story.allow_comments !== false; // Use API value, default 
                 </div>
             </div>
             
-            <!-- COMMENTS SECTION - ALWAYS ENABLED -->
+            <!-- COMMENTS SECTION -->
             <div class="comments-section hidden" id="comments-${story.id}">
                 <div class="comment-form">
                     <input type="text" class="comment-input" placeholder="Add a comment..." 
@@ -834,12 +277,12 @@ const allowComments = story.allow_comments !== false; // Use API value, default 
                     <button class="comment-submit">Post</button>
                 </div>
                 <div class="comments-list" id="comments-list-${story.id}">
-                    <!-- Comments will be loaded here -->
+                    <!-- Comments will be loaded by social-features.js -->
                 </div>
             </div>
         </div>
     `;
-}
+    }
 
     getEmptyStateHTML() {
         return `
@@ -851,16 +294,6 @@ const allowComments = story.allow_comments !== false; // Use API value, default 
         `;
     }
 
-    getCategoryEmoji(category) {
-        const emojis = { romantic: '💖', proposal: '💍', journey: '🛤️', challenge: '🛡️', special: '🌟', longdistance: '✈️', secondchance: '🔁' };
-        return emojis[category] || '💕';
-    }
-    
-    formatCategory(category) {
-        const formats = { romantic: 'Romantic Moment', proposal: 'Marriage Proposal', journey: 'Love Journey', challenge: 'Overcoming Challenges', special: 'Special Memory', longdistance: 'Long Distance Love', secondchance: 'Second Chance' };
-        return formats[category] || 'Love Story';
-    }
-    
     getMoodText(mood) {
         const texts = { romantic: 'Heartwarming romance', emotional: 'Deep emotions', funny: 'Funny and sweet', inspiring: 'Inspiring journey', dramatic: 'Dramatic love story' };
         return texts[mood] || 'Beautiful story';
@@ -868,7 +301,7 @@ const allowComments = story.allow_comments !== false; // Use API value, default 
 }
 
 // ==============================================
-// 5. PAGE CLASS: LoveStoriesPage
+// 3. PAGE CLASS: LoveStoriesPage
 // ==============================================
 class LoveStoriesPage {
     constructor(loveStoriesInstance) {
@@ -949,7 +382,9 @@ class LoveStoriesPage {
             
         } catch (error) {
             this.isLoading = false;
-            this.loveStories.notifications.showError('Failed to load stories with the current filters.');
+            if (window.showNotification) {
+                window.showNotification('Failed to load stories with the current filters.', 'error');
+            }
             this.loveStories.storiesContainer.innerHTML = this.loveStories.getEmptyStateHTML();
         }
     }
@@ -1024,51 +459,113 @@ class LoveStoriesPage {
 }
 
 // ==============================================
-// 6. GLOBAL INITIALIZATION (CLEANED)
+// 4. UI CLASS: StoryModal
 // ==============================================
-let loveStories, notificationService, anonTracker, loveStoriesPage;
+class StoryModal {
+    constructor(loveStoriesInstance) {
+        this.loveStories = loveStoriesInstance;
+        this.storyFab = document.getElementById('storyFab');
+        this.storyModal = document.getElementById('storyModal');
+        this.closeModal = document.getElementById('closeModal');
+        this.storyForm = document.getElementById('storyForm');
+        this.init();
+    }
 
-function initializeLoveStories() {
-    try {
-        const storiesContainer = document.getElementById('storiesContainer');
-        
-        // Core Utilities
-        notificationService = new NotificationService();
-        anonTracker = new AnonUserTracker(); 
-        
-        // Data/State Manager
-        loveStories = new LoveStories(notificationService, anonTracker); 
-        
-        // UI Components
-        if (storiesContainer) {
-            loveStoriesPage = new LoveStoriesPage(loveStories); 
-            window.loveStoriesPage = loveStoriesPage; 
+    init() {
+        if (!this.storyFab || !this.storyModal) return;
+        this.storyFab.addEventListener('click', (e) => {
+            e.preventDefault();
+            this.storyModal.classList.remove('hidden');
+        });
+        this.closeModal.addEventListener('click', () => {
+            this.storyModal.classList.add('hidden');
+        });
+        if (this.storyForm) {
+            this.storyForm.addEventListener('submit', (e) => this.handleSubmit(e));
         }
-        
-        window.loveStories = loveStories; 
-        
-    } catch (error) {
-        console.error('❌ Error initializing Lovculator system:', error);
+    }
+
+    async handleSubmit(e) {
+        e.preventDefault();
+        const submitBtn = this.storyForm.querySelector('.submit-story-btn');
+        submitBtn.disabled = true;
+
+        const formData = {
+            coupleNames: document.getElementById('coupleNames').value,
+            storyTitle: document.getElementById('storyTitle').value,
+            togetherSince: document.getElementById('togetherSince').value,
+            loveStory: document.getElementById('loveStory').value,
+            category: document.getElementById('storyCategory').value,
+            mood: document.getElementById('selectedMood').value,
+            allowComments: document.getElementById('allowComments').checked,
+            anonymousPost: document.getElementById('anonymousPost').checked
+        };
+
+        const backendPayload = {
+            story_title: formData.storyTitle,
+            love_story: formData.loveStory,
+            category: formData.category,
+            mood: formData.mood,
+            couple_names: formData.coupleNames,
+            together_since: formData.togetherSince,
+            allow_comments: formData.allowComments,
+            anonymous_post: formData.anonymousPost
+        };
+
+        try {
+            await this.loveStories.addStory(backendPayload);
+            this.storyModal.classList.add('hidden');
+            this.storyForm.reset();
+        } catch (error) {
+            console.error(error);
+            if (window.showNotification) {
+                window.showNotification('Failed to share story.', 'error');
+            }
+        } finally {
+            submitBtn.disabled = false;
+        }
     }
 }
 
-// ✅ Initialize only ONCE when DOM is ready
+// ==============================================
+// 5. GLOBAL INITIALIZATION
+// ==============================================
+function initializeLoveStories() {
+    // Theme Manager
+    const themeToggle = document.getElementById('darkModeToggle');
+    if (themeToggle) {
+        themeToggle.addEventListener('change', () => document.body.classList.toggle('dark-mode'));
+    }
+    
+    // Core Stories Manager
+    const loveStories = new LoveStories(); 
+    
+    // Page-specific components
+    if (document.getElementById('storiesContainer')) {
+        window.loveStoriesPage = new LoveStoriesPage(loveStories);
+    }
+    
+    // Story creation modal
+    if (document.getElementById('storyFab')) {
+        new StoryModal(loveStories);
+    }
+    
+    window.loveStories = loveStories; 
+}
+
+// Initialize
 if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', initializeLoveStories);
 } else {
     initializeLoveStories();
 }
 
-// ✅ Get logged-in user ID globally
+// Get User ID (for ownership checks)
 fetch(`${window.API_BASE}/auth/me`, { credentials: 'include' })
-  .then(res => res.ok ? res.json() : null)
-  .then(data => {
-    if (data && data.success && data.user && data.user.id) {
-      window.currentUserId = data.user.id;
-    } else {
-      window.currentUserId = null;
-    }
-  })
-  .catch(() => {
-    window.currentUserId = null;
-  });
+    .then(res => res.ok ? res.json() : null)
+    .then(data => {
+        window.currentUserId = data?.id || null;
+    })
+    .catch(() => {
+        window.currentUserId = null;
+    });

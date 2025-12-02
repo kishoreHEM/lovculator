@@ -1,942 +1,929 @@
 /**
- * frontend/js/profile.js — Lovculator 💖
- * Profile Manager: Handles user profile, stories, followers, following, and activity feed
+ * frontend/js/profile.js — Lovculator (FINAL CLEAN, FULL-FEATURE)
+ * - Self-contained profile manager
+ * - Restores loadFollowers, loadFollowing, loadUserActivity, renderUserList, etc.
+ * - Defensive (handles different API response shapes)
+ * - Uses fetch + window.API_BASE / window.ASSET_BASE
  */
-class ProfileManager {
 
+(() => {
+  // -------------------------
+  // Configuration & helpers
+  // -------------------------
+  const API_BASE =
+    window.API_BASE ||
+    (window.location.hostname.includes("localhost")
+      ? "http://localhost:3001/api"
+      : "https://lovculator.com/api");
+
+  const ASSET_BASE =
+    window.ASSET_BASE ||
+    (window.location.hostname.includes("localhost")
+      ? "http://localhost:3001"
+      : "https://lovculator.com");
+
+  function safeJson(res) {
+    return res.text().then((text) => {
+      try {
+        return JSON.parse(text);
+      } catch {
+        return text;
+      }
+    });
+  }
+
+  function getAvatarUrl(url) {
+    if (!url || url === "null" || url === "undefined") return "/images/default-avatar.png";
+    if (url.startsWith("http://") || url.startsWith("https://")) return url;
+    if (url.startsWith("/")) return `${ASSET_BASE}${url}`;
+    // fallback treat as filename
+    return `${ASSET_BASE}/uploads/avatars/${url}`;
+  }
+
+  function showNotification(message, type = "success") {
+    // keep simple: toast
+    const el = document.createElement("div");
+    el.className = `profile-toast ${type}`;
+    Object.assign(el.style, {
+      position: "fixed",
+      top: "20px",
+      right: "20px",
+      background: type === "error" ? "#ff6b6b" : "#4CAF50",
+      color: "#fff",
+      padding: "10px 16px",
+      borderRadius: "8px",
+      zIndex: 9999,
+      boxShadow: "0 6px 18px rgba(0,0,0,0.12)",
+      opacity: "0",
+      transition: "opacity .25s, transform .25s",
+      transform: "translateY(-6px)",
+    });
+    el.textContent = message;
+    document.body.appendChild(el);
+    requestAnimationFrame(() => {
+      el.style.opacity = "1";
+      el.style.transform = "translateY(0)";
+    });
+    setTimeout(() => {
+      el.style.opacity = "0";
+      el.style.transform = "translateY(-6px)";
+      setTimeout(() => el.remove(), 300);
+    }, 3000);
+  }
+
+  // -------------------------
+  // ProfileManager class
+  // -------------------------
+  class ProfileManager {
     constructor() {
-        // 🌍 Ensure API base is correctly set for both localhost and production
-        this.API_BASE =
-            window.API_BASE ||
-            (window.location.hostname.includes("localhost")
-                ? "http://localhost:3001/api"
-                : "https://lovculator.com/api");
-        
-        // 🟢 Add base URL for assets (without /api)
-        this.BASE_URL = window.location.hostname.includes("localhost")
-            ? "http://localhost:3001"
-            : "https://lovculator.com";
-        
-        this.profileInfoContainer = document.getElementById("profileInfoContainer");
-        this.storiesContainer = document.getElementById("userStoriesContainer");
-        this.currentUser = null;
-        this.viewedUser = null;
-        this.isOwnProfile = false;
+      this.apiBase = API_BASE;
+      this.assetBase = ASSET_BASE;
 
-        // Assuming LoveStoriesAPI is a defined class in another file
-        this.api = new LoveStoriesAPI(); 
-        this.init();
+      this.profileInfoContainer = document.getElementById("profileInfoContainer");
+      this.storiesContainer = document.getElementById("userStoriesContainer");
+      this.followersContainer = document.getElementById("followersContainer");
+      this.followingContainer = document.getElementById("followingContainer");
+      this.activityContainer = document.getElementById("userActivityContainer");
+
+      this.currentUser = null; // logged-in user
+      this.viewedUser = null; // whose profile is being shown
+      this.isOwnProfile = false;
+
+      // caching follow status for batch checks
+      this._followingSet = null;
+
+      // bind methods used as handlers
+      this.handleFollowBtnClick = this.handleFollowBtnClick.bind(this);
+      this.followClickHandler = null;
+
+      this.init();
     }
 
-    // =====================================================
-    // 1️⃣ Initialize Profile (FIXED: Handles nested API response)
-    // =====================================================
+    // -------------------------
+    // init
+    // -------------------------
     async init() {
+      try {
         this.showLoading("profileInfoContainer");
         this.showLoading("userStoriesContainer");
 
-        try {
-            const params = new URLSearchParams(window.location.search);
-            const usernameParam = params.get("user"); // example: profile.html?user=kishore6
+        // load session (if any)
+        await this.loadCurrentSession();
 
-            // Step 1️⃣: Check logged-in user session
-            let currentUser = null;
-            try {
-                const meRes = await fetch(`${this.API_BASE}/auth/me`, { 
-                    credentials: "include",
-                    headers: {
-                        'Cache-Control': 'no-cache',
-                        'Pragma': 'no-cache'
-                    }
-                });
-                
-                if (meRes.ok) {
-                    const data = await meRes.json();
-                    
-                    // 🟢 FIX 1: Check for success and access the nested 'user' object
-                    if (data.success && data.user) { 
-                        currentUser = data.user;
-                        this.currentUser = currentUser;
-                        window.currentUserId = currentUser.id;
-                        window.currentUser = currentUser;
-                    }
-                }
-            } catch (err) {
-                console.warn("⚠️ No active session found or parsing error:", err);
-            }
+        const params = new URLSearchParams(window.location.search);
+        const usernameParam = params.get("user");
 
-            // Step 2️⃣: Determine whose profile to load
-            if (usernameParam && (!currentUser || usernameParam !== currentUser.username)) {
-                // Viewing someone else's profile
-                const userRes = await fetch(`${this.API_BASE}/users/profile/${usernameParam}`);
-                if (!userRes.ok) throw new Error("User not found");
-
-                const otherUser = await userRes.json();
-                this.viewedUser = otherUser;
-                this.isOwnProfile = false;
-
-                this.renderProfileDetails(otherUser, false);
-                await this.loadUserStories(otherUser.id);
-
-            } else if (currentUser) {
-                // Viewing your own profile - ensure fresh data for avatar
-                this.isOwnProfile = true;
-                this.viewedUser = currentUser;
-                
-                // Try to get fresh profile data to ensure avatar is current
-                try {
-                    const freshUserRes = await fetch(`${this.API_BASE}/users/profile/${currentUser.username}`, {
-                        credentials: "include"
-                    });
-                    if (freshUserRes.ok) {
-                        const freshUserData = await freshUserRes.json();
-                        this.viewedUser = freshUserData;
-                        this.currentUser = freshUserData;
-                        window.currentUser = freshUserData;
-                    }
-                } catch (freshError) {
-                    console.warn("⚠️ Using session data for profile:", freshError);
-                }
-
-                this.renderProfileDetails(this.viewedUser, true);
-                await this.loadUserStories(this.viewedUser.id);
-            } else {
-                // No session + no username = redirect to login
-                this.handleUnauthorized();
-                return;
-            }
-
-            // Step 3️⃣: Attach handlers after loading
-            this.attachTabHandlers();
-            this.attachEditProfileHandlers();
-
-        } catch (err) {
-            console.error("❌ Profile load error:", err);
-            this.profileInfoContainer.innerHTML = `
-                <p style="color:red;text-align:center;">❌ Failed to load profile.</p>`;
+        if (usernameParam && (!this.currentUser || usernameParam !== this.currentUser.username)) {
+          // viewing another user's profile
+          const other = await this.fetchUserByUsername(usernameParam);
+          if (!other) return this.handleNotFound();
+          this.viewedUser = other;
+          this.isOwnProfile = this.currentUser && this.currentUser.id === other.id;
+        } else if (this.currentUser) {
+          // viewing own profile
+          // fetch fresh profile for current user (use username if available)
+          const fresh = await this.fetchUserById(this.currentUser.id);
+          this.viewedUser = fresh || this.currentUser;
+          this.isOwnProfile = true;
+        } else {
+          // not logged in and no username specified
+          // redirect to login (or show message)
+          // We'll show an unauthorized message
+          return this.handleUnauthorized();
         }
+
+        this.renderProfileDetails(this.viewedUser, this.isOwnProfile);
+        await this.loadUserStories(this.viewedUser.id);
+
+        // attach tabs, edit handlers, follow handlers
+        this.attachTabHandlers();
+        this.attachEditProfileHandlers();
+        this.attachAvatarUploadHandler();
+        this.attachGlobalMessageButtonHandler();
+
+      } catch (err) {
+        console.error("❌ Profile init failed:", err);
+        if (this.profileInfoContainer) {
+          this.profileInfoContainer.innerHTML = `<p style="color:red;text-align:center;">Failed to load profile.</p>`;
+        }
+      }
     }
 
-    // =====================================================
-    // 2️⃣ Render Profile Details (Optimized) - FIXED MESSAGE BUTTON
-    // =====================================================
-    renderProfileDetails(user, isOwnProfile = true) {
-        if (!this.profileInfoContainer) return;
-
-        const followerCount = user.follower_count ?? 0;
-        const followingCount = user.following_count ?? 0;
-        const displayName = user.display_name || user.username || "User";
-        const joinedDate = user.created_at
-            ? new Date(user.created_at).toLocaleDateString("en-US", {
-                month: "long",
-                year: "numeric",
-            })
-            : "Recently";
-
-        // Robust avatar URL handling
-        const getValidAvatarUrl = (avatar) => {
-            if (!avatar || avatar === 'null' || avatar === 'undefined' || avatar.trim() === '') {
-                return "/images/default-avatar.png";
-            }
-            return avatar;
-        };
-
-        let avatarUrl = getValidAvatarUrl(user.avatar_url);
-
-        // Clean localhost URLs
-        if (avatarUrl && avatarUrl.includes('localhost')) {
-            try {
-                const url = new URL(avatarUrl, window.location.origin);
-                avatarUrl = url.pathname;
-            } catch (e) {
-                console.error("Failed to parse and clean avatar URL:", e);
-            }
+    // -------------------------
+    // Session & user fetch helpers
+    // -------------------------
+    async loadCurrentSession() {
+      try {
+        const res = await fetch(`${this.apiBase}/auth/me`, {
+          credentials: "include",
+          headers: { "Cache-Control": "no-cache", Pragma: "no-cache" },
+        });
+        if (!res.ok) return;
+        const data = await safeJson(res);
+        // backend can respond { success:true, user: {...} } or user object directly
+        if (data) {
+          if (data.user) {
+            this.currentUser = data.user;
+            window.currentUser = data.user;
+            window.currentUserId = data.user.id;
+          } else if (data.id) {
+            this.currentUser = data;
+            window.currentUser = data;
+            window.currentUserId = data.id;
+          } else if (data.data && data.data.user) {
+            this.currentUser = data.data.user;
+            window.currentUser = data.data.user;
+            window.currentUserId = data.data.user.id;
+          }
         }
-        
-        // Add cache-buster
-        if (avatarUrl && !avatarUrl.includes('?')) {
-            avatarUrl = `${avatarUrl}?t=${Date.now()}`;
-        } else if (avatarUrl) {
-            avatarUrl = `${avatarUrl}&t=${Date.now()}`;
+      } catch (err) {
+        console.warn("⚠️ Could not fetch session:", err);
+      }
+    }
+
+    async fetchUserByUsername(username) {
+      try {
+        const res = await fetch(`${this.apiBase}/users/profile/${encodeURIComponent(username)}`, {
+          credentials: "include",
+        });
+        if (!res.ok) {
+          console.warn("User fetch by username failed:", res.status);
+          return null;
         }
+        const data = await safeJson(res);
+        // Try to cope with nested shapes
+        if (data.user) return data.user;
+        if (data.data && data.data.user) return data.data.user;
+        if (Array.isArray(data) && data.length) return data[0];
+        return data;
+      } catch (err) {
+        console.error("❌ fetchUserByUsername error:", err);
+        return null;
+      }
+    }
 
-        const bioHTML = user.bio
-            ? `<p class="bio-text">${user.bio}</p>`
-            : `<p class="bio-text empty">No bio set yet.</p>`;
-        const locationHTML = user.location
-            ? `<span class="location">📍 ${user.location}</span>`
-            : "";
+    async fetchUserById(id) {
+      try {
+        const res = await fetch(`${this.apiBase}/users/${id}`, { credentials: "include" });
+        if (!res.ok) return null;
+        const data = await safeJson(res);
+        if (data.user) return data.user;
+        return data;
+      } catch (err) {
+        console.warn("fetchUserById failed:", err);
+        return null;
+      }
+    }
 
-        // Avatar section
-        const avatarSection = isOwnProfile
-            ? `
-                <div class="avatar-upload-section">
-                    <img id="avatarImage" src="${avatarUrl}" alt="${displayName}" class="profile-avatar-img" />
-                    <label class="avatar-upload-label">
-                        📸 Change Photo
-                        <input type="file" id="avatarInput" accept="image/*" hidden />
-                    </label>
-                </div>
-            `
-            : `
-                <div class="avatar-view-section">
-                    <img id="avatarImage" src="${avatarUrl}" alt="${displayName}" class="profile-avatar-img" />
-                </div>
-            `;
+    // -------------------------
+    // Rendering Profile Details
+    // -------------------------
+    renderProfileDetails(user, isOwnProfile = false) {
+      if (!this.profileInfoContainer) return;
+      const followerCount = user.follower_count ?? user.followers_count ?? 0;
+      const followingCount = user.following_count ?? user.following ?? 0;
+      const displayName = user.display_name || user.username || "User";
+      const joinedDate = user.created_at
+        ? new Date(user.created_at).toLocaleDateString("en-US", { month: "long", year: "numeric" })
+        : "Recently";
 
-        // Profile layout
-        this.profileInfoContainer.innerHTML = `
-            <div class="profile-header-card">
-                <div class="profile-cover"></div>
+      const avatarUrl = getAvatarUrl(user.avatar_url || user.avatar || user.profile_image);
 
-                <div class="profile-main-info">
-                    <div class="profile-avatar-wrapper">
-                        ${avatarSection}
-                    </div>
+      const bioHTML = user.bio ? `<p class="bio-text">${user.bio}</p>` : `<p class="bio-text empty">No bio set yet.</p>`;
+      const locationHTML = user.location ? `<span class="location">📍 ${user.location}</span>` : "";
 
-                    <div class="profile-details">
-                        <h3 id="profileUsername">${displayName}</h3>
-                        <div class="social-stats">
-                            <span id="profileFollowers">${followerCount} Followers</span>
-                            <span class="separator">·</span>
-                            <span id="profileFollowing">${followingCount} Following</span>
-                        </div>
-                        <p id="profileJoined" class="joined-date">Joined ${joinedDate}</p>
-                        <div class="profile-bio-summary">
-                            ${bioHTML}
-                            ${locationHTML}
-                        </div>
-                    </div>
-                </div>
-
-                <div class="profile-actions-bar">
-                    ${
-                        isOwnProfile
-                            ? `
-                                <button id="editProfileBtn" class="btn btn-secondary btn-small">✏️ Edit Profile</button>
-                                <button id="logoutBtn" class="btn btn-secondary btn-small">🚪 Logout</button>
-                            `
-                            : `
-                                <button id="followProfileBtn" class="btn btn-primary btn-small">
-                                    ${user.is_following_author ? "Following" : "+ Follow"}
-                                </button>
-                                <button id="messageUserBtn" class="btn btn-primary btn-small message-user-btn" data-user-id="${user.id}">
-                                    💌 Message
-                                </button>
-                            `
-                    }
-                </div>
-            </div>
+      const avatarSection = isOwnProfile
+        ? `
+          <div class="avatar-upload-section">
+            <img id="avatarImage" src="${avatarUrl}" alt="${displayName}" class="profile-avatar-img" />
+            <label class="avatar-upload-label">
+               📸 Change Photo
+               <input type="file" id="avatarInput" accept="image/*" hidden />
+            </label>
+          </div>
+        `
+        : `
+          <div class="avatar-view-section">
+            <img id="avatarImage" src="${avatarUrl}" alt="${displayName}" class="profile-avatar-img" />
+          </div>
         `;
 
-        // Smooth fade-in effect
-        const headerCard = this.profileInfoContainer.querySelector(".profile-header-card");
-        if (headerCard) {
-            requestAnimationFrame(() => {
-                headerCard.classList.add("loaded");
-            });
-        }
+      this.profileInfoContainer.innerHTML = `
+        <div class="profile-header-card">
+          <div class="profile-main-info">
+            <div class="profile-avatar-wrapper">${avatarSection}</div>
+            <div class="profile-details">
+              <h3 id="profileUsername">${displayName}</h3>
+              <div class="social-stats">
+                <span id="profileFollowers">${followerCount} Followers</span>
+                <span class="separator">·</span>
+                <span id="profileFollowing">${followingCount} Following</span>
+              </div>
+              <p id="profileJoined" class="joined-date">Joined ${joinedDate}</p>
+              <div class="profile-bio-summary">
+                ${bioHTML}
+                ${locationHTML}
+              </div>
+            </div>
+          </div>
 
-        // Reattach event handlers
-        if (isOwnProfile) {
-            this.attachLogoutHandler();
-            this.attachEditProfileHandlers();
-            this.attachAvatarUploadHandler();
-        } else {
-            this.attachFollowProfileHandler(user.id);
-        }
-
-        // Debug code - check message button state
-        console.log('👤 Profile rendered for user:', user.username);
-        console.log('📝 Message button should be available for user ID:', user.id);
-
-        // Test if button exists after a short delay
-        setTimeout(() => {
-            if (!isOwnProfile) {
-                this.debugMessageButton();
+          <div class="profile-actions-bar">
+            ${
+              isOwnProfile
+                ? `<button id="editProfileBtn" class="btn btn-secondary btn-small">✏️ Edit Profile</button>
+                   <button id="logoutBtn" class="btn btn-secondary btn-small">🚪 Logout</button>`
+                : `<button id="followProfileBtn" class="btn btn-primary btn-small ${user.is_following_author ? "following" : ""}" data-user-id="${user.id}">
+                     ${user.is_following_author ? "Following" : "+ Follow"}
+                   </button>
+                   <button id="messageUserBtn" class="btn btn-primary btn-small message-user-btn" data-user-id="${user.id}">💌 Message</button>`
             }
-        }, 100);
+          </div>
+        </div>
+      `;
+
+      // reattach handlers for newly created buttons
+      if (isOwnProfile) {
+        this.attachLogoutHandler();
+      } else {
+        const followBtn = document.getElementById("followProfileBtn");
+        if (followBtn) followBtn.addEventListener("click", () => this.toggleFollow(user.id, followBtn));
+      }
+
+      // small accessibility/tweak
+      document.getElementById("profileUsername")?.setAttribute("data-username", user.username || "");
     }
 
-    // =====================================================
-    // 🧩 Debug Helper for Message Button
-    // =====================================================
-    debugMessageButton() {
-        const messageBtn = document.getElementById('messageUserBtn');
-        if (!messageBtn) {
-            console.log('❌ Message button not found in DOM');
-            return;
-        }
+    // -------------------------
+    // Avatar upload
+    // -------------------------
+    attachAvatarUploadHandler() {
+      const avatarInput = document.getElementById("avatarInput");
+      const avatarImage = document.getElementById("avatarImage");
 
-        console.group('🔍 Message Button Debug');
-        console.log('Button found:', messageBtn);
-        console.log('User ID:', messageBtn.dataset.userId);
-        console.log('messagesManager available:', !!window.messagesManager);
-        
-        if (window.messagesManager) {
-            console.log('openMessagesModal function:', typeof window.messagesManager.openMessagesModal);
-        }
-        console.groupEnd();
-    }
+      if (!avatarInput || !avatarImage || !this.currentUser) return;
 
-    // =====================================================
-// 🧁 Avatar Upload (with Preview & Upload - Final Corrected)
-// =====================================================
-attachAvatarUploadHandler() {
-    const avatarInput = document.getElementById("avatarInput");
-    const avatarImage = document.getElementById("avatarImage");
-
-    if (!avatarInput || !avatarImage || !this.currentUser) return;
-
-    avatarInput.addEventListener("change", async (event) => {
-        const file = event.target.files[0];
+      avatarInput.addEventListener("change", async (e) => {
+        const file = e.target.files[0];
         if (!file) return;
-
-        if (file.size > 2 * 1024 * 1024) {
-            this.showToast("⚠️ Max file size is 2MB.", "warning");
-            return;
+        if (file.size > 4 * 1024 * 1024) {
+          showNotification("Max file size 4MB", "error");
+          return;
         }
 
-        // 1. Instant Preview (local only, safe for CSP)
+        // preview
         const reader = new FileReader();
         reader.onload = () => (avatarImage.src = reader.result);
         reader.readAsDataURL(file);
 
-        // 2. Upload to server
-        const formData = new FormData();
-        formData.append("avatar", file);
-
+        // upload
         try {
-            const res = await fetch(`${this.API_BASE}/users/${this.currentUser.id}/avatar`, {
-                method: "POST",
-                body: formData,
-                credentials: "include",
-            });
+          const fd = new FormData();
+          fd.append("avatar", file);
+          const res = await fetch(`${this.apiBase}/users/${this.currentUser.id}/avatar`, {
+            method: "POST",
+            body: fd,
+            credentials: "include",
+          });
 
-            const data = await res.json();
-            if (!res.ok) throw new Error(data.error || "Upload failed");
+          if (!res.ok) {
+            const err = await safeJson(res);
+            throw new Error(err?.error || err?.message || `HTTP ${res.status}`);
+          }
 
-            // Ensure URL is relative
-            let cleanAvatarURL = data.avatar_url;
-            if (cleanAvatarURL && (cleanAvatarURL.includes("localhost") || !cleanAvatarURL.startsWith("/"))) {
-                try {
-                    const urlObj = new URL(cleanAvatarURL, window.location.origin);
-                    cleanAvatarURL = urlObj.pathname;
-                } catch (parseErr) {
-                    console.warn("⚠️ URL parsing failed, fallback used");
-                }
-            }
+          const data = await res.json();
+          const newUrl = data.avatar_url || data.avatar || "/";
+          const finalUrl = newUrl.startsWith("/") ? `${this.assetBase}${newUrl}` : newUrl;
 
-            // Cache busting
-            const newAvatarURL = `${cleanAvatarURL}?t=${Date.now()}`;
+          avatarImage.src = finalUrl + `?t=${Date.now()}`;
 
-            // Update local profile UI
-            avatarImage.src = newAvatarURL;
+          // update global UI
+          document.getElementById("userAvatar")?.setAttribute("src", avatarImage.src);
+          document.getElementById("sidebarAvatar")?.setAttribute("src", avatarImage.src);
+          showNotification("Avatar updated");
 
-            // Update internal state
-            this.currentUser.avatar_url = newAvatarURL;
-            this.viewedUser.avatar_url = newAvatarURL;
-            if (window.currentUser) window.currentUser.avatar_url = newAvatarURL;
-
-            // 🔁 Refresh session globally
-            await this.refreshUserSession();
-
-            // 🔥 Update avatars in header & UI globally (safe optional chaining)
-            document.getElementById("userAvatar")?.setAttribute("src", newAvatarURL);
-            document.getElementById("sidebarAvatar")?.setAttribute("src", newAvatarURL);
-            document.getElementById("creatorAvatar")?.setAttribute("src", newAvatarURL);
-            document.getElementById("modalPostAvatar")?.setAttribute("src", newAvatarURL);
-
-            // 🛰 Broadcast event
-            window.dispatchEvent(new CustomEvent("avatarUpdated", { detail: { avatarUrl: newAvatarURL }}));
-
-            // Animation feedback
-            avatarImage.classList.add("avatar-updated");
-            setTimeout(() => avatarImage.classList.remove("avatar-updated"), 800);
-
-            alert("✅ Profile picture updated!");
-
+          // refresh session
+          await this.refreshSession();
         } catch (err) {
-            console.error("❌ Avatar upload error:", err);
-            avatarImage.src = this.currentUser.avatar_url || "/images/default-avatar.png";
-            alert("❌ Failed to upload avatar. Please try again.");
+          console.error("Avatar upload failed:", err);
+          showNotification("Failed to upload avatar", "error");
         }
-    });
-}
-
-
-    // =====================================================
-    // 🔄 Session Refresh Helper (FIXED: Handles nested API response)
-    // =====================================================
-    async refreshUserSession() {
-        try {
-            const meRes = await fetch(`${this.API_BASE}/auth/me`, {
-                credentials: "include",
-                headers: { 
-                    'Cache-Control': 'no-cache',
-                    'Pragma': 'no-cache'
-                }
-            });
-            
-            if (meRes.ok) {
-                const data = await meRes.json();
-                
-                // 🟢 FIX 2: Check for success and access the nested 'user' object
-                if (data.success && data.user) { 
-                    const freshUser = data.user;
-                    this.currentUser = freshUser;
-                    this.viewedUser = freshUser;
-                    window.currentUser = freshUser;
-                    return freshUser;
-                }
-            }
-        } catch (error) {
-            console.warn("⚠️ Session refresh failed:", error);
-        }
-        return this.currentUser;
+      });
     }
 
-    // =====================================================
-    // 3️⃣ Follow / Unfollow Other User
-    // =====================================================
-    attachFollowProfileHandler(targetId) {
-        const btn = document.getElementById("followProfileBtn");
-        if (!btn) return;
-
-        btn.addEventListener("click", async () => {
-            btn.disabled = true;
-            const initialText = btn.textContent;
-
-            try {
-                const res = await this.api.request(`/users/${targetId}/follow`, { method: "POST" });
-                btn.textContent = res.is_following ? "Following" : "+ Follow";
-                btn.classList.toggle("following", res.is_following);
-                
-                // Update counts if available in response
-                if (res.target_follower_count !== undefined && document.getElementById("profileFollowers")) {
-                    document.getElementById("profileFollowers").textContent = `${res.target_follower_count} Followers`;
-                }
-            } catch (err) {
-                console.error("❌ Follow toggle failed:", err);
-                alert("Something went wrong. Please try again.");
-                btn.textContent = initialText;
-            } finally {
-                btn.disabled = false;
-            }
-        });
+    async refreshSession() {
+      try {
+        const res = await fetch(`${this.apiBase}/auth/me`, { credentials: "include" });
+        if (!res.ok) return;
+        const data = await safeJson(res);
+        if (data.user) this.currentUser = data.user;
+        else if (data.id) this.currentUser = data;
+        window.currentUser = this.currentUser;
+        window.currentUserId = this.currentUser?.id ?? window.currentUserId;
+      } catch (err) {
+        console.warn("Session refresh error:", err);
+      }
     }
 
-    // =====================================================
-    // 4️⃣ Handle Unauthorized User
-    // =====================================================
-    handleUnauthorized() {
-        alert("⚠️ You must log in to view your profile.");
-        window.location.href = "/login.html";
-    }
+    // -------------------------
+    // Edit profile modal
+    // -------------------------
+    attachEditProfileHandlers() {
+      const editBtn = document.getElementById("editProfileBtn");
+      const modal = document.getElementById("editProfileModal");
+      const closeModalBtn = document.getElementById("closeModalBtn");
+      const cancelBtn = document.getElementById("cancelEditBtn");
+      const form = document.getElementById("editProfileForm");
 
-    // =====================================================
-    // 5️⃣ Logout Handler
-    // =====================================================
-    attachLogoutHandler() {
-        const logoutBtn = document.getElementById("logoutBtn");
-        if (logoutBtn) logoutBtn.addEventListener("click", this.handleLogout.bind(this));
-    }
-
-    async handleLogout() {
-        try {
-            const logoutRes = await fetch(`${this.API_BASE}/auth/logout`, {
-                method: "POST",
-                credentials: "include",
-            });
-            if (logoutRes.ok) {
-                alert("✅ Logged out successfully!");
-                setTimeout(() => (window.location.href = "/login.html"), 300);
-            } else {
-                alert("Logout failed. Please try again.");
-            }
-        } catch (err) {
-            console.error("Logout error:", err);
-            alert("⚠️ Network error during logout.");
-        }
-    }
-
-    // =====================================================
-// 6️⃣ Edit Profile Handlers (UPDATED WITH NEW FIELDS)
-// =====================================================
-attachEditProfileHandlers() {
-    const editBtn = document.getElementById("editProfileBtn");
-    const modal = document.getElementById("editProfileModal");
-    const closeBtn = modal?.querySelector(".close-btn");
-    const cancelBtn = document.getElementById("cancelEditBtn");
-    const form = document.getElementById("editProfileForm");
-
-    // 🟢 Open modal
-    if (editBtn) {
+      if (editBtn) {
         editBtn.addEventListener("click", () => {
-            this.populateEditForm();
-            if (modal) {
-                modal.style.display = "flex";
-                setTimeout(() => modal.classList.add("active"), 10);
-            }
+          this.populateEditForm();
+          if (modal) {
+            modal.style.display = "flex";
+            setTimeout(() => modal.classList.add("active"), 10);
+          }
         });
+      }
+
+      if (closeModalBtn) closeModalBtn.addEventListener("click", this.closeProfileModal.bind(this));
+      if (cancelBtn) cancelBtn.addEventListener("click", this.closeProfileModal.bind(this));
+      if (form) form.addEventListener("submit", this.handleEditProfileSubmit.bind(this));
+      window.addEventListener("click", (e) => {
+        if (e.target === modal) this.closeProfileModal();
+      });
     }
 
-    // 🔴 Close modal helper
-    const closeModal = () => {
-        if (modal) {
-            modal.classList.remove("active");
-            setTimeout(() => (modal.style.display = "none"), 300);
+    closeProfileModal() {
+      const modal = document.getElementById("editProfileModal");
+      if (!modal) return;
+      modal.classList.remove("active");
+      setTimeout(() => (modal.style.display = "none"), 300);
+    }
+
+    populateEditForm() {
+      if (!this.currentUser) return;
+      document.getElementById("editDisplayName").value = this.currentUser.display_name || this.currentUser.username || "";
+      document.getElementById("editBio").value = this.currentUser.bio || "";
+      document.getElementById("editLocation").value = this.currentUser.location || "";
+      document.getElementById("editRelationshipStatus").value = this.currentUser.relationship_status || "Single";
+      document.getElementById("editGender").value = this.currentUser.gender || "";
+      document.getElementById("editDOB").value = this.currentUser.date_of_birth || "";
+      document.getElementById("editWork").value = this.currentUser.work_and_education || "";
+      document.getElementById("editProfileMessage").textContent = "";
+    }
+
+    async handleEditProfileSubmit(e) {
+      e.preventDefault();
+      const saveBtn = document.getElementById("saveProfileBtn");
+      const messageEl = document.getElementById("editProfileMessage");
+      if (saveBtn) saveBtn.disabled = true;
+      if (messageEl) {
+        messageEl.textContent = "Saving...";
+        messageEl.style.color = "#333";
+      }
+
+      try {
+        const form = e.target;
+        const fd = new FormData(form);
+        // build payload
+        const payload = {};
+        for (const [k, v] of fd.entries()) {
+          payload[k] = v;
         }
-    };
+        // remove avatar if present
+        delete payload.avatar;
 
-    // Close on X or Cancel
-    if (closeBtn) closeBtn.addEventListener("click", closeModal);
-    if (cancelBtn) cancelBtn.addEventListener("click", closeModal);
-
-    // Click outside closes modal
-    window.addEventListener("click", (e) => {
-        if (e.target === modal) closeModal();
-    });
-
-    // 📝 Submit form
-    if (form) form.addEventListener("submit", this.handleEditProfile.bind(this));
-}
-
-populateEditForm() {
-    if (!this.currentUser) return;
-
-    document.getElementById("editDisplayName").value =
-        this.currentUser.display_name || "";
-    document.getElementById("editBio").value =
-        this.currentUser.bio || "";
-    document.getElementById("editLocation").value =
-        this.currentUser.location || "";
-    document.getElementById("editRelationshipStatus").value =
-        this.currentUser.relationship_status || "Single";
-
-    // 🆕 NEW FIELDS
-    document.getElementById("editGender").value =
-        this.currentUser.gender || "";
-    document.getElementById("editDOB").value =
-        this.currentUser.date_of_birth || "";
-    document.getElementById("editWork").value =
-        this.currentUser.work_and_education || "";
-
-    document.getElementById("editProfileMessage").textContent = "";
-}
-
-async handleEditProfile(e) {
-    e.preventDefault();
-
-    const saveBtn = document.getElementById("saveProfileBtn");
-    const messageEl = document.getElementById("editProfileMessage");
-    const modal = document.getElementById("editProfileModal");
-
-    saveBtn.disabled = true;
-    messageEl.textContent = "Saving...";
-
-    const formData = new FormData(e.target);
-    const updatedData = Object.fromEntries(formData.entries());
-            delete updatedData.avatar_url;
-
-    try {
-        const updatedUser = await this.api.request(`/users/${this.currentUser.id}`, {
-            method: "PUT",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(updatedData),
+        const res = await fetch(`${this.apiBase}/users/${this.currentUser.id}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+          credentials: "include",
         });
-
-        this.currentUser = { ...this.currentUser, ...updatedUser };
-        this.viewedUser = { ...this.viewedUser, ...updatedUser };
-        this.renderProfileDetails(this.currentUser);
-
-        messageEl.textContent = "✅ Profile updated successfully!";
-        messageEl.style.color = "green";
-
-        setTimeout(() => {
-            if (modal) modal.style.display = "none";
-        }, 1500);
-    } catch (err) {
-        console.error("❌ Profile update failed:", err);
-        const errorMsg = err.data?.error || "Failed to save changes. Please try again.";
-        messageEl.textContent = `❌ ${errorMsg}`;
-        messageEl.style.color = "red";
-    } finally {
-        saveBtn.disabled = false;
+        if (!res.ok) {
+          const err = await safeJson(res);
+          throw new Error(err?.error || err?.message || `HTTP ${res.status}`);
+        }
+        const updated = await res.json();
+        // merge and rerender
+        this.currentUser = { ...(this.currentUser || {}), ...updated };
+        this.viewedUser = { ...(this.viewedUser || {}), ...updated };
+        this.renderProfileDetails(this.viewedUser, this.isOwnProfile);
+        showNotification("Profile updated");
+        if (messageEl) {
+          messageEl.textContent = "Saved ✔";
+          messageEl.style.color = "green";
+        }
+        setTimeout(() => this.closeProfileModal(), 800);
+      } catch (err) {
+        console.error("Save profile failed:", err);
+        if (messageEl) {
+          messageEl.textContent = "Failed to save changes";
+          messageEl.style.color = "red";
+        }
+        showNotification("Failed to save profile", "error");
+      } finally {
+        if (saveBtn) saveBtn.disabled = false;
+      }
     }
-}
 
-    // =====================================================
-    // 7️⃣ Load User's Stories
-    // =====================================================
-    async loadUserStories(userIdentifier) {
-        if (!this.storiesContainer) return;
-
-        this.showLoading("userStoriesContainer", "Loading love stories...");
-
+    // -------------------------
+    // Logout
+    // -------------------------
+    attachLogoutHandler() {
+      const logoutBtn = document.getElementById("logoutBtn");
+      if (!logoutBtn) return;
+      logoutBtn.addEventListener("click", async () => {
         try {
-            const stories = await this.api.request(`/users/${userIdentifier}/stories`);
-
-            if (!stories.length) {
-                this.storiesContainer.innerHTML = `
-                    <div class="empty-state">
-                        <p>💌 No love stories shared yet.</p>
-                        ${
-                            this.isOwnProfile
-                                ? `<a href="/index.html" class="btn btn-primary">Share your first story!</a>`
-                                : `<p>Check back later for updates 💞</p>`
-                        }
-                    </div>`;
-                return;
-            }
-
-            const tempLoveStories = new LoveStories(new NotificationService(), new AnonUserTracker());
-            this.storiesContainer.innerHTML = stories
-                .map((story) => tempLoveStories.getStoryHTML(story))
-                .join("");
-
+          const res = await fetch(`${this.apiBase}/auth/logout`, { method: "POST", credentials: "include" });
+          if (res.ok) {
+            showNotification("Logged out");
+            // redirect to login
+            setTimeout(() => (window.location.href = "/login.html"), 300);
+          } else {
+            showNotification("Logout failed", "error");
+          }
         } catch (err) {
-            console.error("❌ Error loading user stories:", err);
-            this.storiesContainer.innerHTML = `
-                <p style="color:red;text-align:center;">❌ Could not load user's stories.</p>`;
+          console.error("Logout error:", err);
+          showNotification("Network error during logout", "error");
         }
+      });
     }
 
-    // =====================================================
-    // 8️⃣ Tab Switching
-    // =====================================================
+    // -------------------------
+    // Tabs
+    // -------------------------
     attachTabHandlers() {
-    document.querySelectorAll(".profile-tabs .tab-btn").forEach((button) => {
-        button.addEventListener("click", (e) => {
-            const tabId = e.target.dataset.tab;
-            document.querySelectorAll(".tab-btn").forEach((btn) => btn.classList.remove("active"));
-            document.querySelectorAll(".tab-pane").forEach((pane) => pane.classList.remove("active"));
+      const tabButtons = document.querySelectorAll(".profile-tabs .tab-btn");
+      if (!tabButtons || tabButtons.length === 0) return;
 
-            e.target.classList.add("active");
-            const targetPane = document.getElementById(`${tabId}-tab`);
-            if (targetPane) targetPane.classList.add("active");
+      tabButtons.forEach((btn) => {
+        btn.addEventListener("click", (e) => {
+          const tab = e.currentTarget.dataset.tab;
+          tabButtons.forEach((b) => b.classList.remove("active"));
+          e.currentTarget.classList.add("active");
 
-            // 🟢 CRITICAL FIX: Use viewedUser instead of currentUser
-            if (!this.viewedUser) return;
-            
-            const userIdToLoad = this.viewedUser.id;
-            
-            switch (tabId) {
-                case "stories":
-                    this.loadUserStories(userIdToLoad);
-                    break;
-                case "followers":
-                    this.loadFollowers(userIdToLoad);
-                    break;
-                case "following":
-                    this.loadFollowing(userIdToLoad);
-                    break;
-                case "activity":
-                    this.loadUserActivity(userIdToLoad);
-                    break;
-            }
+          document.querySelectorAll(".tab-pane").forEach((pane) => pane.classList.remove("active"));
+          const pane = document.getElementById(`${tab}-tab`);
+          if (pane) pane.classList.add("active");
+
+          if (!this.viewedUser) return;
+          const userId = this.viewedUser.id;
+
+          switch (tab) {
+            case "stories":
+              this.loadUserStories(userId);
+              break;
+            case "followers":
+              this.loadFollowers(userId);
+              break;
+            case "following":
+              this.loadFollowing(userId);
+              break;
+            case "activity":
+              this.loadUserActivity(userId);
+              break;
+            default:
+              break;
+          }
         });
-    });
-}
+      });
+    }
 
-    // =====================================================
-    // 9️⃣ Followers & Following
-    // =====================================================
-    async loadFollowers(userId) {
-        const container = document.getElementById("followersContainer");
-
-        if (!container) return;
-
-        this.showLoading("followersContainer", "Loading Followers...");
-        try {
-            const followers = await this.api.request(`/users/${userId}/followers`);
-            if (!followers.length) {
-                container.innerHTML = `<p class="empty-state">No users are following you yet. 🥺</p>`;
-                return;
-            }
-            const ids = followers.map((f) => f.id);
-            const statusMap = await this.getFollowStatusBatch(ids);
-            container.innerHTML = this.renderUserList(followers, statusMap);
-            this.attachFollowButtonHandlers();
-        } catch (err) {
-            console.error("❌ Error loading followers:", err);
-            container.innerHTML = `<p style="color:red;">❌ Failed to load followers.</p>`;
+    // -------------------------
+    // Stories loader (simple)
+    // -------------------------
+    async loadUserStories(userId) {
+      if (!this.storiesContainer) return;
+      this.showLoading("userStoriesContainer", "Loading love stories...");
+      try {
+        const res = await fetch(`${this.apiBase}/users/${userId}/stories`, { credentials: "include" });
+        if (!res.ok) {
+          this.storiesContainer.innerHTML = `<p style="color:red;text-align:center;">Failed to load stories.</p>`;
+          return;
         }
+        const data = await safeJson(res);
+        let stories = [];
+        if (Array.isArray(data)) stories = data;
+        else if (data.stories) stories = data.stories;
+        else if (data.data) stories = data.data;
+        else if (data.items) stories = data.items;
+        else if (data.rows) stories = data.rows;
+
+        if (!stories || stories.length === 0) {
+          this.storiesContainer.innerHTML = `<div class="empty-state"><p>💌 No love stories yet.</p></div>`;
+          return;
+        }
+
+        // reuse existing story HTML template if social-features provided getStoryHTML (not guaranteed)
+        // Build a simple card if not found
+        const html = stories.map((s) => this.renderStoryCard(s)).join("");
+        this.storiesContainer.innerHTML = html;
+      } catch (err) {
+        console.error("Load stories error:", err);
+        this.storiesContainer.innerHTML = `<p style="color:red;text-align:center;">Failed to load stories.</p>`;
+      }
+    }
+
+    renderStoryCard(story) {
+      // defensive
+      const id = story.id || story.story_id || story._id;
+      const title = story.story_title || story.title || "";
+      const content = story.love_story || story.content || story.body || "";
+      const date = story.created_at ? new Date(story.created_at).toLocaleDateString() : "";
+      const authorName = story.author_display_name || story.display_name || story.author_username || story.username || "User";
+      const authorUsername = story.author_username || story.username || "";
+      const avatar = getAvatarUrl(story.author_avatar_url || story.avatar || story.author_avatar || "/images/default-avatar.png");
+      const commentsCount = story.comments_count || story.comment_count || 0;
+      const likesCount = story.likes_count || story.like_count || 0;
+      const isLong = content.length > 220;
+      const preview = isLong ? content.substring(0, 220) + "..." : content;
+
+      return `
+        <div class="story-card" data-story-id="${id}">
+          <div class="story-card-header">
+            <div class="story-user-info">
+              <a href="/profile.html?user=${encodeURIComponent(authorUsername)}" class="story-user-link">
+                <img src="${avatar}" alt="${authorName}" class="story-avatar" onerror="this.src='/images/default-avatar.png'">
+              </a>
+              <div class="story-user-details">
+                <a href="/profile.html?user=${encodeURIComponent(authorUsername)}" class="story-username-link">
+                  <h4 class="story-username">${authorName}</h4>
+                </a>
+                <span class="story-date">${date}</span>
+              </div>
+            </div>
+            ${!story.anonymous_post && story.author_id && (!window.currentUserId || window.currentUserId !== story.author_id)
+              ? `<button class="follow-btn ${story.is_following_author ? "following" : ""}" data-user-id="${story.author_id}">${story.is_following_author ? "Following" : "+ Follow"}</button>`
+              : ""}
+          </div>
+
+          <h3 class="story-title">${title}</h3>
+          <div class="story-content">${preview}</div>
+          ${isLong ? `<button class="read-more">Read More</button>` : ""}
+          <div class="story-footer">
+            <div class="story-actions">
+              <button class="story-action like-button" data-id="${id}">
+                ❤️ <span class="like-count">${likesCount}</span>
+              </button>
+              <button class="story-action comment-toggle" data-id="${id}">
+                💬 <span>${commentsCount}</span>
+              </button>
+              <button class="story-action share-action-toggle" data-share-url="${location.origin}/stories/${id}" data-share-title="${title}" data-share-text="${title}">
+                ↗️
+              </button>
+            </div>
+          </div>
+
+          <div class="comments-section hidden" id="comments-${id}">
+            <div class="comment-form">
+              <input type="text" class="comment-input" placeholder="Add a comment..." data-story-id="${id}">
+              <button class="comment-submit">Post</button>
+            </div>
+            <div class="comments-list" id="comments-list-${id}"></div>
+          </div>
+        </div>
+      `;
+    }
+
+    // -------------------------
+    // Followers / Following
+    // -------------------------
+    async loadFollowers(userId) {
+      if (!this.followersContainer) return;
+      this.showLoading("followersContainer", "Loading followers...");
+      try {
+        const res = await fetch(`${this.apiBase}/users/${userId}/followers`, { credentials: "include" });
+        if (!res.ok) {
+          this.followersContainer.innerHTML = `<p style="color:red;text-align:center;">Failed to load followers.</p>`;
+          return;
+        }
+        const data = await safeJson(res);
+        const followers = Array.isArray(data) ? data : data.followers || data.items || data.data || [];
+        if (!followers || followers.length === 0) {
+          this.followersContainer.innerHTML = `<p class="empty-state">No followers yet.</p>`;
+          return;
+        }
+        const ids = followers.map((f) => f.id || f.user_id);
+        const statusMap = await this.getFollowStatusBatch(ids);
+        this.followersContainer.innerHTML = this.renderUserList(followers, statusMap);
+        this.attachFollowButtonHandlers();
+      } catch (err) {
+        console.error("Load followers error:", err);
+        this.followersContainer.innerHTML = `<p style="color:red;text-align:center;">Failed to load followers.</p>`;
+      }
     }
 
     async loadFollowing(userId) {
-        const container = document.getElementById("followingContainer");
-
-        if (!container) return;
-
-        this.showLoading("followingContainer", "Loading Following...");
-        try {
-            const following = await this.api.request(`/users/${userId}/following`);
-            if (!following.length) {
-                container.innerHTML = `<p class="empty-state">You are not following anyone yet. 🔍</p>`;
-                return;
-            }
-            const ids = following.map((f) => f.id);
-            const statusMap = await this.getFollowStatusBatch(ids);
-            container.innerHTML = this.renderUserList(following, statusMap);
-            this.attachFollowButtonHandlers();
-        } catch (err) {
-            console.error("❌ Error loading following:", err);
-            container.innerHTML = `<p style="color:red;">❌ Failed to load following.</p>`;
+      if (!this.followingContainer) return;
+      this.showLoading("followingContainer", "Loading following...");
+      try {
+        const res = await fetch(`${this.apiBase}/users/${userId}/following`, { credentials: "include" });
+        if (!res.ok) {
+          this.followingContainer.innerHTML = `<p style="color:red;text-align:center;">Failed to load following.</p>`;
+          return;
         }
+        const data = await safeJson(res);
+        const following = Array.isArray(data) ? data : data.following || data.items || data.data || [];
+        if (!following || following.length === 0) {
+          this.followingContainer.innerHTML = `<p class="empty-state">Not following anyone yet.</p>`;
+          return;
+        }
+        const ids = following.map((f) => f.id || f.user_id);
+        const statusMap = await this.getFollowStatusBatch(ids);
+        this.followingContainer.innerHTML = this.renderUserList(following, statusMap);
+        this.attachFollowButtonHandlers();
+      } catch (err) {
+        console.error("Load following error:", err);
+        this.followingContainer.innerHTML = `<p style="color:red;text-align:center;">Failed to load following.</p>`;
+      }
     }
 
     renderUserList(users, statusMap = {}) {
-        const myId = this.currentUser ? this.currentUser.id : null;
-
-        return users
-            .map((user) => {
-                if (user.id == myId) return "";
-
-                const isFollowing = statusMap[user.id] || false;
-                const btnText = isFollowing ? "Following" : "+ Follow";
-                const btnClass = isFollowing ? "following" : "";
-
-                return `<div class="user-card" data-user-id="${user.id}">
-                    <a href="/profile.html?user=${encodeURIComponent(user.username)}">
-                         <img src="${user.avatar_url || '/images/default-avatar.png'}" alt="${user.username}" class="user-avatar" />
-                    </a>
-                    <div class="user-info">
-                        <h4>${user.display_name || user.username}</h4>
-                        <p class="user-bio">${user.bio || ''}</p>
-                    </div>
-                    <div class="user-actions">
-                        <button class="follow-btn follow-toggle-btn ${btnClass}" data-user-id="${user.id}">
-                            ${btnText}
-                        </button>
-                    </div>
-                </div>`;
-            })
-            .join("");
+      const myId = this.currentUser ? this.currentUser.id : null;
+      return users
+        .map((user) => {
+          const uid = user.id || user.user_id || user.user?.id;
+          if (!uid) return "";
+          if (uid === myId) return ""; // skip self
+          const isFollowing = !!statusMap[uid];
+          const avatar = getAvatarUrl(user.avatar_url || user.profile_image || user.avatar || "/images/default-avatar.png");
+          const name = user.display_name || user.username || user.user?.display_name || "User";
+          const username = user.username || user.user?.username || name;
+          const bio = user.bio || user.user?.bio || "";
+          return `
+            <div class="user-card" data-user-id="${uid}">
+              <a href="/profile.html?user=${encodeURIComponent(username)}">
+                <img src="${avatar}" alt="${name}" class="user-avatar" onerror="this.src='/images/default-avatar.png'">
+              </a>
+              <div class="user-info">
+                <h4>${name}</h4>
+                <p class="user-bio">${bio}</p>
+              </div>
+              <div class="user-actions">
+                <button class="follow-btn follow-toggle-btn ${isFollowing ? "following" : ""}" data-user-id="${uid}">
+                  ${isFollowing ? "Following" : "+ Follow"}
+                </button>
+              </div>
+            </div>
+          `;
+        })
+        .join("");
     }
 
     attachFollowButtonHandlers() {
+      // Remove previous handler if exist
+      if (this.followClickHandler) {
         document.removeEventListener("click", this.followClickHandler);
+      }
 
-        this.followClickHandler = (e) => {
-            const button = e.target.closest(".follow-toggle-btn");
-
-            if (button && this.currentUser) {
-                const targetId = button.dataset.userId;
-                const isRelevant =
-                    document.getElementById("followers-tab")?.classList.contains("active") ||
-                    document.getElementById("following-tab")?.classList.contains("active");
-
-                if (isRelevant) this.toggleFollow(targetId, button);
-            }
-        };
-
-        document.addEventListener("click", this.followClickHandler);
-    }
-
-    async toggleFollow(targetId, button) {
-        button.disabled = true;
-        const initial = button.textContent;
-        button.textContent = "...";
-
-        try {
-            const res = await this.api.request(`/users/${targetId}/follow`, { method: "POST" });
-            
-            this.updateFollowButton(button, res.is_following);
-            this.updateProfileCounts(res.is_following);
-
-            if (document.getElementById("profileFollowers") && res.target_follower_count !== undefined) {
-                document.getElementById("profileFollowers").textContent = `${res.target_follower_count} Followers`;
-            }
-            if (document.getElementById("profileFollowing") && res.follower_following_count !== undefined) {
-                document.getElementById("profileFollowing").textContent = `${res.follower_following_count} Following`;
-            }
-
-        } catch (err) {
-            console.error("❌ Follow toggle failed:", err);
-            button.textContent = initial;
-        } finally {
-            button.disabled = false;
+      this.followClickHandler = (e) => {
+        const btn = e.target.closest(".follow-toggle-btn, .follow-btn");
+        if (!btn) return;
+        const id = btn.dataset.userId || btn.getAttribute("data-user-id");
+        if (!id) {
+          console.error("Follow button missing data-user-id");
+          return;
         }
+        this.toggleFollow(id, btn);
+      };
+
+      document.addEventListener("click", this.followClickHandler);
     }
 
-    updateFollowButton(button, isFollowing) {
-        button.textContent = isFollowing ? "Following" : "Follow";
-        button.classList.toggle("following", isFollowing);
-    }
-
-    updateProfileCounts(isFollowing) {
-        // Optional: Update local counts if needed
-    }
-
-    async getFollowStatusBatch(ids) {
-        if (!this.currentUser) return {};
-        
-        if (!this._followingSet) {
-            try {
-                const following = await this.api.request(`/users/${this.currentUser.id}/following`);
-                this._followingSet = new Set(following.map((u) => u.id));
-            } catch (error) {
-                console.error("Failed to load user's following list for batch check:", error);
-                this._followingSet = new Set();
-            }
-        }
-
-        const statusMap = {};
-        ids.forEach((id) => (statusMap[id] = this._followingSet.has(parseInt(id))));
-        
-        return statusMap;
-    }
-
-    // =====================================================
-    // 🔟 Activity Feed
-    // =====================================================
-    async loadUserActivity(userId) {
-        const container = document.getElementById("userActivityContainer");
-
-        if (!container) return;
-
-        this.showLoading("userActivityContainer", "Loading your activity feed...");
-        try {
-            const activity = await this.api.request(`/users/${userId}/activity`);
-            if (!activity.length) {
-                container.innerHTML = `<p class="empty-state">No recent activity yet. 🚀</p>`;
-                return;
-            }
-            container.innerHTML = this.renderActivityFeed(activity);
-        } catch (err) {
-            console.error("❌ Error loading user activity:", err);
-            container.innerHTML = `<p style="color:red;">❌ Failed to load activity feed.</p>`;
-        }
-    }
-
-    renderActivityFeed(activity) {
-        return `<div class="activity-list">
-            ${activity
-                .map((item) => {
-                    const date = new Date(item.date).toLocaleString();
-                    let icon = "🔔", linkHtml = "", color = "#333";
-                    
-                    if (item.type === "story_like") {
-                        icon = "❤️";
-                        color = "#ff4b8d";
-                        
-                        if (item.story_id) {
-                            linkHtml = `<a href="/stories.html?story=${item.story_id}" class="activity-link">View Story</a>`;
-                        } else {
-                            linkHtml = `<a href="/stories.html" class="activity-link">Browse Stories</a>`;
-                        }
-                        
-                    } else if (item.type === "new_follower") {
-                        icon = "✨";
-                        
-                        if (item.follower_username) {
-                            linkHtml = `<a href="/profile.html?user=${encodeURIComponent(item.follower_username)}" class="activity-link">View Profile</a>`;
-                        } else if (item.actor_username) {
-                            linkHtml = `<a href="/profile.html?user=${encodeURIComponent(item.actor_username)}" class="activity-link">View Profile</a>`;
-                        } else {
-                            const usernameMatch = item.message?.match(/@(\w+)/);
-                            if (usernameMatch) {
-                                linkHtml = `<a href="/profile.html?user=${encodeURIComponent(usernameMatch[1])}" class="activity-link">View Profile</a>`;
-                            } else {
-                                linkHtml = `<a href="/followers.html" class="activity-link">View Followers</a>`;
-                            }
-                        }
-                    } else {
-                        linkHtml = `<a href="/activity.html" class="activity-link">View Details</a>`;
-                    }
-                    
-                    return `
-                        <div class="activity-item" style="border-left: 3px solid ${color};">
-                            <div class="activity-message">
-                                <span class="activity-icon">${icon}</span>
-                                <span class="activity-text">${item.message}</span>
-                            </div>
-                            <div class="activity-meta">
-                                ${linkHtml} • <span class="activity-date">${date}</span>
-                            </div>
-                        </div>
-                    `;
-                })
-                .join("")}
-        </div>`;
-    }
-
-    // =====================================================
-    // 🧩 Utility
-    // =====================================================
-    showLoading(id, text = "Loading...") {
-        const el = document.getElementById(id);
-        if (el)
-            el.innerHTML = `<div class="loading-wrapper" style="text-align:center;padding:40px;">
-                <div class="spinner"></div><p style="margin-top:12px;color:#666;">${text}</p>
-            </div>`;
-    }
-}
-
-// =====================================================
-// 🌟 Initialize
-// =====================================================
-
-document.addEventListener("DOMContentLoaded", () => {
-    if (typeof LoveStoriesAPI === "undefined" || typeof NotificationService === "undefined" || typeof LoveStories === "undefined" || typeof AnonUserTracker === "undefined") {
-        console.error("❌ Dependency missing: Required global classes (LoveStoriesAPI, NotificationService, LoveStories, AnonUserTracker) must be loaded before profile.js");
+    async toggleFollow(targetId, buttonEl) {
+      if (!window.currentUserId) {
+        showNotification("Please log in to follow", "error");
+        setTimeout(() => (window.location.href = "/login.html"), 800);
         return;
+      }
+
+      const originalText = buttonEl.textContent;
+      const originalClassName = buttonEl.className;
+      buttonEl.disabled = true;
+      // optimistic UI
+      const isNowFollowing = !buttonEl.classList.contains("following");
+      buttonEl.classList.toggle("following", isNowFollowing);
+      buttonEl.textContent = isNowFollowing ? "Following" : "+ Follow";
+
+      try {
+        const res = await fetch(`${this.apiBase}/users/${targetId}/follow`, {
+          method: "POST",
+          credentials: "include",
+          headers: { "Content-Type": "application/json" },
+        });
+        if (!res.ok) {
+          const err = await safeJson(res);
+          throw new Error(err?.error || err?.message || `HTTP ${res.status}`);
+        }
+        const data = await res.json();
+        const is_following = data.is_following ?? data.following ?? isNowFollowing;
+        // update UI universally
+        document.querySelectorAll(`[data-user-id="${targetId}"], [data-author-id="${targetId}"]`).forEach((b) => {
+          b.classList.toggle("following", is_following);
+          b.textContent = is_following ? "Following" : "+ Follow";
+        });
+
+        // update profile counts if returned
+        if (data.target_follower_count && document.getElementById("profileFollowers")) {
+          document.getElementById("profileFollowers").textContent = `${data.target_follower_count} Followers`;
+        }
+        showNotification(is_following ? "Followed" : "Unfollowed");
+      } catch (err) {
+        console.error("Follow toggle error:", err);
+        buttonEl.className = originalClassName;
+        buttonEl.textContent = originalText;
+        showNotification("Failed to update follow", "error");
+      } finally {
+        buttonEl.disabled = false;
+      }
     }
 
-    new ProfileManager();
-});
-
-// Global avatar update handler for cross-component synchronization
-window.addEventListener('avatarUpdated', (event) => {
-    const { avatarUrl } = event.detail;
-    console.log('✅ Avatar updated globally:', avatarUrl);
-});
-
-// =====================================================
-// 💌 ENHANCED GLOBAL MESSAGE BUTTON HANDLER
-// =====================================================
-document.addEventListener(
-    "click",
-    (e) => {
-        const btn = e.target.closest("#messageUserBtn, .message-user-btn");
-        if (btn) {
-            e.preventDefault();
-            e.stopPropagation();
-            
-            console.log("💌 Global handler → Message button clicked");
-            const userId = btn.dataset.userId;
-            
-            if (!userId) {
-                console.error('❌ No user ID found on message button');
-                return;
-            }
-
-            console.log('🔍 Opening messages for user ID:', userId);
-            console.log('📱 messagesManager available:', !!window.messagesManager);
-
-            if (window.messagesManager && typeof window.messagesManager.openMessagesModal === 'function') {
-                console.log('🚀 Calling openMessagesModal with user ID:', userId);
-                window.messagesManager.openMessagesModal(parseInt(userId)); // Ensure it's a number
-            } else {
-                console.error('❌ messagesManager not available or openMessagesModal not a function');
-                
-                // Fallback: redirect to messages page
-                setTimeout(() => {
-                    window.location.href = `/messages.html?user=${userId}`;
-                }, 500);
-                
-                // Show user feedback
-                const toast = document.createElement('div');
-                toast.innerHTML = `
-                    <div style="position: fixed; top: 20px; right: 20px; background: #ff9800; color: white; padding: 12px 20px; border-radius: 8px; z-index: 10000;">
-                        💬 Opening messages...
-                    </div>
-                `;
-                document.body.appendChild(toast);
-                setTimeout(() => toast.remove(), 3000);
-            }
+    async getFollowStatusBatch(ids = []) {
+      const out = {};
+      if (!this.currentUser) return out;
+      try {
+        if (!this._followingSet) {
+          const res = await fetch(`${this.apiBase}/users/${this.currentUser.id}/following`, { credentials: "include" });
+          if (!res.ok) {
+            this._followingSet = new Set();
+          } else {
+            const data = await safeJson(res);
+            const list = Array.isArray(data) ? data : data.following || data.data || [];
+            this._followingSet = new Set(list.map((u) => Number(u.id || u.user_id)).filter(Boolean));
+          }
         }
-    },
-    true // capture mode
-);
+      } catch (err) {
+        console.warn("Batch follow status load failed:", err);
+        this._followingSet = new Set();
+      }
+      ids.forEach((id) => (out[id] = this._followingSet.has(Number(id))));
+      return out;
+    }
+
+    // -------------------------
+    // Activity feed
+    // -------------------------
+    async loadUserActivity(userId) {
+      if (!this.activityContainer) return;
+      this.showLoading("userActivityContainer", "Loading activity...");
+      try {
+        const res = await fetch(`${this.apiBase}/users/${userId}/activity`, { credentials: "include" });
+        if (!res.ok) {
+          this.activityContainer.innerHTML = `<p style="color:red;text-align:center;">Failed to load activity.</p>`;
+          return;
+        }
+        const data = await safeJson(res);
+        const items = Array.isArray(data) ? data : data.items || data.activity || data.data || [];
+        if (!items || items.length === 0) {
+          this.activityContainer.innerHTML = `<p class="empty-state">No recent activity</p>`;
+          return;
+        }
+        this.activityContainer.innerHTML = items
+          .map((it) => {
+            const date = it.date ? new Date(it.date).toLocaleString() : it.created_at ? new Date(it.created_at).toLocaleString() : "";
+            const message = it.message || it.text || it.summary || "";
+            let link = "";
+            if (it.type === "story_like" && it.story_id) link = `<a href="/stories.html?story=${it.story_id}" class="activity-link">View Story</a>`;
+            else if (it.type === "new_follower" && it.actor_username) link = `<a href="/profile.html?user=${encodeURIComponent(it.actor_username)}" class="activity-link">View</a>`;
+            else link = `<a href="/activity.html" class="activity-link">Details</a>`;
+            return `<div class="activity-item"><div class="activity-message">${message}</div><div class="activity-meta">${link} • <span>${date}</span></div></div>`;
+          })
+          .join("");
+      } catch (err) {
+        console.error("Load activity error:", err);
+        this.activityContainer.innerHTML = `<p style="color:red;text-align:center;">Failed to load activity.</p>`;
+      }
+    }
+
+    // -------------------------
+    // Utility: show loading states
+    // -------------------------
+    showLoading(id, text = "Loading...") {
+      const el = document.getElementById(id);
+      if (!el) return;
+      el.innerHTML = `<div class="loading-wrapper" style="text-align:center;padding:28px;"><div class="spinner"></div><p style="color:#666;margin-top:10px;">${text}</p></div>`;
+    }
+
+    // -------------------------
+    // Follow profile btn (banner) specific
+    // -------------------------
+    async toggleFollowProfile(targetUserId, btn) {
+      return this.toggleFollow(targetUserId, btn);
+    }
+
+    // attach handler for follow toggles created at top of page
+    handleFollowBtnClick(e) {
+      const btn = e.target.closest(".follow-btn");
+      if (!btn) return;
+      const uid = btn.dataset.userId;
+      if (!uid) return;
+      this.toggleFollow(uid, btn);
+    }
+
+    // -------------------------
+    // Global message button handler
+    // -------------------------
+    attachGlobalMessageButtonHandler() {
+      document.addEventListener(
+        "click",
+        (e) => {
+          const btn = e.target.closest("#messageUserBtn, .message-user-btn");
+          if (!btn) return;
+          e.preventDefault();
+          const userId = btn.dataset.userId;
+          if (!userId) return;
+          if (window.messagesManager && typeof window.messagesManager.openMessagesModal === "function") {
+            window.messagesManager.openMessagesModal(Number(userId));
+          } else {
+            // fallback to messages page
+            window.location.href = `/messages.html?user=${encodeURIComponent(userId)}`;
+          }
+        },
+        true
+      );
+    }
+
+    // -------------------------
+    // Not found / unauthorized
+    // -------------------------
+    handleNotFound() {
+      if (this.profileInfoContainer) {
+        this.profileInfoContainer.innerHTML = `<p style="text-align:center;color:#666;">User not found.</p>`;
+      }
+    }
+
+    handleUnauthorized() {
+      // if not logged in, either redirect or show a helpful message
+      showNotification("Please login to view this page", "error");
+      setTimeout(() => (window.location.href = "/login.html"), 900);
+    }
+
+    // -------------------------
+    // Global helpers to be used elsewhere
+    // -------------------------
+    attachAvatarUpdateListener() {
+      window.addEventListener("avatarUpdated", (evt) => {
+        const url = evt?.detail?.avatarUrl;
+        if (!url) return;
+        document.getElementById("userAvatar")?.setAttribute("src", url);
+        document.getElementById("sidebarAvatar")?.setAttribute("src", url);
+      });
+    }
+  }
+
+  // -------------------------
+  // Initialize on DOM ready
+  // -------------------------
+  document.addEventListener("DOMContentLoaded", () => {
+    try {
+      window.profileManager = new ProfileManager();
+      console.log("✅ profileManager initialized");
+    } catch (err) {
+      console.error("❌ Failed to initialize profileManager:", err);
+    }
+  });
+
+  // expose minimal API for debugging / tests
+  window._profileManager = {
+    getInstance: () => window.profileManager,
+  };
+})();
