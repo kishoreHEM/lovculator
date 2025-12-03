@@ -112,14 +112,38 @@ router.put("/:id", isAuthenticated, async (req, res) => {
     const { id } = req.params;
     const sessionUserId = req.user.id;
 
-    const {
-      display_name, bio, location, relationship_status, avatar_url,
-      gender, date_of_birth, work, education
-    } = req.body;
-
     if (parseInt(id) !== sessionUserId) {
       return res.status(403).json({ error: "Unauthorized action" });
     }
+
+    // 🔥 FRONTEND sends: editDisplayName, editBio, editLocation, etc.
+    // So we normalize both frontend and backend field names:
+    const display_name =
+      req.body.editDisplayName || req.body.display_name || null;
+
+    const bio =
+      req.body.editBio || req.body.bio || null;
+
+    const location =
+      req.body.editLocation || req.body.location || null;
+
+    const relationship_status =
+      req.body.editRelationshipStatus || req.body.relationship_status || null;
+
+    const gender =
+      req.body.editGender || req.body.gender || null;
+
+    const date_of_birth =
+      req.body.editDOB || req.body.date_of_birth || null;
+
+    const work =
+      req.body.editWork || req.body.work || null;
+
+    const education =
+      req.body.editEducation || req.body.education || null;
+
+    // Avatar URL (if updated separately)
+    const avatar_url = req.body.avatar_url || null;
 
     const result = await pool.query(
       `
@@ -140,8 +164,16 @@ router.put("/:id", isAuthenticated, async (req, res) => {
                 follower_count, following_count, avatar_url, created_at;
       `,
       [
-        display_name, bio, location, relationship_status, avatar_url,
-        gender, date_of_birth, work, education, id
+        display_name,
+        bio,
+        location,
+        relationship_status,
+        avatar_url,
+        gender,
+        date_of_birth,
+        work,
+        education,
+        id
       ]
     );
 
@@ -155,7 +187,6 @@ router.put("/:id", isAuthenticated, async (req, res) => {
     res.status(500).json({ error: "Profile update failed" });
   }
 });
-
 
 /* ======================================================
    4️⃣ UPLOAD PROFILE AVATAR (CSP + CDN Safe)
@@ -412,5 +443,38 @@ router.get("/:identifier/stories", async (req, res) => {
     res.status(500).json({ error: "Failed to load user's stories" });
   }
 });
+
+/* ======================================================
+   FETCH USER BY ID (Profile fetch by numeric ID)
+====================================================== */
+router.get("/:id", async (req, res) => {
+  try {
+    const userId = parseInt(req.params.id);
+
+    const query = `
+      SELECT 
+        u.id, u.username, u.display_name, u.bio, u.location, 
+        u.relationship_status, u.avatar_url, u.gender, u.date_of_birth,
+        u.work, u.education, u.created_at,
+        (SELECT COUNT(*) FROM follows WHERE target_id = u.id) AS follower_count,
+        (SELECT COUNT(*) FROM follows WHERE follower_id = u.id) AS following_count
+      FROM users u
+      WHERE u.id = $1
+      LIMIT 1;
+    `;
+
+    const { rows } = await pool.query(query, [userId]);
+
+    if (!rows.length) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    res.json(rows[0]);
+  } catch (err) {
+    console.error("❌ Error fetching user by ID:", err);
+    res.status(500).json({ error: "Failed to fetch user" });
+  }
+});
+
 
 export default router;

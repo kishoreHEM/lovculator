@@ -7,7 +7,6 @@
     <meta name="description" content="View your notifications and stay updated">
     
     <link rel="stylesheet" href="/css/layout.css">
-    <link rel="stylesheet" href="/css/components.css">
     <link rel="stylesheet" href="/css/style.css"> 
     <link rel="stylesheet" href="/css/messages.css"> 
     
@@ -221,29 +220,6 @@
     </button>
 </div>
 
-<style>
-/* Add a rule to style the SVG icons inside the tab buttons */
-.notification-tabs .tab-btn svg {
-    width: 18px;
-    height: 18px;
-    margin-right: 6px;
-    vertical-align: middle;
-    /* Use Lovculator brand color for inactive icons */
-    stroke: #65676b; 
-}
-
-/* Ensure the SVG is colored white when the button is active */
-.notification-tabs .tab-btn.active svg {
-    stroke: white;
-    fill: none; /* Reset fill for stroke icons */
-}
-
-/* Specific coloring for the filled Star (Unread) icon */
-.notification-tabs .tab-btn[data-filter="unread"].active svg {
-    fill: white;
-    stroke: white;
-}
-</style>
 
                 <div class="notifications-container" id="notificationsContainer">
                     <div class="loading-notifications">

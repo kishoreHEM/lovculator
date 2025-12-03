@@ -216,82 +216,176 @@
     }
 
     // -------------------------
-    // Rendering Profile Details
-    // -------------------------
-    renderProfileDetails(user, isOwnProfile = false) {
-      if (!this.profileInfoContainer) return;
-      const followerCount = user.follower_count ?? user.followers_count ?? 0;
-      const followingCount = user.following_count ?? user.following ?? 0;
-      const displayName = user.display_name || user.username || "User";
-      const joinedDate = user.created_at
-        ? new Date(user.created_at).toLocaleDateString("en-US", { month: "long", year: "numeric" })
-        : "Recently";
+// Rendering Profile Details (FINAL WITH SVG ICONS)
+// -------------------------
+renderProfileDetails(user, isOwnProfile = false) {
+  if (!this.profileInfoContainer) return;
 
-      const avatarUrl = getAvatarUrl(user.avatar_url || user.avatar || user.profile_image);
+  const followerCount = user.follower_count ?? user.followers_count ?? 0;
+  const followingCount = user.following_count ?? user.following ?? 0;
 
-      const bioHTML = user.bio ? `<p class="bio-text">${user.bio}</p>` : `<p class="bio-text empty">No bio set yet.</p>`;
-      const locationHTML = user.location ? `<span class="location">📍 ${user.location}</span>` : "";
+  const displayName = user.display_name || user.username || "User";
 
-      const avatarSection = isOwnProfile
-        ? `
-          <div class="avatar-upload-section">
-            <img id="avatarImage" src="${avatarUrl}" alt="${displayName}" class="profile-avatar-img" />
-            <label class="avatar-upload-label">
-               📸 Change Photo
-               <input type="file" id="avatarInput" accept="image/*" hidden />
-            </label>
+  const joinedDate = user.created_at
+    ? new Date(user.created_at).toLocaleDateString("en-US", {
+        month: "long",
+        year: "numeric",
+      })
+    : "Recently";
+
+  const avatarUrl = getAvatarUrl(
+    user.avatar_url || user.avatar || user.profile_image
+  );
+
+  const bioHTML = user.bio
+    ? `<p class="bio-text">${user.bio}</p>`
+    : `<p class="bio-text empty">No bio set yet.</p>`;
+
+  const locationHTML = user.location
+    ? `<span class="location">📍 ${user.location}</span>`
+    : "";
+
+  const avatarSection = isOwnProfile
+    ? `
+      <div class="avatar-upload-section">
+        <img id="avatarImage" src="${avatarUrl}" alt="${displayName}" class="profile-avatar-img" />
+        <label class="avatar-upload-label">
+  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" class="upload-icon">
+    <path stroke-linecap="round" stroke-linejoin="round" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+    <path stroke-linecap="round" stroke-linejoin="round" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+  </svg>
+  Change Photo
+  <input type="file" id="avatarInput" accept="image/*" hidden />
+</label>
+      </div>
+    `
+    : `
+      <div class="avatar-view-section">
+        <img id="avatarImage" src="${avatarUrl}" alt="${displayName}" class="profile-avatar-img" />
+      </div>
+    `;
+
+  // -------------------------
+  // MAIN PROFILE UI
+  // -------------------------
+  this.profileInfoContainer.innerHTML = `
+    <div class="profile-header-card">
+
+      <div class="profile-main-info">
+        <div class="profile-avatar-wrapper">${avatarSection}</div>
+
+        <div class="profile-details">
+          <h3 id="profileUsername">${displayName}</h3>
+
+          <div class="social-stats">
+            <span id="profileFollowers">${followerCount} Followers</span>
+            <span class="separator">·</span>
+            <span id="profileFollowing">${followingCount} Following</span>
           </div>
-        `
-        : `
-          <div class="avatar-view-section">
-            <img id="avatarImage" src="${avatarUrl}" alt="${displayName}" class="profile-avatar-img" />
-          </div>
-        `;
 
-      this.profileInfoContainer.innerHTML = `
-        <div class="profile-header-card">
-          <div class="profile-main-info">
-            <div class="profile-avatar-wrapper">${avatarSection}</div>
-            <div class="profile-details">
-              <h3 id="profileUsername">${displayName}</h3>
-              <div class="social-stats">
-                <span id="profileFollowers">${followerCount} Followers</span>
-                <span class="separator">·</span>
-                <span id="profileFollowing">${followingCount} Following</span>
-              </div>
-              <p id="profileJoined" class="joined-date">Joined ${joinedDate}</p>
-              <div class="profile-bio-summary">
-                ${bioHTML}
-                ${locationHTML}
-              </div>
-            </div>
-          </div>
+          <p id="profileJoined" class="joined-date">Joined ${joinedDate}</p>
 
-          <div class="profile-actions-bar">
-            ${
-              isOwnProfile
-                ? `<button id="editProfileBtn" class="btn btn-secondary btn-small">✏️ Edit Profile</button>
-                   <button id="logoutBtn" class="btn btn-secondary btn-small">🚪 Logout</button>`
-                : `<button id="followProfileBtn" class="btn btn-primary btn-small ${user.is_following_author ? "following" : ""}" data-user-id="${user.id}">
-                     ${user.is_following_author ? "Following" : "+ Follow"}
-                   </button>
-                   <button id="messageUserBtn" class="btn btn-primary btn-small message-user-btn" data-user-id="${user.id}">💌 Message</button>`
-            }
+          <div class="profile-bio-summary">
+            ${bioHTML}
+            ${locationHTML}
           </div>
         </div>
-      `;
+      </div>
 
-      // reattach handlers for newly created buttons
-      if (isOwnProfile) {
-        this.attachLogoutHandler();
-      } else {
-        const followBtn = document.getElementById("followProfileBtn");
-        if (followBtn) followBtn.addEventListener("click", () => this.toggleFollow(user.id, followBtn));
-      }
+      <div class="profile-actions-bar">
+        ${
+          isOwnProfile
+            ? `
+            <!-- ✏️ Edit Profile -->
+            <button id="editProfileBtn" class="btn btn-secondary btn-small">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none"
+                viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round"
+                  d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414
+                  a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+              </svg>
+              Edit Profile
+            </button>
 
-      // small accessibility/tweak
-      document.getElementById("profileUsername")?.setAttribute("data-username", user.username || "");
-    }
+            <!-- 🚪 Logout -->
+            <button id="logoutBtn" class="btn btn-secondary btn-small">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none"
+                viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round"
+                  d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6
+                  a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
+              </svg>
+              Logout
+            </button>
+            `
+            : `
+            <!-- 👤 Follow -->
+            <button id="followProfileBtn"
+              class="btn btn-primary btn-small ${user.is_following_author ? "following" : ""}"
+              data-user-id="${user.id}">
+              
+              ${
+                user.is_following_author
+                  ? `
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16"
+                      fill="none" viewBox="0 0 24 24" stroke="currentColor"
+                      stroke-width="2">
+                      <path stroke-linecap="round" stroke-linejoin="round"
+                        d="M5 13l4 4L19 7"/>
+                    </svg>
+                    Following
+                  `
+                  : `
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16"
+                      fill="none" viewBox="0 0 24 24" stroke="currentColor"
+                      stroke-width="2">
+                      <path stroke-linecap="round" stroke-linejoin="round"
+                        d="M18 9v3m0 0v3m0-3h3m-3 0h-3
+                        m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3
+                        20a6 6 0 0112 0v1H3v-1z"/>
+                    </svg>
+                    Follow
+                  `
+              }
+            </button>
+
+            <!-- 💌 Message -->
+            <button
+              id="messageUserBtn"
+              class="btn btn-primary btn-small message-user-btn"
+              data-user-id="${user.id}">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16"
+                fill="none" viewBox="0 0 24 24" stroke="currentColor"
+                stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round"
+                  d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8
+                  M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5
+                  a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+              </svg>
+              Message
+            </button>
+            `
+        }
+      </div>
+    </div>
+  `;
+
+  // Reattach dynamic handlers
+  if (isOwnProfile) {
+    this.attachLogoutHandler();
+  } else {
+    const followBtn = document.getElementById("followProfileBtn");
+    if (followBtn)
+      followBtn.addEventListener("click", () =>
+        this.toggleFollow(user.id, followBtn)
+      );
+  }
+
+  document
+    .getElementById("profileUsername")
+    ?.setAttribute("data-username", user.username || "");
+}
+
 
     // -------------------------
     // Avatar upload
@@ -602,14 +696,24 @@
           <div class="story-footer">
             <div class="story-actions">
               <button class="story-action like-button" data-id="${id}">
-                ❤️ <span class="like-count">${likesCount}</span>
-              </button>
-              <button class="story-action comment-toggle" data-id="${id}">
-                💬 <span>${commentsCount}</span>
-              </button>
-              <button class="story-action share-action-toggle" data-share-url="${location.origin}/stories/${id}" data-share-title="${title}" data-share-text="${title}">
-                ↗️
-              </button>
+  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" class="story-icon">
+    <path stroke-linecap="round" stroke-linejoin="round" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+  </svg>
+  <span class="like-count">${likesCount}</span>
+</button>
+
+<button class="story-action comment-toggle" data-id="${id}">
+  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" class="story-icon">
+    <path stroke-linecap="round" stroke-linejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+  </svg>
+  <span>${commentsCount}</span>
+</button>
+
+<button class="story-action share-action-toggle" data-share-url="${location.origin}/stories/${id}" data-share-title="${title}" data-share-text="${title}">
+  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" class="story-icon">
+    <path stroke-linecap="round" stroke-linejoin="round" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
+  </svg>
+</button>
             </div>
           </div>
 

@@ -3628,7 +3628,7 @@ footer {
 /* Adjust card spacing */
 .story-card {
   background: #fff;
-    border-radius: 12px;
+    border-radius: 0px;
     padding: 16px;
     margin: 15px auto;
     box-shadow: 0 2px 10px rgba(0,0,0,0.06);
