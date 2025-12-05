@@ -189,41 +189,98 @@ function handleCommentToggle(commentToggleBtn) {
 }
 
 // ==============================================
-// 3. COMMENT SUBMIT HANDLER
+// 3. COMMENT SUBMIT HANDLER (FIXED FOR BOTH POSTS & STORIES)
 // ==============================================
 async function handleCommentSubmit(commentSubmitBtn) {
-    const id = commentSubmitBtn.dataset.post || 
-               commentSubmitBtn.dataset.storyId || 
-               commentSubmitBtn.closest("[data-story-id]")?.dataset.storyId ||
-               commentSubmitBtn.closest("[data-post-id]")?.dataset.postId;
+    // Get the closest parent container that has an ID
+    const container = commentSubmitBtn.closest('[data-story-id], [data-post-id], [data-id], .story-card, .post-card');
     
-    if (!id) return;
-
-    const input = document.querySelector(`input[data-post-id="${id}"], input[data-story-id="${id}"], #commentInput-${id}`);
-    
-    if (!input?.value.trim()) {
-        showNotification('Comment cannot be empty.', 'error');
+    if (!container) {
+        console.error('No container found for comment');
+        showNotification('Unable to find post/story', 'error');
         return;
     }
 
+    // Extract ID from all possible locations
+    const id = container.dataset.storyId || 
+               container.dataset.postId || 
+               container.dataset.id ||
+               commentSubmitBtn.dataset.storyId ||
+               commentSubmitBtn.dataset.postId ||
+               commentSubmitBtn.dataset.id;
+    
+    if (!id) {
+        console.error('Could not find ID for comment:', container);
+        showNotification('Unable to comment on this item', 'error');
+        return;
+    }
+
+    // Find the input element - check multiple selectors
+    const inputSelectors = [
+        `input[data-post-id="${id}"]`,
+        `input[data-story-id="${id}"]`, 
+        `#commentInput-${id}`,
+        `input.comment-input`,
+        container.querySelector('.comment-input')
+    ];
+    
+    let input = null;
+    for (const selector of inputSelectors) {
+        if (typeof selector === 'string') {
+            input = document.querySelector(selector);
+        } else {
+            input = selector; // Already an element
+        }
+        if (input) break;
+    }
+    
+    if (!input) {
+        // Fallback: find any input in the same form/container
+        input = container.querySelector('input[type="text"], textarea');
+    }
+    
+    if (!input) {
+        console.error('No input element found for ID:', id, container);
+        showNotification('Unable to find comment input', 'error');
+        return;
+    }
+
+    // Validate input
     const text = input.value.trim();
+    if (!text) {
+        showNotification('Comment cannot be empty.', 'error');
+        input.focus();
+        return;
+    }
+
+    // Clear input and disable button
     input.value = "";
     commentSubmitBtn.disabled = true;
+    const originalText = commentSubmitBtn.textContent;
+    commentSubmitBtn.textContent = "Posting...";
 
     try {
-        const isStory = commentSubmitBtn.closest(".story-card") || window.location.pathname.includes("love-stories");
-        const url = isStory
-            ? `${window.API_BASE}/stories/${id}/comments`
-            : `${window.API_BASE}/posts/${id}/comments`;
+        // Determine if it's a story or post
+        const isStory = container.classList.contains('story-card') || 
+                        container.hasAttribute('data-story-id') ||
+                        window.location.pathname.includes("love-stories");
 
-        console.log(`📡 Making comment request to: ${url}`);
-        
+        const endpoint = isStory ? "stories" : "posts";
+        const url = `${window.API_BASE}/${endpoint}/${id}/comments`;
+
+        console.log(`📡 Comment request: ${url} (${isStory ? 'story' : 'post'})`);
+
+        // Add timeout
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 10000);
 
         const res = await fetch(url, {
             method: "POST",
-            body: JSON.stringify({ text }),
+            body: JSON.stringify({ 
+                text: text,
+                content: text,  // Try both field names
+                comment: text
+            }),
             headers: { "Content-Type": "application/json" },
             credentials: "include",
             signal: controller.signal
@@ -232,149 +289,115 @@ async function handleCommentSubmit(commentSubmitBtn) {
         clearTimeout(timeoutId);
 
         if (!res.ok) {
-            let errorMessage = `HTTP ${res.status}: Failed to add comment`;
+            let errorMessage = `Server error (${res.status})`;
             try {
                 const errorData = await res.json();
-                errorMessage = errorData.error || errorData.message || errorMessage;
-            } catch (parseError) {
+                console.error("Server error details:", errorData);
+                
+                // Common error field names
+                errorMessage = errorData.message || 
+                              errorData.error || 
+                              errorData.detail || 
+                              errorMessage;
+                              
+                // Check for validation errors
+                if (errorData.errors) {
+                    errorMessage = Object.values(errorData.errors).join(', ');
+                }
+            } catch (e) {
                 errorMessage = res.statusText || errorMessage;
             }
             throw new Error(errorMessage);
         }
 
         const result = await res.json();
-
-        // Reload comments
-        await loadComments(id);
+        console.log('✅ Comment added:', result);
 
         // Update comment count
-        const countSpan = document.querySelector(`[data-story-id="${id}"] .comment-toggle span`) ||
-                         document.querySelector(`[data-post-id="${id}"] .comment-count`);
-        if (countSpan) {
-            countSpan.textContent = result.comments_count || result.comment_count || 0;
+        const countSelectors = [
+            `[data-story-id="${id}"] .comment-count`,
+            `[data-post-id="${id}"] .comment-count`,
+            `[data-id="${id}"] .comment-count`,
+            container.querySelector('.comment-count'),
+            container.querySelector('.comment-btn span'),
+            container.querySelector('.comment-toggle span')
+        ];
+        
+        for (const selector of countSelectors) {
+            const countElement = typeof selector === 'string' 
+                ? document.querySelector(selector) 
+                : selector;
+            
+            if (countElement) {
+                const currentCount = parseInt(countElement.textContent) || 0;
+                countElement.textContent = currentCount + 1;
+                break;
+            }
         }
 
-        showNotification('Comment added!', 'success');
-        window.simpleStats?.trackComment?.();
+        // Reload comments after a short delay
+        setTimeout(() => {
+            loadComments(id);
+        }, 500);
+
+        showNotification('Comment added successfully!', 'success');
+        
+        // Track analytics
+        if (window.simpleStats?.trackComment) {
+            window.simpleStats.trackComment({ type: isStory ? 'story' : 'post', id });
+        }
 
     } catch (err) {
-        console.error("Comment error:", err);
+        console.error("❌ Comment error:", err);
+        
+        // Put text back in input if error
+        if (input) input.value = text;
+        
+        // Show appropriate error
         if (err.name === 'AbortError') {
-            showNotification('Request timeout. Please check your connection.', 'error');
-        } else if (err.message?.includes('401') || err.message?.includes('Unauthorized')) {
+            showNotification('Request timeout. Please try again.', 'error');
+        } else if (err.message.includes('401') || err.message.includes('Unauthorized')) {
             showNotification('Please log in to comment!', 'error');
-            setTimeout(() => (window.location.href = '/login.html'), 1200);
-        } else if (err.message?.includes('500')) {
+            setTimeout(() => {
+                window.location.href = '/login.html?redirect=' + encodeURIComponent(window.location.pathname);
+            }, 1500);
+        } else if (err.message.includes('400')) {
+            showNotification(err.message || 'Invalid comment format.', 'error');
+        } else if (err.message.includes('500')) {
             showNotification('Server error. Please try again later.', 'error');
         } else {
             showNotification(err.message || 'Failed to add comment.', 'error');
         }
     } finally {
         commentSubmitBtn.disabled = false;
+        commentSubmitBtn.textContent = originalText;
     }
 }
 
 // ==============================================
-// 4. ADD COMMENT VIA ENTER KEY
-// ==============================================
-async function handleAddComment(storyId, inputElement) {
-    if (!window.currentUserId) {
-        showNotification('Please log in to comment!', 'error');
-        return;
-    }
-
-    const text = inputElement.value.trim();
-    if (!text) {
-        showNotification('Comment cannot be empty.', 'error');
-        return;
-    }
-
-    const submitButton = inputElement.nextElementSibling || 
-                        inputElement.closest('.comment-form')?.querySelector('.comment-submit');
-    
-    if (submitButton) submitButton.disabled = true;
-
-    try {
-        const isStory = window.location.pathname.includes("love-stories");
-        const url = isStory
-            ? `${window.API_BASE}/stories/${storyId}/comments`
-            : `${window.API_BASE}/posts/${storyId}/comments`;
-
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 10000);
-
-        const res = await fetch(url, {
-            method: "POST",
-            body: JSON.stringify({ text }),
-            headers: { "Content-Type": "application/json" },
-            credentials: "include",
-            signal: controller.signal
-        });
-        
-        clearTimeout(timeoutId);
-
-        if (!res.ok) {
-            let errorMessage = `HTTP ${res.status}: Failed to add comment`;
-            try {
-                const errorData = await res.json();
-                errorMessage = errorData.error || errorData.message || errorMessage;
-            } catch (parseError) {
-                errorMessage = res.statusText || errorMessage;
-            }
-            throw new Error(errorMessage);
-        }
-
-        const result = await res.json();
-        console.log('Add comment response:', result);
-
-        // Reload comments - wait a moment for the server to process
-        setTimeout(() => {
-            loadComments(storyId);
-        }, 300);
-
-        // Update comment count
-        const countSpan = document.querySelector(`[data-story-id="${storyId}"] .comment-toggle span`) ||
-                         document.querySelector(`[data-post-id="${storyId}"] .comment-count`);
-        if (countSpan) {
-            countSpan.textContent = result.comments_count || result.comment_count || 0;
-        }
-
-        inputElement.value = '';
-        showNotification('Comment added!', 'success');
-        window.simpleStats?.trackComment?.();
-
-    } catch (err) {
-        console.error("❌ Error adding comment:", err);
-        if (err.name === 'AbortError') {
-            showNotification('Request timeout. Please check your connection.', 'error');
-        } else if (err.message?.includes('401') || err.message?.includes('Unauthorized')) {
-            showNotification('Please log in to comment!', 'error');
-            setTimeout(() => (window.location.href = '/login.html'), 1200);
-        } else if (err.message?.includes('500')) {
-            showNotification('Server error. Please try again later.', 'error');
-        } else {
-            showNotification(err.message || 'Failed to add comment.', 'error');
-        }
-    } finally {
-        if (submitButton) submitButton.disabled = false;
-    }
-}
-
-// ==============================================
-// 5. LOAD COMMENTS (IMPROVED - FIXED NAME/AVATAR DISPLAY)
+// 5. LOAD COMMENTS (FIXED FOR BOTH POSTS & STORIES)
 // ==============================================
 async function loadComments(id) {
-    const isStory = window.location.pathname.includes("love-stories");
+    // Determine if it's a story or post by checking the page or DOM
+    const container = document.querySelector(`[data-story-id="${id}"], [data-post-id="${id}"], [data-id="${id}"]`);
+    const isStory = container?.classList.contains('story-card') || 
+                    container?.hasAttribute('data-story-id') ||
+                    window.location.pathname.includes("love-stories");
+    
     const commentsList = document.getElementById(`comments-list-${id}`);
     
-    if (!commentsList) return;
+    if (!commentsList) {
+        console.error('No comments list found for ID:', id);
+        return;
+    }
 
     commentsList.innerHTML = '<p style="text-align:center; padding: 10px;">Loading comments...</p>';
 
     try {
-        const url = isStory
-            ? `${window.API_BASE}/stories/${id}/comments`
-            : `${window.API_BASE}/posts/${id}/comments`;
+        const endpoint = isStory ? "stories" : "posts";
+        const url = `${window.API_BASE}/${endpoint}/${id}/comments`;
+
+        console.log(`📡 Loading comments: ${url}`);
 
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 10000);
@@ -408,12 +431,9 @@ async function loadComments(id) {
             comments = data.comments;
         } else if (data && data.data && Array.isArray(data.data)) {
             comments = data.data;
-        } else if (data && data.items && Array.isArray(data.items)) {
-            comments = data.items;
         }
         
-        console.log('Comments API response:', data);
-        console.log('Parsed comments:', comments);
+        console.log('Loaded comments:', comments.length, 'for', isStory ? 'story' : 'post', id);
 
         if (!comments || comments.length === 0) {
             commentsList.innerHTML = '<p class="empty-state-comment">Be the first to comment! 💬</p>';
@@ -421,7 +441,7 @@ async function loadComments(id) {
         }
 
         commentsList.innerHTML = comments.map(comment => {
-            // Extract comment data - check for different possible field names
+            // Extract comment data
             const authorName = comment.author_name || 
                               comment.username || 
                               comment.user?.username || 
@@ -430,37 +450,29 @@ async function loadComments(id) {
                               comment.author?.display_name ||
                               'Anonymous User';
             
-            const avatar = comment.author_avatar_url || 
-                          comment.avatar_url || 
-                          comment.user?.avatar_url || 
-                          comment.author?.avatar_url ||
-                          comment.user?.avatar ||
-                          comment.author?.avatar ||
-                          '/images/default-avatar.png';
+            const avatar = getAvatarURL(
+                comment.author_avatar_url || 
+                comment.avatar_url || 
+                comment.user?.avatar_url || 
+                comment.author?.avatar_url
+            );
             
-            const commentDate = comment.created_at || comment.commented_at || comment.date;
-            const date = commentDate ? new Date(commentDate).toLocaleDateString() : 'Recently';
+            const commentDate = comment.created_at || comment.commented_at;
+            const date = commentDate ? timeSince(new Date(commentDate)) : 'Recently';
             const text = comment.comment_text || comment.text || comment.content || comment.body || '';
 
             return `
-                <div class="comment" style="display: flex; align-items: flex-start; padding: 12px; border-bottom: 1px solid #eee; margin-bottom: 8px;">
+                <div class="comment">
                     <img src="${avatar}" 
                          alt="${authorName}" 
                          class="comment-avatar" 
-                         style="width: 40px; height: 40px; border-radius: 50%; margin-right: 12px; object-fit: cover;" 
                          onerror="this.src='/images/default-avatar.png'" />
-                    <div class="comment-content-wrapper" style="flex: 1;">
-                        <div class="comment-author-info" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;">
-                            <span class="comment-author-name" style="font-weight: bold; font-size: 14px; color: #333;">
-                                ${authorName}
-                            </span>
-                            <span class="comment-time" style="font-size: 12px; color: #888;">
-                                ${date}
-                            </span>
+                    <div class="comment-content-wrapper">
+                        <div class="comment-author-info">
+                            <span class="comment-author-name">${authorName}</span>
+                            <span class="comment-time">${date}</span>
                         </div>
-                        <p class="comment-text" style="margin: 0; font-size: 14px; line-height: 1.4; color: #333;">
-                            ${text}
-                        </p>
+                        <p class="comment-text">${text}</p>
                     </div>
                 </div>
             `;
@@ -469,12 +481,12 @@ async function loadComments(id) {
     } catch (err) {
         console.error("❌ Error loading comments:", err);
         if (err.name === 'AbortError') {
-            commentsList.innerHTML = '<p style="color:orange; text-align:center; padding: 20px;">Request timeout. Please check your connection.</p>';
+            commentsList.innerHTML = '<p style="color:orange; text-align:center; padding: 20px;">Request timeout</p>';
         } else {
             commentsList.innerHTML = `
                 <p style="color:red; text-align:center; padding: 20px;">
-                    Failed to load comments.<br>
-                    <small>${err.message || 'Please try again later.'}</small>
+                    Failed to load comments<br>
+                    <small>${err.message || 'Try again later'}</small>
                 </p>
             `;
         }

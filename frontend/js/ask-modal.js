@@ -1,120 +1,111 @@
 // frontend/js/ask-modal.js
-class AskModal {
+class AskModalController {
     constructor() {
-        this.askModal = document.getElementById("askCreateModal");
+        // ---- MODALS ----
         this.storyModal = document.getElementById("storyModal");
+        this.askModal = document.getElementById("askCreateModal");
+        this.postModal = document.getElementById("createPostModal");
+
+        // ---- BUTTONS ----
+        this.btnStory = document.getElementById("btnStory");
+        this.btnAsk = document.getElementById("btnQuestion");
+        this.btnPost = document.getElementById("btnPost");
+        this.bigTextBar = document.getElementById("openPostModal"); // Main big input bar
+
+        // ---- CLOSE BUTTONS ----
+        this.closeAskBtn = document.getElementById("closeAskModal");
+        this.closeStoryBtn = document.getElementById("closeModal");
+        this.closePostBtn = document.getElementById("closePostModal");
+
         this.init();
     }
 
-    init() {
-        // Ask/Post bar elements
-        const askTrigger = document.getElementById("askTrigger");
-        const askBtn = document.getElementById("askQuestionBtn");
-        const postBtn = document.getElementById("postStoryBtn");
+    /* -----------------------------------------
+       HELPERS
+    ----------------------------------------- */
+    open(modal) {
+        modal?.classList.remove("hidden");
+        document.body.classList.add("modal-open");
+    }
 
-        // Ask modal elements
+    close(modal) {
+        modal?.classList.add("hidden");
+        document.body.classList.remove("modal-open");
+    }
+
+    openAskModal() {
+        this.open(this.askModal);
+
+        // Make sure ASK TAB is selected
         const tabQuestion = document.getElementById("tabAddQuestion");
         const tabPost = document.getElementById("tabCreatePost");
         const questionSection = document.getElementById("questionSection");
         const postSection = document.getElementById("postSection");
-        const cancelAskCreate = document.getElementById("cancelAskCreate");
-        const cancelPostCreate = document.getElementById("cancelPostCreate");
-        const submitQuestion = document.getElementById("submitQuestion");
-        const submitPost = document.getElementById("submitPost");
 
-        // Close button in story modal
-        const closeStoryModal = document.getElementById("closeModal");
+        if (tabQuestion && questionSection) {
+            tabQuestion.classList.add("active");
+            tabPost?.classList.remove("active");
+            questionSection.classList.remove("hidden");
+            postSection?.classList.add("hidden");
+        }
+    }
 
-        // Helper: Switch tabs
-        const switchTab = (type) => {
-            if (!tabQuestion || !tabPost || !questionSection || !postSection) return;
-            const isQuestion = type === "question";
-            tabQuestion.classList.toggle("active", isQuestion);
-            tabPost.classList.toggle("active", !isQuestion);
-            questionSection.classList.toggle("hidden", !isQuestion);
-            postSection.classList.toggle("hidden", isQuestion);
-        };
+    init() {
+        /* -----------------------------------------
+           BUTTON ACTIONS (HOME PAGE)
+        ----------------------------------------- */
 
-        // Helper: Safe modal toggle
-        const showModal = (modal) => {
-            if (modal) modal.classList.remove("hidden");
-        };
-        const hideModal = (modal) => {
-            if (modal) modal.classList.add("hidden");
-        };
+        // ❤️ Love Story
+        this.btnStory?.addEventListener("click", () =>
+            this.open(this.storyModal)
+        );
 
-        // 🧠 Open modal from Ask bar
-        askTrigger?.addEventListener("click", () => showModal(this.askModal));
-        askBtn?.addEventListener("click", () => {
-            showModal(this.askModal);
-            switchTab("question");
-        });
-        postBtn?.addEventListener("click", () => {
-            showModal(this.askModal);
-            switchTab("post");
-        });
+        // ❓ Ask
+        this.btnAsk?.addEventListener("click", () =>
+            this.openAskModal()
+        );
 
-        // 🗂️ Tab switching
-        tabQuestion?.addEventListener("click", () => switchTab("question"));
-        tabPost?.addEventListener("click", () => switchTab("post"));
+        // 📝 Post
+        this.btnPost?.addEventListener("click", () =>
+            this.open(this.postModal)
+        );
 
-        // ❌ Close Ask modal
-        cancelAskCreate?.addEventListener("click", () => hideModal(this.askModal));
-        cancelPostCreate?.addEventListener("click", () => hideModal(this.askModal));
+        // Big text bar = open post modal
+        this.bigTextBar?.addEventListener("click", () =>
+            this.open(this.postModal)
+        );
 
-        // ✅ Submit Question
-        submitQuestion?.addEventListener("click", async () => {
-            const questionInput = document.getElementById("questionText");
-            const question = questionInput?.value.trim();
-            if (!question) return alert("Please enter your question.");
+        /* -----------------------------------------
+           CLOSE BUTTONS
+        ----------------------------------------- */
 
-            try {
-                const res = await fetch("/api/questions", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    credentials: "include",
-                    body: JSON.stringify({ question })
-                });
+        this.closeAskBtn?.addEventListener("click", () =>
+            this.close(this.askModal)
+        );
 
-                if (res.ok) {
-                    alert("✅ Question posted successfully!");
-                    questionInput.value = "";
-                    localStorage.removeItem("draft_question");
-                    hideModal(this.askModal);
-                } else if (res.status === 401) {
-                    alert("⚠️ Please log in to post a question.");
-                    window.location.href = "/login.html";
-                } else {
-                    const data = await res.json().catch(() => ({}));
-                    alert("❌ Failed to post question: " + (data.error || "Unknown error"));
-                }
+        this.closeStoryBtn?.addEventListener("click", () =>
+            this.close(this.storyModal)
+        );
 
-            } catch (err) {
-                console.error("Error posting question:", err);
-                alert("⚠️ Something went wrong. Try again later.");
-            }
-        });
+        this.closePostBtn?.addEventListener("click", () =>
+            this.close(this.postModal)
+        );
 
-        // 🩷 Create Post (opens Love Story modal)
-        submitPost?.addEventListener("click", () => {
-            hideModal(this.askModal);
-            showModal(this.storyModal);
-        });
+        /* -----------------------------------------
+           CLICK OUTSIDE CLOSE
+        ----------------------------------------- */
 
-        // ✖️ Close Love Story modal
-        closeStoryModal?.addEventListener("click", () => hideModal(this.storyModal));
-
-        // 🪄 Close modals when clicking outside
         window.addEventListener("click", (e) => {
-            if (e.target === this.askModal) hideModal(this.askModal);
-            if (e.target === this.storyModal) hideModal(this.storyModal);
+            if (e.target === this.askModal) this.close(this.askModal);
+            if (e.target === this.storyModal) this.close(this.storyModal);
+            if (e.target === this.postModal) this.close(this.postModal);
         });
 
-        console.log("✅ Ask/Post modal logic initialized successfully");
+        console.log("✅ AskModalController initialized successfully");
     }
 }
 
-// Export for use in other files
-if (typeof module !== 'undefined' && module.exports) {
-    module.exports = { AskModal };
-}
+// AUTO INIT
+document.addEventListener("DOMContentLoaded", () => {
+    new AskModalController();
+});

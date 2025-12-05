@@ -279,18 +279,7 @@ body {
     gap: 12px;
 }
 
-.post-avatar {
-    width: 40px;
-    height: 40px;
-    border-radius: 50%;
-    background: linear-gradient(135deg, #ff4b8d, #ff6b6b);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: white;
-    font-size: 16px;
-    font-weight: bold;
-}
+
 
 .post-username {
     font-weight: 600;
@@ -2840,7 +2829,7 @@ footer {
 .stories-filters {
     background: white;
     border: 1px solid #dbdbdb;
-    border-radius: 12px;
+    border-radius: 0px;
     padding: 20px;
     margin-bottom: 20px;
     display: flex;
@@ -3218,18 +3207,7 @@ footer {
     gap: 12px;
 }
 
-.post-avatar {
-    width: 40px;
-    height: 40px;
-    border-radius: 50%;
-    background: linear-gradient(135deg, #667eea, #764ba2);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: white;
-    font-size: 16px;
-    font-weight: bold;
-}
+
 
 .post-username {
     font-weight: 600;
@@ -4669,7 +4647,7 @@ footer {
   padding: 12px 20px;
   background: #fff;
   border: 1px solid #eee;
-  border-radius: 12px;
+  border-radius: 0px;
   box-shadow: 0 4px 10px rgba(0,0,0,0.06);
   position: relative;
   z-index: 5;
@@ -4911,6 +4889,12 @@ footer {
 /* Prevent background scrolling when modal is open */
 body.modal-open {
   overflow: hidden;
+}
+.ask-user-avatar {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  object-fit: cover;
 }
 
 /* Add to your components.css file */

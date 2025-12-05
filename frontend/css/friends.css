@@ -1,0 +1,142 @@
+body {
+    font-family: "Inter", "Poppins", sans-serif;
+    background: #f7f7f7;
+    margin: 0;
+    padding: 0;
+    color: #222;
+}
+
+.page-wrapper {
+    max-width: 850px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+.page-title {
+    text-align: center;
+    font-size: 1.8rem;
+    font-weight: 700;
+    color: #ff4b8d;
+    margin-bottom: 20px;
+}
+
+/* Tabs */
+.tabs {
+    display: flex;
+    background: #fff;
+    border-radius: 12px;
+    padding: 10px;
+    margin-bottom: 25px;
+    border: 1px solid #ddd;
+}
+
+.tab {
+    flex: 1;
+    text-align: center;
+    padding: 12px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: 600;
+    color: #555;
+    transition: 0.2s;
+}
+
+.tab.active {
+    background: #ff4b8d;
+    color: #fff;
+}
+
+/* User cards */
+.user-card {
+    background: #fff;
+    padding: 16px;
+    border-radius: 12px;
+    border: 1px solid #ddd;
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.07);
+}
+
+.user-info {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+.user-avatar {
+    width: 54px;
+    height: 54px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 2px solid #ff4b8d30;
+}
+
+.user-details {
+    display: flex;
+    flex-direction: column;
+}
+
+.user-name {
+    font-size: 1rem;
+    font-weight: 600;
+}
+
+.user-username {
+    color: #777;
+    font-size: 0.85rem;
+}
+
+.follow-btn, .unfollow-btn {
+    padding: 8px 16px;
+    border-radius: 18px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: 0.2s;
+}
+
+.follow-btn {
+    border: 1px solid #ff4b8d;
+    background: #ff4b8d;
+    color: #fff;
+}
+
+.follow-btn:hover {
+    background: #ff6ba1;
+}
+
+.unfollow-btn {
+    border: 1px solid #aaa;
+    background: #f2f2f2;
+    color: #444;
+}
+
+.unfollow-btn:hover {
+    background: #e3e3e3;
+}
+
+/* Empty state */
+.empty-state {
+    text-align: center;
+    padding: 40px;
+    color: #777;
+    background: #fff;
+    border-radius: 12px;
+    border: 1px solid #ddd;
+    margin-top: 25px;
+}
+
+@media (max-width: 600px) {
+    .user-card {
+        flex-direction: column;
+        text-align: center;
+        gap: 10px;
+    }
+
+    .user-info {
+        flex-direction: column;
+    }
+    
+}

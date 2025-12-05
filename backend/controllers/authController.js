@@ -152,10 +152,21 @@ export const logout = (req, res) => {
       console.error("❌ Logout failed:", err);
       return res.status(500).json({ error: "Logout failed." });
     }
-    res.clearCookie("connect.sid");
-    res.status(204).send();
+
+    // Clear session cookie correctly
+    res.clearCookie("connect.sid", {
+      httpOnly: true,
+      sameSite: "lax",
+      secure: process.env.NODE_ENV === "production"
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: "Logged out successfully"
+    });
   });
 };
+
 
 // ===================================================
 // 5️⃣ FORGOT PASSWORD

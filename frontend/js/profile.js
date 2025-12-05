@@ -140,6 +140,9 @@
         this.attachEditProfileHandlers();
         this.attachAvatarUploadHandler();
         this.attachGlobalMessageButtonHandler();
+        
+        // Explicitly attach logout handler here to ensure it catches elements rendered
+        this.attachLogoutHandler();
 
       } catch (err) {
         console.error("❌ Profile init failed:", err);
@@ -216,176 +219,173 @@
     }
 
     // -------------------------
-// Rendering Profile Details (FINAL WITH SVG ICONS)
-// -------------------------
-renderProfileDetails(user, isOwnProfile = false) {
-  if (!this.profileInfoContainer) return;
+    // Rendering Profile Details (FINAL WITH SVG ICONS)
+    // -------------------------
+    renderProfileDetails(user, isOwnProfile = false) {
+      if (!this.profileInfoContainer) return;
 
-  const followerCount = user.follower_count ?? user.followers_count ?? 0;
-  const followingCount = user.following_count ?? user.following ?? 0;
+      const followerCount = user.follower_count ?? user.followers_count ?? 0;
+      const followingCount = user.following_count ?? user.following ?? 0;
 
-  const displayName = user.display_name || user.username || "User";
+      const displayName = user.display_name || user.username || "User";
 
-  const joinedDate = user.created_at
-    ? new Date(user.created_at).toLocaleDateString("en-US", {
-        month: "long",
-        year: "numeric",
-      })
-    : "Recently";
+      const joinedDate = user.created_at
+        ? new Date(user.created_at).toLocaleDateString("en-US", {
+            month: "long",
+            year: "numeric",
+          })
+        : "Recently";
 
-  const avatarUrl = getAvatarUrl(
-    user.avatar_url || user.avatar || user.profile_image
-  );
+      const avatarUrl = getAvatarUrl(
+        user.avatar_url || user.avatar || user.profile_image
+      );
 
-  const bioHTML = user.bio
-    ? `<p class="bio-text">${user.bio}</p>`
-    : `<p class="bio-text empty">No bio set yet.</p>`;
+      const bioHTML = user.bio
+        ? `<p class="bio-text">${user.bio}</p>`
+        : `<p class="bio-text empty">No bio set yet.</p>`;
 
-  const locationHTML = user.location
-    ? `<span class="location">📍 ${user.location}</span>`
-    : "";
+      const locationHTML = user.location
+        ? `<span class="location">📍 ${user.location}</span>`
+        : "";
 
-  const avatarSection = isOwnProfile
-    ? `
-      <div class="avatar-upload-section">
-        <img id="avatarImage" src="${avatarUrl}" alt="${displayName}" class="profile-avatar-img" />
-        <label class="avatar-upload-label">
-  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" class="upload-icon">
-    <path stroke-linecap="round" stroke-linejoin="round" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
-    <path stroke-linecap="round" stroke-linejoin="round" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
-  </svg>
-  Change Photo
-  <input type="file" id="avatarInput" accept="image/*" hidden />
-</label>
-      </div>
-    `
-    : `
-      <div class="avatar-view-section">
-        <img id="avatarImage" src="${avatarUrl}" alt="${displayName}" class="profile-avatar-img" />
-      </div>
-    `;
+      const avatarSection = isOwnProfile
+        ? `
+          <div class="avatar-upload-section">
+            <img id="avatarImage" src="${avatarUrl}" alt="${displayName}" class="profile-avatar-img" />
+            <label class="avatar-upload-label">
+      <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" class="upload-icon">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+        <path stroke-linecap="round" stroke-linejoin="round" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+      </svg>
+      Change Photo
+      <input type="file" id="avatarInput" accept="image/*" hidden />
+    </label>
+          </div>
+        `
+        : `
+          <div class="avatar-view-section">
+            <img id="avatarImage" src="${avatarUrl}" alt="${displayName}" class="profile-avatar-img" />
+          </div>
+        `;
 
-  // -------------------------
-  // MAIN PROFILE UI
-  // -------------------------
-  this.profileInfoContainer.innerHTML = `
-    <div class="profile-header-card">
+      // -------------------------
+      // MAIN PROFILE UI
+      // -------------------------
+      // Note: We use class 'profile-logout-btn' to avoid ID collision with header
+      this.profileInfoContainer.innerHTML = `
+        <div class="profile-header-card">
 
-      <div class="profile-main-info">
-        <div class="profile-avatar-wrapper">${avatarSection}</div>
+          <div class="profile-main-info">
+            <div class="profile-avatar-wrapper">${avatarSection}</div>
 
-        <div class="profile-details">
-          <h3 id="profileUsername">${displayName}</h3>
+            <div class="profile-details">
+              <h3 id="profileUsername">${displayName}</h3>
 
-          <div class="social-stats">
-            <span id="profileFollowers">${followerCount} Followers</span>
-            <span class="separator">·</span>
-            <span id="profileFollowing">${followingCount} Following</span>
+              <div class="social-stats">
+                <span id="profileFollowers">${followerCount} Followers</span>
+                <span class="separator">·</span>
+                <span id="profileFollowing">${followingCount} Following</span>
+              </div>
+
+              <p id="profileJoined" class="joined-date">Joined ${joinedDate}</p>
+
+              <div class="profile-bio-summary">
+                ${bioHTML}
+                ${locationHTML}
+              </div>
+            </div>
           </div>
 
-          <p id="profileJoined" class="joined-date">Joined ${joinedDate}</p>
+          <div class="profile-actions-bar">
+            ${
+              isOwnProfile
+                ? `
+                <button id="editProfileBtn" class="btn btn-secondary btn-small">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none"
+                    viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round"
+                      d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414
+                      a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+                  </svg>
+                  Edit Profile
+                </button>
 
-          <div class="profile-bio-summary">
-            ${bioHTML}
-            ${locationHTML}
+                <button id="profileCardLogoutBtn" class="btn btn-secondary btn-small profile-logout-btn">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none"
+                    viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round"
+                      d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6
+                      a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
+                  </svg>
+                  Logout
+                </button>
+                `
+                : `
+                <button id="followProfileBtn"
+                  class="btn btn-primary btn-small ${user.is_following_author ? "following" : ""}"
+                  data-user-id="${user.id}">
+                  
+                  ${
+                    user.is_following_author
+                      ? `
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16"
+                          fill="none" viewBox="0 0 24 24" stroke="currentColor"
+                          stroke-width="2">
+                          <path stroke-linecap="round" stroke-linejoin="round"
+                            d="M5 13l4 4L19 7"/>
+                        </svg>
+                        Following
+                      `
+                      : `
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16"
+                          fill="none" viewBox="0 0 24 24" stroke="currentColor"
+                          stroke-width="2">
+                          <path stroke-linecap="round" stroke-linejoin="round"
+                            d="M18 9v3m0 0v3m0-3h3m-3 0h-3
+                            m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3
+                            20a6 6 0 0112 0v1H3v-1z"/>
+                        </svg>
+                        Follow
+                      `
+                  }
+                </button>
+
+                <button
+                  id="messageUserBtn"
+                  class="btn btn-primary btn-small message-user-btn"
+                  data-user-id="${user.id}">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16"
+                    fill="none" viewBox="0 0 24 24" stroke="currentColor"
+                    stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round"
+                      d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8
+                      M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5
+                      a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+                  </svg>
+                  Message
+                </button>
+                `
+            }
           </div>
         </div>
-      </div>
+      `;
 
-      <div class="profile-actions-bar">
-        ${
-          isOwnProfile
-            ? `
-            <!-- ✏️ Edit Profile -->
-            <button id="editProfileBtn" class="btn btn-secondary btn-small">
-              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none"
-                viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                <path stroke-linecap="round" stroke-linejoin="round"
-                  d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414
-                  a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
-              </svg>
-              Edit Profile
-            </button>
+      // Reattach dynamic handlers
+      if (isOwnProfile) {
+        // We re-run this to catch the new button in the DOM
+        this.attachLogoutHandler();
+      } else {
+        const followBtn = document.getElementById("followProfileBtn");
+        if (followBtn)
+          followBtn.addEventListener("click", () =>
+            this.toggleFollow(user.id, followBtn)
+          );
+      }
 
-            <!-- 🚪 Logout -->
-            <button id="logoutBtn" class="btn btn-secondary btn-small">
-              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none"
-                viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                <path stroke-linecap="round" stroke-linejoin="round"
-                  d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6
-                  a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
-              </svg>
-              Logout
-            </button>
-            `
-            : `
-            <!-- 👤 Follow -->
-            <button id="followProfileBtn"
-              class="btn btn-primary btn-small ${user.is_following_author ? "following" : ""}"
-              data-user-id="${user.id}">
-              
-              ${
-                user.is_following_author
-                  ? `
-                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16"
-                      fill="none" viewBox="0 0 24 24" stroke="currentColor"
-                      stroke-width="2">
-                      <path stroke-linecap="round" stroke-linejoin="round"
-                        d="M5 13l4 4L19 7"/>
-                    </svg>
-                    Following
-                  `
-                  : `
-                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16"
-                      fill="none" viewBox="0 0 24 24" stroke="currentColor"
-                      stroke-width="2">
-                      <path stroke-linecap="round" stroke-linejoin="round"
-                        d="M18 9v3m0 0v3m0-3h3m-3 0h-3
-                        m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3
-                        20a6 6 0 0112 0v1H3v-1z"/>
-                    </svg>
-                    Follow
-                  `
-              }
-            </button>
-
-            <!-- 💌 Message -->
-            <button
-              id="messageUserBtn"
-              class="btn btn-primary btn-small message-user-btn"
-              data-user-id="${user.id}">
-              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16"
-                fill="none" viewBox="0 0 24 24" stroke="currentColor"
-                stroke-width="2">
-                <path stroke-linecap="round" stroke-linejoin="round"
-                  d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8
-                  M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5
-                  a2 2 0 00-2 2v10a2 2 0 002 2z"/>
-              </svg>
-              Message
-            </button>
-            `
-        }
-      </div>
-    </div>
-  `;
-
-  // Reattach dynamic handlers
-  if (isOwnProfile) {
-    this.attachLogoutHandler();
-  } else {
-    const followBtn = document.getElementById("followProfileBtn");
-    if (followBtn)
-      followBtn.addEventListener("click", () =>
-        this.toggleFollow(user.id, followBtn)
-      );
-  }
-
-  document
-    .getElementById("profileUsername")
-    ?.setAttribute("data-username", user.username || "");
-}
-
+      document
+        .getElementById("profileUsername")
+        ?.setAttribute("data-username", user.username || "");
+    }
 
     // -------------------------
     // Avatar upload
@@ -560,25 +560,68 @@ renderProfileDetails(user, isOwnProfile = false) {
     }
 
     // -------------------------
-    // Logout
+    // Logout (FINAL FIXED VERSION)
     // -------------------------
     attachLogoutHandler() {
-      const logoutBtn = document.getElementById("logoutBtn");
-      if (!logoutBtn) return;
-      logoutBtn.addEventListener("click", async () => {
-        try {
-          const res = await fetch(`${this.apiBase}/auth/logout`, { method: "POST", credentials: "include" });
-          if (res.ok) {
-            showNotification("Logged out");
-            // redirect to login
-            setTimeout(() => (window.location.href = "/login.html"), 300);
-          } else {
-            showNotification("Logout failed", "error");
+      // FIX: Select ALL logout buttons (Header ID, Profile Card ID, classes, links)
+      // This handles the conflict where header ID usually wins
+      const logoutButtons = document.querySelectorAll(
+        "#logoutBtn, #profileCardLogoutBtn, .profile-logout-btn, a[href='/logout'], a[href='/logout.html']"
+      );
+      
+      if (!logoutButtons || logoutButtons.length === 0) return;
+
+      logoutButtons.forEach(btn => {
+        // Clone to remove old listeners if re-running
+        const newBtn = btn.cloneNode(true);
+        btn.parentNode.replaceChild(newBtn, btn);
+
+        newBtn.addEventListener("click", async (e) => {
+          // 🛑 CRITICAL: Prevent <a> tag from navigating to 404
+          e.preventDefault(); 
+          e.stopPropagation();
+
+          console.log("🔄 Logging out...");
+
+          // 1️⃣ Prevent refresh loops / WebSocket reconnection
+          window.isLoggingOut = true;
+
+          try {
+            // 2️⃣ Send logout request (fire & forget is fine)
+            await fetch(`${this.apiBase}/auth/logout`, {
+              method: "POST",
+              credentials: "include",
+              cache: "no-store"
+            });
+
+            // 3️⃣ Cleanup in browser
+            localStorage.clear();
+            sessionStorage.clear();
+
+            // 4️⃣ Aggressive cookie cleanup
+            ["", window.location.hostname, "." + window.location.hostname].forEach(domain => {
+              document.cookie = `connect.sid=; Path=/; Max-Age=0; ${domain ? `Domain=${domain};` : ""}`;
+            });
+
+            // 5️⃣ Shut down global websocket safely
+            if (window.messagesManager?.disconnect) {
+              console.log("🔌 Closing websocket...");
+              window.messagesManager.disconnect();
+            }
+
+            // 6️⃣ Prevent history back showing profile cached page
+            window.history.pushState(null, null, "/login.html");
+            window.history.replaceState(null, null, "/login.html");
+
+            // 7️⃣ Redirect with cache busting so browser reloads clean
+            const cb = Date.now();
+            window.location.replace(`/login.html?logout=${cb}`);
+
+          } catch (err) {
+            console.error("❌ Logout error", err);
+            window.location.replace(`/login.html?fail=${Date.now()}`);
           }
-        } catch (err) {
-          console.error("Logout error:", err);
-          showNotification("Network error during logout", "error");
-        }
+        });
       });
     }
 

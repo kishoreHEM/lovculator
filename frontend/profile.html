@@ -6,6 +6,10 @@
   <title>User Profile - Lovculator 💖</title>
   <meta name="description" content="View your Lovculator profile — love stories, followers, and connections." />
   <meta name="theme-color" content="#ff4b8d" />
+  <!-- Add these meta tags in the <head> section of profile.html -->
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
 
   <!-- Favicons -->
   <link rel="apple-touch-icon" href="/images/apple-touch-icon.png" />
@@ -941,62 +945,15 @@
   <!-- Footer -->
   <footer class="footer"></footer>
 
-  <!-- Scripts with proper loading order -->
-  <script src="/js/navigation.js" defer></script>
+  <script src="/js/layout-manager.js" defer></script> <script src="/js/navigation.js" defer></script>
   <script src="/js/auth.js" defer></script>
   <script src="/js/messages.js" defer></script>
   
-  <!-- Profile.js must load after messages.js -->
   <script src="/js/profile.js" defer></script>
   
   <script src="/js/love-stories.js" defer></script>
   <script src="/js/social-features.js" defer></script>
   <script src="/js/pwa.js" defer></script>
-
-  <!-- Enhanced initialization script -->
-  <script>
-    // Enhanced error handling for profile page
-    document.addEventListener('DOMContentLoaded', function() {
-      console.log('🚀 Profile page initialized');
-      
-      // Add global error handler for profile page
-      window.addEventListener('error', function(event) {
-        console.error('Global error caught:', event.error);
-      });
-      
-      // Handle page visibility changes
-      document.addEventListener('visibilitychange', function() {
-        if (!document.hidden && window.profileManager) {
-          console.log('🔄 Page visible, refreshing profile data...');
-          // Optional: Refresh profile data when page becomes visible
-        }
-      });
-      
-      // Enhanced offline handling
-      window.addEventListener('online', function() {
-        console.log('✅ Connection restored');
-        const toast = document.createElement('div');
-        toast.innerHTML = `
-          <div style="position: fixed; top: 20px; right: 20px; background: #4CAF50; color: white; padding: 12px 20px; border-radius: 8px; z-index: 10000;">
-            ✅ Connection restored
-          </div>
-        `;
-        document.body.appendChild(toast);
-        setTimeout(() => toast.remove(), 3000);
-      });
-      
-      window.addEventListener('offline', function() {
-        console.log('❌ Connection lost');
-        const toast = document.createElement('div');
-        toast.innerHTML = `
-          <div style="position: fixed; top: 20px; right: 20px; background: #ff9800; color: white; padding: 12px 20px; border-radius: 8px; z-index: 10000;">
-            ⚠️ You are currently offline
-          </div>
-        `;
-        document.body.appendChild(toast);
-        setTimeout(() => toast.remove(), 3000);
-      });
-    });
-  </script>
+  
 </body>
 </html>

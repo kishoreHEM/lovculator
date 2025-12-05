@@ -60,7 +60,7 @@ async function loadFeed() {
 }
 
 /* =========================================
-   UI: CREATE POST CARD
+   UI: CREATE POST CARD (FIXED WITH PROPER STYLING)
    ========================================= */
 function createPostCard(post) {
     const card = document.createElement("div");
@@ -68,22 +68,25 @@ function createPostCard(post) {
     
     // Set data attributes
     card.dataset.postId = post.id; 
+    card.dataset.id = post.id; // Add for compatibility
 
     const avatar = getAvatarURL(post.avatar_url);
     const timeAgo = window.timeSince ? window.timeSince(new Date(post.created_at)) : new Date(post.created_at).toLocaleDateString();
     const isOwner = window.currentUserId && (post.user_id == window.currentUserId);
 
     card.innerHTML = `
+        <!-- POST HEADER - Matching Story styling -->
         <div class="post-header">
-            <a href="/profile.html?user=${post.username}" class="profile-link">
-                <img src="${avatar}" class="post-avatar" alt="${post.username}" />
-            </a>
-
-            <div class="post-user">
-                <a href="/profile.html?user=${post.username}" class="profile-link">
-                    <h4 class="post-name">${post.display_name || post.username}</h4>
+            <div class="post-user-info">
+                <a href="/profile.html?user=${post.username}" class="post-user-link">
+                    <img src="${avatar}" class="post-avatar" alt="${post.username}" />
                 </a>
-                <span class="post-time">${timeAgo}</span>
+                <div class="post-user-details">
+                    <a href="/profile.html?user=${post.username}" class="post-username-link">
+                        <h4 class="post-username">${post.display_name || post.username}</h4>
+                    </a>
+                    <span class="post-time">${timeAgo}</span>
+                </div>
             </div>
 
             ${!isOwner ? `
@@ -103,6 +106,7 @@ function createPostCard(post) {
         <div class="post-actions">
             <button class="post-action like-btn ${post.is_liked ? 'liked' : ''}" 
                     data-id="${post.id}" 
+                    data-post-id="${post.id}"
                     aria-label="Like">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="${post.is_liked ? '#e91e63' : 'none'}" stroke="${post.is_liked ? '#e91e63' : 'currentColor'}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                     <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
@@ -112,6 +116,7 @@ function createPostCard(post) {
 
             <button class="post-action comment-btn" 
                     data-id="${post.id}" 
+                    data-post-id="${post.id}"
                     aria-label="Comment">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                     <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path>
@@ -121,6 +126,7 @@ function createPostCard(post) {
 
             <button class="post-action share-btn" 
                     data-id="${post.id}" 
+                    data-post-id="${post.id}"
                     aria-label="Share">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                     <circle cx="18" cy="5" r="3"></circle>
@@ -133,14 +139,18 @@ function createPostCard(post) {
             </button>
         </div>
 
+        <!-- COMMENTS SECTION -->
         <div class="comments-section hidden" id="comments-${post.id}">
-            <div class="comments-list" id="comments-list-${post.id}"></div>
-            <div class="comment-input-row">
-                <input id="commentInput-${post.id}" 
-                       class="comment-input" 
+            <div class="comment-form">
+                <input type="text"
+                       class="comment-input"
+                       placeholder="Add a comment..."
                        data-post-id="${post.id}"
-                       placeholder="Add a comment..." />
-                <button class="comment-submit-btn" data-post="${post.id}">Post</button>
+                       data-id="${post.id}">
+                <button class="comment-submit" data-post-id="${post.id}">Post</button>
+            </div>
+            <div class="comments-list" id="comments-list-${post.id}">
+                <!-- Comments loaded by social-features.js -->
             </div>
         </div>
     `;

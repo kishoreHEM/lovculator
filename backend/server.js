@@ -42,6 +42,7 @@ import notificationsRouter from "./routes/notifications.js";
 import postsRouter from "./routes/posts.js";
 import feedRouter from "./routes/feed.js";
 import commentsRouter from "./routes/comments.js";
+import followRoutes from "./routes/follow.js";
 
 //
 // 3️⃣ PATH RESOLUTION & FRONTEND ROOT
@@ -250,6 +251,22 @@ app.use(
     },
   })
 );
+app.use((req, res, next) => {
+  // For HTML pages that require authentication, prevent caching
+  const protectedPages = [
+    '/profile',
+    '/messages',
+    '/admin-analytics',
+    '/stories'
+  ];
+  
+  if (protectedPages.some(page => req.path.startsWith(page))) {
+    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, private');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
+  }
+  next();
+});
 
 //
 // 1️⃣1️⃣ API ROUTES
@@ -264,6 +281,7 @@ app.use("/api/notifications", notificationsRouter);
 app.use("/api/posts/feed", feedRouter);
 app.use("/api/posts", postsRouter);
 app.use("/api/posts", commentsRouter);
+app.use("/api/follow", followRoutes(pool));
 app.use(trackPageVisit);
 
 //

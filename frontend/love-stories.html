@@ -47,12 +47,6 @@
 <header class="main-header">
     <div class="header-left">
         <a href="/" class="logo">Lovculator</a>
-        <div class="search-bar-placeholder">
-            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-search">
-                <circle cx="11" cy="11" r="8"></circle>
-                <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-            </svg>
-        </div>
     </div>
     <nav class="header-nav-center">
         <a href="/" class="nav-icon-item" aria-label="Home">
@@ -222,8 +216,7 @@
         <div class="ask-post-bar">
           <div class="ask-input" id="askTrigger">What do you want to ask or share?</div>
           <div class="ask-buttons">
-            <button class="ask-btn" id="askQuestionBtn">Ask</button>
-            <button class="post-btn" id="postStoryBtn">Post</button>
+            <button class="ask-btn" id="askQuestionBtn">+ LoveStory</button>
           </div>
         </div>
 
@@ -270,48 +263,6 @@
             <a href="/" class="home-link">← Back to Home</a>
         </div>
     </main>
-</div>
-
-<div id="askCreateModal" class="modal-overlay hidden">
-  <div class="modal-box ask-modal">
-    
-    <div class="modal-tabs">
-      <button class="tab-btn active" id="tabAddQuestion">Add Question</button>
-      <button class="tab-btn" id="tabCreatePost">Create Post</button>
-    </div>
-    <div class="tip-box">
-      <h4>💡 Tips on getting good answers quickly</h4>
-      <ul>
-        <li>✅ Make sure your question hasn’t been asked already</li>
-        <li>✍️ Keep your question short and to the point</li>
-        <li>🔍 Double-check grammar and spelling</li>
-      </ul>
-    </div>
-    <div class="modal-section" id="questionSection">
-      <textarea
-        id="questionText"
-        class="question-input"
-        placeholder='Start your question with "What", "How", "Why", etc.'
-        maxlength="200"
-      ></textarea>
-      <div class="modal-footer">
-        <button id="cancelAskCreate" class="btn-secondary">Cancel</button>
-        <button id="submitQuestion" class="btn-primary">Add Question</button>
-      </div>
-    </div>
-    <div class="modal-section hidden" id="postSection">
-      <textarea
-        id="postText"
-        class="question-input"
-        placeholder='Share your thoughts or love story...'
-        maxlength="500"
-      ></textarea>
-      <div class="modal-footer">
-        <button id="cancelPostCreate" class="btn-secondary">Cancel</button>
-        <button id="submitPost" class="btn-primary">Post</button>
-      </div>
-    </div>
-  </div>
 </div>
 
 <div class="fab-container">

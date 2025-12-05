@@ -18,6 +18,7 @@
     align-items: center;
     justify-content: space-between;
     z-index: 1000;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
 }
 
 .header-left {
@@ -122,6 +123,7 @@
     padding: 8px;
     min-width: 200px;
     margin-top: 8px;
+    z-index: 1001;
 }
 
 .user-dropdown a {
@@ -140,8 +142,10 @@
 /* Main Container */
 .app-container {
     display: flex;
-    margin-top: 0px;
+    margin-top: 56px;
     min-height: calc(100vh - 56px);
+    position: relative;
+    z-index: 1;
 }
 
 /* Left Sidebar */
@@ -155,6 +159,7 @@
     top: 56px;
     bottom: 0;
     overflow-y: auto;
+    height: calc(100vh - 56px);
 }
 
 .user-card {
@@ -403,29 +408,32 @@
     left: 0;
     right: 0;
     bottom: 0;
-    background: rgba(0, 0, 0, 0.5);
+    background: rgba(0, 0, 0, 0.75);
     display: flex;
     align-items: center;
     justify-content: center;
-    z-index: 2000;
+    z-index: 9999;
     padding: 20px;
+    backdrop-filter: blur(4px);
 }
 
 .modal-container {
     background: white;
-    border-radius: 8px;
+    border-radius: 12px;
     width: 100%;
     max-width: 500px;
     max-height: 90vh;
     overflow: hidden;
-    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.2);
-    animation: modalSlideIn 0.2s ease-out;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+    animation: modalSlideIn 0.3s ease-out;
+    z-index: 10000;
+    position: relative;
 }
 
 @keyframes modalSlideIn {
     from {
         opacity: 0;
-        transform: scale(0.9) translateY(-20px);
+        transform: scale(0.95) translateY(-10px);
     }
     to {
         opacity: 1;
@@ -475,87 +483,14 @@
     overflow-y: auto;
 }
 
-/* =========================================== */
-/* FIXED LAYOUT WITH MODALS ABOVE              */
-/* =========================================== */
-
-/* 1. Fixed Header (always visible) */
-.main-header {
-    position: fixed !important;
-    top: 0 !important;
-    left: 0 !important;
-    right: 0 !important;
-    height: 56px;
-    background: white;
-    border-bottom: 1px solid #dddfe2;
-    z-index: 1000; /* Base level for header */
-    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-}
-
-/* 2. Adjust container for fixed header */
-.app-container {
-    margin-top: 56px !important; /* Push down below header */
-    min-height: calc(100vh - 56px);
-    position: relative;
-    z-index: 1;
-}
-
-/* 3. Modal Overlay - MUST be above fixed header */
-.modal-overlay {
-    position: fixed !important;
-    top: 0 !important;
-    left: 0 !important;
-    right: 0 !important;
-    bottom: 0 !important;
-    z-index: 9999 !important; /* Higher than header */
-    background: rgba(0, 0, 0, 0.8) !important;
-    backdrop-filter: blur(4px);
-    display: flex !important;
-    align-items: center;
-    justify-content: center;
-    padding: 20px;
-}
-
-/* 4. Modal Container */
-.modal-container {
-    z-index: 10000 !important; /* Higher than overlay */
-    position: relative;
-    background: white;
-    border-radius: 12px;
-    width: 100%;
-    max-width: 500px;
-    max-height: 90vh;
-    overflow: hidden;
-    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
-    animation: modalSlideIn 0.3s ease-out;
-}
-
-/* 5. Prevent body scroll when modal is open */
+/* Prevent body scroll when modal is open */
 body.modal-open {
     overflow: hidden !important;
     position: fixed;
     width: 100%;
 }
 
-/* 6. Ensure sidebar accounts for header */
-.main-sidebar {
-    top: 56px !important; /* Start below fixed header */
-    height: calc(100vh - 56px) !important;
-}
-
-/* 7. Animation for modal */
-@keyframes modalSlideIn {
-    from {
-        opacity: 0;
-        transform: scale(0.95) translateY(-10px);
-    }
-    to {
-        opacity: 1;
-        transform: scale(1) translateY(0);
-    }
-}
-
-/* 8. Make sure all modals use same high z-index */
+/* Ensure all modals use same high z-index */
 #createPostModal,
 #storyModal,
 #askCreateModal,
@@ -565,53 +500,302 @@ body.modal-open {
     z-index: 9999 !important;
 }
 
-/* 9. Dropdowns should be below modals but above header */
-.notification-dropdown,
-.user-dropdown {
-    z-index: 1001 !important; /* Above header but below modals */
-}
-/* =========================================== */
-/* MODAL FIXES - ABOVE HEADER                  */
-/* =========================================== */
+/* ==============================================
+   POST USER INFO STYLING (Matching Stories)
+   ============================================== */
 
-/* Fix modal stacking */
-.modal-overlay {
-    z-index: 9999 !important;
-    background: rgba(0, 0, 0, 0.75) !important;
-    position: fixed !important;
+/* Post Header */
+.post-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 16px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid #f0f2f5;
 }
 
-.modal-container {
-    z-index: 10000 !important;
-    position: relative;
-}
-
-/* Ensure header is below modals */
-.main-header {
-    z-index: 1000;
-    position: relative;
-}
-
-/* Remove any stacking context creators from modal parents */
-body,
-html,
-.app-container,
-.main-content-area {
-    transform: none !important;
-    opacity: 1 !important;
-    filter: none !important;
-    position: static;
-}
-
-/* Make sure modal is visible when not hidden */
-.modal-overlay:not(.hidden) {
-    display: flex !important;
-    visibility: visible !important;
-    opacity: 1 !important;
-}
-
-/* User Info in Post */
+/* Post User Info - Same as story-user-info */
 .post-user-info {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex: 1;
+    margin-bottom: 0; /* Remove conflicting margin */
+}
+
+.post-avatar {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #ff4b8d, #ff6b6b);
+    display: flex;
+    border: 2px;
+    cursor: pointer;
+    object-fit: cover;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 16px;
+    font-weight: bold;
+}
+
+.post-user-link {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    overflow: hidden;
+    text-decoration: none;
+}
+
+.post-user-details {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.post-username {
+    margin: 0;
+    font-size: 1rem;
+    font-weight: 600;
+    color: #222;
+}
+
+.post-time {
+    font-size: 0.85rem;
+    color: #8e8e8e;
+}
+
+.post-user-link, 
+.post-username-link {
+    text-decoration: none;
+    color: inherit;
+    transition: 0.2s;
+}
+
+.post-user-link:hover img {
+    transform: scale(1.05);
+    border-color: #ff4b8d;
+}
+
+.post-username-link:hover .post-username {
+    color: #ff4b8d;
+}
+
+/* Follow Button */
+.follow-author-btn {
+    padding: 8px 16px;
+    border-radius: 20px;
+    border: 1px solid #ff4b8d;
+    background: white;
+    color: #ff4b8d;
+    font-weight: 600;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: all 0.2s;
+    white-space: nowrap;
+}
+
+.follow-author-btn:hover {
+    background: #fff0f6;
+}
+
+.follow-author-btn.following {
+    background: #ff4b8d;
+    color: white;
+}
+
+.follow-author-btn.following:hover {
+    
+    border-color: #e83e8c;
+}
+
+/* Post Content */
+.post-content {
+    margin-bottom: 16px;
+}
+
+.post-content p {
+    margin: 0;
+    font-size: 1rem;
+    line-height: 1.6;
+    color: #1c1e21;
+}
+
+/* Post Image */
+.post-image {
+    width: 100%;
+    max-height: 500px;
+    object-fit: cover;
+    border-radius: 12px;
+    margin-bottom: 16px;
+    display: block;
+}
+
+/* Post Actions */
+.post-actions {
+    display: flex;
+    justify-content: space-between;
+    gap: 8px;
+    margin-top: 16px;
+    padding-top: 16px;
+    border-top: 1px solid #f0f2f5;
+}
+
+.post-action {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 10px 0;
+    border-radius: 8px;
+    border: 1px solid #e4e6e9;
+    background: #ffffff;
+    cursor: pointer;
+    font-weight: 600;
+    transition: all 0.2s;
+    color: #65676b;
+    font-size: 0.9rem;
+}
+
+.post-action:hover {
+    background: #f5f5f5;
+}
+
+.post-action svg {
+    width: 20px;
+    height: 20px;
+}
+
+.like-btn.liked {
+    color: #e91e63;
+}
+
+.like-btn.liked svg {
+    fill: #e91e63;
+    stroke: #e91e63;
+}
+
+.like-count, 
+.comment-count,
+.share-label {
+    font-size: 0.9rem;
+    color: inherit;
+}
+
+/* Comments Section */
+.comments-section {
+    margin-top: 16px;
+    padding-top: 16px;
+    border-top: 1px solid #f0f2f5;
+}
+
+.comment-form {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 16px;
+}
+
+.comment-input {
+    flex: 1;
+    padding: 12px 16px;
+    border: 1px solid #dddfe2;
+    border-radius: 20px;
+    font-size: 0.9rem;
+    outline: none;
+    transition: border-color 0.2s;
+}
+
+.comment-input:focus {
+    border-color: #ff4b8d;
+}
+
+.comment-submit {
+    padding: 12px 24px;
+    background: #ff4b8d;
+    color: white;
+    border: none;
+    border-radius: 20px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.comment-submit:hover {
+    background: #e83e8c;
+}
+
+.comment-submit:disabled {
+    background: #e4e6e9;
+    cursor: not-allowed;
+}
+
+.comments-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.comment {
+    display: flex;
+    gap: 12px;
+    padding: 12px;
+    background: #f8f9fa;
+    border-radius: 12px;
+}
+
+.comment-avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    object-fit: cover;
+}
+
+.comment-content-wrapper {
+    flex: 1;
+}
+
+.comment-author-info {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 4px;
+}
+
+.comment-author-name {
+    font-weight: 600;
+    font-size: 0.9rem;
+    color: #1c1e21;
+}
+
+.comment-time {
+    font-size: 0.8rem;
+    color: #65676b;
+}
+
+.comment-text {
+    margin: 0;
+    font-size: 0.9rem;
+    line-height: 1.4;
+    color: #1c1e21;
+}
+
+.empty-state-comment {
+    text-align: center;
+    padding: 20px;
+    color: #65676b;
+    font-style: italic;
+}
+
+/* ==============================================
+   MODAL SPECIFIC STYLES (Not for feed posts)
+   ============================================== */
+
+/* MODAL User Info - Different from post feed */
+.modal-user-info {
     display: flex;
     align-items: center;
     gap: 12px;
@@ -626,7 +810,7 @@ html,
 
 .post-user-details h4 {
     margin: 0;
-    font-size: 15px;
+    font-size: 1rem;
     font-weight: 600;
     color: #1c1e21;
 }
@@ -640,7 +824,7 @@ html,
     background: white;
 }
 
-/* Post Content */
+/* Post Content Area (Modal) */
 .post-content-area {
     margin-bottom: 16px;
 }
@@ -660,7 +844,7 @@ html,
     color: #65676b;
 }
 
-/* Image Preview */
+/* Image Preview (Modal) */
 .image-preview-container {
     margin-top: 16px;
     position: relative;
@@ -699,7 +883,7 @@ html,
     background: rgba(0, 0, 0, 0.8);
 }
 
-/* Post Options */
+/* Post Options (Modal) */
 .post-options {
     border: 1px solid #dddfe2;
     border-radius: 8px;
@@ -781,7 +965,6 @@ html,
 .btn-loading {
     display: none;
 }
-
 /* Sub Modal (Feeling/Activity) */
 .sub-modal {
     position: fixed;
@@ -1186,16 +1369,6 @@ html,
     flex: 1;
 }
 
-.notification-badge {
-    background: #ff4b8d;
-    color: white;
-    font-size: 12px;
-    font-weight: 600;
-    padding: 2px 8px;
-    border-radius: 10px;
-    margin-left: auto;
-}
-
 .notification-text {
     margin: 0 0 8px 0;
     font-size: 14px;
@@ -1340,48 +1513,6 @@ html,
     100% { transform: rotate(360deg); }
 }
 
-/* Responsive Design */
-@media (max-width: 768px) {
-    .notifications-page {
-        padding: 0 16px;
-    }
-    
-    .page-header {
-        flex-direction: column;
-        align-items: flex-start;
-        gap: 12px;
-    }
-    
-    .header-actions {
-        width: 100%;
-        justify-content: flex-end;
-    }
-    
-    .page-notification-item {
-        padding: 12px 16px;
-        gap: 12px;
-    }
-    
-    .notification-avatar {
-        width: 40px;
-        height: 40px;
-    }
-    
-    .notification-title {
-        font-size: 14px;
-    }
-    
-    .notification-text {
-        font-size: 13px;
-    }
-    
-    .notification-meta {
-        flex-wrap: wrap;
-        gap: 8px;
-    }
-}
-
-/* Empty State */
 .empty-state {
     text-align: center;
     padding: 60px 20px;
@@ -1447,13 +1578,6 @@ html,
     margin-bottom: 10px;
 }
 
-.post-avatar {
-    width: 46px;
-    height: 46px;
-    border-radius: 50%;
-    margin-right: 10px;
-}
-
 .post-time {
     font-size: 13px;
     opacity: 0.6;
@@ -1475,9 +1599,8 @@ html,
     margin-top: 10px;
 }
 
-
 .post-action {
-    flex: 1;                      /* makes each button equal width */
+    flex: 1;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -1521,24 +1644,24 @@ html,
 
 /* Toast Popup */
 .toast-popup {
-  position: fixed;
-  bottom: 20px;
-  right: 20px;
-  background:#333;
-  color:#fff; 
-  padding:12px 18px;
-  border-radius:10px;
-  opacity:0;
-  transform: translateY(20px);
-  transition: opacity .3s, transform .3s;
-  z-index:99999;
-  font-size:15px;
-  font-weight:600;
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    background:#333;
+    color:#fff; 
+    padding:12px 18px;
+    border-radius:10px;
+    opacity:0;
+    transform: translateY(20px);
+    transition: opacity .3s, transform .3s;
+    z-index:99999;
+    font-size:15px;
+    font-weight:600;
 }
 
 .toast-popup.visible {
-  opacity:1;
-  transform: translateY(0);
+    opacity:1;
+    transform: translateY(0);
 }
 
 /* Feed Styles */
@@ -1604,7 +1727,7 @@ html,
     text-align: left;
 }
 
-/* Responsive */
+/* Responsive Design */
 @media (max-width: 1200px) {
     .right-sidebar {
         display: none;
@@ -1728,34 +1851,84 @@ html,
     .header-nav-center {
         display: none;
     }
+    
     .upload-btn {
         display: inline-flex;
         align-items: center;
-        gap: 8px; /* Adds space between the camera and text */
+        gap: 8px;
     }
-
+    
     .btn-icon {
-        flex-shrink: 0; /* Prevents icon from getting squashed */
+        flex-shrink: 0;
+    }
+    
+    /* ===== NOTIFICATIONS PAGE AVATAR FIX ===== */
+    .notifications-page .page-notification-item .notification-avatar {
+        width: 48px !important;
+        height: 48px !important;
+        min-width: 48px !important;
+        min-height: 48px !important;
+        flex-shrink: 0 !important;
+    }
+    
+    .notifications-page .page-notification-item .notification-avatar img {
+        width: 100% !important;
+        height: 100% !important;
+        object-fit: cover !important;
+    }
+    
+    /* Keep dropdown avatars smaller */
+    .notification-dropdown .notification-avatar {
+        width: 40px;
+        height: 40px;
     }
 
-    /* ===== NOTIFICATIONS PAGE AVATAR FIX ===== */
-.notifications-page .page-notification-item .notification-avatar {
-    width: 48px !important;
-    height: 48px !important;
-    min-width: 48px !important;
-    min-height: 48px !important;
-    flex-shrink: 0 !important;
-}
+    /* Post actions styling */
+    .post-actions {
+        display: flex;
+        justify-content: space-between;
+        gap: 10px;
+        margin-top: 10px;
+        padding-top: 10px;
+        border-top: 1px solid #eee;
+    }
 
-.notifications-page .page-notification-item .notification-avatar img {
-    width: 100% !important;
-    height: 100% !important;
-    object-fit: cover !important;
-}
+    .post-action {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 12px 0;
+    border-radius: 12px;
+    border: 1px solid #eee;
+    background: #ffffff;
+    cursor: pointer;
+    font-weight: 600;
+    transition: 0.2s ease;
+    color: #666;
+    }
 
-/* Keep dropdown avatars smaller */
-.notification-dropdown .notification-avatar {
-    width: 40px;
-    height: 40px;
-}
+    .post-action:hover {
+    background: #f5f5f5;
+    }
+
+    .post-action svg {
+    width: 20px;
+    height: 20px;
+    }
+
+    .like-btn.liked {
+    color: #e91e63;
+    }
+
+    .like-btn.liked svg {
+    fill: #e91e63;
+    stroke: #e91e63;
+    }
+
+    .like-count, .comment-count {
+    font-size: 14px;
+    color: inherit;
+    }
 }
