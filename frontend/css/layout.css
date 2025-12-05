@@ -19,6 +19,7 @@
     justify-content: space-between;
     z-index: 1000;
     box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    line-height: 0.6;
 }
 
 .header-left {
@@ -524,8 +525,8 @@ body.modal-open {
 }
 
 .post-avatar {
-    width: 60px;
-    height: 60px;
+    width: 46px;
+    height: 46px;
     border-radius: 50%;
     background: linear-gradient(135deg, #ff4b8d, #ff6b6b);
     display: flex;
@@ -1931,4 +1932,33 @@ body.modal-open {
     font-size: 14px;
     color: inherit;
     }
+
+    /* Mobile Sidebar Styles */
+@media (max-width: 1024px) {
+    .main-sidebar {
+        position: fixed;
+        left: -280px; /* Hide off-screen by default */
+        top: 0;
+        bottom: 0;
+        width: 280px;
+        z-index: 1000;
+        transition: left 0.3s ease;
+        /* existing styles... */
+    }
+
+    .main-sidebar.active {
+        left: 0; /* Slide in when active */
+    }
+    
+    .mobile-menu-overlay {
+        /* ... styles for overlay ... */
+        display: none;
+    }
+    
+    .mobile-menu-overlay.active {
+        display: block;
+    }
+}
+
+
 }

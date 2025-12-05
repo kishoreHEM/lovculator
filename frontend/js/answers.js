@@ -5,6 +5,17 @@ if (!window.API_BASE) {
         : "https://lovculator.com/api";
 }
 
+// XSS Protection Helper
+function escapeHtml(unsafe) {
+    if (typeof unsafe !== 'string') return unsafe;
+    return unsafe
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+}
+
 // Make function globally available
 window.loadQuestions = async function() {
     const container = document.getElementById("storiesContainer");
@@ -63,8 +74,11 @@ window.loadQuestions = async function() {
         container.innerHTML = questions
             .map(question => {
                 // Extract question data with fallbacks
-                const questionText = question.question || question.title || question.content || '';
-                const questionSlug = question.slug || question.id || '';
+                // Apply escaping to user content
+                const questionText = escapeHtml(question.question || question.title || question.content || '');
+                const questionSlug = escapeHtml(question.slug || question.id || '');
+                const username = escapeHtml(question.username || 'Anonymous');
+                
                 const questionDate = question.created_at || question.date || new Date().toISOString();
                 const formattedDate = new Date(questionDate).toLocaleDateString('en-US', {
                     year: 'numeric',
@@ -79,6 +93,20 @@ window.loadQuestions = async function() {
 
                 return `
                     <div class="question-card" data-question-id="${question.id || ''}">
+                        <!-- Question Header -->
+                        <div class="question-header">
+                            <div class="question-user-info">
+                                <img src="${question.avatar_url || '/images/default-avatar.png'}" 
+                                     alt="${username}" 
+                                     class="question-avatar"
+                                     onerror="this.src='/images/default-avatar.png'">
+                                <div class="question-user-details">
+                                    <span class="question-username">${username}</span>
+                                    <span class="question-date">${formattedDate}</span>
+                                </div>
+                            </div>
+                        </div>
+
                         <!-- Question Text -->
                         <a href="/question.html?slug=${questionSlug}" class="question-title">
                             ${questionText}

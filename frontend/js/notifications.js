@@ -5,7 +5,6 @@ class NotificationManager {
     constructor() {
         this.notificationCount = 0;
         this.messageCount = 0;
-
         this.socket = null;
         this.reconnectTimeout = null;
         this.autoRefreshInterval = null;
@@ -13,29 +12,20 @@ class NotificationManager {
         // Bind reference methods
         this.boundCloseNotifications = this.closeNotifications.bind(this);
         this.boundHandleSocketMessage = this.handleSocketMessage.bind(this);
-        this.boundReconnect = this.setupWebSocket.bind(this); // 🟢 Bind for explicit reconnect call
+        this.boundReconnect = this.setupWebSocket.bind(this);
 
         this.init();
     }
 
-    /* ======================================================
-       INIT
-    ====================================================== */
     init() {
         console.log("🔔 NotificationManager initialized");
-
         this.setupNotificationHandlers();
-        // 🟢 These two calls immediately fetch and update the badge counts on page load
         this.updateNotificationBadge();
         this.updateMessageBadge(); 
-        
         this.setupWebSocket();
         this.startAutoRefresh();
     }
 
-    /* ======================================================
-       HEADER BUTTON HANDLERS
-    ====================================================== */
     setupNotificationHandlers() {
         const notificationsBtn = document.getElementById("notificationsBtn");
         const messagesBtn = document.getElementById("messagesBtn");
@@ -46,9 +36,6 @@ class NotificationManager {
         });
     }
 
-    /* ======================================================
-       FETCH NOTIFICATIONS / SHOW DROPDOWN
-    ====================================================== */
     async showNotifications() {
         try {
             const response = await fetch("/api/notifications?filter=all&page=1&limit=5", {
@@ -56,10 +43,20 @@ class NotificationManager {
             });
 
             const data = response.ok ? await response.json() : { notifications: [] };
+            
+            // 1. Render dropdown first
             this.renderDropdown(data.notifications);
 
-            // Mark all visible as read
-            this.markAllAsReadSilent();
+            // 2. Identify unread IDs
+            const unreadIds = data.notifications
+                .filter(n => !n.is_read && !n.read)
+                .map(n => n.id);
+
+            // 3. Mark unread as read (Client-side loop workaround)
+            if (unreadIds.length > 0) {
+                this.markListAsRead(unreadIds);
+            }
+
         } catch (error) {
             console.error("❌ Notification load error:", error);
             this.renderDropdown([]);
@@ -67,271 +64,116 @@ class NotificationManager {
     }
 
     renderDropdown(notifications) {
-    const existing = document.getElementById("notificationsDropdown");
-    if (existing) existing.remove();
-    
-    // Find the position of the notifications button to place the dropdown
-    const btn = document.getElementById("notificationsBtn");
-    if (!btn) return;
-    
-    const rect = btn.getBoundingClientRect();
-
-    const dropdown = document.createElement("div");
-    dropdown.id = "notificationsDropdown";
-    dropdown.className = "notification-dropdown";
-    
-    // 🟢 Positioning the dropdown right below the button
-    dropdown.style.position = 'absolute';
-    dropdown.style.top = `${rect.bottom + 10}px`;
-    dropdown.style.right = `${window.innerWidth - rect.right}px`;
-    dropdown.style.zIndex = '1000';
-
-    dropdown.innerHTML = `
-        <div class="dropdown-header">
-            <h4>Notifications</h4>
-            <a href="/notifications.html" class="see-all-link">See All</a>
-        </div>
-        <div class="dropdown-content">
-            ${
-                notifications.length > 0
-                    ? notifications
-                          .map(
-                              (n) => `
-                    <div class="dropdown-notification-item ${n.is_read ? "" : "unread"}">
-                        <img src="${n.actor_avatar_url || "/images/default-avatar.png"}" alt="${n.actor_name || 'User'}" class="notification-avatar">
-                        <div class="notification-content">
-                            <div class="dropdown-notification-text">${n.message}</div>
-                            <div class="dropdown-notification-time">${this.formatTime(n.created_at)}</div>
-                            ${!n.is_read ? `
-                            <div class="notification-dropdown-actions">
-                                <button class="notification-dropdown-action" data-notification-id="${n.id}">Mark as read</button>
-                            </div>
-                            ` : ''}
-                        </div>
-                        ${!n.is_read ? '<div class="unread-dot"></div>' : ''}
-                    </div>
-                `
-                          )
-                          .join("")
-                    : `<div class="no-notifications">No new notifications</div>`
-            }
-        </div>
-        <div class="dropdown-footer">
-            <a href="/notifications.html">View all notifications</a>
-        </div>
-    `;
-
-    document.body.appendChild(dropdown);
-    
-    // Add event listeners for mark as read buttons
-    dropdown.querySelectorAll('.notification-dropdown-action').forEach(button => {
-        button.addEventListener('click', (e) => {
-            e.stopPropagation();
-            const notificationId = button.dataset.notificationId;
-            this.markAsRead(notificationId);
-        });
-    });
-    
-    setTimeout(() => {
-        document.addEventListener("click", this.boundCloseNotifications);
-    }, 100);
-}
-
-    closeNotifications(event) {
-        const dropdown = document.getElementById("notificationsDropdown");
+        const existing = document.getElementById("notificationsDropdown");
+        if (existing) existing.remove();
+        
         const btn = document.getElementById("notificationsBtn");
+        if (!btn) return;
         
-        // Check if the click was outside the dropdown AND outside the button
-        if (dropdown && btn && !dropdown.contains(event.target) && !btn.contains(event.target)) {
-            dropdown.remove();
-            document.removeEventListener("click", this.boundCloseNotifications);
-        }
-    }
+        // Deduplicate
+        const uniqueNotifications = Array.from(
+            new Map(notifications.map(n => [n.id, n])).values()
+        );
 
-    /* ======================================================
-       BADGE COUNT REFRESH
-    ====================================================== */
-    async updateNotificationBadge() {
-        try {
-            // 🟢 This API call fetches the unread count
-            const res = await fetch("/api/notifications/unread-count", { credentials: "include" });
-            const data = await res.json();
-            this.notificationCount = data.count || 0;
-            this.updateNotificationBadgeUI();
-        } catch (error) {
-            console.error("Error updating notif badge:", error);
-        }
-    }
-
-    updateNotificationBadgeUI() {
-        // 🟢 Targeting the element with class .notification-badge
-        const badge = document.querySelector(".notification-badge");
-        if (!badge) return;
-
-        if (this.notificationCount > 0) {
-            badge.textContent = this.notificationCount > 99 ? "99+" : String(this.notificationCount);
-            badge.classList.remove("hidden"); // 🟢 Makes the badge visible
-        } else {
-            badge.classList.add("hidden");
-        }
-    }
-
-    async updateMessageBadge() {
-        try {
-            // 🟢 This API call fetches the unread count
-            const res = await fetch("/api/messages/unread-count", { credentials: "include" });
-            const data = await res.json();
-            this.messageCount = data.count || 0;
-
-            // 🟢 Targeting the element with class .message-badge
-            const badge = document.querySelector(".message-badge");
-            if (!badge) return;
-
-            if (this.messageCount > 0) {
-                badge.textContent = this.messageCount > 99 ? "99+" : String(this.messageCount);
-                badge.classList.remove("hidden"); // 🟢 Makes the badge visible
-            } else {
-                badge.classList.add("hidden");
-            }
-        } catch (error) {
-            console.warn("Messages unread API not ready yet or failed to fetch.");
-        }
-    }
-
-    /* ======================================================
-       MARK ALL READ (SILENT)
-    ====================================================== */
-    async markAllAsReadSilent() {
-        await fetch("/api/notifications/mark-all-read", {
-            method: "POST",
-            credentials: "include"
-        });
-        this.updateNotificationBadge();
-    }
-
-    /* ======================================================
-       WEBSOCKET
-    ====================================================== */
-    setupWebSocket() {
-        clearTimeout(this.reconnectTimeout); // Clear any pending reconnects
+        const rect = btn.getBoundingClientRect();
+        const dropdown = document.createElement("div");
+        dropdown.id = "notificationsDropdown";
+        dropdown.className = "notification-dropdown";
         
-        try {
-            // Check if messagesManager already created the socket (Decoupling is better, but this handles the current structure)
-            if (window.messagesManager?.socket) {
-                this.socket = window.messagesManager.socket;
-                this.socket.removeEventListener("message", this.boundHandleSocketMessage); // Prevent duplicate listeners
-                this.socket.addEventListener("message", this.boundHandleSocketMessage);
-                console.log("🔌 Reusing existing WS connection for notifications");
-                return;
-            }
-            
-            // If no existing socket, create a new one
-            const protocol = window.location.protocol === "https:" ? "wss" : "ws";
-            this.socket = new WebSocket(`${protocol}://${window.location.host}`);
+        dropdown.style.position = 'absolute';
+        dropdown.style.top = `${rect.bottom + 10}px`;
+        dropdown.style.right = `${window.innerWidth - rect.right}px`;
+        dropdown.style.zIndex = '1000';
 
-            this.socket.addEventListener("open", () =>
-                console.log("✅ Notifications WebSocket Connected")
-            );
-
-            this.socket.addEventListener("message", this.boundHandleSocketMessage);
-
-            this.socket.addEventListener("close", () => {
-                console.log("⚠️ WS closed — Reconnecting in 5s...");
-                // 🟢 Use the bound method for clean recursion
-                this.reconnectTimeout = setTimeout(this.boundReconnect, 5000); 
-            });
-            
-            this.socket.addEventListener("error", (err) => {
-                console.error("❌ WS error:", err);
-                this.socket?.close(); // Force close to trigger the 'close' handler and retry
-            });
-
-        } catch (error) {
-            console.error("❌ WS init failed:", error);
-            this.reconnectTimeout = setTimeout(this.boundReconnect, 5000); 
-        }
-    }
-
-    handleSocketMessage(event) {
-        let data = null;
-        try {
-            data = JSON.parse(event.data);
-        } catch {
-            return;
-        }
-
-        if (!data.type) return;
-
-        switch (data.type) {
-            case "NEW_NOTIFICATION":
-                // 🟢 Update local count and badge UI immediately
-                this.notificationCount++;
-                this.updateNotificationBadgeUI();
-                this.showToast(data.message);
-                break;
-
-            case "NEW_MESSAGE":
-                // 🟢 Refresh message badge
-                this.updateMessageBadge();
-                this.showToast("📨 New message received");
-                break;
-        }
-    }
-
-    /* ======================================================
-       LIVE TOAST POPUP
-    ====================================================== */
-    showToast(message) {
-        const toast = document.createElement("div");
-        toast.className = "toast-popup";
-        toast.textContent = message;
-
-        // Apply temporary inline styles for visibility (assuming you have toast styles in CSS)
-        toast.style.cssText = `
-            position: fixed; 
-            top: 20px; 
-            right: 20px; 
-            background: #ff4b8d; 
-            color: white; 
-            padding: 10px 15px; 
-            border-radius: 6px; 
-            box-shadow: 0 4px 10px rgba(0,0,0,0.1); 
-            z-index: 10000;
-            opacity: 0;
-            transition: opacity 0.3s, transform 0.3s;
-            transform: translateX(100%);
+        dropdown.innerHTML = `
+            <div class="dropdown-header">
+                <h4>Notifications</h4>
+                <a href="/notifications.html" class="see-all-link">See All</a>
+            </div>
+            <div class="dropdown-content">
+                ${
+                    uniqueNotifications.length > 0
+                        ? uniqueNotifications.map((n) => {
+                            const formattedText = this.formatNotificationText(n);
+                            const timeAgo = this.formatTime(n.created_at);
+                            
+                            // Check flat fields for avatar too
+                            const actorAvatar = n.actor?.avatar_url || n.actor_avatar_url || "/images/default-avatar.png";
+                            
+                            return `
+                                <div class="dropdown-notification-item ${n.read || n.is_read ? "" : "unread"}">
+                                    <img 
+                                        src="${actorAvatar}" 
+                                        alt="User" 
+                                        class="notification-avatar"
+                                        onerror="this.onerror=null;this.src='/images/default-avatar.png';"
+                                    >
+                                    <div class="notification-content">
+                                        <div class="dropdown-notification-text">${formattedText}</div>
+                                        <div class="dropdown-notification-time">${timeAgo}</div>
+                                        ${!n.read && !n.is_read ? `
+                                        <div class="notification-dropdown-actions">
+                                            <button class="notification-dropdown-action" data-notification-id="${n.id}">Mark as read</button>
+                                        </div>
+                                        ` : ''}
+                                    </div>
+                                    ${!n.read && !n.is_read ? '<div class="unread-dot"></div>' : ''}
+                                </div>
+                            `;
+                        }).join("")
+                        : `<div class="no-notifications">No new notifications</div>`
+                }
+            </div>
+            <div class="dropdown-footer">
+                <a href="/notifications.html">View all notifications</a>
+            </div>
         `;
 
-        document.body.appendChild(toast);
-
-        setTimeout(() => {
-            toast.style.opacity = '1';
-            toast.style.transform = 'translateX(0)';
-        }, 50);
-
-        setTimeout(() => {
-            toast.style.opacity = '0';
-            toast.style.transform = 'translateX(100%)';
-            setTimeout(() => toast.remove(), 300);
-        }, 3000);
-    }
-
-    /* ======================================================
-       AUTO REFRESH EVERY 60 SEC
-    ====================================================== */
-    startAutoRefresh() {
-        // Clear any existing interval to prevent duplicates
-        if (this.autoRefreshInterval) clearInterval(this.autoRefreshInterval); 
+        document.body.appendChild(dropdown);
         
-        this.autoRefreshInterval = setInterval(() => {
-            this.updateNotificationBadge();
-            this.updateMessageBadge();
-        }, 60000); // Refreshes every minute
+        dropdown.querySelectorAll('.notification-dropdown-action').forEach(button => {
+            button.addEventListener('click', (e) => {
+                e.stopPropagation();
+                this.markAsRead(button.dataset.notificationId);
+            });
+        });
+        
+        setTimeout(() => {
+            document.addEventListener("click", this.boundCloseNotifications);
+        }, 100);
     }
 
-    /* ======================================================
-       TIME FORMAT HELPERS
-    ====================================================== */
+    formatNotificationText(notification) {
+        const { type, actor, message, data } = notification;
+        
+        const displayName = actor?.display_name || notification.actor_display_name;
+        const userName = actor?.username || notification.actor_username;
+        
+        const nameToDisplay = this.safeText(displayName || userName || 'Someone');
+
+        switch (type) {
+            case 'like':
+                return `<strong>${nameToDisplay}</strong> liked your ${data?.post_type === 'story' ? 'love story' : 'post'}`;
+            case 'comment':
+                return `<strong>${nameToDisplay}</strong> commented on your ${data?.post_type === 'story' ? 'love story' : 'post'}`;
+            case 'follow':
+                return `<strong>${nameToDisplay}</strong> started following you`;
+            case 'message':
+                return `<strong>${nameToDisplay}</strong> sent you a message`;
+            case 'system':
+                return this.safeText(message);
+            default:
+                return this.safeText(message || 'A new event occurred');
+        }
+    }
+
+    safeText(str) {
+        if (!str) return '';
+        const div = document.createElement('div');
+        div.textContent = str;
+        return div.innerHTML;
+    }
+
     formatTime(dateString) {
         const date = new Date(dateString);
         const now = new Date();
@@ -345,8 +187,155 @@ class NotificationManager {
         if (hrs < 24) return `${hrs}h ago`;
         return `${days}d ago`;
     }
+
+    closeNotifications(event) {
+        const dropdown = document.getElementById("notificationsDropdown");
+        const btn = document.getElementById("notificationsBtn");
+        
+        if (dropdown && btn && !dropdown.contains(event.target) && !btn.contains(event.target)) {
+            dropdown.remove();
+            document.removeEventListener("click", this.boundCloseNotifications);
+        }
+    }
+
+    async updateNotificationBadge() {
+        try {
+            const res = await fetch("/api/notifications/unread-count", { credentials: "include" });
+            const data = await res.json();
+            this.notificationCount = data.count || 0;
+            this.updateNotificationBadgeUI();
+        } catch (error) {}
+    }
+
+    updateNotificationBadgeUI() {
+        const badge = document.querySelector(".notification-badge");
+        if (!badge) return;
+
+        if (this.notificationCount > 0) {
+            badge.textContent = this.notificationCount > 99 ? "99+" : String(this.notificationCount);
+            badge.classList.remove("hidden");
+        } else {
+            badge.classList.add("hidden");
+        }
+    }
+
+    async updateMessageBadge() {
+        try {
+            const res = await fetch("/api/messages/unread-count", { credentials: "include" });
+            const data = await res.json();
+            this.messageCount = data.count || 0;
+
+            const badge = document.querySelector(".message-badge");
+            if (!badge) return;
+
+            if (this.messageCount > 0) {
+                badge.textContent = this.messageCount > 99 ? "99+" : String(this.messageCount);
+                badge.classList.remove("hidden");
+            } else {
+                badge.classList.add("hidden");
+            }
+        } catch (error) {}
+    }
+
+    // ✅ ADDED THIS MISSING METHOD
+    async markListAsRead(ids) {
+        if (!ids || ids.length === 0) return;
+        this.notificationCount = Math.max(0, this.notificationCount - ids.length);
+        this.updateNotificationBadgeUI();
+
+        ids.forEach(id => {
+            fetch(`/api/notifications/${id}/read`, { 
+                method: "POST", 
+                credentials: "include" 
+            }).catch(e => console.error(`Failed to mark ${id} read`, e));
+        });
+    }
+
+    async markAsRead(id) {
+        try {
+            await fetch(`/api/notifications/${id}/read`, { method: "POST", credentials: "include" });
+            const btn = document.querySelector(`button[data-notification-id="${id}"]`);
+            if (btn) {
+                const item = btn.closest('.dropdown-notification-item');
+                item.classList.remove('unread');
+                item.querySelector('.unread-dot')?.remove();
+                btn.parentElement.remove();
+            }
+            this.updateNotificationBadge();
+        } catch (e) { console.error(e); }
+    }
+
+    setupWebSocket() {
+        clearTimeout(this.reconnectTimeout); 
+        try {
+            if (window.messagesManager?.socket) {
+                this.socket = window.messagesManager.socket;
+                this.socket.removeEventListener("message", this.boundHandleSocketMessage);
+                this.socket.addEventListener("message", this.boundHandleSocketMessage);
+                return;
+            }
+            
+            const protocol = window.location.protocol === "https:" ? "wss" : "ws";
+            this.socket = new WebSocket(`${protocol}://${window.location.host}`);
+
+            this.socket.addEventListener("message", this.boundHandleSocketMessage);
+            this.socket.addEventListener("close", () => {
+                this.reconnectTimeout = setTimeout(this.boundReconnect, 5000); 
+            });
+            this.socket.addEventListener("error", () => this.socket?.close());
+
+        } catch (error) {
+            this.reconnectTimeout = setTimeout(this.boundReconnect, 5000); 
+        }
+    }
+
+    handleSocketMessage(event) {
+        let data = null;
+        try { data = JSON.parse(event.data); } catch { return; }
+        if (!data.type) return;
+
+        switch (data.type) {
+            case "NEW_NOTIFICATION":
+                this.notificationCount++;
+                this.updateNotificationBadgeUI();
+                this.showToast(data.message);
+                break;
+            case "NEW_MESSAGE":
+                this.updateMessageBadge();
+                this.showToast("📨 New message received");
+                break;
+        }
+    }
+
+    showToast(message) {
+        const toast = document.createElement("div");
+        toast.className = "toast-popup";
+        toast.textContent = message;
+        toast.style.cssText = `
+            position: fixed; top: 20px; right: 20px; background: #ff4b8d; 
+            color: white; padding: 10px 15px; border-radius: 6px; 
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1); z-index: 10000;
+            opacity: 0; transition: opacity 0.3s, transform 0.3s; transform: translateX(100%);
+        `;
+        document.body.appendChild(toast);
+        setTimeout(() => { toast.style.opacity = '1'; toast.style.transform = 'translateX(0)'; }, 50);
+        setTimeout(() => { 
+            toast.style.opacity = '0'; toast.style.transform = 'translateX(100%)'; 
+            setTimeout(() => toast.remove(), 300);
+        }, 3000);
+    }
+
+    startAutoRefresh() {
+        if (this.autoRefreshInterval) clearInterval(this.autoRefreshInterval); 
+        this.autoRefreshInterval = setInterval(() => {
+            this.updateNotificationBadge();
+            this.updateMessageBadge();
+        }, 60000);
+    }
 }
 
 document.addEventListener("DOMContentLoaded", () => {
-    window.notificationManager = new NotificationManager();
+    if (document.getElementById("notificationsBtn")) {
+        window.notificationManager = new NotificationManager();
+    }
 });

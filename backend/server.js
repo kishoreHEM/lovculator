@@ -276,7 +276,10 @@ app.use("/api/users", userRoutes);
 app.use("/api/stories", storiesRoutes);
 app.use("/api/messages", messageRoutes);
 app.use("/api/analytics", analyticsRoutesFactory(pool));
-app.use("/api/questions", questionsRouter(pool));
+
+// ✅ FIXED: Removed (pool) call since questionsRouter is now a standard router object
+app.use("/api/questions", questionsRouter);
+
 app.use("/api/notifications", notificationsRouter);
 app.use("/api/posts/feed", feedRouter);
 app.use("/api/posts", postsRouter);
@@ -351,4 +354,3 @@ server.listen(PORT, () => {
   console.log(`🌍 Environment: ${process.env.NODE_ENV || "development"}`);
   console.log(`📁 Frontend path: ${frontendPath}`);
 });
-  

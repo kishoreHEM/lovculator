@@ -128,6 +128,22 @@ router.get("/unread-count", auth, async (req, res) => {
 });
 
 /* ======================================================
+   ✅ NEW ROUTE: Mark ALL notifications as read
+====================================================== */
+router.post("/mark-all-read", auth, async (req, res) => {
+    try {
+        await pool.query(
+            "UPDATE notifications SET is_read = true WHERE user_id = $1",
+            [req.user.id]
+        );
+        res.json({ success: true, message: "All notifications marked as read" });
+    } catch (error) {
+        console.error("❌ Mark all read error:", error);
+        res.status(500).json({ error: "Failed to mark all as read" });
+    }
+});
+
+/* ======================================================
    🎯 Helper: Create notification
 ====================================================== */
 export const createNotification = async ({
