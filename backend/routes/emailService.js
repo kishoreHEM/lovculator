@@ -7,50 +7,38 @@ dotenv.config();
  * Send verification email using EmailJS
  */
 export const sendVerificationEmail = async (to, token, username) => {
-  const serviceId = process.env.EMAILJS_SERVICE_ID;
-  const templateId = process.env.EMAILJS_TEMPLATE_ID;
-  const userId = process.env.EMAILJS_PUBLIC_KEY;
-  
-  if (!serviceId || !templateId || !userId) {
-    console.error('❌ EmailJS credentials missing');
-    return false;
-  }
-  
-  const verificationLink = `${process.env.CLIENT_URL || 'https://lovculator.com'}/verify-email.html?token=${token}`;
-  
-  const templateParams = {
-    to_email: to,
-    username: username,
-    verification_link: verificationLink,
-    reply_to: 'noreply@lovculator.com'
-  };
-  
   try {
     const response = await fetch('https://api.emailjs.com/api/v1.0/email/send', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'origin': process.env.CLIENT_URL || 'https://lovculator.com'
       },
       body: JSON.stringify({
-        service_id: serviceId,
-        template_id: templateId,
-        user_id: userId,
-        template_params: templateParams,
-        accessToken: process.env.EMAILJS_PRIVATE_KEY // Optional for private templates
+        service_id: process.env.EMAILJS_SERVICE_ID,      // Your SERVICE ID
+        template_id: process.env.EMAILJS_TEMPLATE_ID,    // Your TEMPLATE ID
+        user_id: process.env.EMAILJS_PUBLIC_KEY,         // Your PUBLIC KEY
+        template_params: {
+          to_email: to,                                  // Recipient email
+          username: username,                            // User's name
+          verification_link: `https://lovculator.com/verify-email.html?token=${token}`,
+          year: new Date().getFullYear().toString(),     // Current year
+          reply_to: 'support@lovculator.com'             // Optional
+        }
       })
     });
+
+    const result = await response.text();
+    console.log('📧 EmailJS Response:', result);
     
     if (response.ok) {
-      console.log(`✅ EmailJS: Verification email sent to ${to}`);
+      console.log(`✅ Verification email sent to ${to}`);
       return true;
     } else {
-      const error = await response.text();
-      console.error(`❌ EmailJS failed for ${to}:`, error);
+      console.error(`❌ EmailJS failed: ${result}`);
       return false;
     }
   } catch (error) {
-    console.error(`❌ EmailJS network error for ${to}:`, error.message);
+    console.error('❌ EmailJS network error:', error.message);
     return false;
   }
 };
