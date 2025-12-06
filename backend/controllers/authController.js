@@ -192,10 +192,11 @@ export const getMe = async (req, res) => {
       return res.status(401).json({ success: false, user: null });
     }
 
+    // ✅ FIX: Added "is_admin" to the SELECT list below
     const result = await pool.query(
       `SELECT 
           id, username, display_name, email, avatar_url, email_verified,
-          follower_count, following_count, created_at
+          follower_count, following_count, created_at, is_admin
        FROM users
        WHERE id = $1`,
       [userId]
@@ -206,12 +207,14 @@ export const getMe = async (req, res) => {
     }
 
     const user = result.rows[0];
-    // Refresh session data
+    
+    // Refresh session data (optional but good practice)
     req.session.user = { 
       id: user.id, 
       username: user.username, 
       email: user.email,
-      email_verified: user.email_verified
+      email_verified: user.email_verified,
+      is_admin: user.is_admin // Add this to session too
     };
 
     res.json({

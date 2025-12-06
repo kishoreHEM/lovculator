@@ -57,8 +57,8 @@ export default (pool) => {
    * Endpoint: GET /api/analytics/daily
    * ==============================================================
    */
-  // 📅 Get daily visits (last 14 days)
-router.get("/daily", async (req, res) => {
+  // 📅 Get daily visits (last 14 days) - ADD checkAdmin HERE
+router.get("/daily", checkAdmin, async (req, res) => { // <--- Added checkAdmin
   try {
     const result = await pool.query(`
       SELECT DATE(visit_time) AS visit_date, COUNT(*) AS visits
