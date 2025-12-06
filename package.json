@@ -9,6 +9,7 @@
     "node": "18.x"
   },
   "dependencies": {
+    "@emailjs/browser": "^4.4.1",
     "bcryptjs": "^3.0.3",
     "compression": "^1.8.1",
     "helmet": "^8.1.0",

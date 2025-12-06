@@ -46,11 +46,19 @@ export const signup = async (req, res) => {
       [verificationToken, tokenExpires, newUser.id]
     );
     
-    // Send verification email
-    const verificationLink = `https://lovculator.com/verify-email?token=${verificationToken}`;
-    await sendVerificationEmail(email, verificationToken, username);
+    // Send verification email - FIXED URL
+    const verificationLink = `https://lovculator.com/verify-email.html?token=${verificationToken}`;
     
-    // Set session (but user still needs to verify email)
+    // Try to send email, but don't fail signup if email fails
+    let emailSent = false;
+    try {
+      emailSent = await sendVerificationEmail(email, verificationToken, username);
+    } catch (emailError) {
+      console.error("📧 Email sending error (non-fatal):", emailError.message);
+      // Continue with signup even if email fails
+    }
+    
+    // Set session
     req.session.user = {
       id: newUser.id,
       username: newUser.username,
@@ -58,12 +66,25 @@ export const signup = async (req, res) => {
       email_verified: false
     };
 
-    res.status(201).json({
-      success: true,
-      message: "Signup successful! Please check your email to verify your account.",
-      user: newUser,
-      needs_verification: true
-    });
+    // Return response based on email success
+    if (emailSent) {
+      res.status(201).json({
+        success: true,
+        message: "Signup successful! Please check your email to verify your account.",
+        user: newUser,
+        needs_verification: true
+      });
+    } else {
+      // Email failed, but signup succeeded - provide manual verification option
+      res.status(201).json({
+        success: true,
+        message: "Account created! Email verification failed. Please contact support or use manual verification.",
+        user: newUser,
+        needs_verification: true,
+        verification_token: verificationToken, // Include token for manual verification
+        manual_verification_url: verificationLink
+      });
+    }
   } catch (err) {
     console.error("❌ Signup error:", err);
     res.status(500).json({ error: "Failed to register user." });
@@ -73,8 +94,6 @@ export const signup = async (req, res) => {
 // ===================================================
 // 2️⃣ LOGIN (UPDATED with email verification check)
 // ===================================================
-// backend/controllers/authController.js
-
 export const login = async (req, res) => {
   try {
     let { email, password } = req.body;
@@ -339,14 +358,23 @@ export const sendVerification = async (req, res) => {
       [verificationToken, tokenExpires, userId]
     );
     
-    // Send verification email
-    const verificationLink = `https://lovculator.com/verify-email?token=${verificationToken}`;
-    await sendVerificationEmail(user.email, verificationToken, user.username);
+    // Send verification email - FIXED URL
+    const verificationLink = `https://lovculator.com/verify-email.html?token=${verificationToken}`;
+    const emailSent = await sendVerificationEmail(user.email, verificationToken, user.username);
     
-    res.json({
-      success: true,
-      message: "Verification email sent successfully"
-    });
+    if (emailSent) {
+      res.json({
+        success: true,
+        message: "Verification email sent successfully"
+      });
+    } else {
+      res.json({
+        success: false,
+        message: "Failed to send email, but token was generated",
+        verification_token: verificationToken,
+        manual_verification_url: verificationLink
+      });
+    }
     
   } catch (err) {
     console.error("❌ Error sending verification email:", err.message);
@@ -437,7 +465,7 @@ export const checkVerificationStatus = async (req, res) => {
   }
 };
 
-// 4️⃣ Resend verification email
+// 4️⃣ Resend verification email - FIXED URL
 export const resendVerification = async (req, res) => {
   try {
     const userId = req.session.user.id;
@@ -466,14 +494,23 @@ export const resendVerification = async (req, res) => {
       [verificationToken, tokenExpires, userId]
     );
     
-    // Send verification email
-    const verificationLink = `https://lovculator.com/verify-email?token=${verificationToken}`;
-    await sendVerificationEmail(user.email, verificationToken, user.username);
+    // Send verification email - FIXED URL
+    const verificationLink = `https://lovculator.com/verify-email.html?token=${verificationToken}`;
+    const emailSent = await sendVerificationEmail(user.email, verificationToken, user.username);
     
-    res.json({
-      success: true,
-      message: "Verification email resent successfully"
-    });
+    if (emailSent) {
+      res.json({
+        success: true,
+        message: "Verification email resent successfully"
+      });
+    } else {
+      res.json({
+        success: false,
+        message: "Failed to resend email, but new token was generated",
+        verification_token: verificationToken,
+        manual_verification_url: verificationLink
+      });
+    }
     
   } catch (err) {
     console.error("❌ Error resending verification email:", err.message);
