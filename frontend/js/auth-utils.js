@@ -1,8 +1,13 @@
 // frontend/js/auth-utils.js
 // ✅ Global authentication and logout utilities
-const API_BASE = window.location.hostname.includes("localhost")
-  ? "http://localhost:3001/api"
-  : "https://lovculator.com/api";
+
+// Use the global ROOT_API_BASE if it exists, otherwise define it
+const API_BASE = window.ROOT_API_BASE || 
+  (window.location.hostname.includes("localhost")
+    ? "http://localhost:3001/api"
+    : "https://lovculator.com/api");
+
+console.log(`🔐 Auth Utils using API Base: ${API_BASE}`);
 
 // Global logout flag
 let isLoggingOut = false;
@@ -14,7 +19,8 @@ let isLoggingOut = false;
 // Check if a user is logged in
 async function isUserLoggedIn() {
   try {
-    const res = await fetch(`${API_BASE}/auth/session`, { 
+    const res = await fetch(`${API_BASE}/auth/me`, { 
+      method: "GET",
       credentials: "include",
       headers: {
         'Cache-Control': 'no-cache',
@@ -22,8 +28,11 @@ async function isUserLoggedIn() {
       },
       cache: 'no-store'
     });
+    
+    if (!res.ok) return null;
+    
     const data = await res.json();
-    return data.loggedIn ? data.user : null;
+    return data.user || data;
   } catch {
     return null;
   }
@@ -33,6 +42,7 @@ async function isUserLoggedIn() {
 async function checkSession() {
   try {
     const res = await fetch(`${API_BASE}/auth/me`, {
+      method: "GET",
       credentials: "include",
       headers: {
         'Cache-Control': 'no-cache, no-store, must-revalidate',
@@ -61,6 +71,29 @@ async function checkSession() {
   } catch (err) {
     console.warn("⚠️ Session check failed:", err);
     return null;
+  }
+}
+
+// Check if user's email is verified
+async function checkEmailVerified() {
+  try {
+    const user = await isUserLoggedIn();
+    if (!user) return false;
+    
+    // Check verification status endpoint
+    const res = await fetch(`${API_BASE}/auth/verification-status`, {
+      method: "GET",
+      credentials: "include",
+      cache: 'no-store'
+    });
+    
+    if (!res.ok) return false;
+    
+    const data = await res.json();
+    return data.email_verified === true;
+  } catch (err) {
+    console.warn("⚠️ Email verification check failed:", err);
+    return false;
   }
 }
 
@@ -97,13 +130,68 @@ function showLoginRequiredPopup() {
   }
 }
 
+// Show email verification required popup
+function showVerificationRequiredPopup() {
+  if (document.querySelector(".verification-popup")) return;
+
+  const popup = document.createElement("div");
+  popup.className = "verification-popup";
+  popup.innerHTML = `
+    <div class="popup-overlay"></div>
+    <div class="popup-box">
+      <button class="popup-close">&times;</button>
+      <h3>📧 Email Verification Required</h3>
+      <p>Please verify your email to access this feature.</p>
+      <div class="popup-buttons">
+        <button id="resend-verification" class="btn btn-primary">Resend Verification Email</button>
+        <button id="skip-verification" class="btn btn-secondary">Skip for Now</button>
+      </div>
+    </div>
+  `;
+
+  document.body.appendChild(popup);
+  setTimeout(() => popup.classList.add("show"), 10);
+
+  // Close handlers
+  popup.querySelector(".popup-overlay").onclick = () => closePopup(popup);
+  popup.querySelector(".popup-close").onclick = () => closePopup(popup);
+  
+  // Resend verification
+  popup.querySelector("#resend-verification").onclick = async () => {
+    try {
+      const response = await fetch(`${API_BASE}/auth/resend-verification`, {
+        method: 'POST',
+        credentials: 'include'
+      });
+      
+      if (response.ok) {
+        alert('✅ New verification email sent!');
+        closePopup(popup);
+      } else {
+        alert('❌ Failed to resend email');
+      }
+    } catch (err) {
+      alert('🚫 Network error');
+    }
+  };
+  
+  // Skip
+  popup.querySelector("#skip-verification").onclick = () => {
+    closePopup(popup);
+  };
+
+  function closePopup(el) {
+    el.classList.remove("show");
+    setTimeout(() => el.remove(), 300);
+  }
+}
+
 // ============================================
 // 🚀 LOGOUT UTILITIES (Consolidated)
 // ============================================
 
 /**
  * 🔥 NUCLEAR LOGOUT - Complete cache clearing and back button prevention
- * Use this for profile page and other protected areas
  */
 async function nuclearLogout() {
   if (isLoggingOut) return;
@@ -131,7 +219,7 @@ async function nuclearLogout() {
     // 4. Clear cookies aggressively
     clearAllCookies();
     
-    // 5. Send logout request (fire and forget)
+    // 5. Send logout request
     fetch(`${API_BASE}/auth/logout`, {
       method: 'POST',
       credentials: 'include',
@@ -141,34 +229,23 @@ async function nuclearLogout() {
         'Pragma': 'no-cache'
       },
       cache: 'no-store'
-    }).catch(() => { /* Ignore errors */ });
+    }).catch(() => {});
     
-    // 6. STOP ALL JavaScript timers
-    stopAllTimers();
-    
-    // 7. Disconnect WebSocket if exists
-    disconnectWebSocket();
-    
-    // 8. PREVENT BACK BUTTON - Manipulate history
-    preventBackButton();
-    
-    // 9. Create cache-busting URL
+    // 6. Redirect with cache prevention
     const cacheBuster = `logout_${timestamp}_${Math.random().toString(36).substr(2, 9)}`;
     const redirectUrl = `/login.html?logout=true&cb=${cacheBuster}&t=${timestamp}`;
     
-    // 10. Execute multiple redirect strategies
+    // 7. Execute redirect
     executeRedirect(redirectUrl);
     
   } catch (err) {
     console.error("❌ Nuclear logout error:", err);
-    // Ultimate fallback
     window.location.href = `/login.html?logout_error=${Date.now()}`;
   }
 }
 
 /**
  * 🚀 FORCE LOGOUT - Standard logout with cache prevention
- * Use for most pages
  */
 async function forceLogout() {
   if (isLoggingOut) return;
@@ -263,55 +340,6 @@ function clearAllCookies() {
   });
 }
 
-function stopAllTimers() {
-  // Get the highest timer ID
-  const maxTimerId = setTimeout(() => {}, 0);
-  
-  // Clear all timeouts and intervals
-  for (let i = maxTimerId; i >= 0; i--) {
-    clearTimeout(i);
-    clearInterval(i);
-  }
-}
-
-function disconnectWebSocket() {
-  // Disconnect global WebSocket
-  if (window.globalSocket && typeof window.globalSocket.close === 'function') {
-    try {
-      window.globalSocket.close(1000, "User logged out");
-    } catch (e) {}
-  }
-  
-  // Disconnect messages WebSocket
-  if (window.messagesManager && typeof window.messagesManager.disconnect === 'function') {
-    try {
-      window.messagesManager.disconnect();
-    } catch (e) {}
-  }
-}
-
-function preventBackButton() {
-  // Replace current history entry with login page
-  window.history.pushState(null, null, '/login.html');
-  window.history.replaceState(null, null, '/login.html');
-  
-  // Set up back button blocker
-  window.addEventListener('popstate', function backButtonBlocker(event) {
-    console.log("🚫 Back button blocked");
-    
-    // Go forward instead of back
-    window.history.go(1);
-    
-    // Redirect to login
-    setTimeout(() => {
-      window.location.replace('/login.html?back_blocked=true');
-    }, 10);
-    
-    // Remove this listener after use
-    window.removeEventListener('popstate', backButtonBlocker);
-  }, { once: true });
-}
-
 function executeRedirect(redirectUrl) {
   // Strategy 1: Meta refresh (works without JavaScript)
   const meta = document.createElement('meta');
@@ -330,13 +358,6 @@ function executeRedirect(redirectUrl) {
       window.location.href = redirectUrl;
     }
   }, 50);
-  
-  // Strategy 4: Final nuclear option
-  setTimeout(() => {
-    if (window.location.pathname !== '/login.html') {
-      window.location.href = `/login.html?force=${Date.now()}`;
-    }
-  }, 200);
 }
 
 /**
@@ -392,7 +413,9 @@ function validateSession() {
 // Export functions to window for global access
 window.isUserLoggedIn = isUserLoggedIn;
 window.checkSession = checkSession;
+window.checkEmailVerified = checkEmailVerified;
 window.showLoginRequiredPopup = showLoginRequiredPopup;
+window.showVerificationRequiredPopup = showVerificationRequiredPopup;
 window.nuclearLogout = nuclearLogout;
 window.forceLogout = forceLogout;
 window.simpleLogout = simpleLogout;
@@ -407,7 +430,7 @@ window.globalLogout = nuclearLogout;
 
 const style = document.createElement("style");
 style.textContent = `
-.login-popup {
+.login-popup, .verification-popup {
   position: fixed; inset: 0;
   display:flex; align-items:center; justify-content:center;
   background: rgba(0,0,0,0.0);
@@ -415,7 +438,7 @@ style.textContent = `
   transition: background 0.3s ease, opacity 0.3s ease;
   z-index: 9999;
 }
-.login-popup.show {
+.login-popup.show, .verification-popup.show {
   background: rgba(0,0,0,0.5);
   opacity: 1;
 }
@@ -431,26 +454,33 @@ style.textContent = `
   opacity: 0;
   transition: transform 0.35s ease-out, opacity 0.35s ease-out;
 }
-.login-popup.show .popup-box {
+.login-popup.show .popup-box, .verification-popup.show .popup-box {
   transform: translateY(0);
   opacity: 1;
 }
 .popup-buttons {
   display: flex; gap: 10px; justify-content: center; margin-top: 18px;
 }
-.popup-buttons a {
+.popup-buttons a, .popup-buttons button {
   padding: 10px 18px;
   border-radius: 8px;
   text-decoration: none;
   color: white;
   font-weight: 600;
   transition: transform 0.2s ease;
+  border: none;
+  cursor: pointer;
+  font-size: 14px;
 }
-.popup-buttons a:hover {
+.popup-buttons a:hover, .popup-buttons button:hover {
   transform: scale(1.05);
 }
-.btn-login { background: #ff4b8d; }
-.btn-signup { background: #4b9eff; }
+.btn-login, .btn-primary { 
+  background: #ff4b8d; 
+}
+.btn-signup, .btn-secondary { 
+  background: #4b9eff; 
+}
 .popup-close {
   position: absolute;
   top: 8px;
@@ -481,7 +511,9 @@ if (typeof module !== 'undefined' && module.exports) {
   module.exports = {
     isUserLoggedIn,
     checkSession,
+    checkEmailVerified,
     showLoginRequiredPopup,
+    showVerificationRequiredPopup,
     nuclearLogout,
     forceLogout,
     simpleLogout,

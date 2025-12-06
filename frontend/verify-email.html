@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Verify Your Email - Lovculator</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      margin: 0;
+      padding: 20px;
+    }
+    .container {
+      background: white;
+      padding: 40px;
+      border-radius: 15px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+      max-width: 500px;
+      width: 100%;
+      text-align: center;
+    }
+    h1 {
+      color: #333;
+      margin-bottom: 20px;
+    }
+    .message {
+      padding: 15px;
+      border-radius: 8px;
+      margin: 20px 0;
+      display: none;
+    }
+    .success { background: #d4edda; color: #155724; }
+    .error { background: #f8d7da; color: #721c24; }
+    .info { background: #d1ecf1; color: #0c5460; }
+    .btn {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      border: none;
+      padding: 12px 30px;
+      border-radius: 25px;
+      font-size: 16px;
+      cursor: pointer;
+      margin: 10px;
+      transition: transform 0.3s;
+    }
+    .btn:hover {
+      transform: translateY(-2px);
+    }
+    .btn:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+    .spinner {
+      display: inline-block;
+      width: 20px;
+      height: 20px;
+      border: 3px solid rgba(255,255,255,.3);
+      border-radius: 50%;
+      border-top-color: white;
+      animation: spin 1s ease-in-out infinite;
+      margin-right: 10px;
+    }
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+    .resend-link {
+      color: #667eea;
+      cursor: pointer;
+      text-decoration: underline;
+      margin-top: 20px;
+      display: inline-block;
+    }
+    .hidden {
+      display: none;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>📧 Verify Your Email</h1>
+    
+    <div id="message" class="message"></div>
+    
+    <!-- Verification Form -->
+    <div id="verify-section">
+      <p>Please click the button below to verify your email address.</p>
+      <button id="verify-btn" class="btn">
+        <span id="verify-text">Verify Email</span>
+        <span id="verify-spinner" class="spinner hidden"></span>
+      </button>
+      <p style="color: #666; margin-top: 20px;">
+        Didn't receive the email? 
+        <span id="resend-link" class="resend-link">Resend verification email</span>
+      </p>
+    </div>
+    
+    <!-- Success Section -->
+    <div id="success-section" class="hidden">
+      <h2 style="color: #28a745;">✅ Email Verified!</h2>
+      <p>Your email has been successfully verified.</p>
+      <button id="login-btn" class="btn">Go to Login</button>
+    </div>
+    
+    <!-- Error Section -->
+    <div id="error-section" class="hidden">
+      <h2 style="color: #dc3545;">❌ Verification Failed</h2>
+      <p id="error-details">The verification link is invalid or has expired.</p>
+      <button id="try-again-btn" class="btn">Try Again</button>
+    </div>
+  </div>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      const urlParams = new URLSearchParams(window.location.search);
+      const token = urlParams.get('token');
+      const verifyBtn = document.getElementById('verify-btn');
+      const resendLink = document.getElementById('resend-link');
+      const messageDiv = document.getElementById('message');
+      
+      function showMessage(text, type) {
+        messageDiv.textContent = text;
+        messageDiv.className = `message ${type}`;
+        messageDiv.style.display = 'block';
+      }
+      
+      function setLoading(isLoading) {
+        if (isLoading) {
+          verifyBtn.disabled = true;
+          document.getElementById('verify-text').classList.add('hidden');
+          document.getElementById('verify-spinner').classList.remove('hidden');
+        } else {
+          verifyBtn.disabled = false;
+          document.getElementById('verify-text').classList.remove('hidden');
+          document.getElementById('verify-spinner').classList.add('hidden');
+        }
+      }
+      
+      async function verifyEmail(token) {
+        showMessage('Verifying your email...', 'info');
+        setLoading(true);
+        
+        try {
+          const response = await fetch(`${window.ROOT_API_BASE || 'http://localhost:3001/api'}/auth/verify-email`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ token })
+          });
+          
+          const data = await response.json();
+          
+          if (response.ok) {
+            showMessage('✅ Email verified successfully!', 'success');
+            document.getElementById('verify-section').classList.add('hidden');
+            document.getElementById('success-section').classList.remove('hidden');
+          } else {
+            showMessage(`❌ ${data.error || 'Verification failed'}`, 'error');
+            document.getElementById('verify-section').classList.add('hidden');
+            document.getElementById('error-section').classList.remove('hidden');
+            document.getElementById('error-details').textContent = data.error || 'The verification link is invalid or has expired.';
+          }
+        } catch (error) {
+          showMessage('🚫 Network error. Please try again.', 'error');
+        } finally {
+          setLoading(false);
+        }
+      }
+      
+      // Auto-verify if token is in URL
+      if (token) {
+        verifyEmail(token);
+      }
+      
+      // Manual verify button
+      verifyBtn.addEventListener('click', () => {
+        if (token) {
+          verifyEmail(token);
+        } else {
+          showMessage('❌ No verification token found in URL', 'error');
+        }
+      });
+      
+      // Resend verification email
+      resendLink.addEventListener('click', async () => {
+        showMessage('Sending verification email...', 'info');
+        
+        try {
+          const response = await fetch(`${window.ROOT_API_BASE || 'http://localhost:3001/api'}/auth/send-verification`, {
+            method: 'POST',
+            credentials: 'include',
+            headers: { 'Content-Type': 'application/json' }
+          });
+          
+          const data = await response.json();
+          
+          if (response.ok) {
+            showMessage('✅ Verification email sent! Check your inbox.', 'success');
+          } else {
+            showMessage(`❌ ${data.error || 'Failed to send email'}`, 'error');
+          }
+        } catch (error) {
+          showMessage('🚫 Network error. Please try again.', 'error');
+        }
+      });
+      
+      // Go to login button
+      document.getElementById('login-btn').addEventListener('click', () => {
+        window.location.href = '/login.html';
+      });
+      
+      // Try again button
+      document.getElementById('try-again-btn').addEventListener('click', () => {
+        document.getElementById('error-section').classList.add('hidden');
+        document.getElementById('verify-section').classList.remove('hidden');
+      });
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Check Your Email - Lovculator</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      margin: 0;
+      padding: 20px;
+      text-align: center;
+    }
+    .container {
+      background: white;
+      padding: 40px;
+      border-radius: 15px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+      max-width: 500px;
+      width: 100%;
+    }
+    .email-icon {
+      font-size: 80px;
+      margin-bottom: 20px;
+      color: #ff4b8d;
+    }
+    h1 {
+      color: #333;
+      margin-bottom: 15px;
+    }
+    .highlight {
+      background: #f0f0f0;
+      padding: 10px 15px;
+      border-radius: 8px;
+      margin: 20px 0;
+      font-weight: bold;
+      color: #333;
+    }
+    .actions {
+      margin: 30px 0;
+    }
+    .btn {
+      background: linear-gradient(135deg, #ff4b8d, #ff8e53);
+      color: white;
+      border: none;
+      padding: 12px 30px;
+      border-radius: 25px;
+      font-size: 16px;
+      cursor: pointer;
+      margin: 10px;
+      text-decoration: none;
+      display: inline-block;
+      transition: transform 0.3s;
+    }
+    .btn:hover {
+      transform: translateY(-2px);
+    }
+    .btn-secondary {
+      background: #667eea;
+    }
+    .info-box {
+      background: #e7f3ff;
+      border-left: 4px solid #2196F3;
+      padding: 15px;
+      margin: 20px 0;
+      text-align: left;
+      border-radius: 5px;
+    }
+    .info-box h3 {
+      margin-top: 0;
+      color: #0c5460;
+    }
+    .spinner {
+      display: inline-block;
+      width: 20px;
+      height: 20px;
+      border: 3px solid rgba(255,255,255,.3);
+      border-radius: 50%;
+      border-top-color: white;
+      animation: spin 1s ease-in-out infinite;
+      margin-right: 10px;
+      vertical-align: middle;
+    }
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+    .message {
+      padding: 15px;
+      border-radius: 8px;
+      margin: 20px 0;
+      display: none;
+    }
+    .success { background: #d4edda; color: #155724; }
+    .error { background: #f8d7da; color: #721c24; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="email-icon">📧</div>
+    <h1>Check Your Email! ✨</h1>
+    
+    <div id="message" class="message"></div>
+    
+    <p>We've sent a verification link to:</p>
+    <div class="highlight" id="user-email">
+      <!-- Email will be inserted here -->
+    </div>
+    
+    <p>Please click the link in the email to activate your account.</p>
+    
+    <div class="info-box">
+      <h3>💡 Didn't receive the email?</h3>
+      <ul>
+        <li>Check your <strong>spam</strong> or <strong>junk</strong> folder</li>
+        <li>Make sure you entered the correct email address</li>
+        <li>Wait a few minutes - emails can sometimes be delayed</li>
+      </ul>
+    </div>
+    
+    <div class="actions">
+      <button class="btn" id="resend-btn">
+        <span id="resend-text">Resend Verification Email</span>
+        <span id="resend-spinner" class="spinner hidden"></span>
+      </button>
+      <a href="/login.html" class="btn btn-secondary">Back to Login</a>
+    </div>
+    
+    <p><small>Verification links expire in 24 hours.</small></p>
+  </div>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      // Get email from URL parameter
+      const urlParams = new URLSearchParams(window.location.search);
+      const email = urlParams.get('email') || 'your email address';
+      
+      // Display the email
+      document.getElementById('user-email').textContent = email;
+      
+      const resendBtn = document.getElementById('resend-btn');
+      const messageDiv = document.getElementById('message');
+      
+      function showMessage(text, type) {
+        messageDiv.textContent = text;
+        messageDiv.className = `message ${type}`;
+        messageDiv.style.display = 'block';
+      }
+      
+      function setLoading(isLoading) {
+        if (isLoading) {
+          resendBtn.disabled = true;
+          document.getElementById('resend-text').classList.add('hidden');
+          document.getElementById('resend-spinner').classList.remove('hidden');
+        } else {
+          resendBtn.disabled = false;
+          document.getElementById('resend-text').classList.remove('hidden');
+          document.getElementById('resend-spinner').classList.add('hidden');
+        }
+      }
+      
+      // Resend verification email
+      resendBtn.addEventListener('click', async () => {
+        setLoading(true);
+        
+        try {
+          const response = await fetch(`${window.ROOT_API_BASE || 'http://localhost:3001/api'}/auth/resend-verification`, {
+            method: 'POST',
+            credentials: 'include',
+            headers: { 'Content-Type': 'application/json' }
+          });
+          
+          const data = await response.json();
+          
+          if (response.ok) {
+            showMessage('✅ New verification email sent! Check your inbox.', 'success');
+          } else {
+            showMessage(`❌ ${data.error || 'Failed to resend email'}`, 'error');
+          }
+        } catch (error) {
+          showMessage('🚫 Network error. Please try again.', 'error');
+        } finally {
+          setLoading(false);
+        }
+      });
+      
+      // Auto-resend after 2 minutes if still on page
+      setTimeout(() => {
+        if (window.location.pathname.includes('verify-pending')) {
+          showMessage('Still waiting? You can request another verification email.', 'info');
+        }
+      }, 120000); // 2 minutes
+    });
+  </script>
+</body>
+</html>

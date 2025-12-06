@@ -1,11 +1,10 @@
 import bcrypt from "bcryptjs";
 import crypto from "crypto";
 import pool from "../db.js";
-// Adjust this path if emailService is located elsewhere
-import { sendPasswordResetEmail } from "../routes/emailService.js"; 
+import { sendPasswordResetEmail, sendVerificationEmail, sendWelcomeEmail } from "../routes/emailService.js"; 
 
 // ===================================================
-// 1️⃣ SIGNUP
+// 1️⃣ SIGNUP (UPDATED with email verification)
 // ===================================================
 export const signup = async (req, res) => {
   try {
@@ -27,6 +26,7 @@ export const signup = async (req, res) => {
 
     const hashedPassword = await bcrypt.hash(password, 10);
 
+    // Insert user with verification fields
     const result = await pool.query(
       `INSERT INTO users (username, email, password_hash, created_at)
        VALUES ($1, $2, $3, NOW())
@@ -35,11 +35,34 @@ export const signup = async (req, res) => {
     );
 
     const newUser = result.rows[0];
-    req.session.user = newUser;
+    
+    // Generate verification token
+    const verificationToken = crypto.randomBytes(32).toString('hex');
+    const tokenExpires = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
+    
+    // Save verification token
+    await pool.query(
+      "UPDATE users SET verification_token = $1, verification_token_expires = $2 WHERE id = $3",
+      [verificationToken, tokenExpires, newUser.id]
+    );
+    
+    // Send verification email
+    const verificationLink = `https://lovculator.com/verify-email?token=${verificationToken}`;
+    await sendVerificationEmail(email, verificationToken, username);
+    
+    // Set session (but user still needs to verify email)
+    req.session.user = {
+      id: newUser.id,
+      username: newUser.username,
+      email: newUser.email,
+      email_verified: false
+    };
 
     res.status(201).json({
-      message: "Signup successful 🎉",
+      success: true,
+      message: "Signup successful! Please check your email to verify your account.",
       user: newUser,
+      needs_verification: true
     });
   } catch (err) {
     console.error("❌ Signup error:", err);
@@ -48,8 +71,10 @@ export const signup = async (req, res) => {
 };
 
 // ===================================================
-// 2️⃣ LOGIN
+// 2️⃣ LOGIN (UPDATED with email verification check)
 // ===================================================
+// backend/controllers/authController.js
+
 export const login = async (req, res) => {
   try {
     let { email, password } = req.body;
@@ -61,7 +86,8 @@ export const login = async (req, res) => {
     email = email.trim().toLowerCase();
 
     const result = await pool.query(
-      `SELECT id, username, email, password_hash
+      `SELECT id, username, email, password_hash, email_verified,
+              EXTRACT(DAY FROM NOW() - created_at) as days_since_signup
        FROM users
        WHERE LOWER(email) = LOWER($1) OR LOWER(username) = LOWER($1)
        LIMIT 1`,
@@ -77,11 +103,12 @@ export const login = async (req, res) => {
     if (!validPassword) {
       return res.status(401).json({ error: "Invalid credentials." });
     }
-
+    
     req.session.user = {
       id: user.id,
       username: user.username,
       email: user.email,
+      email_verified: user.email_verified
     };
 
     req.session.save((err) => {
@@ -89,9 +116,43 @@ export const login = async (req, res) => {
         console.error("❌ Session save failed:", err);
         return res.status(500).json({ error: "Failed to save session." });
       }
+      
+      // ✅ GRACE PERIOD: 7 days to verify email
+      const GRACE_PERIOD_DAYS = 7;
+      const daysLeft = GRACE_PERIOD_DAYS - user.days_since_signup;
+      
+      if (!user.email_verified) {
+        if (user.days_since_signup > GRACE_PERIOD_DAYS) {
+          // ❌ GRACE PERIOD EXPIRED - REQUIRE VERIFICATION
+          return res.status(200).json({
+            success: true,
+            message: "Email verification required to continue.",
+            user: req.session.user,
+            verification_required: true,
+            reason: `Your ${GRACE_PERIOD_DAYS}-day grace period has ended.`,
+            can_resend: true
+          });
+        } else {
+          // ⚠️ IN GRACE PERIOD - GENTLE REMINDER
+          return res.status(200).json({
+            success: true,
+            message: `Welcome back! Please verify your email within ${Math.ceil(daysLeft)} day(s) for full access.`,
+            user: req.session.user,
+            email_verified: false,
+            grace_period: true,
+            days_left: Math.ceil(daysLeft),
+            can_access: true  // Allow access during grace period
+          });
+        }
+      }
+      
+      // ✅ FULLY VERIFIED
       res.status(200).json({
+        success: true,
         message: "Login successful ✅",
         user: req.session.user,
+        email_verified: true,
+        full_access: true
       });
     });
 
@@ -114,7 +175,7 @@ export const getMe = async (req, res) => {
 
     const result = await pool.query(
       `SELECT 
-          id, username, display_name, email, avatar_url,
+          id, username, display_name, email, avatar_url, email_verified,
           follower_count, following_count, created_at
        FROM users
        WHERE id = $1`,
@@ -127,7 +188,12 @@ export const getMe = async (req, res) => {
 
     const user = result.rows[0];
     // Refresh session data
-    req.session.user = { id: user.id, username: user.username, email: user.email };
+    req.session.user = { 
+      id: user.id, 
+      username: user.username, 
+      email: user.email,
+      email_verified: user.email_verified
+    };
 
     res.json({
       success: true,
@@ -166,7 +232,6 @@ export const logout = (req, res) => {
     });
   });
 };
-
 
 // ===================================================
 // 5️⃣ FORGOT PASSWORD
@@ -240,17 +305,17 @@ export const resetPassword = async (req, res) => {
 };
 
 // ============================================
-// EMAIL VERIFICATION ROUTES
+// EMAIL VERIFICATION CONTROLLER FUNCTIONS
 // ============================================
 
-// 1️⃣ Send verification email (after signup)
-router.post("/send-verification", requireAuth, async (req, res) => {
+// 1️⃣ Send verification email
+export const sendVerification = async (req, res) => {
   try {
     const userId = req.session.user.id;
     
     // Check if already verified
     const userRes = await pool.query(
-      "SELECT email, email_verified FROM users WHERE id = $1",
+      "SELECT email, email_verified, username FROM users WHERE id = $1",
       [userId]
     );
     
@@ -276,9 +341,7 @@ router.post("/send-verification", requireAuth, async (req, res) => {
     
     // Send verification email
     const verificationLink = `https://lovculator.com/verify-email?token=${verificationToken}`;
-    
-    // TODO: Implement email sending (using nodemailer, SendGrid, etc.)
-    await sendVerificationEmail(user.email, verificationLink);
+    await sendVerificationEmail(user.email, verificationToken, user.username);
     
     res.json({
       success: true,
@@ -289,10 +352,10 @@ router.post("/send-verification", requireAuth, async (req, res) => {
     console.error("❌ Error sending verification email:", err.message);
     res.status(500).json({ error: "Failed to send verification email" });
   }
-});
+};
 
 // 2️⃣ Verify email with token
-router.post("/verify-email", async (req, res) => {
+export const verifyEmail = async (req, res) => {
   try {
     const { token } = req.body;
     
@@ -302,7 +365,7 @@ router.post("/verify-email", async (req, res) => {
     
     // Find user by token
     const userRes = await pool.query(
-      `SELECT id, email_verified, verification_token_expires 
+      `SELECT id, email, username, email_verified, verification_token_expires 
        FROM users 
        WHERE verification_token = $1`,
       [token]
@@ -335,6 +398,9 @@ router.post("/verify-email", async (req, res) => {
       [user.id]
     );
     
+    // Send welcome email
+    await sendWelcomeEmail(user.email, user.username);
+    
     res.json({
       success: true,
       message: "Email verified successfully! You can now log in."
@@ -344,10 +410,10 @@ router.post("/verify-email", async (req, res) => {
     console.error("❌ Error verifying email:", err.message);
     res.status(500).json({ error: "Failed to verify email" });
   }
-});
+};
 
 // 3️⃣ Check verification status
-router.get("/verification-status", requireAuth, async (req, res) => {
+export const checkVerificationStatus = async (req, res) => {
   try {
     const userId = req.session.user.id;
     
@@ -369,66 +435,48 @@ router.get("/verification-status", requireAuth, async (req, res) => {
     console.error("❌ Error checking verification status:", err.message);
     res.status(500).json({ error: "Failed to check verification status" });
   }
-});
+};
 
-// 4️⃣ Update login to check verification
-router.post("/login", async (req, res) => {
+// 4️⃣ Resend verification email
+export const resendVerification = async (req, res) => {
   try {
-    const { email, password } = req.body;
+    const userId = req.session.user.id;
     
-    // ... existing login code ...
+    const userRes = await pool.query(
+      "SELECT email, username, email_verified FROM users WHERE id = $1",
+      [userId]
+    );
     
-    // AFTER finding user and verifying password, add this check:
-    const user = userRes.rows[0];
-    
-    if (!user.email_verified) {
-      return res.status(403).json({ 
-        error: "Please verify your email before logging in",
-        needs_verification: true,
-        user_id: user.id
-      });
+    if (userRes.rows.length === 0) {
+      return res.status(404).json({ error: "User not found" });
     }
     
-    // ... rest of login logic ...
+    const user = userRes.rows[0];
     
-  } catch (err) {
-    console.error("❌ Login error:", err.message);
-    res.status(500).json({ error: "Login failed" });
-  }
-});
-
-// 5️⃣ Update signup to send verification email automatically
-router.post("/signup", async (req, res) => {
-  try {
-    const { username, email, password } = req.body;
+    if (user.email_verified) {
+      return res.status(400).json({ error: "Email already verified" });
+    }
     
-    // ... existing signup code ...
-    
-    // AFTER successful user creation, send verification email
-    const newUser = insertRes.rows[0];
-    
-    // Generate verification token
+    // Generate new verification token
     const verificationToken = crypto.randomBytes(32).toString('hex');
     const tokenExpires = new Date(Date.now() + 24 * 60 * 60 * 1000);
     
     await pool.query(
       "UPDATE users SET verification_token = $1, verification_token_expires = $2 WHERE id = $3",
-      [verificationToken, tokenExpires, newUser.id]
+      [verificationToken, tokenExpires, userId]
     );
     
     // Send verification email
     const verificationLink = `https://lovculator.com/verify-email?token=${verificationToken}`;
-    await sendVerificationEmail(email, verificationLink);
+    await sendVerificationEmail(user.email, verificationToken, user.username);
     
     res.json({
       success: true,
-      message: "Signup successful! Please check your email to verify your account.",
-      user: newUser,
-      needs_verification: true
+      message: "Verification email resent successfully"
     });
     
   } catch (err) {
-    console.error("❌ Signup error:", err);
-    res.status(500).json({ error: "Signup failed" });
+    console.error("❌ Error resending verification email:", err.message);
+    res.status(500).json({ error: "Failed to resend verification email" });
   }
-});
+};
