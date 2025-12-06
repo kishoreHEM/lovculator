@@ -116,6 +116,13 @@
 
   <script>
     document.addEventListener('DOMContentLoaded', function() {
+      // ✅ FIX: Define the API URL correctly
+      const API_BASE = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+        ? 'http://localhost:3001/api'
+        : 'https://lovculator.com/api';
+
+      console.log('Using API Base:', API_BASE); // Debugging
+
       const urlParams = new URLSearchParams(window.location.search);
       const token = urlParams.get('token');
       const verifyBtn = document.getElementById('verify-btn');
@@ -145,7 +152,8 @@
         setLoading(true);
         
         try {
-          const response = await fetch(`${window.ROOT_API_BASE || 'http://localhost:3001/api'}/auth/verify-email`, {
+          // ✅ FIX: Use API_BASE variable
+          const response = await fetch(`${API_BASE}/auth/verify-email`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ token })
@@ -164,6 +172,7 @@
             document.getElementById('error-details').textContent = data.error || 'The verification link is invalid or has expired.';
           }
         } catch (error) {
+          console.error("Verification Error:", error);
           showMessage('🚫 Network error. Please try again.', 'error');
         } finally {
           setLoading(false);
@@ -189,7 +198,8 @@
         showMessage('Sending verification email...', 'info');
         
         try {
-          const response = await fetch(`${window.ROOT_API_BASE || 'http://localhost:3001/api'}/auth/send-verification`, {
+          // ✅ FIX: Use API_BASE variable
+          const response = await fetch(`${API_BASE}/auth/resend-verification`, {
             method: 'POST',
             credentials: 'include',
             headers: { 'Content-Type': 'application/json' }

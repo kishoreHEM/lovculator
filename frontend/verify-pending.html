@@ -135,6 +135,11 @@
 
   <script>
     document.addEventListener('DOMContentLoaded', function() {
+      // ✅ FIX: Define the API URL correctly
+      const API_BASE = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+        ? 'http://localhost:3001/api'
+        : 'https://lovculator.com/api';
+        
       // Get email from URL parameter
       const urlParams = new URLSearchParams(window.location.search);
       const email = urlParams.get('email') || 'your email address';
@@ -168,7 +173,8 @@
         setLoading(true);
         
         try {
-          const response = await fetch(`${window.ROOT_API_BASE || 'http://localhost:3001/api'}/auth/resend-verification`, {
+          // ✅ FIX: Use API_BASE variable
+          const response = await fetch(`${API_BASE}/auth/resend-verification`, {
             method: 'POST',
             credentials: 'include',
             headers: { 'Content-Type': 'application/json' }
