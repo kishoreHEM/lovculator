@@ -1,178 +1,91 @@
-// backend/routes/emailService.js - EmailJS Version (Updated)
+import nodemailer from 'nodemailer';
 import dotenv from 'dotenv';
 dotenv.config();
 
-/**
- * Send verification email using EmailJS
- */
+// 1. Create the Transporter
+// This handles the connection to your email provider
+const transporter = nodemailer.createTransport({
+  service: 'gmail', // You can use 'gmail', 'outlook', or provide host/port for others
+  auth: {
+    user: process.env.EMAIL_USER,     // Your email address
+    pass: process.env.EMAIL_PASS      // Your email password or App Password
+  }
+});
+
+// 2. Define the Verification Email Function
 export const sendVerificationEmail = async (to, token, username) => {
-  try {
-    // Validate environment variables
-    if (!process.env.EMAILJS_SERVICE_ID || !process.env.EMAILJS_TEMPLATE_ID || !process.env.EMAILJS_PUBLIC_KEY) {
-      console.error('❌ EmailJS credentials missing. Check Railway variables.');
-      console.log('Service ID present:', !!process.env.EMAILJS_SERVICE_ID);
-      console.log('Template ID present:', !!process.env.EMAILJS_TEMPLATE_ID);
-      console.log('Public Key present:', !!process.env.EMAILJS_PUBLIC_KEY);
-      return false;
-    }
-    
-    const response = await fetch('https://api.emailjs.com/api/v1.0/email/send', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        service_id: process.env.EMAILJS_SERVICE_ID,      // Your SERVICE ID
-        template_id: process.env.EMAILJS_TEMPLATE_ID,    // Your TEMPLATE ID
-        user_id: process.env.EMAILJS_PUBLIC_KEY,         // Your PUBLIC KEY
-        template_params: {
-          to_email: to,                                  // Recipient email
-          username: username,                            // User's name
-          verification_link: `https://lovculator.com/verify-email.html?token=${token}`,
-          year: new Date().getFullYear().toString(),     // Current year
-          reply_to: 'support@lovculator.com'             // Optional
-        }
-      })
-    });
+  const verificationLink = `https://lovculator.com/verify-email.html?token=${token}`;
 
-    const result = await response.text();
-    console.log('📧 EmailJS Response Status:', response.status);
-    console.log('📧 EmailJS Response:', result);
-    
-    if (response.ok) {
-      console.log(`✅ Verification email sent to ${to}`);
-      return true;
-    } else {
-      console.error(`❌ EmailJS failed: ${result}`);
-      
-      // Log specific error details
-      if (result.includes('insufficient authentication scopes')) {
-        console.error('⚠️  Gmail API scope issue. Reconnect Gmail in EmailJS dashboard.');
-      } else if (result.includes('Template not found')) {
-        console.error('⚠️  Template ID incorrect. Check EmailJS template.');
-      } else if (result.includes('Service not found')) {
-        console.error('⚠️  Service ID incorrect. Check EmailJS connected service.');
-      }
-      
-      return false;
-    }
+  const mailOptions = {
+    from: `"Lovculator Team" <${process.env.EMAIL_USER}>`,
+    to: to,
+    subject: 'Verify your email for Lovculator',
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <h2 style="color: #ff4b8d;">Welcome to Lovculator, ${username}!</h2>
+        <p>Thank you for signing up. Please verify your email address to get full access.</p>
+        <div style="margin: 30px 0;">
+          <a href="${verificationLink}" style="background-color: #ff4b8d; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; font-weight: bold;">Verify Email Now</a>
+        </div>
+        <p>Or click this link: <a href="${verificationLink}">${verificationLink}</a></p>
+        <p style="color: #777; font-size: 12px;">This link will expire in 24 hours.</p>
+      </div>
+    `
+  };
+
+  try {
+    const info = await transporter.sendMail(mailOptions);
+    console.log('✅ Email sent: %s', info.messageId);
+    return true;
   } catch (error) {
-    console.error('❌ EmailJS network error:', error.message);
+    console.error('❌ Error sending email:', error);
     return false;
   }
 };
 
-/**
- * Send password reset email using EmailJS
- */
-export const sendPasswordResetEmail = async (to, token) => {
-  try {
-    // Validate credentials
-    if (!process.env.EMAILJS_SERVICE_ID || !process.env.EMAILJS_PUBLIC_KEY) {
-      console.error('❌ EmailJS credentials missing for password reset');
-      return false;
-    }
-    
-    const templateId = process.env.EMAILJS_PASSWORD_TEMPLATE_ID || process.env.EMAILJS_TEMPLATE_ID;
-    
-    if (!templateId) {
-      console.error('❌ No EmailJS template ID found for password reset');
-      return false;
-    }
-    
-    const resetLink = `https://lovculator.com/reset-password.html?token=${token}`;
-    
-    const templateParams = {
-      to_email: to,
-      reset_link: resetLink,
-      reply_to: 'support@lovculator.com'
-    };
-    
-    const response = await fetch('https://api.emailjs.com/api/v1.0/email/send', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        service_id: process.env.EMAILJS_SERVICE_ID,
-        template_id: templateId,
-        user_id: process.env.EMAILJS_PUBLIC_KEY,
-        template_params: templateParams
-      })
-    });
-    
-    const result = await response.text();
-    
-    if (response.ok) {
-      console.log(`✅ Password reset email sent to ${to}`);
-      return true;
-    } else {
-      console.error(`❌ EmailJS password reset failed: ${result}`);
-      return false;
-    }
-  } catch (error) {
-    console.error(`❌ EmailJS network error for ${to}:`, error.message);
-    return false;
-  }
-};
-
-/**
- * Send welcome email after verification
- */
+// 3. Define Welcome Email Function
 export const sendWelcomeEmail = async (to, username) => {
-  // For now, just log. You can create a welcome template later.
-  console.log(`📧 Welcome email would be sent to ${to} (username: ${username})`);
-  return true;
-};
+  const mailOptions = {
+    from: `"Lovculator Team" <${process.env.EMAIL_USER}>`,
+    to: to,
+    subject: 'Welcome to Lovculator!',
+    html: `
+      <h3>Hi ${username},</h3>
+      <p>Your email has been verified successfully. You now have full access to all features!</p>
+      <p>Have fun calculating love!</p>
+    `
+  };
 
-/**
- * Test EmailJS connection (for debugging)
- */
-export const testEmailJSConnection = async () => {
   try {
-    console.log('🔍 Testing EmailJS connection...');
-    console.log('Service ID:', process.env.EMAILJS_SERVICE_ID ? '✅ Present' : '❌ Missing');
-    console.log('Template ID:', process.env.EMAILJS_TEMPLATE_ID ? '✅ Present' : '❌ Missing');
-    console.log('Public Key:', process.env.EMAILJS_PUBLIC_KEY ? '✅ Present' : '❌ Missing');
-    
-    if (!process.env.EMAILJS_SERVICE_ID || !process.env.EMAILJS_TEMPLATE_ID || !process.env.EMAILJS_PUBLIC_KEY) {
-      return { success: false, message: 'Missing credentials' };
-    }
-    
-    // Simple test request
-    const response = await fetch('https://api.emailjs.com/api/v1.0/email/send', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        service_id: process.env.EMAILJS_SERVICE_ID,
-        template_id: process.env.EMAILJS_TEMPLATE_ID,
-        user_id: process.env.EMAILJS_PUBLIC_KEY,
-        template_params: {
-          to_email: 'test@example.com',
-          username: 'TestUser',
-          verification_link: 'https://lovculator.com/test',
-          year: '2024'
-        }
-      })
-    });
-    
-    const result = await response.text();
-    return {
-      success: response.ok,
-      status: response.status,
-      message: result
-    };
+    await transporter.sendMail(mailOptions);
+    return true;
   } catch (error) {
-    return {
-      success: false,
-      message: error.message
-    };
+    console.error('❌ Error sending welcome email:', error);
+    return false;
   }
 };
 
-export default {
-  sendVerificationEmail,
-  sendPasswordResetEmail,
-  sendWelcomeEmail,
-  testEmailJSConnection
+// 4. Define Password Reset Email Function
+export const sendPasswordResetEmail = async (to, token) => {
+  // Use a frontend page URL that handles the reset logic
+  const resetLink = `https://lovculator.com/reset-password.html?token=${token}`;
+
+  const mailOptions = {
+    from: `"Lovculator Support" <${process.env.EMAIL_USER}>`,
+    to: to,
+    subject: 'Reset Your Password',
+    html: `
+      <h3>Password Reset Request</h3>
+      <p>Click the link below to reset your password. This link expires in 1 hour.</p>
+      <a href="${resetLink}">Reset Password</a>
+    `
+  };
+
+  try {
+    await transporter.sendMail(mailOptions);
+    return true;
+  } catch (error) {
+    console.error('❌ Error sending reset email:', error);
+    return false;
+  }
 };
