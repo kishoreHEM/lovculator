@@ -255,13 +255,16 @@
           { credentials: "include" }
         ).then(r => r.json()).catch(() => null);
 
-        if (!me || !me.is_admin) {
-          alert("Access denied. Admins only.");
-          window.location.href = "/login.html";
-          return;
-        }
+        // ✅ FIXED: Check inside 'response.user'
+const user = response ? response.user : null;
 
-        console.log("✅ Admin verified:", me.username);
+if (!user || !user.is_admin) {
+  alert("Access denied. Admins only.");
+  window.location.href = "/login.html";
+  return;
+}
+
+console.log("✅ Admin verified:", user.username);
         await loadAnalytics();
       } catch (err) {
         console.error("❌ Admin check failed:", err);
