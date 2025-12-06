@@ -150,9 +150,9 @@
     // -----------------------------------------
     // API Base Setup
     // -----------------------------------------
-    const API_BASE = window.location.hostname.includes("localhost")
-      ? "http://localhost:3001/api/analytics"
-      : "https://lovculator.com/api/analytics";
+    const API_DOMAIN = window.location.hostname.includes("localhost")
+      ? "http://localhost:3001"
+      : "https://lovculator.com";
 
     // -----------------------------------------
     // Load Analytics Function
@@ -161,9 +161,9 @@
       document.body.insertAdjacentHTML('beforeend', '<p class="loading">Loading analytics data...</p>');
       try {
         const [statsRes, recentRes, dailyRes] = await Promise.all([
-          fetch(`${API_BASE}/stats`, { credentials: 'include' }),
-          fetch(`${API_BASE}/recent`, { credentials: 'include' }),
-          fetch(`${API_BASE}/daily`, { credentials: 'include' })
+          fetch(`${API_DOMAIN}/api/analytics/stats`, { credentials: 'include' }),
+          fetch(`${API_DOMAIN}/api/analytics/recent`, { credentials: 'include' }),
+          fetch(`${API_DOMAIN}/api/analytics/daily`, { credentials: 'include' })
         ]);
 
         const stats = await statsRes.json();
@@ -172,39 +172,24 @@
 
         document.querySelector('.loading')?.remove();
 
-        /* 1️⃣ Daily Visits Chart (Line) */
-        const dailyCtx = document.getElementById("dailyChart");
-        new Chart(dailyCtx, {
+        // 1. Daily Chart
+        new Chart(document.getElementById("dailyChart"), {
           type: "line",
           data: {
             labels: daily.map(d => d.visit_date),
             datasets: [{
-              label: "Visits per Day",
+              label: "Visits",
               data: daily.map(d => d.visits),
               fill: true,
               borderColor: "#ff4b8d",
               backgroundColor: "rgba(255, 75, 141, 0.15)",
-              tension: 0.3,
-              pointRadius: 5,
-              pointHoverRadius: 7,
+              tension: 0.3
             }]
-          },
-          options: {
-            responsive: true,
-            scales: {
-              y: { beginAtZero: true, ticks: { precision: 0 } },
-              x: { ticks: { autoSkip: false, maxRotation: 45, minRotation: 45 } }
-            },
-            plugins: {
-              legend: { display: false },
-              tooltip: { mode: "index", intersect: false }
-            }
           }
         });
 
-        /* 2️⃣ Most Visited Pages Chart (Bar) */
-        const pageCtx = document.getElementById("pageChart");
-        new Chart(pageCtx, {
+        // 2. Page Chart
+        new Chart(document.getElementById("pageChart"), {
           type: "bar",
           data: {
             labels: stats.map(s => s.path),
@@ -212,63 +197,65 @@
               label: "Total Visits",
               data: stats.map(s => s.total_visits),
               backgroundColor: "#ff4b8d",
-              borderRadius: 6,
+              borderRadius: 6
             }]
-          },
-          options: {
-            scales: { y: { beginAtZero: true, ticks: { precision: 0 } } },
-            plugins: {
-              legend: { display: false },
-              tooltip: { mode: "index", intersect: false }
-            }
           }
         });
 
-        /* 3️⃣ Recent Visits List */
+        // 3. Recent List
         const list = document.getElementById("recentVisits");
         list.innerHTML = "";
         recent.forEach(v => {
           const li = document.createElement("li");
-          const date = new Date(v.visit_time).toLocaleString();
-          li.innerHTML = `
-            <strong>${v.path}</strong>
-            <span>${date} • ${v.ip_address || "unknown"}</span>
-          `;
+          li.innerHTML = `<strong>${v.path}</strong><span>${new Date(v.visit_time).toLocaleString()}</span>`;
           list.appendChild(li);
         });
 
       } catch (err) {
-        console.error("❌ Analytics Load Error:", err);
-        alert("Failed to load analytics data. Please check backend connection.");
+        console.error("Analytics Error:", err);
+        // Only alert if we actually failed to load data
+        // alert("Failed to load charts. Check console."); 
       }
     }
 
     // -----------------------------------------
-    // ✅ Unified Admin Check + Load
+    // ✅ ADMIN CHECK (Debug Version)
     // -----------------------------------------
     document.addEventListener("DOMContentLoaded", async () => {
       try {
-        const me = await fetch(
-          window.location.hostname.includes("localhost")
-            ? "http://localhost:3001/api/auth/me"
-            : "https://lovculator.com/api/auth/me",
-          { credentials: "include" }
-        ).then(r => r.json()).catch(() => null);
+        console.log("Checking admin status...");
+        
+        const response = await fetch(`${API_DOMAIN}/api/auth/me`, { 
+          credentials: "include",
+          cache: "no-store" // Force fresh request
+        });
+        
+        const data = await response.json();
+        console.log("Admin Check Response:", data);
 
-        // ✅ FIXED: Check inside 'response.user'
-const user = response ? response.user : null;
+        // ✅ FIXED LOGIC: Look inside data.user
+        const user = data.user || null;
 
-if (!user || !user.is_admin) {
-  alert("Access denied. Admins only.");
-  window.location.href = "/login.html";
-  return;
-}
+        if (!user) {
+          alert("Debug: User is null. You are not logged in.");
+          window.location.href = "/login.html";
+          return;
+        }
 
-console.log("✅ Admin verified:", user.username);
+        if (user.is_admin !== true) {
+          // DEBUG: Show why it failed
+          alert(`Debug Access Denied.\nUsername: ${user.username}\nIs Admin: ${user.is_admin}`);
+          window.location.href = "/login.html";
+          return;
+        }
+
+        // If we get here, you are an admin!
+        console.log("✅ Admin verified. Loading charts...");
         await loadAnalytics();
+
       } catch (err) {
-        console.error("❌ Admin check failed:", err);
-        alert("Something went wrong verifying admin access.");
+        console.error("Check Failed:", err);
+        alert("Error checking admin status: " + err.message);
       }
     });
   </script>
