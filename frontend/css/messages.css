@@ -673,4 +673,23 @@ body.messages-page {
     font-size: 12px;
 }
 
+.message-image-container {
+    margin-bottom: 5px;
+    overflow: hidden;
+    border-radius: 8px;
+}
+.message-image {
+    max-width: 250px;
+    max-height: 300px;
+    object-fit: cover;
+    display: block;
+}
+/* Typing animation in header */
+@keyframes blink {
+    50% { opacity: 0.5; }
+}
+.typing {
+    animation: blink 1s infinite;
+}
+
 }

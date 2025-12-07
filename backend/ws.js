@@ -249,28 +249,34 @@ export function initWebSocketLayer({ app, server, sessionMiddleware }) {
   }
 
   function broadcastToUsers(userIds, payload) {
-    const ids = Array.isArray(userIds) ? userIds : [userIds];
+  const ids = Array.isArray(userIds) ? userIds : [userIds];
+  
+  console.log(`🎯 BROADCAST DEBUG: Type ${payload.type} to ${ids.length} users:`, {
+    userIds: ids,
+    messageId: payload.message?.id,
+    conversationId: payload.conversationId
+  });
 
-    // Local delivery
-    const sent = localBroadcastToUsers(ids, payload);
+  // Local delivery
+  const sent = localBroadcastToUsers(ids, payload);
 
-    // Cluster delivery via Redis
-    if (redisReady && redisPub) {
-      const envelope = {
-        target: "USERS",
-        origin: nodeId,
-        userIds: ids,
-        payload,
-      };
-      redisPub
-        .publish(WS_CHANNEL, JSON.stringify(envelope))
-        .catch((err) =>
-          console.error("❌ Redis publish USERS error:", err.message)
-        );
-    }
-
-    return sent;
+  // Cluster delivery via Redis
+  if (redisReady && redisPub) {
+    const envelope = {
+      target: "USERS",
+      origin: nodeId,
+      userIds: ids,
+      payload,
+    };
+    redisPub
+      .publish(WS_CHANNEL, JSON.stringify(envelope))
+      .catch((err) =>
+        console.error("❌ Redis publish USERS error:", err.message)
+      );
   }
+
+  return sent;
+}
 
   //
   // 6️⃣ PRESENCE & SOCKET REGISTRATION (ENHANCED)
@@ -659,7 +665,7 @@ export function initWebSocketLayer({ app, server, sessionMiddleware }) {
   });
 
   //
-  // 🔟 HTTP → WS UPGRADE HANDLER (with rate limit + session)
+  // 🔟 HTTP → WS UPGRADE HANDLER (Fixed for rolling sessions)
   //
   server.on("upgrade", (req, socket, head) => {
     const clientIp =
@@ -671,7 +677,16 @@ export function initWebSocketLayer({ app, server, sessionMiddleware }) {
       return socket.destroy();
     }
 
-    sessionMiddleware(req, {}, () => {
+    // ✅ FIX: Create a mock Response object so 'rolling: true' doesn't crash
+    const responseWrapper = {
+      setHeader: () => {},
+      getHeader: () => {},
+      on: () => {},
+      writeHead: () => {},
+      end: () => {}
+    };
+
+    sessionMiddleware(req, responseWrapper, () => {
       if (!req.session?.user?.id) {
         console.log(`❌ Unauthenticated WebSocket attempt from ${clientIp}`);
         socket.write("HTTP/1.1 401 Unauthorized\r\n\r\n");

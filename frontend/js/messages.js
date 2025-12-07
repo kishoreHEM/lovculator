@@ -1,17 +1,16 @@
 /**
  * frontend/js/messages.js — Lovculator 💖
- * Enhanced Global Messaging Manager + Messages Page (WhatsApp-style)
+ * COMPLETE UPDATED VERSION with all real-time features:
+ * 1. Real-time typing indicators ✓
+ * 2. Instant message delivery without refresh ✓
+ * 3. Last seen with precise time ✓
+ * 4. Message status ticks (✓, ✓✓) ✓
+ * 5. File sharing (images, PDFs, docs) ✓
  */
 
 /* ======================================================
    1) GLOBAL MANAGER (for all pages except messages.html)
-   - Handles:
-     • "Message" button clicks on profiles
-     • Unread badge in navbar
-     • Real-time notifications
 ====================================================== */
-this.replyToMessage = null;
-
 class MessagesManager {
   constructor() {
     this.API_BASE =
@@ -52,13 +51,16 @@ class MessagesManager {
         this.isLoggedIn = true;
         window.currentUser = this.currentUser;
         console.log("✅ User authenticated:", this.currentUser.username);
+        return true;
       } else {
         this.isLoggedIn = false;
         console.log("⚠️ User not authenticated");
+        return false;
       }
     } catch (error) {
       console.error("❌ Auth check failed:", error);
       this.isLoggedIn = false;
+      return false;
     }
   }
 
@@ -73,11 +75,18 @@ class MessagesManager {
         console.log("✅ Global WS connected");
         this.reconnectAttempts = 0;
         this.updateConnectionStatus("connected");
+        
+        // Send presence update
+        this.sendPresenceUpdate();
       });
 
       this.ws.addEventListener("message", (event) => {
-        const msg = JSON.parse(event.data);
-        this.handleRealtimeEvent(msg);
+        try {
+          const msg = JSON.parse(event.data);
+          this.handleRealtimeEvent(msg);
+        } catch (error) {
+          console.error("❌ Failed to parse WS message:", error);
+        }
       });
 
       this.ws.addEventListener("close", (event) => {
@@ -91,6 +100,13 @@ class MessagesManager {
         this.updateConnectionStatus("error");
       });
 
+      // Setup heartbeat
+      setInterval(() => {
+        if (this.ws?.readyState === WebSocket.OPEN) {
+          this.ws.send(JSON.stringify({ type: "PONG" }));
+        }
+      }, 25000);
+
     } catch (err) {
       console.error("Global WS init error:", err);
     }
@@ -99,6 +115,7 @@ class MessagesManager {
   reconnectWebSocket() {
     if (this.reconnectAttempts >= this.maxReconnectAttempts) {
       console.log("Max reconnection attempts reached");
+      this.showReconnectNotification("Connection lost. Please refresh the page.", 0);
       return;
     }
 
@@ -111,15 +128,31 @@ class MessagesManager {
     }, delay);
   }
 
+  sendPresenceUpdate() {
+    if (this.ws?.readyState === WebSocket.OPEN) {
+      this.ws.send(JSON.stringify({
+        type: "PRESENCE_UPDATE",
+        timestamp: new Date().toISOString()
+      }));
+    }
+  }
+
   updateConnectionStatus(status) {
-    // Could show a subtle connection indicator
-    const statuses = {
-      connected: "✅",
-      disconnected: "❌", 
-      error: "⚠️",
-      reconnecting: "🔄"
-    };
-    console.log(`Connection: ${statuses[status] || status}`);
+    const statusElement = document.getElementById("connectionStatus");
+    if (statusElement) {
+      const statusConfig = {
+        connected: { text: "Connected", class: "connected" },
+        disconnected: { text: "Disconnected", class: "disconnected" },
+        error: { text: "Connection Error", class: "error" },
+        reconnecting: { text: "Reconnecting...", class: "reconnecting" }
+      };
+
+      const config = statusConfig[status];
+      if (config) {
+        statusElement.textContent = config.text;
+        statusElement.className = `connection-status ${config.class}`;
+      }
+    }
   }
 
   handleRealtimeEvent(msg) {
@@ -133,8 +166,14 @@ class MessagesManager {
       case "SERVER_SHUTDOWN":
         this.handleServerShutdown(msg);
         break;
-      default:
+      case "TYPING":
+        this.handleTypingNotification(msg);
         break;
+      case "MESSAGE_SEEN":
+        this.handleMessageSeen(msg);
+        break;
+      default:
+        console.log("Unknown WS event type:", msg.type);
     }
   }
 
@@ -151,14 +190,82 @@ class MessagesManager {
     this.incrementUnreadBadge();
   }
 
-  handlePresenceUpdate({ userId, isOnline, lastSeen }) {
-    // Update online status indicators across the app
+  handleTypingNotification({ fromUserId, conversationId, isTyping }) {
+    // Update typing indicators across the app
+    this.updateTypingIndicator(fromUserId, conversationId, isTyping);
+  }
+
+  handleMessageSeen({ conversationId, messageIds, seenAt }) {
+    // Update message status to seen (✓✓)
+    this.updateMessageStatus(messageIds, 'seen', seenAt);
+  }
+
+  handlePresenceUpdate({ userId, isOnline, lastSeen, timestamp }) {
+    // Update online status indicators
     this.updateUserPresence(userId, isOnline, lastSeen);
   }
 
   handleServerShutdown({ message, reconnectDelay }) {
     console.log("Server shutdown notification:", message);
     this.showReconnectNotification(message, reconnectDelay);
+  }
+
+  updateUserPresence(userId, isOnline, lastSeen) {
+    const presenceIndicators = document.querySelectorAll(`[data-user-id="${userId}"] .presence-indicator`);
+    presenceIndicators.forEach(indicator => {
+      if (isOnline) {
+        indicator.className = 'presence-indicator online';
+        indicator.title = 'Online now';
+      } else {
+        indicator.className = 'presence-indicator offline';
+        if (lastSeen) {
+          const timeAgo = this.formatLastSeen(lastSeen);
+          indicator.title = `Last seen ${timeAgo}`;
+        }
+      }
+    });
+  }
+
+  updateTypingIndicator(userId, conversationId, isTyping) {
+    const indicators = document.querySelectorAll(`[data-conversation-id="${conversationId}"] .typing-indicator`);
+    indicators.forEach(indicator => {
+      indicator.style.display = isTyping ? 'block' : 'none';
+    });
+  }
+
+  updateMessageStatus(messageIds, status, timestamp) {
+    messageIds.forEach(messageId => {
+      const statusEl = document.querySelector(`[data-message-id="${messageId}"] .message-status`);
+      if (statusEl) {
+        if (status === 'seen') {
+          statusEl.innerHTML = '✓✓';
+          statusEl.className = 'message-status seen';
+          statusEl.title = `Seen at ${new Date(timestamp).toLocaleTimeString()}`;
+        } else if (status === 'delivered') {
+          statusEl.innerHTML = '✓✓';
+          statusEl.className = 'message-status delivered';
+        }
+      }
+    });
+  }
+
+  formatLastSeen(timestamp) {
+    const now = new Date();
+    const lastSeen = new Date(timestamp);
+    const diffMs = now - lastSeen;
+    const diffMinutes = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMs / 3600000);
+    
+    if (diffMinutes < 1) return 'just now';
+    if (diffMinutes < 60) return `${diffMinutes}m ago`;
+    if (diffHours < 24) return `${diffHours}h ago`;
+    
+    return lastSeen.toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
   }
 
   shouldShowNotification() {
@@ -171,9 +278,10 @@ class MessagesManager {
 
   showDesktopNotification(message) {
     const notification = new Notification("New Message 💌", {
-      body: `${message.sender_display_name || message.sender_username}: ${this.truncateMessage(message.message_text, 50)}`,
+      body: `${message.sender_display_name || message.sender_username}: ${this.truncateMessage(message.message_text || 'Sent an attachment', 50)}`,
       icon: message.sender_avatar_url || "/images/default-avatar.png",
-      tag: `message-${message.conversation_id}`
+      tag: `message-${message.conversation_id}`,
+      badge: '/images/favicon-32x32.png'
     });
 
     notification.onclick = () => {
@@ -185,21 +293,7 @@ class MessagesManager {
     setTimeout(() => notification.close(), 5000);
   }
 
-  updateUserPresence(userId, isOnline, lastSeen) {
-    // Update presence indicators across the app
-    const presenceIndicators = document.querySelectorAll(`[data-user-id="${userId}"] .online-indicator`);
-    presenceIndicators.forEach(indicator => {
-      if (isOnline) {
-        indicator.style.display = "inline-block";
-        indicator.style.background = "#4CAF50";
-      } else {
-        indicator.style.display = "none";
-      }
-    });
-  }
-
   showReconnectNotification(message, delay = 5000) {
-    // Show a user-friendly reconnection notification
     const notification = document.createElement("div");
     notification.className = "reconnect-notification";
     notification.innerHTML = `
@@ -211,11 +305,13 @@ class MessagesManager {
     
     document.body.appendChild(notification);
     
-    setTimeout(() => {
-      if (notification.parentElement) {
-        notification.remove();
-      }
-    }, delay);
+    if (delay > 0) {
+      setTimeout(() => {
+        if (notification.parentElement) {
+          notification.remove();
+        }
+      }, delay);
+    }
   }
 
   showLoginPrompt() {
@@ -304,7 +400,6 @@ class MessagesManager {
   }
 
   showError(message) {
-    // Show user-friendly error message
     const errorDiv = document.createElement("div");
     errorDiv.className = "global-error-message";
     errorDiv.textContent = message;
@@ -390,7 +485,9 @@ class MessagesManager {
     if ("Notification" in window && Notification.permission === "default") {
       setTimeout(() => {
         if (this.isLoggedIn && document.visibilityState === "visible") {
-          Notification.requestPermission();
+          Notification.requestPermission().then(permission => {
+            console.log("📢 Notification permission:", permission);
+          });
         }
       }, 3000);
     }
@@ -399,6 +496,18 @@ class MessagesManager {
     document.addEventListener("visibilitychange", () => {
       if (!document.hidden && this.isLoggedIn) {
         this.updateUnreadCount();
+        this.sendPresenceUpdate();
+      }
+    });
+
+    // Handle page unload
+    window.addEventListener('beforeunload', () => {
+      if (this.ws?.readyState === WebSocket.OPEN) {
+        this.ws.send(JSON.stringify({
+          type: "PRESENCE_UPDATE",
+          status: "away",
+          timestamp: new Date().toISOString()
+        }));
       }
     });
 
@@ -418,7 +527,6 @@ class MessagesManager {
 
 /* ======================================================
    2) ENHANCED MESSAGES PAGE (WhatsApp-style full chat)
-   - Only used on messages.html (body.messages-page)
 ====================================================== */
 class MessagesPage {
   constructor() {
@@ -438,80 +546,84 @@ class MessagesPage {
     this.isLoadingMessages = false;
     this.hasMoreMessages = true;
     this.messageQueue = [];
+    this.presenceMap = new Map(); // Store user presence data
+    this.typingUsers = new Map(); // Store typing status by conversation
 
     this.init();
   }
 
   // ✅ ENHANCED initialization
-async init() {
-  await this.checkAuth();
-  
-  // Ensure currentUserId is properly set
-  window.currentUserId = this.currentUser?.id;
-  console.log("⚡ MessagesPage initialized:", {
-    currentUser: this.currentUser,
-    currentUserId: window.currentUserId
-  });
-  
-  await this.loadConversations();
-  this.attachEventListeners();
-  this.connectWebSocket();
-
-  // Pre-select user from URL parameters
-  const urlParams = new URLSearchParams(window.location.search);
-  const targetUser = urlParams.get("user");
-  const targetConversation = urlParams.get("conversation");
-  
-  console.log("🎯 URL parameters:", { targetUser, targetConversation });
-  
-  if (targetConversation) {
-    await this.openConversation(targetConversation);
-  } else if (targetUser) {
-    await this.startConversationWithUser(targetUser);
+  async init() {
+    console.log("⚡ Initializing MessagesPage...");
+    
+    const authSuccess = await this.checkAuth();
+    if (!authSuccess) return;
+    
+    // Set currentUserId globally
+    window.currentUserId = this.currentUser?.id;
+    console.log("✅ Authentication successful. User ID:", window.currentUserId);
+    
+    // Initialize notifications
+    this.initializeNotifications();
+    
+    // Load conversations
+    await this.loadConversations();
+    
+    // Connect WebSocket
+    this.connectWebSocket();
+    
+    // Attach event listeners
+    this.attachEventListeners();
+    
+    // Pre-select from URL
+    const urlParams = new URLSearchParams(window.location.search);
+    const targetUser = urlParams.get("user");
+    const targetConversation = urlParams.get("conversation");
+    
+    console.log("🎯 URL parameters:", { targetUser, targetConversation });
+    
+    if (targetConversation) {
+      await this.openConversation(targetConversation);
+    } else if (targetUser) {
+      await this.startConversationWithUser(targetUser);
+    }
+    
+    console.log("✅ MessagesPage fully initialized");
   }
-
-  // Initialize notification permission
-  this.initializeNotifications();
-  
-  // Test WebSocket after a delay
-  setTimeout(() => this.testWebSocketConnection(), 2000);
-}
 
   async checkAuth() {
-  try {
-    const response = await fetch(`${this.API_BASE}/auth/me`, {
-      credentials: "include",
-      cache: "no-store"
-    });
+    try {
+      const response = await fetch(`${this.API_BASE}/auth/me`, {
+        credentials: "include",
+        cache: "no-store"
+      });
 
-    if (response.ok) {
-      const data = await response.json(); 
-      this.currentUser = data.user;   // 🔥 Correct extraction
-      window.currentUser = this.currentUser;
+      if (response.ok) {
+        const data = await response.json();
+        this.currentUser = data.user || data; // Handle both response formats
+        window.currentUser = this.currentUser;
 
-      console.log("⚡ Current user set:", this.currentUser);
+        if (!this.currentUser?.id) {
+          throw new Error("User ID not found in response");
+        }
 
-      return true;
+        console.log("✅ Auth check passed. User:", this.currentUser.username, "ID:", this.currentUser.id);
+        return true;
+      }
+
+      // Redirect to login if not authenticated
+      const redirectUrl = "/login.html?redirect=" + 
+        encodeURIComponent(window.location.pathname + window.location.search);
+      window.location.href = redirectUrl;
+      return false;
+
+    } catch (error) {
+      console.error("❌ Auth check failed:", error);
+      window.location.href = "/login.html?redirect=" + 
+        encodeURIComponent(window.location.pathname + window.location.search);
+      return false;
     }
-
-    window.location.href =
-      "/login.html?redirect=" +
-      encodeURIComponent(window.location.pathname + window.location.search);
-
-    return false;
-
-  } catch (error) {
-    console.error("❌ Auth check failed:", error);
-    window.location.href =
-      "/login.html?redirect=" +
-      encodeURIComponent(window.location.pathname + window.location.search);
-
-    return false;
   }
-}
-
-
-
 
   /* 🔌 Enhanced WebSocket connection */
   connectWebSocket() {
@@ -524,11 +636,19 @@ async init() {
         console.log("✅ Messages WS connected");
         this.reconnectAttempts = 0;
         this.updateConnectionStatus("connected");
+        
+        // Send initial presence
+        this.sendPresenceUpdate();
       });
 
       this.ws.addEventListener("message", (event) => {
-        const msg = JSON.parse(event.data);
-        this.handleRealtimeEvent(msg);
+        try {
+          const msg = JSON.parse(event.data);
+          console.log("📨 WS message received:", msg.type, msg);
+          this.handleRealtimeEvent(msg);
+        } catch (error) {
+          console.error("❌ Failed to parse WS message:", error, "Raw:", event.data);
+        }
       });
 
       this.ws.addEventListener("close", (event) => {
@@ -542,10 +662,11 @@ async init() {
         this.updateConnectionStatus("error");
       });
 
-      // Set up heartbeat
+      // Setup heartbeat
       this.heartbeatInterval = setInterval(() => {
-        if (this.ws.readyState === WebSocket.OPEN) {
+        if (this.ws?.readyState === WebSocket.OPEN) {
           this.ws.send(JSON.stringify({ type: "PONG" }));
+          this.sendPresenceUpdate();
         }
       }, 25000);
 
@@ -554,10 +675,20 @@ async init() {
     }
   }
 
+  sendPresenceUpdate() {
+    if (this.ws?.readyState === WebSocket.OPEN) {
+      this.ws.send(JSON.stringify({
+        type: "PRESENCE_UPDATE",
+        timestamp: new Date().toISOString(),
+        userId: this.currentUser?.id
+      }));
+    }
+  }
+
   reconnectWebSocket() {
     if (this.reconnectAttempts >= this.maxReconnectAttempts) {
       console.log("Max reconnection attempts reached");
-      this.showReconnectNotification("Connection lost. Please refresh the page.");
+      this.showReconnectNotification("Connection lost. Please refresh the page.", 0);
       return;
     }
 
@@ -585,11 +716,23 @@ async init() {
     if (config) {
       statusElement.textContent = config.text;
       statusElement.className = `connection-status ${config.class}`;
+      
+      // Auto-hide after 3 seconds if connected
+      if (status === 'connected') {
+        setTimeout(() => {
+          if (statusElement.classList.contains('connected')) {
+            statusElement.style.opacity = '0';
+            setTimeout(() => statusElement.style.display = 'none', 300);
+          }
+        }, 3000);
+      }
     }
   }
 
   /* 📡 Enhanced real-time event handling */
   handleRealtimeEvent(msg) {
+    console.log(`📡 Handling WS event: ${msg.type}`);
+    
     switch (msg.type) {
       case "NEW_MESSAGE":
         this.handleNewMessageEvent(msg);
@@ -601,13 +744,9 @@ async init() {
         this.handleSeenEvent(msg);
         break;
       case "PRESENCE":
-        this.handlePresenceEvent(msg);
-        break;
       case "PRESENCE_INITIAL":
-        this.handlePresenceInitialEvent(msg);
-        break;
       case "BULK_PRESENCE":
-        this.handleBulkPresenceEvent(msg);
+        this.handlePresenceEvent(msg);
         break;
       case "MESSAGE_EDITED":
         this.handleEditedEvent(msg);
@@ -619,166 +758,329 @@ async init() {
         this.handleServerShutdown(msg);
         break;
       default:
-        console.log("Unknown message type:", msg.type);
+        console.log("Unknown WS event type:", msg.type, msg);
     }
   }
 
   handleNewMessageEvent({ conversationId, message }) {
+    console.log(`📨 New message for conversation ${conversationId}:`, message.id);
+    
+    // If chat is open, append message
     if (this.currentConversation?.id === parseInt(conversationId)) {
-      // Message for current conversation
       this.appendMessage(message);
       this.scrollToBottom();
-      if (this.currentConversation.messages) {
-        this.currentConversation.messages.push(message);
-      }
       
-      // Mark as read if we're viewing the conversation
+      // Mark as read immediately
       this.markConversationSeen(conversationId);
+      
+      // Update message status
+      if (message.sender_id !== this.currentUser?.id) {
+        this.sendMessageSeen(conversationId, [message.id]);
+      }
     } else {
-      // Message for other conversation - show notification
+      // Show notification
       this.showMessageNotification(message, conversationId);
     }
     
-    // Refresh conversation list
-    this.loadConversations();
+    // Update conversation list
+    this.updateConversationPreview(conversationId, message);
   }
 
-  handleTypingEvent({ fromUserId, conversationId, isTyping }) {
-    if (!this.currentConversation || this.currentConversation.id !== parseInt(conversationId)) return;
-    if (fromUserId === this.currentUser.id) return;
+  updateConversationPreview(conversationId, message) {
+    const convItem = document.querySelector(`.conversation-item[data-conversation-id="${conversationId}"]`);
+    
+    if (convItem) {
+      const previewEl = convItem.querySelector(".conversation-preview");
+      const timeEl = convItem.querySelector(".conversation-time");
+      const unreadBadge = convItem.querySelector(".unread-badge");
+      
+      // Update preview text
+      if (previewEl) {
+        let previewText = '';
+        
+        if (message.message_type === 'image') {
+          previewText = '📷 Photo';
+        } else if (message.message_type === 'pdf' || message.message_type === 'doc') {
+          previewText = '📎 Document';
+        } else {
+          previewText = this.truncateMessage(message.message_text || 'Sent a file', 40);
+        }
+        
+        previewEl.textContent = previewText;
+        previewEl.style.color = ""; // Reset typing color
+      }
+      
+      // Update time
+      if (timeEl) {
+        timeEl.textContent = this.formatTimeShort(new Date());
+      }
+      
+      // Update unread badge if not current chat
+      if (this.currentConversation?.id !== parseInt(conversationId)) {
+        convItem.classList.add("unread");
+        
+        if (unreadBadge) {
+          const currentCount = parseInt(unreadBadge.textContent) || 0;
+          unreadBadge.textContent = currentCount + 1;
+        } else {
+          const badge = document.createElement("span");
+          badge.className = "unread-badge";
+          badge.textContent = "1";
+          convItem.querySelector(".conversation-meta")?.appendChild(badge);
+        }
+      }
+      
+      // Move to top
+      const list = document.getElementById("conversationsList");
+      if (list && convItem.parentNode === list) {
+        list.prepend(convItem);
+      }
+    } else {
+      // Conversation not in list, reload
+      this.loadConversations();
+    }
+  }
 
+  handleTypingEvent({ fromUserId, conversationId, isTyping, timestamp }) {
+    console.log(`⌨️ Typing event from ${fromUserId} in ${conversationId}: ${isTyping}`);
+    
+    // Store typing state
+    if (isTyping) {
+      this.typingUsers.set(conversationId, {
+        userId: fromUserId,
+        timestamp: new Date(timestamp)
+      });
+    } else {
+      this.typingUsers.delete(conversationId);
+    }
+    
+    // Update current chat header
+    if (this.currentConversation && this.currentConversation.id === parseInt(conversationId)) {
+      this.updateChatTypingIndicator(fromUserId, isTyping);
+    }
+    
+    // Update conversation list
+    this.updateConversationTypingIndicator(conversationId, isTyping);
+  }
+
+  updateChatTypingIndicator(userId, isTyping) {
     const statusEl = document.getElementById("currentChatStatus");
     if (!statusEl) return;
-
+    
     if (isTyping) {
-      statusEl.textContent = "Typing...";
-      statusEl.classList.add("typing");
+      statusEl.innerHTML = `
+        <div class="typing-indicator">
+          <span></span><span></span><span></span>
+        </div>
+        <span>Typing...</span>
+      `;
+      statusEl.classList.add('typing-active');
     } else {
-      statusEl.classList.remove("typing");
-      this.updateChatStatus(fromUserId);
+      // Revert to presence status
+      const userPresence = this.presenceMap.get(userId);
+      if (userPresence?.isOnline) {
+        statusEl.innerHTML = '<span class="online-dot"></span> Online';
+      } else if (userPresence?.lastSeen) {
+        statusEl.textContent = `Last seen ${this.formatLastSeen(userPresence.lastSeen)}`;
+      } else {
+        statusEl.textContent = 'Start chatting to connect';
+      }
+      statusEl.classList.remove('typing-active');
+    }
+  }
+
+  updateConversationTypingIndicator(conversationId, isTyping) {
+    const convItem = document.querySelector(`.conversation-item[data-conversation-id="${conversationId}"]`);
+    if (!convItem) return;
+    
+    const previewEl = convItem.querySelector(".conversation-preview");
+    if (previewEl) {
+      if (isTyping) {
+        previewEl.textContent = "Typing...";
+        previewEl.classList.add('typing');
+      } else {
+        // Restore last message
+        const conv = this.conversations.find(c => c.id === parseInt(conversationId));
+        if (conv?.last_message) {
+          let previewText = '';
+          if (conv.last_message.message_type === 'image') {
+            previewText = '📷 Photo';
+          } else if (conv.last_message.message_type === 'pdf' || conv.last_message.message_type === 'doc') {
+            previewText = '📎 Document';
+          } else {
+            previewText = this.truncateMessage(conv.last_message.message_text || '', 40);
+          }
+          previewEl.textContent = previewText;
+        }
+        previewEl.classList.remove('typing');
+      }
     }
   }
 
   handleSeenEvent({ conversationId, messageIds, seenAt }) {
+    console.log(`👀 Messages seen in ${conversationId}:`, messageIds);
+    
     if (!this.currentConversation || this.currentConversation.id !== parseInt(conversationId)) return;
     
     // Update message status in UI
     messageIds.forEach(messageId => {
-      const messageEl = document.querySelector(`[data-message-id="${messageId}"] .message-status`);
+      const messageEl = document.querySelector(`[data-message-id="${messageId}"]`);
       if (messageEl) {
-        messageEl.innerHTML = "✓✓";
-        messageEl.title = `Seen at ${new Date(seenAt).toLocaleTimeString()}`;
+        const statusEl = messageEl.querySelector('.message-status');
+        if (statusEl) {
+          statusEl.innerHTML = '✓✓';
+          statusEl.className = 'message-status seen';
+          statusEl.title = `Seen at ${new Date(seenAt).toLocaleTimeString()}`;
+        }
       }
     });
   }
 
-  handlePresenceEvent({ userId, isOnline, lastSeen }) {
-    this.updateUserPresence(userId, isOnline, lastSeen);
-  }
-
-  handlePresenceInitialEvent(msg) {
-    this.updateUserPresence(msg.userId, msg.isOnline, msg.lastSeen);
-  }
-
-  handleBulkPresenceEvent({ users }) {
+  handlePresenceEvent(msg) {
+    let users = [];
+    
+    if (msg.type === "BULK_PRESENCE" || msg.type === "PRESENCE_INITIAL") {
+      users = msg.users || [];
+    } else if (msg.type === "PRESENCE") {
+      users = [{
+        userId: msg.userId,
+        isOnline: msg.isOnline,
+        lastSeen: msg.lastSeen
+      }];
+    }
+    
     users.forEach(user => {
-      this.updateUserPresence(user.userId, user.isOnline, user.lastSeen);
+      this.presenceMap.set(user.userId, {
+        isOnline: user.isOnline,
+        lastSeen: user.lastSeen ? new Date(user.lastSeen) : null,
+        updatedAt: new Date()
+      });
+      
+      // Update UI
+      this.updateUserPresenceUI(user.userId, user.isOnline, user.lastSeen);
     });
+  }
+
+  updateUserPresenceUI(userId, isOnline, lastSeen) {
+    // Update in conversations list
+    const conversationItems = document.querySelectorAll(`.conversation-item[data-user-id="${userId}"]`);
+    conversationItems.forEach(item => {
+      const presenceEl = item.querySelector('.presence-indicator');
+      if (presenceEl) {
+        if (isOnline) {
+          presenceEl.className = 'presence-indicator online';
+          presenceEl.title = 'Online now';
+        } else {
+          presenceEl.className = 'presence-indicator offline';
+          if (lastSeen) {
+            presenceEl.title = `Last seen ${this.formatLastSeen(lastSeen)}`;
+          }
+        }
+      }
+    });
+    
+    // Update in current chat header
+    if (this.currentConversation) {
+      const conv = this.conversations.find(c => c.id === this.currentConversation.id);
+      const otherParticipant = conv?.participants?.[0];
+      
+      if (otherParticipant && otherParticipant.id === userId) {
+        const statusEl = document.getElementById("currentChatStatus");
+        if (statusEl && !statusEl.classList.contains('typing-active')) {
+          if (isOnline) {
+            statusEl.innerHTML = '<span class="online-dot"></span> Online';
+          } else if (lastSeen) {
+            statusEl.textContent = `Last seen ${this.formatLastSeen(lastSeen)}`;
+          }
+        }
+      }
+    }
   }
 
   handleEditedEvent({ message }) {
     if (!this.currentConversation || this.currentConversation.id !== message.conversation_id) return;
 
-    const el = document.querySelector(`[data-message-id="${message.id}"] .message-text`);
-    if (el) {
-      const safe = this.escapeHtml(message.message_text || "");
-      el.innerHTML = `${safe} <small class="edited-tag">(edited)</small>`;
+    const messageEl = document.querySelector(`[data-message-id="${message.id}"]`);
+    if (messageEl) {
+      const textEl = messageEl.querySelector('.message-text');
+      if (textEl) {
+        const safeText = this.escapeHtml(message.message_text || "");
+        textEl.innerHTML = `${safeText} <small class="edited-tag">(edited)</small>`;
+      }
     }
   }
 
   handleDeletedEvent({ messageId }) {
     if (!this.currentConversation) return;
 
-    const el = document.querySelector(`[data-message-id="${messageId}"] .message-text`);
-    if (el) {
-      el.textContent = "[deleted]";
-      el.classList.add("deleted-message");
+    const messageEl = document.querySelector(`[data-message-id="${messageId}"]`);
+    if (messageEl) {
+      const textEl = messageEl.querySelector('.message-text');
+      if (textEl) {
+        textEl.textContent = "[This message was deleted]";
+        textEl.classList.add("deleted-message");
+      }
     }
   }
 
   handleServerShutdown({ message, reconnectDelay }) {
     console.log("Server shutdown:", message);
-    this.showReconnectNotification(message, reconnectDelay);
+    this.showReconnectNotification(message, reconnectDelay || 5000);
   }
 
-  updateUserPresence(userId, isOnline, lastSeen) {
-    // Update in conversations list
-    const conversationItem = document.querySelector(`[data-user-id="${userId}"]`);
-    if (conversationItem) {
-      const onlineIndicator = conversationItem.querySelector('.online-indicator');
-      if (onlineIndicator) {
-        onlineIndicator.style.display = isOnline ? 'inline-block' : 'none';
-      }
-    }
-
-    // Update in current chat header
-    if (this.currentConversation) {
-      const conv = this.conversations.find(c => c.id === this.currentConversation.id);
-      const otherParticipant = conv?.participants?.[0];
-      if (otherParticipant && otherParticipant.id === userId) {
-        this.updateChatStatus(userId, isOnline, lastSeen);
-      }
-    }
-  }
-
-  updateChatStatus(userId = null, isOnline = null, lastSeen = null) {
-    const statusEl = document.getElementById("currentChatStatus");
-    if (!statusEl) return;
-
-    if (isOnline) {
-      statusEl.innerHTML = `<span class="online-indicator"></span> Online`;
-      return;
-    }
-
-    if (!lastSeen) {
-      statusEl.textContent = "Last seen recently";
-      return;
-    }
-
-    const last = new Date(lastSeen);
+  formatLastSeen(timestamp) {
+    const lastSeen = new Date(timestamp);
     const now = new Date();
-    const diffMs = now - last;
+    const diffMs = now - lastSeen;
     const diffMinutes = Math.floor(diffMs / 60000);
-
-    if (diffMinutes < 5) {
-      statusEl.textContent = "Last seen recently";
-      return;
-    }
-
-    const sameDay = last.toDateString() === now.toDateString();
-    const time = last.toLocaleTimeString("en-US", {
-      hour: "numeric",
-      minute: "2-digit",
-      hour12: true,
+    const diffHours = Math.floor(diffMs / 3600000);
+    const diffDays = Math.floor(diffMs / 86400000);
+    
+    if (diffMinutes < 1) return 'just now';
+    if (diffMinutes < 60) return `${diffMinutes}m ago`;
+    if (diffHours < 24) return `${diffHours}h ago`;
+    if (diffDays < 7) return `${diffDays}d ago`;
+    
+    return lastSeen.toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
     });
+  }
 
-    if (sameDay) {
-      statusEl.textContent = `Last seen today at ${time}`;
-    } else {
-      const dateText = last.toLocaleDateString("en-US", {
-        month: "short",
-        day: "numeric",
-      });
-      statusEl.textContent = `Last seen ${dateText} at ${time}`;
+  formatTimeShort(date) {
+    const now = new Date();
+    const diffMs = now - date;
+    const diffMinutes = Math.floor(diffMs / 60000);
+    
+    if (diffMinutes < 1) return 'now';
+    if (diffMinutes < 60) return `${diffMinutes}m`;
+    if (date.getDate() === now.getDate()) {
+      return date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
     }
+    
+    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
   }
 
   showMessageNotification(message, conversationId) {
     if (this.shouldShowNotification()) {
-      const notification = new Notification("New Message 💌", {
-        body: `${message.sender_display_name || message.sender_username}: ${this.truncateMessage(message.message_text, 50)}`,
+      const senderName = message.sender_display_name || message.sender_username || 'Someone';
+      let messageBody = '';
+      
+      if (message.message_type === 'image') {
+        messageBody = '📷 Sent a photo';
+      } else if (message.message_type === 'pdf' || message.message_type === 'doc') {
+        messageBody = '📎 Sent a document';
+      } else {
+        messageBody = this.truncateMessage(message.message_text || 'Sent a message', 60);
+      }
+      
+      const notification = new Notification(`${senderName}`, {
+        body: messageBody,
         icon: message.sender_avatar_url || "/images/default-avatar.png",
-        tag: `message-${conversationId}`
+        tag: `message-${conversationId}`,
+        badge: '/images/favicon-32x32.png'
       });
 
       notification.onclick = () => {
@@ -821,15 +1123,20 @@ async init() {
     try {
       const response = await fetch(`${this.API_BASE}/messages/conversations`, {
         credentials: "include",
-        cache: "no-cache"
+        cache: "no-cache",
+        headers: {
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Pragma': 'no-cache'
+        }
       });
 
-      if (!response.ok) throw new Error("Failed to load conversations");
+      if (!response.ok) throw new Error(`Failed to load conversations: ${response.status}`);
 
       this.conversations = await response.json();
+      console.log(`📋 Loaded ${this.conversations.length} conversations`);
       this.renderConversationsList();
     } catch (error) {
-      console.error("Load conversations error:", error);
+      console.error("❌ Load conversations error:", error);
       container.innerHTML = `
         <div class="empty-conversations">
           <div class="empty-icon">😔</div>
@@ -879,6 +1186,25 @@ async init() {
         const lastMessage = conv.last_message;
         const unreadCount = conv.unread_count || 0;
         const isActive = this.currentConversation?.id === conv.id;
+        const userPresence = this.presenceMap.get(otherParticipant?.id);
+        const isTyping = this.typingUsers.get(conv.id.toString());
+
+        // Format preview text
+        let previewText = 'No messages yet';
+        if (lastMessage) {
+          if (lastMessage.message_type === 'image') {
+            previewText = '📷 Photo';
+          } else if (lastMessage.message_type === 'pdf' || lastMessage.message_type === 'doc') {
+            previewText = '📎 Document';
+          } else {
+            previewText = this.truncateMessage(lastMessage.message_text || '', 40);
+          }
+        }
+
+        // Check if user is typing
+        if (isTyping) {
+          previewText = 'Typing...';
+        }
 
         return `
           <div class="conversation-item ${isActive ? "active" : ""} ${
@@ -886,16 +1212,28 @@ async init() {
         }" 
             data-conversation-id="${conv.id}" 
             data-user-id="${otherParticipant?.id || ""}">
-            <img src="${
-              otherParticipant?.avatar_url || "/images/default-avatar.png"
-            }" 
-              alt="${
-                otherParticipant?.display_name ||
-                otherParticipant?.username ||
-                "User"
+            <div class="conversation-avatar-wrapper">
+              <img src="${
+                otherParticipant?.avatar_url || "/images/default-avatar.png"
               }" 
-              class="conversation-avatar" 
-              onerror="this.src='/images/default-avatar.png'" />
+                alt="${
+                  otherParticipant?.display_name ||
+                  otherParticipant?.username ||
+                  "User"
+                }" 
+                class="conversation-avatar" 
+                onerror="this.src='/images/default-avatar.png'" />
+              <span class="presence-indicator ${
+                userPresence?.isOnline ? 'online' : 'offline'
+              }" 
+                title="${
+                  userPresence?.isOnline 
+                    ? 'Online now' 
+                    : userPresence?.lastSeen 
+                      ? `Last seen ${this.formatLastSeen(userPresence.lastSeen)}` 
+                      : 'Offline'
+                }"></span>
+            </div>
             <div class="conversation-info">
               <div class="conversation-header-row">
                 <h4 class="conversation-name">
@@ -906,23 +1244,18 @@ async init() {
                   }
                 </h4>
                 <span class="conversation-time">
-                  ${lastMessage ? this.formatTime(lastMessage.created_at) : ""}
+                  ${lastMessage ? this.formatTimeShort(new Date(lastMessage.created_at)) : ""}
                 </span>
               </div>
-              <p class="conversation-preview">
-                ${
-                  lastMessage?.message_text
-                    ? this.truncateMessage(lastMessage.message_text)
-                    : "No messages yet"
-                }
+              <p class="conversation-preview ${isTyping ? 'typing' : ''}">
+                ${previewText}
               </p>
               <div class="conversation-meta">
                 ${
                   unreadCount > 0
-                    ? `<span class="unread-badge">${unreadCount}</span>`
+                    ? `<span class="unread-badge">${unreadCount > 99 ? '99+' : unreadCount}</span>`
                     : ""
                 }
-                <div class="online-indicator" style="display: ${otherParticipant?.is_online ? 'inline-block' : 'none'}"></div>
               </div>
             </div>
           </div>
@@ -939,7 +1272,7 @@ async init() {
     });
   }
 
-  /* 🔁 Enhanced conversation opening with pagination */
+  /* 🔁 Enhanced conversation opening */
   async openConversation(conversationId, options = {}) {
     if (this.isLoadingMessages) return;
     
@@ -951,13 +1284,27 @@ async init() {
       let url = `${this.API_BASE}/messages/conversations/${conversationId}/messages?limit=${limit}`;
       if (before) url += `&before=${before}`;
 
-      const response = await fetch(url, { credentials: "include" });
+      console.log(`📥 Loading messages for conversation ${conversationId}`);
+      const response = await fetch(url, { 
+        credentials: "include",
+        headers: {
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Pragma': 'no-cache'
+        }
+      });
       
-      if (!response.ok) throw new Error("Failed to load messages");
+      if (!response.ok) {
+        if (response.status === 403) {
+          throw new Error("You don't have access to this conversation");
+        } else if (response.status === 404) {
+          throw new Error("Conversation not found");
+        } else {
+          throw new Error(`Failed to load messages: ${response.status}`);
+        }
+      }
 
-      const data = await response.json();
-      const messages = data.messages || data; // Handle both formats
-      this.hasMoreMessages = data.pagination?.hasMore !== false;
+      const messages = await response.json();
+      this.hasMoreMessages = messages.length >= limit;
 
       if (
         !this.currentConversation ||
@@ -981,29 +1328,36 @@ async init() {
 
       this.showMessageInput();
 
-      // Update active state in conversations list
+      // Update active state
       document.querySelectorAll(".conversation-item").forEach((item) => {
-        item.classList.toggle(
-          "active",
-          item.dataset.conversationId === String(conversationId)
-        );
+        const isActive = item.dataset.conversationId === String(conversationId);
+        item.classList.toggle("active", isActive);
+        
+        // Remove unread badge
+        if (isActive) {
+          item.classList.remove("unread");
+          const badge = item.querySelector(".unread-badge");
+          if (badge) badge.remove();
+        }
       });
-
-      // Update mobile view
-      const container = document.querySelector(".messages-container");
-      const messagesMain = document.getElementById("messagesMain");
-      if (messagesMain) messagesMain.classList.add("active");
-      if (window.innerWidth <= 768 && container) container.classList.add("chat-open");
 
       // Mark as seen
       await this.markConversationSeen(conversationId);
 
-      // Update URL without page reload
+      // Update URL
       this.updateURL(conversationId);
 
+      // Update mobile view
+      if (window.innerWidth <= 768) {
+        document.querySelector(".messages-container")?.classList.add("chat-open");
+      }
+      
+      const messagesMain = document.getElementById("messagesMain");
+      if (messagesMain) messagesMain.classList.add("active");
+
     } catch (err) {
-      console.error("Open conversation error:", err);
-      this.showError("Failed to load conversation");
+      console.error("❌ Open conversation error:", err);
+      this.showError(err.message || "Failed to load conversation");
     } finally {
       this.isLoadingMessages = false;
     }
@@ -1023,6 +1377,9 @@ async init() {
         {
           method: "POST",
           credentials: "include",
+          headers: {
+            'Content-Type': 'application/json'
+          }
         }
       );
       
@@ -1032,9 +1389,23 @@ async init() {
         conv.unread_count = 0;
       }
       
-      this.renderConversationsList();
     } catch (err) {
-      console.error("mark seen error", err);
+      console.error("❌ Mark seen error:", err);
+    }
+  }
+
+  async sendMessageSeen(conversationId, messageIds) {
+    try {
+      if (this.ws?.readyState === WebSocket.OPEN) {
+        this.ws.send(JSON.stringify({
+          type: "MESSAGE_SEEN",
+          conversationId: conversationId,
+          messageIds: messageIds,
+          timestamp: new Date().toISOString()
+        }));
+      }
+    } catch (err) {
+      console.error("❌ Send message seen error:", err);
     }
   }
 
@@ -1042,6 +1413,7 @@ async init() {
     const messagesList = document.getElementById("messagesList");
     const currentChatName = document.getElementById("currentChatName");
     const currentChatAvatar = document.getElementById("currentChatAvatar");
+    const currentChatStatus = document.getElementById("currentChatStatus");
 
     if (!messagesList) return;
 
@@ -1062,14 +1434,25 @@ async init() {
     const otherParticipant = conv?.participants?.[0];
 
     if (otherParticipant) {
-      if (currentChatName)
-        currentChatName.textContent =
-          otherParticipant.display_name || otherParticipant.username;
+      if (currentChatName) {
+        currentChatName.textContent = otherParticipant.display_name || otherParticipant.username;
+      }
       if (currentChatAvatar) {
         currentChatAvatar.src = otherParticipant.avatar_url || "/images/default-avatar.png";
         currentChatAvatar.alt = otherParticipant.display_name || otherParticipant.username;
       }
-      this.updateChatStatus(otherParticipant.id, otherParticipant.is_online);
+      
+      // Update status
+      const userPresence = this.presenceMap.get(otherParticipant.id);
+      if (currentChatStatus) {
+        if (userPresence?.isOnline) {
+          currentChatStatus.innerHTML = '<span class="online-dot"></span> Online';
+        } else if (userPresence?.lastSeen) {
+          currentChatStatus.textContent = `Last seen ${this.formatLastSeen(userPresence.lastSeen)}`;
+        } else {
+          currentChatStatus.textContent = 'Start chatting to connect';
+        }
+      }
     }
 
     const groupedMessages = this.groupMessagesByDate(messages);
@@ -1126,118 +1509,199 @@ async init() {
     messagesList.scrollTop = newScrollHeight - oldScrollHeight;
   }
 
-
   renderMessage(message) {
-  // ✅ Now this.currentUser is properly set from data.user
-  const currentUserId = this.currentUser?.id;
-  
-  // Simple and reliable comparison
-  const isOwnMessage = parseInt(message.sender_id) === parseInt(currentUserId);
+    const currentUserId = this.currentUser?.id;
+    const isOwnMessage = parseInt(message.sender_id) === parseInt(currentUserId);
+    const messageTime = this.formatMessageTime(message.created_at);
+    
+    // Message status ticks
+    let messageStatus = '';
+    if (isOwnMessage) {
+      if (message.is_read) {
+        messageStatus = '<span class="message-status seen" title="Seen">✓✓</span>';
+      } else if (message.delivered_at) {
+        messageStatus = '<span class="message-status delivered" title="Delivered">✓✓</span>';
+      } else {
+        messageStatus = '<span class="message-status sent" title="Sent">✓</span>';
+      }
+    }
 
-  const messageTime = this.formatTime(message.created_at);
-  const messageStatus = isOwnMessage ? 
-    (message.is_read ? 
-      '<span class="message-status" title="Read">✓✓</span>' : 
-      '<span class="message-status" title="Sent">✓</span>') : 
-    '';
+    // Message content based on type
+    let contentHtml = '';
+    switch(message.message_type) {
+      case 'image':
+        contentHtml = this.renderImageMessage(message);
+        break;
+      case 'pdf':
+      case 'doc':
+      case 'docx':
+      case 'txt':
+        contentHtml = this.renderDocumentMessage(message);
+        break;
+      default:
+        contentHtml = `<div class="message-text">${this.escapeHtml(message.message_text || "")}</div>`;
+    }
 
-  return `
-    <div class="message ${isOwnMessage ? "own-message" : "other-message"}" 
-         data-message-id="${message.id}">
-      <div class="message-bubble">
-        <p class="message-text">${this.escapeHtml(message.message_text || "")}</p>
-        <div class="message-meta">
-          <span class="message-time">${messageTime}</span>
-          ${messageStatus}
+    return `
+      <div class="message ${isOwnMessage ? "own-message" : "other-message"}" 
+           data-message-id="${message.id}"
+           data-sender-id="${message.sender_id}">
+        <div class="message-bubble">
+          ${contentHtml}
+          <div class="message-meta">
+            <span class="message-time">${messageTime}</span>
+            ${messageStatus}
+          </div>
         </div>
       </div>
-    </div>
-  `;
-}
+    `;
+  }
 
+  renderImageMessage(message) {
+    return `
+      <div class="message-attachment image">
+        <img src="${message.attachment_url}" 
+             alt="Image" 
+             class="message-image" 
+             onclick="window.open(this.src, '_blank')"
+             loading="lazy"
+             onerror="this.src='/images/image-error.png'">
+        ${message.message_text && message.message_text !== 'Sent an image' ? 
+          `<div class="image-caption">${this.escapeHtml(message.message_text)}</div>` : ''}
+      </div>
+    `;
+  }
+
+  renderDocumentMessage(message) {
+    const icon = this.getDocumentIcon(message.message_type);
+    const filename = message.filename || 'Document';
+    const size = message.file_size ? this.formatFileSize(message.file_size) : '';
+    
+    return `
+      <div class="message-attachment document">
+        <a href="${message.attachment_url}" target="_blank" class="attachment-link" download>
+          <span class="doc-icon">${icon}</span>
+          <div class="doc-info">
+            <div class="doc-name">${this.escapeHtml(filename)}</div>
+            ${size ? `<div class="doc-size">${size}</div>` : ''}
+          </div>
+          <span class="download-btn">↓</span>
+        </a>
+        ${message.message_text ? 
+          `<div class="document-caption">${this.escapeHtml(message.message_text)}</div>` : ''}
+      </div>
+    `;
+  }
+
+  getDocumentIcon(fileType) {
+    const icons = {
+      'pdf': '📄',
+      'doc': '📝',
+      'docx': '📝',
+      'txt': '📄',
+      'default': '📎'
+    };
+    return icons[fileType] || icons.default;
+  }
+
+  formatFileSize(bytes) {
+    if (!bytes || bytes === 0) return '0 B';
+    const k = 1024;
+    const sizes = ['B', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+  }
+
+  formatMessageTime(timestamp) {
+    const date = new Date(timestamp);
+    return date.toLocaleTimeString('en-US', {
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: true
+    });
+  }
 
   /* ✉️ Enhanced message sending */
-  // ✅ ENHANCED message sending
-async sendMessage(attachmentMeta = null) {
-  const input = document.getElementById("messageInput");
-  const sendBtn = document.getElementById("sendMessageBtn");
-  const messageText = input?.value.trim();
-  
-  if (!messageText && !attachmentMeta) return;
-  if (!this.currentConversation) return;
-
-  console.log("🚀 Sending message:", {
-    conversationId: this.currentConversation.id,
-    currentUser: this.currentUser?.id,
-    messageLength: messageText?.length
-  });
-
-  // Disable send button during sending
-  if (sendBtn) {
-    sendBtn.disabled = true;
-    sendBtn.innerHTML = '<div class="loading-spinner"></div>';
-  }
-
-  const body = {
-    message_text: messageText || null,
-    message_type: attachmentMeta ? 'attachment' : 'text'
-  };
-
-  if (attachmentMeta) {
-    body.attachment_type = attachmentMeta.type;
-    body.attachment_url = attachmentMeta.url;
-  }
-
-  try {
-    const response = await fetch(
-      `${this.API_BASE}/messages/conversations/${this.currentConversation.id}/messages`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify(body),
-      }
-    );
-
-    if (!response.ok) throw new Error("Failed to send message");
-
-    const newMessage = await response.json();
+  async sendMessage(attachmentMeta = null) {
+    const input = document.getElementById("messageInput");
+    const sendBtn = document.getElementById("sendMessageBtn");
+    const messageText = input?.value.trim();
     
-    // Debug the received message
-    console.log("✅ Message sent successfully:", {
-      messageId: newMessage.id,
-      senderId: newMessage.sender_id,
-      currentUserId: this.currentUser?.id,
-      alignment: String(newMessage.sender_id) === String(this.currentUser?.id) ? "OWN" : "OTHER"
-    });
-
-    this.appendMessage(newMessage);
-    
-    if (input) {
-      input.value = "";
-      this.autoResizeTextarea(input);
+    if (!messageText && !attachmentMeta) {
+      console.log("⚠️ Cannot send: No message text or attachment");
+      return;
     }
     
-    this.scrollToBottom();
-    
-    if (this.currentConversation?.messages) {
-      this.currentConversation.messages.push(newMessage);
+    if (!this.currentConversation) {
+      this.showError("Please select a conversation first");
+      return;
     }
 
-    // Refresh conversations list to update last message
-    this.loadConversations();
+    console.log("🚀 Sending message to conversation:", this.currentConversation.id);
 
-  } catch (error) {
-    console.error("❌ Send message error:", error);
-    this.showError("Failed to send message. Please try again.");
-  } finally {
-    // Re-enable send button
+    // Disable send button during sending
     if (sendBtn) {
-      sendBtn.disabled = false;
-      sendBtn.innerHTML = '<span style="font-size: 18px;">➤</span>';
+      sendBtn.disabled = true;
+      sendBtn.innerHTML = '<div class="loading-spinner"></div>';
+    }
+
+    // Prepare message data
+    const messageData = {
+      message_text: messageText || null,
+      message_type: attachmentMeta ? 'attachment' : 'text'
+    };
+
+    if (attachmentMeta) {
+      messageData.message_type = attachmentMeta.type;
+      messageData.attachment_url = attachmentMeta.url;
+      messageData.filename = attachmentMeta.filename;
+      messageData.file_size = attachmentMeta.file_size;
+    }
+
+    try {
+      const response = await fetch(
+        `${this.API_BASE}/messages/conversations/${this.currentConversation.id}/messages`,
+        {
+          method: "POST",
+          headers: { 
+            "Content-Type": "application/json" 
+          },
+          credentials: "include",
+          body: JSON.stringify(messageData),
+        }
+      );
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Failed to send message: ${response.status} - ${errorText}`);
+      }
+
+      const newMessage = await response.json();
+      console.log("✅ Message sent successfully:", newMessage.id);
+      
+      // Clear input
+      if (input) {
+        input.value = "";
+        this.autoResizeTextarea(input);
+      }
+      
+      // Stop typing indicator
+      this.stopTypingIndicator();
+      
+      // Refresh conversations to update last message
+      this.loadConversations();
+
+    } catch (error) {
+      console.error("❌ Send message error:", error);
+      this.showError("Failed to send message. Please try again.");
+    } finally {
+      // Re-enable send button
+      if (sendBtn) {
+        sendBtn.disabled = false;
+        sendBtn.innerHTML = '<span style="font-size: 18px;">➤</span>';
+      }
     }
   }
-}
 
   appendMessage(message) {
     const messagesList = document.getElementById("messagesList");
@@ -1251,7 +1715,7 @@ async sendMessage(attachmentMeta = null) {
 
   showMessageInput() {
     const inputContainer = document.getElementById("messageInputContainer");
-    if (inputContainer) inputContainer.style.display = "block";
+    if (inputContainer) inputContainer.style.display = "flex";
   }
 
   scrollToBottom(force = false) {
@@ -1270,12 +1734,13 @@ async sendMessage(attachmentMeta = null) {
 
   /* 🎯 Enhanced event listeners */
   attachEventListeners() {
+    console.log("🔧 Attaching event listeners...");
+
     // Send message button
     const sendBtn = document.getElementById("sendMessageBtn");
     if (sendBtn) {
       sendBtn.addEventListener("click", () => this.sendMessage());
     }
-
 
     // Message input handling
     const messageInput = document.getElementById("messageInput");
@@ -1339,25 +1804,35 @@ async sendMessage(attachmentMeta = null) {
       });
     }
 
-    // Attachments
+    // File attachment
     const attachBtn = document.getElementById("attachBtn");
     const attachInput = document.getElementById("attachInput");
     if (attachBtn && attachInput) {
       attachBtn.addEventListener("click", () => {
         attachInput.click();
       });
+      
       attachInput.addEventListener("change", async (e) => {
         const file = e.target.files[0];
         if (!file) return;
         
-        // Show uploading state
-        this.showUploadingState();
+        console.log("📎 File selected:", file.name, file.type, file.size);
         
-        const meta = await this.uploadAttachment(file);
-        if (meta) {
-          this.sendMessage(meta);
+        // Show uploading state
+        const uploadId = this.showUploadingState(file.name);
+        
+        try {
+          const meta = await this.uploadAttachment(file);
+          if (meta) {
+            await this.sendMessage(meta);
+          }
+        } catch (error) {
+          console.error("❌ File upload failed:", error);
+          this.showError("Failed to upload file");
+        } finally {
+          this.removeUploadingState(uploadId);
+          e.target.value = "";
         }
-        e.target.value = "";
       });
     }
 
@@ -1389,57 +1864,98 @@ async sendMessage(attachmentMeta = null) {
     document.addEventListener("visibilitychange", () => {
       if (document.hidden) {
         this.stopTypingIndicator();
+      } else {
+        this.sendPresenceUpdate();
+        this.loadConversations();
       }
     });
 
     // Handle beforeunload
     window.addEventListener("beforeunload", () => {
       this.stopTypingIndicator();
+      this.sendPresenceUpdate();
     });
+
+    // Handle offline/online events
+    window.addEventListener('online', () => {
+      console.log("✅ Connection restored");
+      this.updateConnectionStatus("connected");
+      this.loadConversations();
+    });
+
+    window.addEventListener('offline', () => {
+      console.log("❌ Connection lost");
+      this.updateConnectionStatus("disconnected");
+    });
+
+    console.log("✅ Event listeners attached");
   }
 
   handleTyping() {
-    if (!this.currentConversation) return;
+    if (!this.currentConversation || !this.ws || this.ws.readyState !== WebSocket.OPEN) {
+      console.log("⚠️ Typing indicator skipped: No conversation or WS not ready");
+      return;
+    }
+    
+    const conv = this.conversations.find(c => c.id === this.currentConversation.id);
+    if (!conv || !conv.participants?.[0]) return;
+    
+    const otherUserId = conv.participants[0].id;
     
     if (!this.isTyping) {
       this.isTyping = true;
-      this.sendTypingIndicator(true);
+      console.log(`⌨️ Sending typing START to ${otherUserId}`);
+      this.sendTypingIndicator(true, otherUserId);
     }
 
     clearTimeout(this.typingTimeout);
     this.typingTimeout = setTimeout(() => {
-      this.isTyping = false;
-      this.sendTypingIndicator(false);
+      if (this.isTyping) {
+        this.isTyping = false;
+        console.log(`⌨️ Sending typing STOP to ${otherUserId}`);
+        this.sendTypingIndicator(false, otherUserId);
+      }
     }, 2000);
   }
 
   stopTypingIndicator() {
     if (this.isTyping) {
       this.isTyping = false;
-      this.sendTypingIndicator(false);
+      const conv = this.conversations.find(c => c.id === this.currentConversation?.id);
+      if (conv?.participants?.[0]) {
+        this.sendTypingIndicator(false, conv.participants[0].id);
+      }
     }
-    clearTimeout(this.typingTimeout);
+    if (this.typingTimeout) {
+      clearTimeout(this.typingTimeout);
+    }
   }
 
-  sendTypingIndicator(isTyping) {
-    if (!this.currentConversation) return;
+  sendTypingIndicator(isTyping, toUserId) {
+    if (!this.currentConversation || !this.ws || this.ws.readyState !== WebSocket.OPEN) {
+      console.log("⚠️ Cannot send typing: WS not ready");
+      return;
+    }
 
-    const conv = this.conversations.find(
-      (c) => c.id === this.currentConversation.id
-    );
-    const other = conv?.participants?.[0];
+    const payload = {
+      type: "TYPING",
+      conversationId: this.currentConversation.id,
+      isTyping: isTyping,
+      toUserId: toUserId,
+      timestamp: new Date().toISOString()
+    };
     
-    if (other && this.ws?.readyState === WebSocket.OPEN) {
-      this.ws.send(JSON.stringify({
-        type: "TYPING",
-        conversationId: this.currentConversation.id,
-        isTyping: isTyping,
-        toUserId: other.id
-      }));
+    console.log("📤 Sending typing event:", payload);
+    
+    try {
+      this.ws.send(JSON.stringify(payload));
+    } catch (error) {
+      console.error("❌ Failed to send typing event:", error);
     }
   }
 
   autoResizeTextarea(textarea) {
+    if (!textarea) return;
     textarea.style.height = "auto";
     textarea.style.height = Math.min(textarea.scrollHeight, 120) + "px";
   }
@@ -1467,6 +1983,8 @@ async sendMessage(attachmentMeta = null) {
 
   async startConversationWithUser(userId) {
     try {
+      console.log(`🤝 Starting conversation with user ${userId}`);
+      
       const response = await fetch(`${this.API_BASE}/messages/conversations`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -1474,51 +1992,134 @@ async sendMessage(attachmentMeta = null) {
         body: JSON.stringify({ targetUserId: userId }),
       });
 
-      if (!response.ok) throw new Error("Failed to create conversation");
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || "Failed to create conversation");
+      }
 
       const { conversationId } = await response.json();
+      console.log(`✅ Conversation created: ${conversationId}`);
       await this.openConversation(conversationId);
     } catch (error) {
-      console.error("Start conversation error:", error);
-      this.showError("Failed to start conversation");
+      console.error("❌ Start conversation error:", error);
+      this.showError(error.message || "Failed to start conversation");
     }
   }
 
-  // Upload attachment (enhanced)
+  // Enhanced file upload
   async uploadAttachment(file) {
+    // Validate file
+    const maxSize = 10 * 1024 * 1024; // 10MB
+    if (file.size > maxSize) {
+      this.showError('File too large (max 10MB)');
+      throw new Error('File size exceeded');
+    }
+    
+    const allowedTypes = [
+      'image/jpeg', 'image/png', 'image/gif', 'image/webp',
+      'application/pdf',
+      'application/msword',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      'text/plain'
+    ];
+    
+    if (!allowedTypes.includes(file.type)) {
+      this.showError('File type not supported. Supported: Images, PDF, Word, Text');
+      throw new Error('File type not supported');
+    }
+    
+    // Determine file type category
+    let messageType = 'text';
+    if (file.type.startsWith('image/')) messageType = 'image';
+    else if (file.type === 'application/pdf') messageType = 'pdf';
+    else if (file.type.includes('word')) messageType = 'doc';
+    else if (file.type === 'text/plain') messageType = 'txt';
+    
     try {
       const formData = new FormData();
-      formData.append("file", file);
-
+      formData.append('file', file);
+      
+      console.log(`📤 Uploading ${file.name} (${messageType})`);
+      
       const response = await fetch(`${this.API_BASE}/messages/upload`, {
-        method: "POST",
-        credentials: "include",
+        method: 'POST',
+        credentials: 'include',
         body: formData,
       });
       
-      if (!response.ok) throw new Error("Upload failed");
+      if (!response.ok) {
+        const error = await response.text();
+        throw new Error(`Upload failed: ${error}`);
+      }
       
       const data = await response.json();
-      return { type: data.type, url: data.url };
-    } catch (err) {
-      console.error("Upload error", err);
-      this.showError("Failed to upload attachment");
-      return null;
+      console.log('✅ Upload successful:', data.url);
+      
+      return {
+        url: data.url,
+        type: messageType,
+        filename: file.name,
+        file_size: file.size,
+        mime_type: file.type
+      };
+      
+    } catch (error) {
+      console.error('❌ Upload error:', error);
+      throw error;
     }
   }
 
-  showUploadingState() {
-    const inputContainer = document.getElementById("messageInputContainer");
+  showUploadingState(filename) {
+    const uploadId = 'upload-' + Date.now();
+    const indicator = document.createElement('div');
+    indicator.id = uploadId;
+    indicator.className = 'upload-indicator';
+    indicator.innerHTML = `
+      <div class="upload-progress">
+        <div class="upload-filename">Uploading: ${this.escapeHtml(filename)}</div>
+        <div class="upload-progress-bar">
+          <div class="upload-progress-fill"></div>
+        </div>
+      </div>
+    `;
+    
+    const inputContainer = document.getElementById('messageInputContainer');
     if (inputContainer) {
-      const existing = inputContainer.querySelector('.uploading-indicator');
-      if (existing) existing.remove();
+      inputContainer.parentNode.insertBefore(indicator, inputContainer.nextSibling);
+    }
+    
+    // Simulate progress animation
+    const progressFill = indicator.querySelector('.upload-progress-fill');
+    let width = 0;
+    const interval = setInterval(() => {
+      if (width < 80) {
+        width += 5;
+        progressFill.style.width = `${width}%`;
+      }
+    }, 200);
+    
+    indicator.dataset.intervalId = interval;
+    
+    return uploadId;
+  }
+
+  removeUploadingState(uploadId) {
+    const indicator = document.getElementById(uploadId);
+    if (indicator) {
+      const intervalId = indicator.dataset.intervalId;
+      if (intervalId) clearInterval(intervalId);
       
-      const indicator = document.createElement('div');
-      indicator.className = 'uploading-indicator';
-      indicator.textContent = 'Uploading...';
-      inputContainer.appendChild(indicator);
+      // Complete animation
+      const progressFill = indicator.querySelector('.upload-progress-fill');
+      if (progressFill) {
+        progressFill.style.width = '100%';
+      }
       
-      setTimeout(() => indicator.remove(), 3000);
+      setTimeout(() => {
+        if (indicator.parentElement) {
+          indicator.remove();
+        }
+      }, 500);
     }
   }
 
@@ -1588,16 +2189,19 @@ async sendMessage(attachmentMeta = null) {
     const url = new URL(window.location);
     url.searchParams.delete('conversation');
     window.history.replaceState({}, '', url);
+    
+    // Reload conversations to update badges
+    this.loadConversations();
   }
 
   initializeNotifications() {
     if ("Notification" in window && Notification.permission === "default") {
-      // Request permission when user interacts with messages
+      // Request permission when user focuses message input
       const messageInput = document.getElementById("messageInput");
       if (messageInput) {
         messageInput.addEventListener("focus", () => {
           Notification.requestPermission().then(permission => {
-            console.log("Notification permission:", permission);
+            console.log("📢 Notification permission:", permission);
           });
         }, { once: true });
       }
@@ -1641,15 +2245,23 @@ async sendMessage(attachmentMeta = null) {
 
   formatTime(timestamp) {
     if (!timestamp) return "";
-    return new Date(timestamp).toLocaleTimeString("en-US", {
-      hour: "numeric",
-      minute: "2-digit",
-      hour12: true,
-    });
+    
+    const date = new Date(timestamp);
+    const now = new Date();
+    const diffMs = now - date;
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMs / 3600000);
+
+    if (diffMins < 1) return "Just now";
+    if (diffMins < 60) return `${diffMins}m ago`;
+    if (diffHours < 24) return `${diffHours}h ago`;
+
+    return date.toLocaleDateString();
   }
 
   truncateMessage(text, length = 40) {
-    return text && text.length > length ? text.substring(0, length) + "..." : text;
+    if (!text) return '';
+    return text.length > length ? text.substring(0, length) + "..." : text;
   }
 
   escapeHtml(text) {
@@ -1696,10 +2308,7 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 });
 
-
-
 // Export for module usage if needed
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = { MessagesManager, MessagesPage };
 }
-

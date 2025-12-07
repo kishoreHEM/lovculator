@@ -826,7 +826,6 @@ body {
   align-items: center;
   justify-content: center;
   gap: 10px;
-  width: 80%;
   max-width: 360px;
   color: #000;
 }
