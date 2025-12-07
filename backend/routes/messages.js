@@ -429,19 +429,21 @@ router.post("/conversations/:conversationId/messages", auth, async (req, res) =>
 
     // Get recipients for WebSocket
     const { rows: others } = await client.query(
-      `SELECT user_id FROM conversation_participants WHERE conversation_id = $1 AND user_id <> $2`,
-      [conversationId, userId]
-    );
+  `SELECT user_id FROM conversation_participants WHERE conversation_id = $1 AND user_id <> $2`,
+  [conversationId, userId]
+);
 
-    await client.query('COMMIT');
+await client.query('COMMIT');
 
-    // 🚀 WebSocket Broadcast
-    const broadcastFn = req.app.get("broadcastNewMessage");
-    if (broadcastFn) {
-      broadcastFn(message, others.map((r) => r.user_id));
-    }
+// 🚀 WebSocket Broadcast - IMPORTANT: Use message object, not just data
+const broadcastFn = req.app.get("broadcastNewMessage");
+if (broadcastFn) {
+  console.log(`📤 Broadcasting new message to users:`, others.map(r => r.user_id));
+  broadcastFn(message, others.map((r) => r.user_id));
+}
 
-    res.json(message);
+res.json(message);
+
   } catch (error) {
     await client.query('ROLLBACK');
     console.error("❌ Send message error:", error);

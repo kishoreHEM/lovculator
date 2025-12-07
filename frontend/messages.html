@@ -1156,5 +1156,72 @@
       });
     });
   </script>
+
+  <!-- Add this at the end of messages.html before </body> -->
+<div id="debugPanel" style="position: fixed; bottom: 10px; right: 10px; background: rgba(0,0,0,0.8); color: white; padding: 10px; border-radius: 5px; font-size: 12px; z-index: 10000; max-width: 300px; display: none;">
+  <h4 style="margin: 0 0 5px 0;">WebSocket Debug</h4>
+  <div id="debugInfo"></div>
+  <button onclick="testWebSocket()" style="background: #ff4b8d; color: white; border: none; padding: 5px 10px; border-radius: 3px; margin-top: 5px;">Test WS</button>
+  <button onclick="document.getElementById('debugPanel').style.display='none'" style="background: #666; color: white; border: none; padding: 5px 10px; border-radius: 3px; margin-top: 5px;">Close</button>
+</div>
+
+<script>
+// Debug functions
+function toggleDebug() {
+  const panel = document.getElementById('debugPanel');
+  panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
+}
+
+function testWebSocket() {
+  if (window.messagesPage?.ws) {
+    const ws = window.messagesPage.ws;
+    const info = `
+      State: ${ws.readyState} (${getWebSocketState(ws.readyState)})
+      URL: ${ws.url}
+      Buffered: ${ws.bufferedAmount}
+    `;
+    document.getElementById('debugInfo').innerHTML = info;
+    
+    // Send test message
+    ws.send(JSON.stringify({
+      type: "DEBUG_REQUEST",
+      message: "Manual test",
+      timestamp: new Date().toISOString()
+    }));
+  }
+}
+
+function getWebSocketState(state) {
+  const states = {
+    0: 'CONNECTING',
+    1: 'OPEN',
+    2: 'CLOSING',
+    3: 'CLOSED'
+  };
+  return states[state] || 'UNKNOWN';
+}
+
+// Update debug info every 5 seconds
+setInterval(() => {
+  if (window.messagesPage?.ws) {
+    const ws = window.messagesPage.ws;
+    const info = `
+      <div>State: ${getWebSocketState(ws.readyState)}</div>
+      <div>Connected: ${ws.readyState === 1 ? '✅' : '❌'}</div>
+      <div>User ID: ${window.currentUser?.id || 'None'}</div>
+      <div>Current Conv: ${window.messagesPage?.currentConversation?.id || 'None'}</div>
+    `;
+    document.getElementById('debugInfo').innerHTML = info;
+  }
+}, 5000);
+
+// Add keyboard shortcut for debug (Ctrl+Shift+D)
+document.addEventListener('keydown', (e) => {
+  if (e.ctrlKey && e.shiftKey && e.key === 'D') {
+    toggleDebug();
+    e.preventDefault();
+  }
+});
+</script>
 </body>
 </html>

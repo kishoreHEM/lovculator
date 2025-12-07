@@ -578,78 +578,98 @@ export function initWebSocketLayer({ app, server, sessionMiddleware }) {
     registerSocket(uid, wsSocket, req);
     setupHeartbeat(wsSocket);
 
-    wsSocket.on("message", (raw) => {
-      let data;
-      try {
-        data = JSON.parse(raw.toString());
-        connectionStats.totalMessages++;
-        
-        // Update last activity
-        if (connectionDebug.has(uid)) {
-          const debugInfo = connectionDebug.get(uid);
-          debugInfo.lastActivity = new Date().toISOString();
-          connectionDebug.set(uid, debugInfo);
-        }
-      } catch (error) {
-        console.log("❌ Invalid WebSocket message format from user", uid);
-        return;
-      }
+    // In the ws.js message handler (around line 300), update the switch statement:
 
-      // Any message = still alive
+wsSocket.on("message", (raw) => {
+  let data;
+  try {
+    data = JSON.parse(raw.toString());
+    connectionStats.totalMessages++;
+    
+    // Update last activity
+    if (connectionDebug.has(uid)) {
+      const debugInfo = connectionDebug.get(uid);
+      debugInfo.lastActivity = new Date().toISOString();
+      connectionDebug.set(uid, debugInfo);
+    }
+  } catch (error) {
+    console.log("❌ Invalid WebSocket message format from user", uid, "Raw:", raw.toString());
+    return;
+  }
+
+  // Any message = still alive
+  wsSocket.isAlive = true;
+
+  console.log(`📨 WebSocket message from user ${uid}:`, data);
+
+  switch (data.type) {
+    case "TYPING":
+      if (data.toUserId && data.conversationId) {
+        console.log(`⌨️ Typing indicator from ${uid} to ${data.toUserId}`);
+        broadcastToUsers([data.toUserId], {
+          type: "TYPING",
+          conversationId: data.conversationId,
+          isTyping: data.isTyping,
+          fromUserId: uid,
+          timestamp: data.timestamp || new Date().toISOString(),
+        });
+      } else {
+        console.log(`⚠️ Invalid TYPING message format from ${uid}:`, data);
+      }
+      break;
+
+    case "PONG":
       wsSocket.isAlive = true;
+      console.log(`❤️ PONG received from user ${uid}`);
+      break;
 
-      console.log(`📨 WebSocket message from user ${uid}:`, {
-        type: data.type,
-        conversationId: data.conversationId,
-        isTyping: data.isTyping
-      });
+    case "PRESENCE_UPDATE": {
+      console.log(`👤 Presence update from user ${uid}`);
+      const userData = onlineUsers.get(uid) || {
+        connectionCount: 0,
+        lastSeen: null,
+        isOnline: false,
+      };
+      userData.lastSeen = new Date();
+      onlineUsers.set(uid, userData);
+      
+      // Broadcast presence to all users in conversations with this user
+      broadcastPresence(uid, true);
+      break;
+    }
 
-      switch (data.type) {
-        case "TYPING":
-          if (data.toUserId && data.conversationId) {
-            console.log(`⌨️ Typing indicator from ${uid} to ${data.toUserId}`);
-            broadcastToUsers([data.toUserId], {
-              type: "TYPING",
-              conversationId: data.conversationId,
-              isTyping: data.isTyping,
-              fromUserId: uid,
-              timestamp: new Date().toISOString(),
-            });
-          }
-          break;
-
-        case "PONG":
-          wsSocket.isAlive = true;
-          break;
-
-        case "PRESENCE_UPDATE": {
-          const userData = onlineUsers.get(uid) || {
-            connectionCount: 0,
-            lastSeen: null,
-            isOnline: false,
-          };
-          userData.lastSeen = new Date();
-          onlineUsers.set(uid, userData);
-          break;
-        }
-
-        case "DEBUG_REQUEST":
-          // Handle debug requests from frontend
-          if (wsSocket.readyState === ws.OPEN) {
-            wsSocket.send(JSON.stringify({
-              type: "DEBUG_RESPONSE",
-              userId: uid,
-              connectionCount: userSockets.get(uid)?.size || 0,
-              online: onlineUsers.get(uid)?.isOnline || false,
-              timestamp: new Date().toISOString()
-            }));
-          }
-          break;
-
-        default:
-          console.log(`Unknown WebSocket message type from user ${uid}: ${data.type}`);
+    case "DEBUG_REQUEST":
+      console.log(`🔍 Debug request from user ${uid}`);
+      if (wsSocket.readyState === ws.OPEN) {
+        wsSocket.send(JSON.stringify({
+          type: "DEBUG_RESPONSE",
+          userId: uid,
+          connectionCount: userSockets.get(uid)?.size || 0,
+          online: onlineUsers.get(uid)?.isOnline || false,
+          onlineUsers: Array.from(onlineUsers.keys()),
+          totalConnections: connectionStats.activeConnections,
+          timestamp: new Date().toISOString()
+        }));
       }
-    });
+      break;
+
+    case "MESSAGE_SEEN":
+      console.log(`👀 Message seen from user ${uid}:`, data);
+      if (data.conversationId && data.messageIds && data.toUserId) {
+        broadcastToUsers([data.toUserId], {
+          type: "MESSAGE_SEEN",
+          conversationId: data.conversationId,
+          messageIds: data.messageIds,
+          seenAt: data.timestamp || new Date().toISOString(),
+          fromUserId: uid
+        });
+      }
+      break;
+
+    default:
+      console.log(`❓ Unknown WebSocket message type from user ${uid}:`, data.type);
+  }
+});
 
     wsSocket.on("close", (code, reason) => {
       console.log(`WebSocket closed for user ${uid}: ${code} - ${reason}`);

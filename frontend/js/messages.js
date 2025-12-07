@@ -156,6 +156,8 @@ class MessagesManager {
   }
 
   handleRealtimeEvent(msg) {
+    console.log("📨 Global WS event:", msg.type);
+    
     switch (msg.type) {
       case "NEW_MESSAGE":
         this.handleNewMessageNotification(msg);
@@ -177,7 +179,7 @@ class MessagesManager {
     }
   }
 
-  handleNewMessageNotification({ message, conversationId }) {
+  handleNewMessageNotification({ conversationId, message }) {
     // Update unread count
     this.updateUnreadCount();
     
@@ -546,576 +548,103 @@ class MessagesPage {
     this.isLoadingMessages = false;
     this.hasMoreMessages = true;
     this.messageQueue = [];
-    this.presenceMap = new Map(); // Store user presence data
-    this.typingUsers = new Map(); // Store typing status by conversation
+    this.presenceMap = new Map();
+    this.typingUsers = new Map();
 
-    this.init();
+    console.log("🔧 MessagesPage constructor called");
   }
 
   // ✅ ENHANCED initialization
   async init() {
-    console.log("⚡ Initializing MessagesPage...");
+    console.log("🚀 Starting initialization...");
     
-    const authSuccess = await this.checkAuth();
-    if (!authSuccess) return;
-    
-    // Set currentUserId globally
-    window.currentUserId = this.currentUser?.id;
-    console.log("✅ Authentication successful. User ID:", window.currentUserId);
-    
-    // Initialize notifications
-    this.initializeNotifications();
-    
-    // Load conversations
-    await this.loadConversations();
-    
-    // Connect WebSocket
-    this.connectWebSocket();
-    
-    // Attach event listeners
-    this.attachEventListeners();
-    
-    // Pre-select from URL
-    const urlParams = new URLSearchParams(window.location.search);
-    const targetUser = urlParams.get("user");
-    const targetConversation = urlParams.get("conversation");
-    
-    console.log("🎯 URL parameters:", { targetUser, targetConversation });
-    
-    if (targetConversation) {
-      await this.openConversation(targetConversation);
-    } else if (targetUser) {
-      await this.startConversationWithUser(targetUser);
+    try {
+      // 1. Check authentication first
+      const authSuccess = await this.checkAuth();
+      if (!authSuccess) {
+        console.error("❌ Authentication failed");
+        return;
+      }
+      
+      console.log("✅ Auth successful. User ID:", this.currentUser?.id);
+      
+      // 2. Load conversations
+      await this.loadConversations();
+      
+      // 3. Connect WebSocket
+      this.connectWebSocket();
+      
+      // 4. Attach event listeners
+      this.attachEventListeners();
+      
+      // 5. Initialize notifications
+      this.initializeNotifications();
+      
+      // 6. Handle URL parameters
+      const urlParams = new URLSearchParams(window.location.search);
+      const targetUser = urlParams.get("user");
+      const targetConversation = urlParams.get("conversation");
+      
+      console.log("🎯 URL params:", { targetUser, targetConversation });
+      
+      if (targetConversation) {
+        await this.openConversation(targetConversation);
+      } else if (targetUser) {
+        await this.startConversationWithUser(targetUser);
+      }
+      
+      console.log("✅ MessagesPage fully initialized");
+    } catch (error) {
+      console.error("❌ Initialization failed:", error);
     }
-    
-    console.log("✅ MessagesPage fully initialized");
   }
 
   async checkAuth() {
     try {
+      console.log("🔐 Checking authentication...");
       const response = await fetch(`${this.API_BASE}/auth/me`, {
         credentials: "include",
         cache: "no-store"
       });
 
+      console.log("📊 Auth response status:", response.status);
+      
       if (response.ok) {
         const data = await response.json();
-        this.currentUser = data.user || data; // Handle both response formats
+        this.currentUser = data.user || data;
         window.currentUser = this.currentUser;
 
         if (!this.currentUser?.id) {
-          throw new Error("User ID not found in response");
+          console.error("❌ No user ID in response");
+          return false;
         }
 
-        console.log("✅ Auth check passed. User:", this.currentUser.username, "ID:", this.currentUser.id);
+        console.log("✅ Auth successful. User:", this.currentUser.username, "ID:", this.currentUser.id);
         return true;
       }
 
-      // Redirect to login if not authenticated
-      const redirectUrl = "/login.html?redirect=" + 
+      console.error("❌ Auth failed, redirecting to login");
+      window.location.href = "/login.html?redirect=" + 
         encodeURIComponent(window.location.pathname + window.location.search);
-      window.location.href = redirectUrl;
       return false;
 
     } catch (error) {
-      console.error("❌ Auth check failed:", error);
+      console.error("❌ Auth check error:", error);
       window.location.href = "/login.html?redirect=" + 
         encodeURIComponent(window.location.pathname + window.location.search);
       return false;
     }
   }
 
-  /* 🔌 Enhanced WebSocket connection */
-  connectWebSocket() {
-    try {
-      const protocol = window.location.protocol === "https:" ? "wss" : "ws";
-      const wsUrl = `${protocol}://${window.location.host}`;
-      this.ws = new WebSocket(wsUrl);
-
-      this.ws.addEventListener("open", () => {
-        console.log("✅ Messages WS connected");
-        this.reconnectAttempts = 0;
-        this.updateConnectionStatus("connected");
-        
-        // Send initial presence
-        this.sendPresenceUpdate();
-      });
-
-      this.ws.addEventListener("message", (event) => {
-        try {
-          const msg = JSON.parse(event.data);
-          console.log("📨 WS message received:", msg.type, msg);
-          this.handleRealtimeEvent(msg);
-        } catch (error) {
-          console.error("❌ Failed to parse WS message:", error, "Raw:", event.data);
-        }
-      });
-
-      this.ws.addEventListener("close", (event) => {
-        console.log("❌ Messages WS closed:", event.code, event.reason);
-        this.updateConnectionStatus("disconnected");
-        this.reconnectWebSocket();
-      });
-
-      this.ws.addEventListener("error", (error) => {
-        console.error("Messages WS error:", error);
-        this.updateConnectionStatus("error");
-      });
-
-      // Setup heartbeat
-      this.heartbeatInterval = setInterval(() => {
-        if (this.ws?.readyState === WebSocket.OPEN) {
-          this.ws.send(JSON.stringify({ type: "PONG" }));
-          this.sendPresenceUpdate();
-        }
-      }, 25000);
-
-    } catch (err) {
-      console.error("Messages WS init error:", err);
-    }
-  }
-
-  sendPresenceUpdate() {
-    if (this.ws?.readyState === WebSocket.OPEN) {
-      this.ws.send(JSON.stringify({
-        type: "PRESENCE_UPDATE",
-        timestamp: new Date().toISOString(),
-        userId: this.currentUser?.id
-      }));
-    }
-  }
-
-  reconnectWebSocket() {
-    if (this.reconnectAttempts >= this.maxReconnectAttempts) {
-      console.log("Max reconnection attempts reached");
-      this.showReconnectNotification("Connection lost. Please refresh the page.", 0);
-      return;
-    }
-
-    const delay = Math.min(1000 * Math.pow(2, this.reconnectAttempts), 30000);
-    
-    setTimeout(() => {
-      this.reconnectAttempts++;
-      console.log(`🔄 Reconnecting... (${this.reconnectAttempts}/${this.maxReconnectAttempts})`);
-      this.connectWebSocket();
-    }, delay);
-  }
-
-  updateConnectionStatus(status) {
-    const statusElement = document.getElementById("connectionStatus");
-    if (!statusElement) return;
-
-    const statusConfig = {
-      connected: { text: "Connected", class: "connected" },
-      disconnected: { text: "Disconnected", class: "disconnected" },
-      error: { text: "Connection Error", class: "error" },
-      reconnecting: { text: "Reconnecting...", class: "reconnecting" }
-    };
-
-    const config = statusConfig[status];
-    if (config) {
-      statusElement.textContent = config.text;
-      statusElement.className = `connection-status ${config.class}`;
-      
-      // Auto-hide after 3 seconds if connected
-      if (status === 'connected') {
-        setTimeout(() => {
-          if (statusElement.classList.contains('connected')) {
-            statusElement.style.opacity = '0';
-            setTimeout(() => statusElement.style.display = 'none', 300);
-          }
-        }, 3000);
-      }
-    }
-  }
-
-  /* 📡 Enhanced real-time event handling */
-  handleRealtimeEvent(msg) {
-    console.log(`📡 Handling WS event: ${msg.type}`);
-    
-    switch (msg.type) {
-      case "NEW_MESSAGE":
-        this.handleNewMessageEvent(msg);
-        break;
-      case "TYPING":
-        this.handleTypingEvent(msg);
-        break;
-      case "MESSAGE_SEEN":
-        this.handleSeenEvent(msg);
-        break;
-      case "PRESENCE":
-      case "PRESENCE_INITIAL":
-      case "BULK_PRESENCE":
-        this.handlePresenceEvent(msg);
-        break;
-      case "MESSAGE_EDITED":
-        this.handleEditedEvent(msg);
-        break;
-      case "MESSAGE_DELETED":
-        this.handleDeletedEvent(msg);
-        break;
-      case "SERVER_SHUTDOWN":
-        this.handleServerShutdown(msg);
-        break;
-      default:
-        console.log("Unknown WS event type:", msg.type, msg);
-    }
-  }
-
-  handleNewMessageEvent({ conversationId, message }) {
-    console.log(`📨 New message for conversation ${conversationId}:`, message.id);
-    
-    // If chat is open, append message
-    if (this.currentConversation?.id === parseInt(conversationId)) {
-      this.appendMessage(message);
-      this.scrollToBottom();
-      
-      // Mark as read immediately
-      this.markConversationSeen(conversationId);
-      
-      // Update message status
-      if (message.sender_id !== this.currentUser?.id) {
-        this.sendMessageSeen(conversationId, [message.id]);
-      }
-    } else {
-      // Show notification
-      this.showMessageNotification(message, conversationId);
-    }
-    
-    // Update conversation list
-    this.updateConversationPreview(conversationId, message);
-  }
-
-  updateConversationPreview(conversationId, message) {
-    const convItem = document.querySelector(`.conversation-item[data-conversation-id="${conversationId}"]`);
-    
-    if (convItem) {
-      const previewEl = convItem.querySelector(".conversation-preview");
-      const timeEl = convItem.querySelector(".conversation-time");
-      const unreadBadge = convItem.querySelector(".unread-badge");
-      
-      // Update preview text
-      if (previewEl) {
-        let previewText = '';
-        
-        if (message.message_type === 'image') {
-          previewText = '📷 Photo';
-        } else if (message.message_type === 'pdf' || message.message_type === 'doc') {
-          previewText = '📎 Document';
-        } else {
-          previewText = this.truncateMessage(message.message_text || 'Sent a file', 40);
-        }
-        
-        previewEl.textContent = previewText;
-        previewEl.style.color = ""; // Reset typing color
-      }
-      
-      // Update time
-      if (timeEl) {
-        timeEl.textContent = this.formatTimeShort(new Date());
-      }
-      
-      // Update unread badge if not current chat
-      if (this.currentConversation?.id !== parseInt(conversationId)) {
-        convItem.classList.add("unread");
-        
-        if (unreadBadge) {
-          const currentCount = parseInt(unreadBadge.textContent) || 0;
-          unreadBadge.textContent = currentCount + 1;
-        } else {
-          const badge = document.createElement("span");
-          badge.className = "unread-badge";
-          badge.textContent = "1";
-          convItem.querySelector(".conversation-meta")?.appendChild(badge);
-        }
-      }
-      
-      // Move to top
-      const list = document.getElementById("conversationsList");
-      if (list && convItem.parentNode === list) {
-        list.prepend(convItem);
-      }
-    } else {
-      // Conversation not in list, reload
-      this.loadConversations();
-    }
-  }
-
-  handleTypingEvent({ fromUserId, conversationId, isTyping, timestamp }) {
-    console.log(`⌨️ Typing event from ${fromUserId} in ${conversationId}: ${isTyping}`);
-    
-    // Store typing state
-    if (isTyping) {
-      this.typingUsers.set(conversationId, {
-        userId: fromUserId,
-        timestamp: new Date(timestamp)
-      });
-    } else {
-      this.typingUsers.delete(conversationId);
-    }
-    
-    // Update current chat header
-    if (this.currentConversation && this.currentConversation.id === parseInt(conversationId)) {
-      this.updateChatTypingIndicator(fromUserId, isTyping);
-    }
-    
-    // Update conversation list
-    this.updateConversationTypingIndicator(conversationId, isTyping);
-  }
-
-  updateChatTypingIndicator(userId, isTyping) {
-    const statusEl = document.getElementById("currentChatStatus");
-    if (!statusEl) return;
-    
-    if (isTyping) {
-      statusEl.innerHTML = `
-        <div class="typing-indicator">
-          <span></span><span></span><span></span>
-        </div>
-        <span>Typing...</span>
-      `;
-      statusEl.classList.add('typing-active');
-    } else {
-      // Revert to presence status
-      const userPresence = this.presenceMap.get(userId);
-      if (userPresence?.isOnline) {
-        statusEl.innerHTML = '<span class="online-dot"></span> Online';
-      } else if (userPresence?.lastSeen) {
-        statusEl.textContent = `Last seen ${this.formatLastSeen(userPresence.lastSeen)}`;
-      } else {
-        statusEl.textContent = 'Start chatting to connect';
-      }
-      statusEl.classList.remove('typing-active');
-    }
-  }
-
-  updateConversationTypingIndicator(conversationId, isTyping) {
-    const convItem = document.querySelector(`.conversation-item[data-conversation-id="${conversationId}"]`);
-    if (!convItem) return;
-    
-    const previewEl = convItem.querySelector(".conversation-preview");
-    if (previewEl) {
-      if (isTyping) {
-        previewEl.textContent = "Typing...";
-        previewEl.classList.add('typing');
-      } else {
-        // Restore last message
-        const conv = this.conversations.find(c => c.id === parseInt(conversationId));
-        if (conv?.last_message) {
-          let previewText = '';
-          if (conv.last_message.message_type === 'image') {
-            previewText = '📷 Photo';
-          } else if (conv.last_message.message_type === 'pdf' || conv.last_message.message_type === 'doc') {
-            previewText = '📎 Document';
-          } else {
-            previewText = this.truncateMessage(conv.last_message.message_text || '', 40);
-          }
-          previewEl.textContent = previewText;
-        }
-        previewEl.classList.remove('typing');
-      }
-    }
-  }
-
-  handleSeenEvent({ conversationId, messageIds, seenAt }) {
-    console.log(`👀 Messages seen in ${conversationId}:`, messageIds);
-    
-    if (!this.currentConversation || this.currentConversation.id !== parseInt(conversationId)) return;
-    
-    // Update message status in UI
-    messageIds.forEach(messageId => {
-      const messageEl = document.querySelector(`[data-message-id="${messageId}"]`);
-      if (messageEl) {
-        const statusEl = messageEl.querySelector('.message-status');
-        if (statusEl) {
-          statusEl.innerHTML = '✓✓';
-          statusEl.className = 'message-status seen';
-          statusEl.title = `Seen at ${new Date(seenAt).toLocaleTimeString()}`;
-        }
-      }
-    });
-  }
-
-  handlePresenceEvent(msg) {
-    let users = [];
-    
-    if (msg.type === "BULK_PRESENCE" || msg.type === "PRESENCE_INITIAL") {
-      users = msg.users || [];
-    } else if (msg.type === "PRESENCE") {
-      users = [{
-        userId: msg.userId,
-        isOnline: msg.isOnline,
-        lastSeen: msg.lastSeen
-      }];
-    }
-    
-    users.forEach(user => {
-      this.presenceMap.set(user.userId, {
-        isOnline: user.isOnline,
-        lastSeen: user.lastSeen ? new Date(user.lastSeen) : null,
-        updatedAt: new Date()
-      });
-      
-      // Update UI
-      this.updateUserPresenceUI(user.userId, user.isOnline, user.lastSeen);
-    });
-  }
-
-  updateUserPresenceUI(userId, isOnline, lastSeen) {
-    // Update in conversations list
-    const conversationItems = document.querySelectorAll(`.conversation-item[data-user-id="${userId}"]`);
-    conversationItems.forEach(item => {
-      const presenceEl = item.querySelector('.presence-indicator');
-      if (presenceEl) {
-        if (isOnline) {
-          presenceEl.className = 'presence-indicator online';
-          presenceEl.title = 'Online now';
-        } else {
-          presenceEl.className = 'presence-indicator offline';
-          if (lastSeen) {
-            presenceEl.title = `Last seen ${this.formatLastSeen(lastSeen)}`;
-          }
-        }
-      }
-    });
-    
-    // Update in current chat header
-    if (this.currentConversation) {
-      const conv = this.conversations.find(c => c.id === this.currentConversation.id);
-      const otherParticipant = conv?.participants?.[0];
-      
-      if (otherParticipant && otherParticipant.id === userId) {
-        const statusEl = document.getElementById("currentChatStatus");
-        if (statusEl && !statusEl.classList.contains('typing-active')) {
-          if (isOnline) {
-            statusEl.innerHTML = '<span class="online-dot"></span> Online';
-          } else if (lastSeen) {
-            statusEl.textContent = `Last seen ${this.formatLastSeen(lastSeen)}`;
-          }
-        }
-      }
-    }
-  }
-
-  handleEditedEvent({ message }) {
-    if (!this.currentConversation || this.currentConversation.id !== message.conversation_id) return;
-
-    const messageEl = document.querySelector(`[data-message-id="${message.id}"]`);
-    if (messageEl) {
-      const textEl = messageEl.querySelector('.message-text');
-      if (textEl) {
-        const safeText = this.escapeHtml(message.message_text || "");
-        textEl.innerHTML = `${safeText} <small class="edited-tag">(edited)</small>`;
-      }
-    }
-  }
-
-  handleDeletedEvent({ messageId }) {
-    if (!this.currentConversation) return;
-
-    const messageEl = document.querySelector(`[data-message-id="${messageId}"]`);
-    if (messageEl) {
-      const textEl = messageEl.querySelector('.message-text');
-      if (textEl) {
-        textEl.textContent = "[This message was deleted]";
-        textEl.classList.add("deleted-message");
-      }
-    }
-  }
-
-  handleServerShutdown({ message, reconnectDelay }) {
-    console.log("Server shutdown:", message);
-    this.showReconnectNotification(message, reconnectDelay || 5000);
-  }
-
-  formatLastSeen(timestamp) {
-    const lastSeen = new Date(timestamp);
-    const now = new Date();
-    const diffMs = now - lastSeen;
-    const diffMinutes = Math.floor(diffMs / 60000);
-    const diffHours = Math.floor(diffMs / 3600000);
-    const diffDays = Math.floor(diffMs / 86400000);
-    
-    if (diffMinutes < 1) return 'just now';
-    if (diffMinutes < 60) return `${diffMinutes}m ago`;
-    if (diffHours < 24) return `${diffHours}h ago`;
-    if (diffDays < 7) return `${diffDays}d ago`;
-    
-    return lastSeen.toLocaleDateString('en-US', {
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
-  }
-
-  formatTimeShort(date) {
-    const now = new Date();
-    const diffMs = now - date;
-    const diffMinutes = Math.floor(diffMs / 60000);
-    
-    if (diffMinutes < 1) return 'now';
-    if (diffMinutes < 60) return `${diffMinutes}m`;
-    if (date.getDate() === now.getDate()) {
-      return date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
-    }
-    
-    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-  }
-
-  showMessageNotification(message, conversationId) {
-    if (this.shouldShowNotification()) {
-      const senderName = message.sender_display_name || message.sender_username || 'Someone';
-      let messageBody = '';
-      
-      if (message.message_type === 'image') {
-        messageBody = '📷 Sent a photo';
-      } else if (message.message_type === 'pdf' || message.message_type === 'doc') {
-        messageBody = '📎 Sent a document';
-      } else {
-        messageBody = this.truncateMessage(message.message_text || 'Sent a message', 60);
-      }
-      
-      const notification = new Notification(`${senderName}`, {
-        body: messageBody,
-        icon: message.sender_avatar_url || "/images/default-avatar.png",
-        tag: `message-${conversationId}`,
-        badge: '/images/favicon-32x32.png'
-      });
-
-      notification.onclick = () => {
-        window.focus();
-        this.openConversation(conversationId);
-        notification.close();
-      };
-
-      setTimeout(() => notification.close(), 5000);
-    }
-  }
-
-  showReconnectNotification(message, delay = 5000) {
-    const notification = document.createElement("div");
-    notification.className = "reconnect-notification";
-    notification.innerHTML = `
-      <div class="notification-content">
-        <span>${message}</span>
-        <button onclick="this.parentElement.parentElement.remove()">×</button>
-      </div>
-    `;
-    
-    document.body.appendChild(notification);
-    
-    setTimeout(() => {
-      if (notification.parentElement) {
-        notification.remove();
-      }
-    }, delay);
-  }
-
   /* 📥 Enhanced conversations loading */
   async loadConversations() {
+    console.log("📥 Loading conversations...");
+    
     const container = document.getElementById("conversationsList");
-    if (!container) return;
+    if (!container) {
+      console.error("❌ Conversations container not found");
+      return;
+    }
 
     // Show loading skeleton
     container.innerHTML = this.getConversationsSkeleton();
@@ -1130,7 +659,11 @@ class MessagesPage {
         }
       });
 
-      if (!response.ok) throw new Error(`Failed to load conversations: ${response.status}`);
+      console.log("📊 Conversations response status:", response.status);
+      
+      if (!response.ok) {
+        throw new Error(`Failed to load conversations: ${response.status}`);
+      }
 
       this.conversations = await response.json();
       console.log(`📋 Loaded ${this.conversations.length} conversations`);
@@ -1621,6 +1154,428 @@ class MessagesPage {
     });
   }
 
+  formatTimeShort(date) {
+    const now = new Date();
+    const diffMs = now - date;
+    const diffMinutes = Math.floor(diffMs / 60000);
+    
+    if (diffMinutes < 1) return 'now';
+    if (diffMinutes < 60) return `${diffMinutes}m`;
+    if (date.getDate() === now.getDate()) {
+      return date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+    }
+    
+    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  }
+
+  /* 🔌 Enhanced WebSocket connection */
+  connectWebSocket() {
+    console.log("🔌 Attempting WebSocket connection...");
+    
+    try {
+      const protocol = window.location.protocol === "https:" ? "wss" : "ws";
+      const host = window.location.host; // This is correct - includes port
+      const wsUrl = `${protocol}://${host}`;
+      
+      console.log("🌐 WebSocket URL:", wsUrl);
+      this.ws = new WebSocket(wsUrl);
+
+      this.ws.addEventListener("open", () => {
+        console.log("✅ WebSocket CONNECTED successfully!");
+        this.reconnectAttempts = 0;
+        this.updateConnectionStatus("connected");
+        
+        // Send initial presence update
+        this.sendPresenceUpdate();
+        
+        // Test WebSocket is working
+        setTimeout(() => this.testWebSocketConnection(), 1000);
+      });
+
+      this.ws.addEventListener("message", (event) => {
+        console.log("📨 RAW WebSocket message received:", event.data);
+        
+        try {
+          const msg = JSON.parse(event.data);
+          console.log("📦 Parsed WebSocket message type:", msg.type, "Full:", msg);
+          this.handleRealtimeEvent(msg);
+        } catch (error) {
+          console.error("❌ Failed to parse WebSocket message:", error, "Raw data:", event.data);
+        }
+      });
+
+      this.ws.addEventListener("close", (event) => {
+        console.log("❌ WebSocket CLOSED. Code:", event.code, "Reason:", event.reason);
+        this.updateConnectionStatus("disconnected");
+        this.reconnectWebSocket();
+      });
+
+      this.ws.addEventListener("error", (error) => {
+        console.error("❌ WebSocket ERROR:", error);
+        this.updateConnectionStatus("error");
+      });
+
+      // Setup heartbeat - send PONG every 25 seconds
+      this.heartbeatInterval = setInterval(() => {
+        if (this.ws?.readyState === WebSocket.OPEN) {
+          console.log("❤️ Sending heartbeat PONG");
+          this.ws.send(JSON.stringify({ 
+            type: "PONG",
+            timestamp: new Date().toISOString()
+          }));
+        } else {
+          console.log("💔 WebSocket not open for heartbeat. State:", this.ws?.readyState);
+        }
+      }, 25000);
+
+    } catch (err) {
+      console.error("❌ WebSocket initialization error:", err);
+    }
+  }
+
+  reconnectWebSocket() {
+    if (this.reconnectAttempts >= this.maxReconnectAttempts) {
+      console.log("Max reconnection attempts reached");
+      this.showReconnectNotification("Connection lost. Please refresh the page.", 0);
+      return;
+    }
+
+    const delay = Math.min(1000 * Math.pow(2, this.reconnectAttempts), 30000);
+    
+    setTimeout(() => {
+      this.reconnectAttempts++;
+      console.log(`🔄 Reconnecting... (${this.reconnectAttempts}/${this.maxReconnectAttempts})`);
+      this.connectWebSocket();
+    }, delay);
+  }
+
+  sendPresenceUpdate() {
+    if (this.ws?.readyState === WebSocket.OPEN) {
+      console.log("📤 Sending presence update");
+      this.ws.send(JSON.stringify({
+        type: "PRESENCE_UPDATE",
+        userId: this.currentUser?.id,
+        timestamp: new Date().toISOString(),
+        isOnline: true
+      }));
+    } else {
+      console.log("⚠️ Cannot send presence: WebSocket not open. State:", this.ws?.readyState);
+    }
+  }
+
+  testWebSocketConnection() {
+    if (this.ws?.readyState === WebSocket.OPEN) {
+      console.log("🧪 Testing WebSocket connection...");
+      this.ws.send(JSON.stringify({
+        type: "DEBUG_REQUEST",
+        message: "WebSocket test from frontend",
+        timestamp: new Date().toISOString(),
+        userId: this.currentUser?.id
+      }));
+    } else {
+      console.log("⚠️ Cannot test: WebSocket not open. State:", this.ws?.readyState);
+    }
+  }
+
+  updateConnectionStatus(status) {
+    const statusElement = document.getElementById("connectionStatus");
+    if (!statusElement) {
+      console.log("⚠️ Connection status element not found");
+      return;
+    }
+
+    console.log("📡 Updating connection status to:", status);
+    
+    const statusConfig = {
+      connected: { text: "Connected", class: "connected" },
+      disconnected: { text: "Disconnected", class: "disconnected" },
+      error: { text: "Connection Error", class: "error" },
+      reconnecting: { text: "Reconnecting...", class: "reconnecting" }
+    };
+
+    const config = statusConfig[status];
+    if (config) {
+      statusElement.textContent = config.text;
+      statusElement.className = `connection-status ${config.class}`;
+      statusElement.style.display = 'block';
+      statusElement.style.opacity = '1';
+      
+      if (status === 'connected') {
+        setTimeout(() => {
+          statusElement.style.opacity = '0';
+          setTimeout(() => statusElement.style.display = 'none', 300);
+        }, 3000);
+      }
+    }
+  }
+
+  /* 📡 Enhanced real-time event handling */
+  handleRealtimeEvent(msg) {
+    console.log(`🎯 Handling WebSocket event type: ${msg.type}`, msg);
+    
+    switch (msg.type) {
+      case "NEW_MESSAGE":
+        this.handleNewMessageEvent(msg);
+        break;
+      case "TYPING":
+        this.handleTypingEvent(msg);
+        break;
+      case "MESSAGE_SEEN":
+        this.handleSeenEvent(msg);
+        break;
+      case "PRESENCE":
+      case "PRESENCE_INITIAL":
+      case "BULK_PRESENCE":
+        this.handlePresenceEvent(msg);
+        break;
+      case "MESSAGE_EDITED":
+        this.handleEditedEvent(msg);
+        break;
+      case "MESSAGE_DELETED":
+        this.handleDeletedEvent(msg);
+        break;
+      case "SERVER_SHUTDOWN":
+        this.handleServerShutdown(msg);
+        break;
+      case "DEBUG_RESPONSE":
+        console.log("✅ WebSocket debug response received:", msg);
+        break;
+      default:
+        console.log("❓ Unknown WebSocket event type:", msg.type, msg);
+    }
+  }
+
+  handleNewMessageEvent({ conversationId, message }) {
+    console.log(`📨 NEW_MESSAGE event for conversation ${conversationId}:`, message);
+    
+    // If this is the current conversation
+    if (this.currentConversation?.id === parseInt(conversationId)) {
+      console.log("✅ Message is for current conversation, appending...");
+      this.appendMessage(message);
+      this.scrollToBottom();
+      
+      // Mark as read immediately
+      this.markConversationSeen(conversationId);
+    } else {
+      console.log("📢 Message is for other conversation, showing notification");
+      this.showMessageNotification(message, conversationId);
+    }
+    
+    // Update conversation list
+    this.updateConversationPreview(conversationId, message);
+  }
+
+  handleTypingEvent({ fromUserId, conversationId, isTyping, timestamp }) {
+    console.log(`⌨️ TYPING event from ${fromUserId} in ${conversationId}: ${isTyping}`);
+    
+    // Update typing state
+    if (isTyping) {
+      this.typingUsers.set(conversationId, {
+        userId: fromUserId,
+        timestamp: new Date(timestamp)
+      });
+    } else {
+      this.typingUsers.delete(conversationId);
+    }
+    
+    // Update UI
+    this.updateTypingUI(conversationId, fromUserId, isTyping);
+  }
+
+  updateTypingUI(conversationId, userId, isTyping) {
+    console.log(`🎨 Updating typing UI for ${conversationId}: ${isTyping}`);
+    
+    // Update chat header if this is the current conversation
+    if (this.currentConversation && this.currentConversation.id === parseInt(conversationId)) {
+      const statusEl = document.getElementById("currentChatStatus");
+      if (statusEl) {
+        if (isTyping) {
+          statusEl.innerHTML = `
+            <div class="typing-indicator">
+              <span></span><span></span><span></span>
+            </div>
+            <span>Typing...</span>
+          `;
+          statusEl.classList.add('typing-active');
+          console.log("✅ Updated chat header typing indicator");
+        } else {
+          // Revert to presence status
+          const userPresence = this.presenceMap.get(userId);
+          if (userPresence?.isOnline) {
+            statusEl.innerHTML = '<span class="online-dot"></span> Online';
+          } else if (userPresence?.lastSeen) {
+            statusEl.textContent = `Last seen ${this.formatLastSeen(userPresence.lastSeen)}`;
+          } else {
+            statusEl.textContent = 'Start chatting to connect';
+          }
+          statusEl.classList.remove('typing-active');
+          console.log("✅ Removed typing indicator from chat header");
+        }
+      }
+    }
+    
+    // Update conversation list
+    const convItem = document.querySelector(`.conversation-item[data-conversation-id="${conversationId}"]`);
+    if (convItem) {
+      const previewEl = convItem.querySelector(".conversation-preview");
+      if (previewEl) {
+        if (isTyping) {
+          previewEl.textContent = "Typing...";
+          previewEl.classList.add('typing');
+          console.log("✅ Updated conversation list typing indicator");
+        } else {
+          // Restore last message
+          const conv = this.conversations.find(c => c.id === parseInt(conversationId));
+          if (conv?.last_message) {
+            let previewText = '';
+            if (conv.last_message.message_type === 'image') {
+              previewText = '📷 Photo';
+            } else if (conv.last_message.message_type === 'pdf' || conv.last_message.message_type === 'doc') {
+              previewText = '📎 Document';
+            } else {
+              previewText = this.truncateMessage(conv.last_message.message_text || '', 40);
+            }
+            previewEl.textContent = previewText;
+          }
+          previewEl.classList.remove('typing');
+          console.log("✅ Removed typing indicator from conversation list");
+        }
+      }
+    }
+  }
+
+  handleSeenEvent({ conversationId, messageIds, seenAt }) {
+    console.log(`👀 Messages seen in ${conversationId}:`, messageIds);
+    
+    if (!this.currentConversation || this.currentConversation.id !== parseInt(conversationId)) return;
+    
+    // Update message status in UI
+    messageIds.forEach(messageId => {
+      const messageEl = document.querySelector(`[data-message-id="${messageId}"]`);
+      if (messageEl) {
+        const statusEl = messageEl.querySelector('.message-status');
+        if (statusEl) {
+          statusEl.innerHTML = '✓✓';
+          statusEl.className = 'message-status seen';
+          statusEl.title = `Seen at ${new Date(seenAt).toLocaleTimeString()}`;
+        }
+      }
+    });
+  }
+
+  handlePresenceEvent(msg) {
+    let users = [];
+    
+    if (msg.type === "BULK_PRESENCE" || msg.type === "PRESENCE_INITIAL") {
+      users = msg.users || [];
+    } else if (msg.type === "PRESENCE") {
+      users = [{
+        userId: msg.userId,
+        isOnline: msg.isOnline,
+        lastSeen: msg.lastSeen
+      }];
+    }
+    
+    users.forEach(user => {
+      this.presenceMap.set(user.userId, {
+        isOnline: user.isOnline,
+        lastSeen: user.lastSeen ? new Date(user.lastSeen) : null,
+        updatedAt: new Date()
+      });
+      
+      // Update UI
+      this.updateUserPresenceUI(user.userId, user.isOnline, user.lastSeen);
+    });
+  }
+
+  updateUserPresenceUI(userId, isOnline, lastSeen) {
+    // Update in conversations list
+    const conversationItems = document.querySelectorAll(`.conversation-item[data-user-id="${userId}"]`);
+    conversationItems.forEach(item => {
+      const presenceEl = item.querySelector('.presence-indicator');
+      if (presenceEl) {
+        if (isOnline) {
+          presenceEl.className = 'presence-indicator online';
+          presenceEl.title = 'Online now';
+        } else {
+          presenceEl.className = 'presence-indicator offline';
+          if (lastSeen) {
+            presenceEl.title = `Last seen ${this.formatLastSeen(lastSeen)}`;
+          }
+        }
+      }
+    });
+    
+    // Update in current chat header
+    if (this.currentConversation) {
+      const conv = this.conversations.find(c => c.id === this.currentConversation.id);
+      const otherParticipant = conv?.participants?.[0];
+      
+      if (otherParticipant && otherParticipant.id === userId) {
+        const statusEl = document.getElementById("currentChatStatus");
+        if (statusEl && !statusEl.classList.contains('typing-active')) {
+          if (isOnline) {
+            statusEl.innerHTML = '<span class="online-dot"></span> Online';
+          } else if (lastSeen) {
+            statusEl.textContent = `Last seen ${this.formatLastSeen(lastSeen)}`;
+          }
+        }
+      }
+    }
+  }
+
+  handleEditedEvent({ message }) {
+    if (!this.currentConversation || this.currentConversation.id !== message.conversation_id) return;
+
+    const messageEl = document.querySelector(`[data-message-id="${message.id}"]`);
+    if (messageEl) {
+      const textEl = messageEl.querySelector('.message-text');
+      if (textEl) {
+        const safeText = this.escapeHtml(message.message_text || "");
+        textEl.innerHTML = `${safeText} <small class="edited-tag">(edited)</small>`;
+      }
+    }
+  }
+
+  handleDeletedEvent({ messageId }) {
+    if (!this.currentConversation) return;
+
+    const messageEl = document.querySelector(`[data-message-id="${messageId}"]`);
+    if (messageEl) {
+      const textEl = messageEl.querySelector('.message-text');
+      if (textEl) {
+        textEl.textContent = "[This message was deleted]";
+        textEl.classList.add("deleted-message");
+      }
+    }
+  }
+
+  handleServerShutdown({ message, reconnectDelay }) {
+    console.log("Server shutdown:", message);
+    this.showReconnectNotification(message, reconnectDelay || 5000);
+  }
+
+  formatLastSeen(timestamp) {
+    const lastSeen = new Date(timestamp);
+    const now = new Date();
+    const diffMs = now - lastSeen;
+    const diffMinutes = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMs / 3600000);
+    const diffDays = Math.floor(diffMs / 86400000);
+    
+    if (diffMinutes < 1) return 'just now';
+    if (diffMinutes < 60) return `${diffMinutes}m ago`;
+    if (diffHours < 24) return `${diffHours}h ago`;
+    if (diffDays < 7) return `${diffDays}d ago`;
+    
+    return lastSeen.toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  }
+
   /* ✉️ Enhanced message sending */
   async sendMessage(attachmentMeta = null) {
     const input = document.getElementById("messageInput");
@@ -1639,7 +1594,7 @@ class MessagesPage {
 
     console.log("🚀 Sending message to conversation:", this.currentConversation.id);
 
-    // Disable send button during sending
+    // Disable send button
     if (sendBtn) {
       sendBtn.disabled = true;
       sendBtn.innerHTML = '<div class="loading-spinner"></div>';
@@ -1647,18 +1602,19 @@ class MessagesPage {
 
     // Prepare message data
     const messageData = {
-      message_text: messageText || null,
-      message_type: attachmentMeta ? 'attachment' : 'text'
+      message_text: messageText || (attachmentMeta ? 'Sent an attachment' : ''),
+      message_type: attachmentMeta ? attachmentMeta.type : 'text'
     };
 
     if (attachmentMeta) {
-      messageData.message_type = attachmentMeta.type;
       messageData.attachment_url = attachmentMeta.url;
       messageData.filename = attachmentMeta.filename;
       messageData.file_size = attachmentMeta.file_size;
     }
 
     try {
+      console.log("📤 Sending POST request with data:", messageData);
+      
       const response = await fetch(
         `${this.API_BASE}/messages/conversations/${this.currentConversation.id}/messages`,
         {
@@ -1671,6 +1627,8 @@ class MessagesPage {
         }
       );
 
+      console.log("📊 Response status:", response.status);
+      
       if (!response.ok) {
         const errorText = await response.text();
         throw new Error(`Failed to send message: ${response.status} - ${errorText}`);
@@ -1688,7 +1646,11 @@ class MessagesPage {
       // Stop typing indicator
       this.stopTypingIndicator();
       
-      // Refresh conversations to update last message
+      // Append message locally (WebSocket will also send it)
+      this.appendMessage(newMessage);
+      this.scrollToBottom();
+      
+      // Refresh conversations
       this.loadConversations();
 
     } catch (error) {
@@ -1893,7 +1855,7 @@ class MessagesPage {
 
   handleTyping() {
     if (!this.currentConversation || !this.ws || this.ws.readyState !== WebSocket.OPEN) {
-      console.log("⚠️ Typing indicator skipped: No conversation or WS not ready");
+      console.log("⚠️ Typing: No conversation or WS not ready");
       return;
     }
     
@@ -1904,7 +1866,7 @@ class MessagesPage {
     
     if (!this.isTyping) {
       this.isTyping = true;
-      console.log(`⌨️ Sending typing START to ${otherUserId}`);
+      console.log(`⌨️ Starting typing indicator to ${otherUserId}`);
       this.sendTypingIndicator(true, otherUserId);
     }
 
@@ -1912,10 +1874,40 @@ class MessagesPage {
     this.typingTimeout = setTimeout(() => {
       if (this.isTyping) {
         this.isTyping = false;
-        console.log(`⌨️ Sending typing STOP to ${otherUserId}`);
+        console.log(`⌨️ Stopping typing indicator to ${otherUserId}`);
         this.sendTypingIndicator(false, otherUserId);
       }
     }, 2000);
+  }
+
+  sendTypingIndicator(isTyping, toUserId) {
+    if (!this.currentConversation || !this.ws) {
+      console.log("⚠️ Cannot send typing: No conversation or WebSocket");
+      return;
+    }
+
+    if (this.ws.readyState !== WebSocket.OPEN) {
+      console.log("⚠️ Cannot send typing: WebSocket not open. State:", this.ws.readyState);
+      return;
+    }
+
+    const payload = {
+      type: "TYPING",
+      conversationId: this.currentConversation.id,
+      isTyping: isTyping,
+      toUserId: toUserId,
+      timestamp: new Date().toISOString(),
+      fromUserId: this.currentUser?.id
+    };
+    
+    console.log("📤 Sending typing WebSocket message:", payload);
+    
+    try {
+      this.ws.send(JSON.stringify(payload));
+      console.log("✅ Typing message sent successfully");
+    } catch (error) {
+      console.error("❌ Failed to send typing message:", error);
+    }
   }
 
   stopTypingIndicator() {
@@ -1928,29 +1920,6 @@ class MessagesPage {
     }
     if (this.typingTimeout) {
       clearTimeout(this.typingTimeout);
-    }
-  }
-
-  sendTypingIndicator(isTyping, toUserId) {
-    if (!this.currentConversation || !this.ws || this.ws.readyState !== WebSocket.OPEN) {
-      console.log("⚠️ Cannot send typing: WS not ready");
-      return;
-    }
-
-    const payload = {
-      type: "TYPING",
-      conversationId: this.currentConversation.id,
-      isTyping: isTyping,
-      toUserId: toUserId,
-      timestamp: new Date().toISOString()
-    };
-    
-    console.log("📤 Sending typing event:", payload);
-    
-    try {
-      this.ws.send(JSON.stringify(payload));
-    } catch (error) {
-      console.error("❌ Failed to send typing event:", error);
     }
   }
 
@@ -2153,6 +2122,55 @@ class MessagesPage {
     }, 5000);
   }
 
+  showMessageNotification(message, conversationId) {
+    if (this.shouldShowNotification()) {
+      const senderName = message.sender_display_name || message.sender_username || 'Someone';
+      let messageBody = '';
+      
+      if (message.message_type === 'image') {
+        messageBody = '📷 Sent a photo';
+      } else if (message.message_type === 'pdf' || message.message_type === 'doc') {
+        messageBody = '📎 Sent a document';
+      } else {
+        messageBody = this.truncateMessage(message.message_text || 'Sent a message', 60);
+      }
+      
+      const notification = new Notification(`${senderName}`, {
+        body: messageBody,
+        icon: message.sender_avatar_url || "/images/default-avatar.png",
+        tag: `message-${conversationId}`,
+        badge: '/images/favicon-32x32.png'
+      });
+
+      notification.onclick = () => {
+        window.focus();
+        this.openConversation(conversationId);
+        notification.close();
+      };
+
+      setTimeout(() => notification.close(), 5000);
+    }
+  }
+
+  showReconnectNotification(message, delay = 5000) {
+    const notification = document.createElement("div");
+    notification.className = "reconnect-notification";
+    notification.innerHTML = `
+      <div class="notification-content">
+        <span>${message}</span>
+        <button onclick="this.parentElement.parentElement.remove()">×</button>
+      </div>
+    `;
+    
+    document.body.appendChild(notification);
+    
+    setTimeout(() => {
+      if (notification.parentElement) {
+        notification.remove();
+      }
+    }, delay);
+  }
+
   closeChat() {
     const container = document.querySelector(".messages-container");
     const messagesMain = document.getElementById("messagesMain");
@@ -2290,21 +2308,35 @@ class MessagesPage {
 }
 
 /* ======================================================
-   3) INITIALIZATION
+   3) INITIALIZATION - FIXED VERSION
 ====================================================== */
 document.addEventListener("DOMContentLoaded", () => {
   const isMessagesPage = document.body.classList.contains("messages-page");
 
   // Global manager for all pages except the main messages page
   if (!isMessagesPage) {
+    console.log("🚀 Initializing global MessagesManager...");
     window.messagesManager = new MessagesManager();
     console.log("✅ messagesManager initialized globally");
   }
 
   // Full chat experience only on messages.html
   if (isMessagesPage) {
+    console.log("🚀 Initializing MessagesPage...");
     window.messagesPage = new MessagesPage();
-    console.log("✅ messagesPage (WhatsApp-style) initialized");
+    
+    // Initialize with a slight delay to ensure DOM is ready
+    setTimeout(() => {
+      if (window.messagesPage && typeof window.messagesPage.init === 'function') {
+        window.messagesPage.init().then(() => {
+          console.log("✅ MessagesPage fully initialized and ready");
+        }).catch(error => {
+          console.error("❌ MessagesPage initialization failed:", error);
+        });
+      } else {
+        console.error("❌ MessagesPage not properly initialized");
+      }
+    }, 100);
   }
 });
 
