@@ -93,15 +93,13 @@ async function loadFeed() {
    ========================================= */
 function createPostCard(post) {
     const card = document.createElement("div");
-    card.className = "post-card"; // This needs CSS to look good
+    card.className = "post-card";
     
-    // Set data attributes for social-features.js
     card.dataset.postId = post.id; 
     card.dataset.id = post.id; 
 
     const avatar = getAvatarURL(post.avatar_url);
     
-    // Safe date handling
     let timeAgo = "Just now";
     if (window.timeSince && post.created_at) {
         timeAgo = window.timeSince(new Date(post.created_at));
@@ -111,6 +109,7 @@ function createPostCard(post) {
 
     const isOwner = window.currentUserId && (parseInt(post.user_id) === parseInt(window.currentUserId));
 
+    // ✅ FIXED HTML STRUCTURE BELOW
     card.innerHTML = `
         <div class="post-header">
             <div class="post-user-info">
@@ -145,7 +144,11 @@ function createPostCard(post) {
         ${post.image_url ? `
             <div class="post-image-container">
                 <img src="${post.image_url.startsWith('http') ? post.image_url : (window.ASSET_BASE + post.image_url)}" 
-                     class="post-image" alt="Post content" loading="lazy" />
+                     class="post-image" 
+                     alt="Post content" 
+                     loading="lazy" 
+                     onerror="this.style.display='none'" 
+                />
             </div>` : 
         ""}
 
