@@ -160,8 +160,23 @@ class MessagesManager {
     
     switch (msg.type) {
       case "NEW_MESSAGE":
+    console.log("💌 Realtime NEW_MESSAGE received:", msg);
+
+    // Push message instantly into UI if same chat is open
+    if (this.currentConversation && Number(this.currentConversation.id) === Number(msg.conversationId)) {
+        console.log("📌 Chat open — inserting live message");
+        this.appendMessage(msg.message);
+        this.scrollToBottom();
+        this.markConversationSeen(msg.conversationId);
+    } else {
+        console.log("📌 Chat not open — update preview badge only");
         this.handleNewMessageNotification(msg);
-        break;
+    }
+    
+    // Always refresh sidebar
+    this.loadConversations();
+    break;
+
       case "PRESENCE":
         this.handlePresenceUpdate(msg);
         break;
@@ -1879,6 +1894,25 @@ class MessagesPage {
       }
     }, 2000);
   }
+
+  handleIncomingMessage(conversationId, message) {
+    console.log("📥 Live WS message received:", conversationId, message);
+
+    // If this chat is open append directly
+    if (this.currentConversation && this.currentConversation.id == conversationId) {
+
+        this.appendMessage(message);
+        this.scrollToBottom();
+
+        // Mark it as seen
+        this.markConversationSeen(conversationId);
+    }
+
+    // Refresh conversation sidebar to update latest preview + unread badges
+    this.loadConversations();
+}
+
+
 
   sendTypingIndicator(isTyping, toUserId) {
     if (!this.currentConversation || !this.ws) {
