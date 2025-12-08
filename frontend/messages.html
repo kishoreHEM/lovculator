@@ -2,301 +2,197 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta
-    name="viewport"
-    content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
-  />
+  <meta name="viewport"
+        content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
   <title>Messages - Lovculator 💖</title>
-  <meta
-    name="description"
-    content="Chat with your matches on Lovculator."
-  />
+  <meta name="description" content="Chat with your matches on Lovculator." />
   <meta name="theme-color" content="#ff4b8d" />
 
-  <link rel="apple-touch-icon" href="/images/apple-touch-icon.png" />
-  <link
-    rel="shortcut icon"
-    href="/images/favicon-32x32.png"
-    type="image/png"
-  />
-  <link rel="icon" href="/images/favicon.ico" sizes="any" />
+  <link rel="apple-touch-icon" href="/images/apple-touch-icon.png"/>
+  <link rel="shortcut icon" href="/images/favicon-32x32.png" type="image/png"/>
+  <link rel="icon" href="/images/favicon.ico" sizes="any"/>
 
-  <!-- Global styles -->
-  <link rel="stylesheet" href="/css/style.css" />
+  <link rel="stylesheet" href="/css/style.css"/>
   <link rel="stylesheet" href="/css/messages.css"/>
-
-  
 </head>
 
 <body class="messages-page">
-  <header class="header">
-    <nav class="navbar">
-      <div class="nav-brand">
-        <a href="/" class="logo" aria-label="Lovculator Home">💖 Lovculator</a>
+
+<header class="header">
+  <nav class="navbar">
+    <div class="nav-brand">
+      <a href="/" class="logo" aria-label="Lovculator Home">💖 Lovculator</a>
+    </div>
+    <ul class="nav-menu">
+      <li class="nav-item"><a href="/signup" class="nav-link">Signup</a></li>
+      <li class="nav-item"><a href="/login" class="nav-link">Login</a></li>
+      <li class="nav-item"><a href="/love-calculator" class="nav-link">Love Calculator</a></li>
+      <li class="nav-item"><a href="/profile.html" class="nav-link">Profile</a></li>
+      <li class="nav-item">
+        <a href="/messages.html" class="nav-link active">
+          Messages
+          <span id="messagesBadge" class="nav-badge" style="display:none"></span>
+        </a>
+      </li>
+    </ul>
+    <button class="menu-toggle" aria-label="Toggle menu"><span></span><span></span><span></span></button>
+    <div class="mobile-menu-overlay"></div>
+  </nav>
+</header>
+
+<div id="connectionStatus" class="connection-status">Connected</div>
+
+<main class="messages-layout-wrapper">
+  <div class="messages-container">
+
+    <!-- LEFT: CONVERSATIONS LIST -->
+    <aside class="conversations-sidebar">
+      <div class="conversations-header">
+        <div class="conversations-header-top">
+          <h1><span>💬</span> Messages</h1>
+          <button class="new-chat-btn" type="button"
+                  onclick="alert('Start a new chat from profile pages or search – coming soon!')">+ New</button>
+        </div>
+
+        <div class="search-container">
+          <input type="text"
+                 placeholder="Search conversations..."
+                 id="searchConversations"
+                 class="search-input"/>
+          <span class="search-icon">🔍</span>
+          <span class="search-clear"
+                onclick="const i=document.getElementById('searchConversations');i.value='';window.messagesPage?.filterConversations('');">
+            ✕
+          </span>
+        </div>
       </div>
-      <ul class="nav-menu">
-        <li class="nav-item"><a href="/signup" class="nav-link">Signup</a></li>
-        <li class="nav-item"><a href="/login" class="nav-link">Login</a></li>
-        <li class="nav-item">
-          <a href="/love-calculator" class="nav-link">Love Calculator</a>
-        </li>
-        <li class="nav-item">
-          <a href="/profile.html" class="nav-link">Profile</a>
-        </li>
-        <li class="nav-item">
-          <a href="/messages.html" class="nav-link active">
-            Messages
-            <span
-              id="messagesBadge"
-              class="nav-badge"
-              style="display: none"
-            ></span>
-          </a>
-        </li>
-      </ul>
-      <button class="menu-toggle" aria-label="Toggle menu">
-        <span></span><span></span><span></span>
-      </button>
-      <div class="mobile-menu-overlay"></div>
-    </nav>
-  </header>
 
-  <div id="connectionStatus" class="connection-status">Connected</div>
+      <div class="conversations-list" id="conversationsList">
+        <div class="loading-conversations"><div>Loading your chats… 💌</div></div>
+      </div>
+    </aside>
 
-  <main class="messages-layout-wrapper">
-    <div class="messages-container">
-      <!-- LEFT: CONVERSATIONS LIST -->
-      <aside class="conversations-sidebar">
-        <div class="conversations-header">
-          <div class="conversations-header-top">
-            <h1><span>💬</span> Messages</h1>
-            <button
-              class="new-chat-btn"
-              type="button"
-              onclick="alert('Start a new chat from profile pages or search – coming soon!')"
-            >
-              + New
-            </button>
-          </div>
+    <!-- RIGHT: CHAT PANEL -->
+    <section class="messages-main" id="messagesMain">
+      <header class="messages-header">
+        <div class="current-chat-info">
+          <button id="backToList" class="back-btn">←</button>
+          <img id="currentChatAvatar"
+               class="current-chat-avatar"
+               src="/images/default-avatar.png"
+               onerror="this.src='/images/default-avatar.png'"/>
 
-          <div class="search-container">
-            <input
-              type="text"
-              class="search-input"
-              placeholder="Search conversations..."
-              id="searchConversations"
-            />
-            <span class="search-icon">🔍</span>
-            <span
-              class="search-clear"
-              onclick="const i=document.getElementById('searchConversations'); i.value=''; if(window.messagesPage){window.messagesPage.filterConversations('');}"
-            >
-              ✕
-            </span>
-          </div>
-        </div>
+          <div class="chat-user-info">
+            <h3 id="currentChatName">Select a conversation</h3>
 
-        <div class="conversations-list" id="conversationsList">
-          <div class="loading-conversations">
-            <div>Loading your chats… 💌</div>
-          </div>
-        </div>
-      </aside>
-
-      <!-- RIGHT: CHAT PANEL -->
-      <section class="messages-main" id="messagesMain">
-        <header class="messages-header">
-          <div class="current-chat-info">
-            <button id="backToList" class="back-btn" title="Back">←</button>
-
-            <img
-              src="/images/default-avatar.png"
-              alt="User"
-              class="current-chat-avatar"
-              id="currentChatAvatar"
-              onerror="this.src='/images/default-avatar.png'"
-            />
-            <div class="chat-user-info">
-              <h3 id="currentChatName">Select a conversation</h3>
-              <div class="chat-user-status" id="currentChatStatus">
-                Start chatting to connect
+            <div class="chat-user-status" id="currentChatStatus">
+              <div class="typing-indicator" style="display:none;">
+                <span></span><span></span><span></span>
               </div>
+              <span class="status-text">Start chatting to connect</span>
             </div>
           </div>
-        </header>
-
-        <div class="messages-list" id="messagesList">
-          <div class="empty-conversations">
-            <div class="empty-icon">💌</div>
-            <h3>Start Messaging</h3>
-            <p>Select a match from the left to start chatting.</p>
-          </div>
         </div>
+      </header>
 
-        <!-- Upload indicator is injected right above this container -->
-        <div
-          class="message-input-container"
-          id="messageInputContainer"
-          style="display: none"
-        >
-          <div class="message-input-wrapper">
-            <button
-              id="attachBtn"
-              type="button"
-              title="Attach file"
-              class="chat-action-btn"
-            >
-              📎
-            </button>
-            <input
-              type="file"
-              id="attachInput"
-              accept="image/*,.pdf,.doc,.docx,.txt"
-              style="display: none"
-            />
-
-            <button
-              id="emojiBtn"
-              type="button"
-              title="Emoji (coming soon)"
-              class="chat-action-btn"
-            >
-              😊
-            </button>
-
-            <textarea
-              id="messageInput"
-              placeholder="Type a message..."
-              rows="1"
-            ></textarea>
-
-            <button
-              id="micBtn"
-              type="button"
-              title="Voice message (coming soon)"
-              class="chat-action-btn"
-            >
-              🎙️
-            </button>
-
-            <button id="sendMessageBtn" title="Send">
-              <span style="font-size: 18px">➤</span>
-            </button>
-          </div>
+      <div class="messages-list" id="messagesList">
+        <div class="empty-conversations">
+          <div class="empty-icon">💌</div>
+          <h3>Start Messaging</h3>
+          <p>Select a match from the left to start chatting.</p>
         </div>
-      </section>
-    </div>
-  </main>
+      </div>
 
-  <div id="offlineIndicator">
-    You are offline. Trying to reconnect...
+      <div class="message-input-container" id="messageInputContainer" style="display:none">
+        <div class="message-input-wrapper">
+          <button id="attachBtn" class="chat-action-btn" title="Attach file">📎</button>
+          <input id="attachInput" type="file" accept="image/*,.pdf,.doc,.docx,.txt" style="display:none"/>
+
+          <button id="emojiBtn" class="chat-action-btn" title="Emoji">😊</button>
+
+          <textarea id="messageInput" placeholder="Type a message..." rows="1"></textarea>
+
+          <button id="micBtn" class="chat-action-btn" title="Voice message">🎙️</button>
+          <button id="sendMessageBtn" title="Send"><span style="font-size:18px;">➤</span></button>
+        </div>
+      </div>
+    </section>
   </div>
+</main>
 
-  <script src="/js/navigation.js"></script>
-  <script src="/js/auth.js"></script>
-  <script src="/js/messages.js"></script>
+<div id="offlineIndicator">You are offline. Trying to reconnect...</div>
 
-  <script>
-    document.addEventListener("DOMContentLoaded", () => {
-      const backBtn = document.getElementById("backToList");
-      const messagesContainer = document.querySelector(".messages-container");
-      const messagesMain = document.getElementById("messagesMain");
+<script src="/js/navigation.js"></script>
+<script src="/js/auth.js"></script>
+<script src="/js/messages.js"></script>
 
-      if (backBtn && messagesContainer && messagesMain) {
-        backBtn.addEventListener("click", () => {
-          // Main back behavior is handled inside messagesPage.closeChat().
-          if (window.messagesPage && typeof window.messagesPage.closeChat === "function") {
-            window.messagesPage.closeChat();
-          } else {
-            // Fallback (just collapse panel on mobile)
-            messagesContainer.classList.remove("chat-open");
-            messagesMain.classList.remove("active");
-          }
-        });
-      }
+<script>
+document.addEventListener("DOMContentLoaded", () => {
 
-      window.addEventListener("offline", () => {
-        const offlineEl = document.getElementById("offlineIndicator");
-        if (offlineEl) offlineEl.style.display = "block";
-      });
+  /* Online / Offline system banner + WS presence sync */
+  window.addEventListener("offline", () => {
+    document.getElementById("offlineIndicator").style.display = "block";
+  });
 
-      window.addEventListener("online", () => {
-        const offlineEl = document.getElementById("offlineIndicator");
-        if (offlineEl) offlineEl.style.display = "none";
+  window.addEventListener("online", () => {
+    const offlineEl = document.getElementById("offlineIndicator");
+    offlineEl.style.display = "none";
 
-        // reconnect WS if needed
-        if (window.messagesPage && typeof window.messagesPage.connectWebSocket === "function") {
-          window.messagesPage.connectWebSocket();
-        }
-      });
-    });
-  </script>
+    // refresh data + push presence
+    if (window.messagesPage) {
+      window.messagesPage.sendPresenceUpdate();
+      window.messagesPage.loadConversations();
+    }
+  });
+});
+</script>
 
-  <!-- Add this at the end of messages.html before </body> -->
-<div id="debugPanel" style="position: fixed; bottom: 10px; right: 10px; background: rgba(0,0,0,0.8); color: white; padding: 10px; border-radius: 5px; font-size: 12px; z-index: 10000; max-width: 300px; display: none;">
-  <h4 style="margin: 0 0 5px 0;">WebSocket Debug</h4>
+<!-- Debug Panel -->
+<div id="debugPanel"
+     style="position:fixed;bottom:10px;right:10px;background:rgba(0,0,0,0.8);color:white;padding:10px;border-radius:5px;font-size:12px;z-index:10000;max-width:300px;display:none;">
+  <h4 style="margin:0 0 5px 0;">WebSocket Debug</h4>
   <div id="debugInfo"></div>
-  <button onclick="testWebSocket()" style="background: #ff4b8d; color: white; border: none; padding: 5px 10px; border-radius: 3px; margin-top: 5px;">Test WS</button>
-  <button onclick="document.getElementById('debugPanel').style.display='none'" style="background: #666; color: white; border: none; padding: 5px 10px; border-radius: 3px; margin-top: 5px;">Close</button>
+  <button onclick="testWebSocket()" style="background:#ff4b8d;color:#fff;border:none;padding:5px 10px;border-radius:3px;margin-top:5px;">Test WS</button>
+  <button onclick="document.getElementById('debugPanel').style.display='none'"
+          style="background:#666;color:#fff;border:none;padding:5px 10px;border-radius:3px;margin-top:5px;">Close</button>
 </div>
 
 <script>
-// Debug functions
+// Debug shortcuts
 function toggleDebug() {
-  const panel = document.getElementById('debugPanel');
-  panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
+    const panel=document.getElementById('debugPanel');
+    panel.style.display=panel.style.display==='none'?'block':'none';
 }
-
 function testWebSocket() {
-  if (window.messagesPage?.ws) {
-    const ws = window.messagesPage.ws;
-    const info = `
-      State: ${ws.readyState} (${getWebSocketState(ws.readyState)})
-      URL: ${ws.url}
-      Buffered: ${ws.bufferedAmount}
-    `;
-    document.getElementById('debugInfo').innerHTML = info;
-    
-    // Send test message
-    ws.send(JSON.stringify({
-      type: "DEBUG_REQUEST",
-      message: "Manual test",
-      timestamp: new Date().toISOString()
-    }));
-  }
+    if(window.messagesPage?.ws){
+        const ws=window.messagesPage.ws;
+        document.getElementById("debugInfo").innerHTML = `
+            State: ${ws.readyState}
+            URL: ${ws.url}
+            Buffered: ${ws.bufferedAmount}
+        `;
+        ws.send(JSON.stringify({type:"DEBUG_REQUEST",timestamp:new Date().toISOString()}));
+    }
 }
+setInterval(()=>{
+    if(window.messagesPage?.ws){
+        const ws=window.messagesPage.ws;
+        document.getElementById("debugInfo").innerHTML=`
+        <div>State: ${ws.readyState}</div>
+        <div>Connected: ${ws.readyState===1?"✅":"❌"}</div>
+        <div>User ID: ${window.currentUser?.id || 'None'}</div>
+        <div>Conversation: ${window.messagesPage?.currentConversation?.id||'None'}</div>
+        `;
+    }
+},5000);
 
-function getWebSocketState(state) {
-  const states = {
-    0: 'CONNECTING',
-    1: 'OPEN',
-    2: 'CLOSING',
-    3: 'CLOSED'
-  };
-  return states[state] || 'UNKNOWN';
-}
-
-// Update debug info every 5 seconds
-setInterval(() => {
-  if (window.messagesPage?.ws) {
-    const ws = window.messagesPage.ws;
-    const info = `
-      <div>State: ${getWebSocketState(ws.readyState)}</div>
-      <div>Connected: ${ws.readyState === 1 ? '✅' : '❌'}</div>
-      <div>User ID: ${window.currentUser?.id || 'None'}</div>
-      <div>Current Conv: ${window.messagesPage?.currentConversation?.id || 'None'}</div>
-    `;
-    document.getElementById('debugInfo').innerHTML = info;
-  }
-}, 5000);
-
-// Add keyboard shortcut for debug (Ctrl+Shift+D)
-document.addEventListener('keydown', (e) => {
-  if (e.ctrlKey && e.shiftKey && e.key === 'D') {
-    toggleDebug();
-    e.preventDefault();
-  }
+document.addEventListener("keydown",(e)=>{
+    if(e.ctrlKey && e.shiftKey && e.key==="D"){
+        toggleDebug();
+        e.preventDefault();
+    }
 });
 </script>
+
 </body>
 </html>
