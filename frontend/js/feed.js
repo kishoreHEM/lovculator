@@ -115,7 +115,12 @@ function createPostCard(post) {
         <div class="post-header">
             <div class="post-user-info">
                 <a href="/profile.html?user=${encodeURIComponent(post.username)}" class="post-user-link">
-                    <img src="${avatar}" class="post-avatar" alt="${post.username}" onerror="this.src='/images/default-avatar.png'" />
+                    <img 
+                        src="${avatar}" 
+                        class="post-avatar" 
+                        alt="${post.username}" 
+                        onerror="this.onerror=null; this.src='/images/default-avatar.png'" 
+                    />
                 </a>
                 <div class="post-user-details">
                     <a href="/profile.html?user=${encodeURIComponent(post.username)}" class="post-username-link">
