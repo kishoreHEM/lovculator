@@ -196,19 +196,41 @@ export function initWebSocketLayer({ app, server, sessionMiddleware }) {
       if (sockets) {
         console.log(`✅ User ${userId} has ${sockets.size} active socket(s)`);
         sockets.forEach((wsSocket) => {
-          if (wsSocket.readyState === ws.OPEN) {
-            try {
-              wsSocket.send(str);
-              sentCount++;
-              console.log(`✅ Sent to user ${userId} (socket ready)`);
-            } catch (error) {
-              errorCount++;
-              console.error(`❌ Error sending to user ${userId}:`, error.message);
+    if (wsSocket.readyState === ws.OPEN) {
+        try {
+            wsSocket.send(str);
+            sentCount++;
+            console.log(`📩 Delivered to user ${userId} (OPEN socket)`);
+        } catch (error) {
+            errorCount++;
+            console.error(`❌ Failed sending to ${userId}:`, error.message);
+        }
+    }
+
+    else if (wsSocket.readyState === ws.CONNECTING) {
+        console.log(`⏳ WS still connecting for user ${userId} — retrying...`);
+
+        setTimeout(() => {
+            if (wsSocket.readyState === ws.OPEN) {
+                try {
+                    wsSocket.send(str);
+                    sentCount++;
+                    console.log(`📩 Delivered on retry to ${userId}`);
+                } catch (error) {
+                    errorCount++;
+                    console.error(`❌ Retry failed sending to ${userId}:`, error.message);
+                }
+            } else {
+                console.log(`⚠️ Retry skipped — socket still not OPEN (state: ${wsSocket.readyState})`);
             }
-          } else {
-            console.log(`⚠️ User ${userId} socket not OPEN (state: ${wsSocket.readyState})`);
-          }
-        });
+        }, 500);
+    }
+
+    else {
+        console.log(`⚠️ WS not open for user ${userId}, state = ${wsSocket.readyState}`);
+    }
+});
+
       } else {
         console.log(`❌ User ${userId} not connected (no sockets in userSockets map)`);
       }

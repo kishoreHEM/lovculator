@@ -78,16 +78,42 @@ class MessagesManager {
         
         // Send presence update
         this.sendPresenceUpdate();
+        this.ws.send(JSON.stringify({ type: "DEBUG_REQUEST" }));
       });
 
-      this.ws.addEventListener("message", (event) => {
-        try {
-          const msg = JSON.parse(event.data);
-          this.handleRealtimeEvent(msg);
-        } catch (error) {
-          console.error("❌ Failed to parse WS message:", error);
+      this.ws.onmessage = (event) => {
+    try {
+        const data = JSON.parse(event.data);
+        console.log("📬 WS received:", data);
+
+        if (data.type === "NEW_MESSAGE") {
+            console.log("💌 Live WS new message", data);
+
+            if (window.messagesPage) {
+                window.messagesPage.handleIncomingMessage(
+                    data.conversationId,
+                    data.message
+                );
+            }
         }
-      });
+
+        if (data.type === "TYPING") {
+            if (window.messagesPage) window.messagesPage.handleTypingEvent(data);
+
+        }
+
+        if (data.type === "PRESENCE" || data.type === "PRESENCE_INITIAL" || data.type === "BULK_PRESENCE") {
+            if (window.messagesPage) window.messagesPage.handlePresenceEvent(data);
+        }
+
+        if (data.type === "MESSAGE_SEEN") {
+            if (window.messagesPage) window.messagesPage.handleSeenEvent(data);
+        }
+
+    } catch (err) {
+        console.error("WS parse failed:", err);
+    }
+};
 
       this.ws.addEventListener("close", (event) => {
         console.log("❌ Global WS closed:", event.code, event.reason);
@@ -811,6 +837,8 @@ class MessagesPage {
       })
       .join("");
 
+      
+
     // Attach event listeners
     container.querySelectorAll(".conversation-item").forEach((item) => {
       item.addEventListener("click", () => {
@@ -1208,16 +1236,49 @@ class MessagesPage {
       });
 
       this.ws.addEventListener("message", (event) => {
-        console.log("📨 RAW WebSocket message received:", event.data);
-        
-        try {
-          const msg = JSON.parse(event.data);
-          console.log("📦 Parsed WebSocket message type:", msg.type, "Full:", msg);
-          this.handleRealtimeEvent(msg);
-        } catch (error) {
-          console.error("❌ Failed to parse WebSocket message:", error, "Raw data:", event.data);
+    console.log("📨 WS received:", event.data);
+
+    try {
+        const data = JSON.parse(event.data);
+
+        // Live message push
+        if (data.type === "NEW_MESSAGE") {
+            if (window.messagesPage) {
+                window.messagesPage.handleIncomingMessage(
+                    data.conversationId,
+                    data.message
+                );
+            }
+            return;
         }
-      });
+
+        // Typing signal
+        if (data.type === "TYPING") {
+            if (window.messagesPage) window.messagesPage.handleTypingEvent(data);
+            return;
+        }
+
+        // Presence updates
+        if (
+            data.type === "PRESENCE" ||
+            data.type === "PRESENCE_INITIAL" ||
+            data.type === "BULK_PRESENCE"
+        ) {
+            if (window.messagesPage) window.messagesPage.handlePresenceEvent(data);
+            return;
+        }
+
+        // Seen events
+        if (data.type === "MESSAGE_SEEN") {
+            if (window.messagesPage) window.messagesPage.handleSeenEvent(data);
+            return;
+        }
+
+    } catch (err) {
+        console.error("WS parse failed:", err);
+    }
+});
+
 
       this.ws.addEventListener("close", (event) => {
         console.log("❌ WebSocket CLOSED. Code:", event.code, "Reason:", event.reason);
@@ -1726,6 +1787,8 @@ class MessagesPage {
         this.handleTyping();
         this.autoResizeTextarea(messageInput);
       });
+
+      
       
       messageInput.addEventListener("keydown", (e) => {
         if (e.key === "Enter" && !e.shiftKey) {
