@@ -922,75 +922,99 @@
     animation: messageSlideIn 0.2s ease-out;
   }
 
-  /* ---- 📱 MOBILE RESPONSIVE FIX (FORCE OVERRIDE) ---- */
-@media (max-width: 900px) {
+  /* ---- 📱 MOBILE RESPONSIVE FIX (FULL SCREEN APP MODE) ---- */
+@media screen and (max-width: 900px) {
     
-    /* 1. Reset Wrapper to Full Screen */
+    /* 1. Lock Body Scroll */
+    body.messages-page {
+        height: 100dvh; /* Dynamic height handles address bars */
+        overflow: hidden;
+        position: fixed;
+        width: 100%;
+    }
+
+    /* 2. Reset Wrapper */
     .messages-layout-wrapper {
         margin: 0 !important;
         padding: 0 !important;
         width: 100% !important;
-        max-width: 100% !important;
-        height: calc(100vh - 60px) !important;
-        margin-top: 0 !important;
+        height: 100% !important;
+        max-width: none !important;
     }
 
-    /* 2. Break the Flex Row Layout (Crucial Step) */
+    /* 3. Main Container */
     .messages-container {
         width: 100% !important;
         height: 100% !important;
         border: none !important;
         border-radius: 0 !important;
-        box-shadow: none !important;
         margin: 0 !important;
-        display: block !important; /* 👈 Stops side-by-side layout */
-        position: relative;
+        display: block !important;
     }
 
-    /* 3. SIDEBAR STATE (Visible by Default) */
+    /* 4. SIDEBAR (Visible by Default) */
     .conversations-sidebar {
-        width: 100% !important; /* 👈 Forces full width */
-        height: 100% !important;
-        border-right: none !important;
-        display: flex !important; 
+        width: 100% !important;
+        height: calc(100dvh - 60px) !important; /* Subtract header height */
+        display: flex !important;
+        flex-direction: column;
         z-index: 10;
         background: #fff;
+        padding-bottom: env(safe-area-inset-bottom);
     }
 
-    /* 4. CHAT STATE (Hidden by Default) */
+    /* 5. CHAT MAIN (Hidden Default -> Full Screen Overlay when Active) */
     .messages-main {
-        display: none !important; /* 👈 Force hide initially */
-        width: 100% !important;
-        height: 100% !important;
-        position: absolute !important; /* Sit on top of sidebar */
+        display: none !important;
+        position: fixed !important; /* Lock to screen */
         top: 0;
         left: 0;
-        z-index: 20;
+        width: 100% !important;
+        height: 100dvh !important; /* Full dynamic height */
+        z-index: 2000 !important; /* Sit ON TOP of site header */
         background: #fff;
         flex-direction: column;
     }
 
-    /* --- TOGGLE STATES (Triggered by JS) --- */
+    /* --- ACTIVE STATE (When user clicks a chat) --- */
     
-    /* When Chat is OPEN: Hide Sidebar */
     .messages-container.chat-open .conversations-sidebar {
         display: none !important;
     }
 
-    /* When Chat is OPEN: Show Chat */
     .messages-container.chat-open .messages-main {
         display: flex !important;
         animation: slideIn 0.2s ease-out;
     }
 
-    @keyframes slideIn {
-        from { transform: translateX(100%); }
-        to { transform: translateX(0); }
+    /* 6. Layout Adjustments for Chat View */
+    .messages-header {
+        padding-top: env(safe-area-inset-top); /* Handle Notch */
+        height: auto;
+        min-height: 60px;
     }
 
-    /* 5. Mobile UI Elements */
+    .messages-list {
+        flex: 1; /* Takes all available space */
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch; /* Smooth scroll on iOS */
+    }
+
+    .message-input-container {
+        padding-bottom: max(10px, env(safe-area-inset-bottom)); /* Handle Home Bar */
+        background: #fff;
+        position: sticky;
+        bottom: 0;
+    }
+
     .back-btn {
         display: inline-flex !important;
         margin-right: 8px;
+        padding: 8px;
+    }
+
+    @keyframes slideIn {
+        from { transform: translateX(100%); }
+        to { transform: translateX(0); }
     }
 }

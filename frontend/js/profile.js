@@ -719,8 +719,8 @@
           <div class="story-card-header">
             <div class="story-user-info">
               <a href="/profile.html?user=${encodeURIComponent(authorUsername)}" class="story-user-link">
-                <img src="${avatar}" alt="${authorName}" class="story-avatar" onerror="this.src='/images/default-avatar.png'">
-              </a>
+                <img src="${avatar}" alt="${authorName}" class="story-avatar" onerror="this.onerror=null; this.src='/images/default-avatar.png'"
+              </a>  
               <div class="story-user-details">
                 <a href="/profile.html?user=${encodeURIComponent(authorUsername)}" class="story-username-link">
                   <h4 class="story-username">${authorName}</h4>
@@ -839,7 +839,7 @@
           return `
             <div class="user-card" data-user-id="${uid}">
               <a href="/profile.html?user=${encodeURIComponent(username)}">
-                <img src="${avatar}" alt="${name}" class="user-avatar" onerror="this.src='/images/default-avatar.png'">
+                <img src="${avatar}" alt="${name}" class="user-avatar" onerror="this.onerror=null; this.src='/images/default-avatar.png'"
               </a>
               <div class="user-info">
                 <h4>${name}</h4>
