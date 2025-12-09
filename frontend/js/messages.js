@@ -1106,18 +1106,29 @@ class MessagesPage {
     const messagesList = document.getElementById("messagesList");
     if (!messagesList) return;
 
+    // ✅ FIXED: Filter out messages we already have
+    const uniqueMessages = messages.filter(msg => 
+      !document.querySelector(`[data-message-id="${msg.id}"]`)
+    );
+
+    if (uniqueMessages.length === 0) return;
+
     const oldScrollHeight = messagesList.scrollHeight;
 
-    const grouped = this.groupMessagesByDate(messages);
+    // Use uniqueMessages instead of messages
+    const grouped = this.groupMessagesByDate(uniqueMessages); 
+    
+    // ... rest of the function remains the same ...
     const sortedDates = Object.keys(grouped).sort(
       (a, b) => new Date(a) - new Date(b)
     );
 
     sortedDates.forEach((date) => {
+      // ... rendering logic ...
       const dayMessages = grouped[date].sort(
         (a, b) => new Date(a.created_at) - new Date(b.created_at)
       );
-
+      
       const html = `
         <div class="message-date-divider">
           <span class="date-label">${this.formatDate(date)}</span>
@@ -1682,12 +1693,17 @@ class MessagesPage {
     const messagesList = document.getElementById("messagesList");
     if (!messagesList) return;
 
+    // ✅ FIXED: Prevent duplicate messages
+    if (document.querySelector(`[data-message-id="${message.id}"]`)) {
+      console.log("⚠️ Ignored duplicate message:", message.id);
+      return;
+    }
+
     const emptyState = messagesList.querySelector(".empty-conversations");
     if (emptyState) emptyState.remove();
 
     messagesList.insertAdjacentHTML("beforeend", this.renderMessage(message));
   }
-
   showMessageInput() {
     const inputContainer = document.getElementById("messageInputContainer");
     if (inputContainer) inputContainer.style.display = "flex";
