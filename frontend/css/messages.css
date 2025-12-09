@@ -1045,4 +1045,24 @@
         from { transform: translateX(100%); }
         to { transform: translateX(0); }
     }
+
+    /* Add to public/css/messages.css */
+.chat-header-text {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  margin-left: 10px;
+}
+
+#currentChatName {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: #333;
+}
+
+#currentChatStatus {
+  font-size: 12px;
+  color: #666;
+}
 }
