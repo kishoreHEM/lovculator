@@ -90,10 +90,9 @@ class MessagesManager {
             console.log("💌 Live WS new message", data);
 
             if (window.messagesPage) {
-                window.messagesPage.handleIncomingMessage(
-                    data.conversationId,
-                    data.message
-                );
+    console.log("🔁 Forwarding WS event to MessagesPage router");
+    window.messagesPage.handleRealtimeEvent(data);
+
             }
         }
 
@@ -1212,102 +1211,72 @@ class MessagesPage {
   }
 
   /* 🔌 Enhanced WebSocket connection */
-  connectWebSocket() {
-    console.log("🔌 Attempting WebSocket connection...");
-    
-    try {
-      const protocol = window.location.protocol === "https:" ? "wss" : "ws";
-      const host = window.location.host; // This is correct - includes port
-      const wsUrl = `${protocol}://${host}`;
-      
-      console.log("🌐 WebSocket URL:", wsUrl);
-      this.ws = new WebSocket(wsUrl);
+connectWebSocket() {
+  console.log("🔌 Attempting WebSocket connection...");
 
-      this.ws.addEventListener("open", () => {
-        console.log("✅ WebSocket CONNECTED successfully!");
-        this.reconnectAttempts = 0;
-        this.updateConnectionStatus("connected");
-        
-        // Send initial presence update
-        this.sendPresenceUpdate();
-        
-        // Test WebSocket is working
-        setTimeout(() => this.testWebSocketConnection(), 1000);
-      });
+  try {
+    const protocol = window.location.protocol === "https:" ? "wss" : "ws";
+    const host = window.location.host;
+    const wsUrl = `${protocol}://${host}`;
 
-      this.ws.addEventListener("message", (event) => {
-    console.log("📨 WS received:", event.data);
+    console.log("🌐 WebSocket URL:", wsUrl);
+    this.ws = new WebSocket(wsUrl);
 
-    try {
-        const data = JSON.parse(event.data);
+    this.ws.addEventListener("open", () => {
+      console.log("✅ WebSocket CONNECTED successfully!");
+      this.reconnectAttempts = 0;
+      this.updateConnectionStatus("connected");
 
-        // Live message push
-        if (data.type === "NEW_MESSAGE") {
-            if (window.messagesPage) {
-                window.messagesPage.handleIncomingMessage(
-                    data.conversationId,
-                    data.message
-                );
-            }
-            return;
-        }
+      // Send initial presence update
+      this.sendPresenceUpdate();
 
-        // Typing signal
-        if (data.type === "TYPING") {
-            if (window.messagesPage) window.messagesPage.handleTypingEvent(data);
-            return;
-        }
+      // Small debug ping
+      setTimeout(() => this.testWebSocketConnection(), 1000);
+    });
 
-        // Presence updates
-        if (
-            data.type === "PRESENCE" ||
-            data.type === "PRESENCE_INITIAL" ||
-            data.type === "BULK_PRESENCE"
-        ) {
-            if (window.messagesPage) window.messagesPage.handlePresenceEvent(data);
-            return;
-        }
+    // ✅ SINGLE place where all WS messages go
+    this.ws.addEventListener("message", (event) => {
+      console.log("📨 RAW WS message:", event.data);
 
-        // Seen events
-        if (data.type === "MESSAGE_SEEN") {
-            if (window.messagesPage) window.messagesPage.handleSeenEvent(data);
-            return;
-        }
+      try {
+        const msg = JSON.parse(event.data);
+        console.log("🎯 WS message type:", msg.type, msg);
 
-    } catch (err) {
-        console.error("WS parse failed:", err);
-    }
-});
+        // Route everything through the central handler
+        this.handleRealtimeEvent(msg);
+      } catch (err) {
+        console.error("❌ WS parse failed:", err);
+      }
+    });
 
+    this.ws.addEventListener("close", (event) => {
+      console.log("❌ WebSocket CLOSED. Code:", event.code, "Reason:", event.reason);
+      this.updateConnectionStatus("disconnected");
+      this.reconnectWebSocket();
+    });
 
-      this.ws.addEventListener("close", (event) => {
-        console.log("❌ WebSocket CLOSED. Code:", event.code, "Reason:", event.reason);
-        this.updateConnectionStatus("disconnected");
-        this.reconnectWebSocket();
-      });
+    this.ws.addEventListener("error", (error) => {
+      console.error("❌ WebSocket ERROR:", error);
+      this.updateConnectionStatus("error");
+    });
 
-      this.ws.addEventListener("error", (error) => {
-        console.error("❌ WebSocket ERROR:", error);
-        this.updateConnectionStatus("error");
-      });
-
-      // Setup heartbeat - send PONG every 25 seconds
-      this.heartbeatInterval = setInterval(() => {
-        if (this.ws?.readyState === WebSocket.OPEN) {
-          console.log("❤️ Sending heartbeat PONG");
-          this.ws.send(JSON.stringify({ 
-            type: "PONG",
-            timestamp: new Date().toISOString()
-          }));
-        } else {
-          console.log("💔 WebSocket not open for heartbeat. State:", this.ws?.readyState);
-        }
-      }, 25000);
-
-    } catch (err) {
-      console.error("❌ WebSocket initialization error:", err);
-    }
+    // Heartbeat
+    this.heartbeatInterval = setInterval(() => {
+      if (this.ws?.readyState === WebSocket.OPEN) {
+        console.log("❤️ Sending heartbeat PONG");
+        this.ws.send(JSON.stringify({
+          type: "PONG",
+          timestamp: new Date().toISOString()
+        }));
+      } else {
+        console.log("💔 WebSocket not open for heartbeat. State:", this.ws?.readyState);
+      }
+    }, 25000);
+  } catch (err) {
+    console.error("❌ WebSocket initialization error:", err);
   }
+}
+
 
   reconnectWebSocket() {
     if (this.reconnectAttempts >= this.maxReconnectAttempts) {
@@ -1440,6 +1409,38 @@ class MessagesPage {
     // Update conversation list
     this.updateConversationPreview(conversationId, message);
   }
+
+  updateConversationPreview(conversationId, message) {
+    const convId = parseInt(conversationId);
+
+    if (!this.conversations || !Array.isArray(this.conversations)) return;
+
+    const index = this.conversations.findIndex(c => c.id === convId);
+
+    if (index === -1) {
+        console.log("ℹ️ Conversation not in cache, reloading list...");
+        this.loadConversations();
+        return;
+    }
+
+    const conv = this.conversations[index];
+
+    // Update last message
+    conv.last_message = message;
+
+    // If message is from *other* user, increase unread count
+    if (parseInt(message.sender_id) !== parseInt(this.currentUser?.id)) {
+        conv.unread_count = (conv.unread_count || 0) + 1;
+    }
+
+    // Move conversation to top (like WhatsApp)
+    this.conversations.splice(index, 1);
+    this.conversations.unshift(conv);
+
+    // Re-render sidebar
+    this.renderConversationsList();
+}
+
 
   handleTypingEvent({ fromUserId, conversationId, isTyping, timestamp }) {
     console.log(`⌨️ TYPING event from ${fromUserId} in ${conversationId}: ${isTyping}`);

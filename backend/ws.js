@@ -304,37 +304,39 @@ export function initWebSocketLayer({ app, server, sessionMiddleware }) {
   // 6️⃣ PRESENCE & SOCKET REGISTRATION (ENHANCED)
   //
   function registerSocket(userId, wsSocket, req) {
-    if (!userSockets.has(userId)) {
-      userSockets.set(userId, new Set());
-    }
+  const numericId = Number(userId); // ✅ Force ID to be a Number
 
-    const userSocketsSet = userSockets.get(userId);
-    userSocketsSet.add(wsSocket);
+  if (!userSockets.has(numericId)) {
+    userSockets.set(numericId, new Set());
+  }
 
-    wsSocket.userId = userId;
-    wsSocket.connectedAt = Date.now();
-    wsSocket.isAlive = true;
-    wsSocket.userAgent = req.headers['user-agent'];
+  const userSocketsSet = userSockets.get(numericId);
+  userSocketsSet.add(wsSocket);
 
-    // Enhanced debug tracking
-    connectionDebug.set(userId, {
-      connectedAt: new Date().toISOString(),
-      lastActivity: new Date().toISOString(),
-      userAgent: wsSocket.userAgent,
-      ip: req.headers['x-forwarded-for'] || req.socket.remoteAddress
-    });
+  // ✅ Store numeric ID on the socket object too
+  wsSocket.userId = numericId; 
+  wsSocket.connectedAt = Date.now();
+  wsSocket.isAlive = true;
+  wsSocket.userAgent = req.headers['user-agent'];
 
-    // Online map
-    const userData =
-      onlineUsers.get(userId) || {
-        connectionCount: 0,
-        lastSeen: null,
-        isOnline: false,
-      };
-    userData.connectionCount++;
-    userData.lastSeen = new Date();
-    userData.isOnline = true;
-    onlineUsers.set(userId, userData);
+  // Enhanced debug tracking
+  connectionDebug.set(numericId, {
+    connectedAt: new Date().toISOString(),
+    lastActivity: new Date().toISOString(),
+    userAgent: wsSocket.userAgent,
+    ip: req.headers['x-forwarded-for'] || req.socket.remoteAddress
+  });
+
+  // Online map
+  const userData = onlineUsers.get(numericId) || {
+      connectionCount: 0,
+      lastSeen: null,
+      isOnline: false,
+    };
+  userData.connectionCount++;
+  userData.lastSeen = new Date();
+  userData.isOnline = true;
+  onlineUsers.set(numericId, userData);
 
     // Connection stats
     connectionStats.totalConnections++;
@@ -349,11 +351,11 @@ export function initWebSocketLayer({ app, server, sessionMiddleware }) {
     );
 
     // Notify others this user is online
-    broadcastPresence(userId, true);
+  broadcastPresence(numericId, true);
 
-    // Send initial presence data (who is online among their contacts)
-    sendInitialPresenceData(wsSocket, userId);
-  }
+  // Send initial presence data
+  sendInitialPresenceData(wsSocket, numericId);
+}
 
   function unregisterSocket(wsSocket) {
     const userId = wsSocket.userId;

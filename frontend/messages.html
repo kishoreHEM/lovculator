@@ -116,14 +116,7 @@
               id="currentChatAvatar"
               onerror="this.src='/images/default-avatar.png'"
             />
-            <div class="chat-user-info">
-              <h3 id="currentChatName">Select a conversation</h3>
-              <div class="chat-user-status" id="currentChatStatus">
-    <div class="typing-indicator" style="display:none;">
-        <span></span><span></span><span></span>
-    </div>
-    <span class="status-text">Start chatting to connect</span>
-</div>
+            <div class="chat-user-status" id="currentChatStatus"></div>
 
             </div>
           </div>
@@ -275,6 +268,13 @@ setInterval(() => {
     document.getElementById('debugInfo').innerHTML = info;
   }
 }, 5000);
+
+document.addEventListener("DOMContentLoaded", () => {
+    if(window.messagesManager?.ws){
+        console.log("🔄 Closing global WS — messages page will handle WS");
+        window.messagesManager.ws.close();
+    }
+});
 
 // Add keyboard shortcut for debug (Ctrl+Shift+D)
 document.addEventListener('keydown', (e) => {
