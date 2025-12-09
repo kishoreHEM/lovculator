@@ -1,5 +1,3 @@
-// backend/routes/notifications.js
-
 import express from "express";
 import pool from "../db.js";
 import auth from "../middleware/auth.js";
@@ -7,7 +5,7 @@ import auth from "../middleware/auth.js";
 const router = express.Router();
 
 /* ======================================================
-   📨 1️⃣ Get notifications (pagination + filters) - FIXED
+   📨 1️⃣ Get notifications (pagination + filters)
 ====================================================== */
 router.get("/", auth, async (req, res) => {
     try {
@@ -69,7 +67,7 @@ router.get("/", auth, async (req, res) => {
 });
 
 /* ======================================================
-   👁 2️⃣ Mark as read
+   👁 2️⃣ Mark single notification as read
 ====================================================== */
 router.post("/:id/read", auth, async (req, res) => {
     try {
@@ -86,7 +84,23 @@ router.post("/:id/read", auth, async (req, res) => {
 });
 
 /* ======================================================
-   🗑 3️⃣ Clear all
+   ✅ 3️⃣ Mark ALL notifications as read
+====================================================== */
+router.post("/mark-all-read", auth, async (req, res) => {
+    try {
+        await pool.query(
+            "UPDATE notifications SET is_read = true WHERE user_id = $1",
+            [req.user.id]
+        );
+        res.json({ success: true, message: "All notifications marked as read" });
+    } catch (error) {
+        console.error("❌ Mark all read error:", error);
+        res.status(500).json({ error: "Failed to mark all as read" });
+    }
+});
+
+/* ======================================================
+   🗑 4️⃣ Clear all notifications
 ====================================================== */
 router.delete("/clear-all", auth, async (req, res) => {
     try {
@@ -107,7 +121,7 @@ router.delete("/clear-all", auth, async (req, res) => {
 });
 
 /* ======================================================
-   🔢 4️⃣ Unread count
+   🔢 5️⃣ Unread count
 ====================================================== */
 router.get("/unread-count", auth, async (req, res) => {
     try {
@@ -128,139 +142,121 @@ router.get("/unread-count", auth, async (req, res) => {
 });
 
 /* ======================================================
-   ✅ NEW ROUTE: Mark ALL notifications as read
+   🎯 HELPER: Create notification & Broadcast Real-Time
+   ⚠️ IMPORTANT: Caller must pass 'req' object!
 ====================================================== */
-router.post("/mark-all-read", auth, async (req, res) => {
-    try {
-        await pool.query(
-            "UPDATE notifications SET is_read = true WHERE user_id = $1",
-            [req.user.id]
-        );
-        res.json({ success: true, message: "All notifications marked as read" });
-    } catch (error) {
-        console.error("❌ Mark all read error:", error);
-        res.status(500).json({ error: "Failed to mark all as read" });
-    }
-});
-
-/* ======================================================
-   🎯 Helper: Create notification
-====================================================== */
-export const createNotification = async ({
+export const createNotification = async (req, {
     userId,
     actorId,
     type,
     message,
     link = null
 }) => {
-    const result = await pool.query(
-        `INSERT INTO notifications (user_id, actor_id, type, message, link, is_read, created_at)
-         VALUES ($1, $2, $3, $4, $5, false, NOW())
-         RETURNING *`,
-        [userId, actorId, type, message, link]
-    );
+    try {
+        // 1. Save to Database
+        const result = await pool.query(
+            `INSERT INTO notifications (user_id, actor_id, type, message, link, is_read, created_at)
+             VALUES ($1, $2, $3, $4, $5, false, NOW())
+             RETURNING *,
+             (SELECT username FROM users WHERE id = $2) as actor_username,
+             (SELECT display_name FROM users WHERE id = $2) as actor_display_name,
+             (SELECT avatar_url FROM users WHERE id = $2) as actor_avatar_url`,
+            [userId, actorId, type, message, link]
+        );
 
-    return result.rows[0];
+        const notification = result.rows[0];
+
+        // 2. Broadcast via WebSocket (The Real-Time Magic 🌟)
+        if (req && req.app) {
+            const broadcast = req.app.get("broadcastNotification");
+            if (broadcast) {
+                console.log(`📡 Broadcasting notification to user ${userId}`);
+                broadcast(userId, {
+                    type: "NEW_NOTIFICATION",
+                    notification: notification
+                });
+            } else {
+                console.log("⚠️ Broadcast function not found on app");
+            }
+        }
+
+        return notification;
+    } catch (error) {
+        console.error("❌ createNotification error:", error);
+        return null;
+    }
 };
 
 /* ======================================================
-   🔔 Notify functions (FIXED - removed req parameter)
+   🔔 EXPORTED NOTIFY FUNCTIONS
+   ⚠️ Remember to update your route files (posts.js, etc.)
+   to pass 'req' as the first argument!
 ====================================================== */
-export const notifyLike = async (targetUserId, actorId, postType, postId) => {
-    try {
-        // Don't notify if user is liking their own content
-        if (targetUserId === actorId) {
-            console.log("Skipping notification: user liking own content");
-            return;
-        }
 
+export const notifyLike = async (req, targetUserId, actorId, postType, postId) => {
+    // Don't notify if user is liking their own content
+    if (parseInt(targetUserId) === parseInt(actorId)) return;
+
+    try {
         const actor = await pool.query("SELECT display_name, username FROM users WHERE id = $1", [actorId]);
         if (!actor.rows.length) return;
 
         const name = actor.rows[0].display_name || actor.rows[0].username;
 
-        const notification = await createNotification({
+        return await createNotification(req, {
             userId: targetUserId,
             actorId,
             type: "like",
             message: `${name} liked your ${postType}`,
             link: `/post.html?id=${postId}`
         });
-
-        console.log(`✅ Like notification created: ${notification.message}`);
-        return notification;
-
-    } catch (error) {
-        console.error("❌ notifyLike error:", error);
-        // Don't throw, just log the error so it doesn't break the main flow
-        return null;
+    } catch (err) {
+        console.error("notifyLike failed:", err);
     }
 };
 
-export const notifyComment = async (targetUserId, actorId, postType, postId) => {
-    try {
-        // Don't notify if user is commenting on their own content
-        if (targetUserId === actorId) {
-            console.log("Skipping notification: user commenting on own content");
-            return;
-        }
+export const notifyComment = async (req, targetUserId, actorId, postType, postId) => {
+    // Don't notify if user is commenting on their own content
+    if (parseInt(targetUserId) === parseInt(actorId)) return;
 
+    try {
         const actor = await pool.query("SELECT display_name, username FROM users WHERE id = $1", [actorId]);
         if (!actor.rows.length) return;
 
         const name = actor.rows[0].display_name || actor.rows[0].username;
 
-        const notification = await createNotification({
+        return await createNotification(req, {
             userId: targetUserId,
             actorId,
             type: "comment",
             message: `${name} commented on your ${postType}`,
             link: `/post.html?id=${postId}`
         });
-
-        console.log(`✅ Comment notification created: ${notification.message}`);
-        return notification;
-
-    } catch (error) {
-        console.error("❌ notifyComment error:", error);
-        // Don't throw, just log the error so it doesn't break the main flow
-        return null;
+    } catch (err) {
+        console.error("notifyComment failed:", err);
     }
 };
 
-export const notifyFollow = async (targetUserId, actorId) => {
-    try {
-        // Don't notify if user is following themselves
-        if (targetUserId === actorId) {
-            console.log("Skipping notification: user following themselves");
-            return;
-        }
+export const notifyFollow = async (req, targetUserId, actorId) => {
+    // Don't notify if user is following themselves
+    if (parseInt(targetUserId) === parseInt(actorId)) return;
 
+    try {
         const actor = await pool.query("SELECT display_name, username FROM users WHERE id = $1", [actorId]);
         if (!actor.rows.length) return;
 
         const name = actor.rows[0].display_name || actor.rows[0].username;
 
-        const notification = await createNotification({
+        return await createNotification(req, {
             userId: targetUserId,
             actorId,
             type: "follow",
             message: `${name} started following you`,
             link: `/profile.html?user=${actorId}`
         });
-
-        console.log(`✅ Follow notification created: ${notification.message}`);
-        return notification;
-
-    } catch (error) {
-        console.error("❌ notifyFollow error:", error);
-        return null;
+    } catch (err) {
+        console.error("notifyFollow failed:", err);
     }
-};
-
-// Keep notifyMessage as is if it's working
-export const notifyMessage = async (targetUserId, actorId) => {
-    // ... existing code
 };
 
 export default router;

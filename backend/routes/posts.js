@@ -109,7 +109,7 @@ router.post("/:postId/like", auth, async (req, res) => {
 
         // Notify only when liking, not unliking – and not your own post
         if (postOwnerId && postOwnerId !== userId && is_liked) {
-            await notifyLike(req, userId, postOwnerId, postId);
+            await notifyLike(req, post.user_id, req.user.id, "post", postId);
 
             const broadcastNotify = req.app.get("broadcastNotification");
             if (broadcastNotify) {
