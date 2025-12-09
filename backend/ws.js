@@ -1,15 +1,16 @@
 /**
  * backend/ws.js — Lovculator Real-Time Layer (WebSocket + Optional Redis)
  * 
- * ENHANCED VERSION with:
+ * COMPLETELY UPDATED VERSION with:
  * - Fixed broadcast function signatures
- * - Enhanced connection tracking and debugging
- * - Better error handling and logging
- * - WebSocket stats exposure for debugging
+ * - Enhanced debugging and logging
+ * - Fixed typing indicator handling
+ * - Fixed message broadcasting
+ * - Better error handling and reconnection logic
  */
 
 import * as ws from "ws";
-import { createClient } from "redis"; // npm install redis
+import { createClient } from "redis";
 import pool from "./db.js";
 
 const WebSocketServer = ws.WebSocketServer;
@@ -21,7 +22,7 @@ function createNodeId() {
 }
 
 export function initWebSocketLayer({ app, server, sessionMiddleware }) {
-  console.log("⚡ Initializing ENHANCED WebSocket layer...");
+  console.log("⚡ Initializing UPDATED WebSocket layer...");
 
   const nodeId = createNodeId();
 
@@ -46,15 +47,10 @@ export function initWebSocketLayer({ app, server, sessionMiddleware }) {
     },
   });
 
-  // Maps & stats used by realtime layer
+  // Maps & stats
   const userSockets = new Map(); // userId -> Set<WebSocket>
-  /**
-   * onlineUsers map:
-   *   key: userId
-   *   value: { connectionCount: number, lastSeen: Date, isOnline: boolean }
-   */
   const onlineUsers = new Map();
-  const connectionDebug = new Map(); // Enhanced: userId -> { connectedAt, lastActivity, userAgent, ip }
+  const connectionDebug = new Map();
   
   const connectionStats = {
     totalConnections: 0,
@@ -64,7 +60,7 @@ export function initWebSocketLayer({ app, server, sessionMiddleware }) {
   };
 
   //
-  // 2️⃣ OPTIONAL REDIS PUB/SUB FOR CLUSTERING
+  // 2️⃣ REDIS PUB/SUB (Optional)
   //
   let redisPub = null;
   let redisSub = null;
@@ -73,7 +69,7 @@ export function initWebSocketLayer({ app, server, sessionMiddleware }) {
   async function setupRedis() {
     const url = process.env.REDIS_URL;
     if (!url) {
-      console.log("📡 Redis URL not set. WebSocket clustering disabled (single-node mode).");
+      console.log("📡 Redis URL not set. WebSocket clustering disabled.");
       return;
     }
 
@@ -82,10 +78,10 @@ export function initWebSocketLayer({ app, server, sessionMiddleware }) {
       redisSub = createClient({ url });
 
       redisPub.on("error", (err) =>
-        console.error("❌ Redis PUB error (WS):", err.message)
+        console.error("❌ Redis PUB error:", err.message)
       );
       redisSub.on("error", (err) =>
-        console.error("❌ Redis SUB error (WS):", err.message)
+        console.error("❌ Redis SUB error:", err.message)
       );
 
       await redisPub.connect();
@@ -109,16 +105,15 @@ export function initWebSocketLayer({ app, server, sessionMiddleware }) {
       redisReady = true;
       console.log("✅ Redis Pub/Sub connected for WebSocket scaling");
     } catch (err) {
-      console.error("❌ Failed to init Redis for WebSocket:", err.message);
+      console.error("❌ Failed to init Redis:", err.message);
       redisReady = false;
     }
   }
 
-  // Fire & forget (don't block startup if Redis fails)
-  setupRedis();
+  setupRedis().catch(console.error);
 
   //
-  // 3️⃣ RATE LIMITING FOR WS CONNECTIONS
+  // 3️⃣ RATE LIMITING
   //
   const wsConnectionAttempts = new Map();
   const MAX_WS_CONNECTIONS_PER_MINUTE = 15;
@@ -143,7 +138,6 @@ export function initWebSocketLayer({ app, server, sessionMiddleware }) {
     return true;
   }
 
-  // Periodic cleanup of old rate-limit entries
   setInterval(() => {
     const now = Date.now();
     const windowMs = 60000;
@@ -159,7 +153,7 @@ export function initWebSocketLayer({ app, server, sessionMiddleware }) {
   }, 30000);
 
   //
-  // 4️⃣ LOCAL BROADCAST HELPERS (DO NOT USE REDIS HERE)
+  // 4️⃣ LOCAL BROADCAST HELPERS
   //
   function localBroadcastToAll(payload) {
     const str = JSON.stringify(payload);
@@ -188,60 +182,28 @@ export function initWebSocketLayer({ app, server, sessionMiddleware }) {
     const str = JSON.stringify(payload);
     let sentCount = 0;
     let errorCount = 0;
-
-    console.log(`📡 LOCAL BROADCAST: Type ${payload.type} to ${userIdArray.length} users:`, userIdArray);
+    let offlineCount = 0;
 
     userIdArray.forEach((userId) => {
       const sockets = userSockets.get(Number(userId));
       if (sockets) {
-        console.log(`✅ User ${userId} has ${sockets.size} active socket(s)`);
         sockets.forEach((wsSocket) => {
-    if (wsSocket.readyState === ws.OPEN) {
-        try {
-            wsSocket.send(str);
-            sentCount++;
-            console.log(`📩 Delivered to user ${userId} (OPEN socket)`);
-        } catch (error) {
-            errorCount++;
-            console.error(`❌ Failed sending to ${userId}:`, error.message);
-        }
-    }
-
-    else if (wsSocket.readyState === ws.CONNECTING) {
-        console.log(`⏳ WS still connecting for user ${userId} — retrying...`);
-
-        setTimeout(() => {
-            if (wsSocket.readyState === ws.OPEN) {
-                try {
-                    wsSocket.send(str);
-                    sentCount++;
-                    console.log(`📩 Delivered on retry to ${userId}`);
-                } catch (error) {
-                    errorCount++;
-                    console.error(`❌ Retry failed sending to ${userId}:`, error.message);
-                }
-            } else {
-                console.log(`⚠️ Retry skipped — socket still not OPEN (state: ${wsSocket.readyState})`);
+          if (wsSocket.readyState === ws.OPEN) {
+            try {
+              wsSocket.send(str);
+              sentCount++;
+            } catch (error) {
+              errorCount++;
+              console.error(`Failed sending to ${userId}:`, error.message);
             }
-        }, 500);
-    }
-
-    else {
-        console.log(`⚠️ WS not open for user ${userId}, state = ${wsSocket.readyState}`);
-    }
-});
-
+          } else {
+            offlineCount++;
+          }
+        });
       } else {
-        console.log(`❌ User ${userId} not connected (no sockets in userSockets map)`);
+        console.log(`📭 User ${userId} not connected (no sockets)`);
       }
     });
-
-    console.log(`📊 LOCAL BROADCAST COMPLETE: ${sentCount} sent, ${errorCount} errors, ${userIdArray.length} targets`);
-    
-    // Log currently connected users for debugging
-    if (sentCount === 0 && userIdArray.length > 0) {
-      console.log(`🔍 Currently connected users:`, Array.from(userSockets.keys()));
-    }
 
     return sentCount;
   }
@@ -250,10 +212,8 @@ export function initWebSocketLayer({ app, server, sessionMiddleware }) {
   // 5️⃣ CLUSTER-AWARE BROADCAST HELPERS
   //
   function broadcastToAll(payload) {
-    // Always send locally
     const sent = localBroadcastToAll(payload);
 
-    // If Redis available, replicate to other instances
     if (redisReady && redisPub) {
       const envelope = {
         target: "ALL",
@@ -271,74 +231,70 @@ export function initWebSocketLayer({ app, server, sessionMiddleware }) {
   }
 
   function broadcastToUsers(userIds, payload) {
-  const ids = Array.isArray(userIds) ? userIds : [userIds];
-  
-  console.log(`🎯 BROADCAST DEBUG: Type ${payload.type} to ${ids.length} users:`, {
-    userIds: ids,
-    messageId: payload.message?.id,
-    conversationId: payload.conversationId
-  });
+    const ids = Array.isArray(userIds) ? userIds : [userIds];
+    
+    // ✅ ENHANCED LOGGING
+    console.log(`🚀 [BROADCAST] Type: ${payload.type}, Targets:`, ids);
+    if (payload.message) {
+      console.log(`   Message ID: ${payload.message.id}, Sender: ${payload.message.sender_id}`);
+    }
 
-  // Local delivery
-  const sent = localBroadcastToUsers(ids, payload);
+    const sent = localBroadcastToUsers(ids, payload);
+    
+    console.log(`📊 [BROADCAST RESULT] Sent: ${sent}, Targets: ${ids.length}`);
 
-  // Cluster delivery via Redis
-  if (redisReady && redisPub) {
-    const envelope = {
-      target: "USERS",
-      origin: nodeId,
-      userIds: ids,
-      payload,
-    };
-    redisPub
-      .publish(WS_CHANNEL, JSON.stringify(envelope))
-      .catch((err) =>
-        console.error("❌ Redis publish USERS error:", err.message)
-      );
+    if (redisReady && redisPub) {
+      const envelope = {
+        target: "USERS",
+        origin: nodeId,
+        userIds: ids,
+        payload,
+      };
+      redisPub
+        .publish(WS_CHANNEL, JSON.stringify(envelope))
+        .catch((err) =>
+          console.error("❌ Redis publish USERS error:", err.message)
+        );
+    }
+
+    return sent;
   }
 
-  return sent;
-}
-
   //
-  // 6️⃣ PRESENCE & SOCKET REGISTRATION (ENHANCED)
+  // 6️⃣ PRESENCE & SOCKET REGISTRATION
   //
   function registerSocket(userId, wsSocket, req) {
-  const numericId = Number(userId); // ✅ Force ID to be a Number
+    const numericId = Number(userId);
 
-  if (!userSockets.has(numericId)) {
-    userSockets.set(numericId, new Set());
-  }
+    if (!userSockets.has(numericId)) {
+      userSockets.set(numericId, new Set());
+    }
 
-  const userSocketsSet = userSockets.get(numericId);
-  userSocketsSet.add(wsSocket);
+    const userSocketsSet = userSockets.get(numericId);
+    userSocketsSet.add(wsSocket);
 
-  // ✅ Store numeric ID on the socket object too
-  wsSocket.userId = numericId; 
-  wsSocket.connectedAt = Date.now();
-  wsSocket.isAlive = true;
-  wsSocket.userAgent = req.headers['user-agent'];
+    wsSocket.userId = numericId;
+    wsSocket.connectedAt = Date.now();
+    wsSocket.isAlive = true;
+    wsSocket.userAgent = req.headers['user-agent'];
 
-  // Enhanced debug tracking
-  connectionDebug.set(numericId, {
-    connectedAt: new Date().toISOString(),
-    lastActivity: new Date().toISOString(),
-    userAgent: wsSocket.userAgent,
-    ip: req.headers['x-forwarded-for'] || req.socket.remoteAddress
-  });
+    connectionDebug.set(numericId, {
+      connectedAt: new Date().toISOString(),
+      lastActivity: new Date().toISOString(),
+      userAgent: wsSocket.userAgent,
+      ip: req.headers['x-forwarded-for'] || req.socket.remoteAddress
+    });
 
-  // Online map
-  const userData = onlineUsers.get(numericId) || {
+    const userData = onlineUsers.get(numericId) || {
       connectionCount: 0,
       lastSeen: null,
       isOnline: false,
     };
-  userData.connectionCount++;
-  userData.lastSeen = new Date();
-  userData.isOnline = true;
-  onlineUsers.set(numericId, userData);
+    userData.connectionCount++;
+    userData.lastSeen = new Date();
+    userData.isOnline = true;
+    onlineUsers.set(numericId, userData);
 
-    // Connection stats
     connectionStats.totalConnections++;
     connectionStats.activeConnections++;
     connectionStats.maxConcurrent = Math.max(
@@ -347,15 +303,12 @@ export function initWebSocketLayer({ app, server, sessionMiddleware }) {
     );
 
     console.log(
-      `🔗 User ${userId} connected. Active: ${connectionStats.activeConnections}, Total Sockets: ${userSocketsSet.size}`
+      `🔗 User ${userId} connected. Active: ${connectionStats.activeConnections}, Sockets: ${userSocketsSet.size}`
     );
 
-    // Notify others this user is online
-  broadcastPresence(numericId, true);
-
-  // Send initial presence data
-  sendInitialPresenceData(wsSocket, numericId);
-}
+    broadcastPresence(numericId, true);
+    sendInitialPresenceData(wsSocket, numericId);
+  }
 
   function unregisterSocket(wsSocket) {
     const userId = wsSocket.userId;
@@ -371,7 +324,6 @@ export function initWebSocketLayer({ app, server, sessionMiddleware }) {
       `🔌 User ${userId} disconnected. Active: ${connectionStats.activeConnections}`
     );
 
-    // Clean up debug info if no more sockets
     if (userSocketsSet.size === 0) {
       userSockets.delete(userId);
       connectionDebug.delete(userId);
@@ -391,7 +343,6 @@ export function initWebSocketLayer({ app, server, sessionMiddleware }) {
     }
     onlineUsers.set(userId, userData);
 
-    // Broadcast offline (but lastSeen preserved in map)
     if (!userData.isOnline) {
       broadcastPresence(userId, false);
     }
@@ -399,7 +350,6 @@ export function initWebSocketLayer({ app, server, sessionMiddleware }) {
 
   async function sendInitialPresenceData(wsSocket, userId) {
     try {
-      // Get people from user's conversations
       const { rows } = await pool.query(
         `
         SELECT DISTINCT u.id, u.username, u.display_name
@@ -425,7 +375,6 @@ export function initWebSocketLayer({ app, server, sessionMiddleware }) {
       });
 
       if (presenceData.length > 0 && wsSocket.readyState === ws.OPEN) {
-        // Send both event types for compatibility
         wsSocket.send(
           JSON.stringify({
             type: "BULK_PRESENCE",
@@ -433,7 +382,6 @@ export function initWebSocketLayer({ app, server, sessionMiddleware }) {
           })
         );
         
-        // Also send as PRESENCE_INITIAL for broader compatibility
         wsSocket.send(
           JSON.stringify({
             type: "PRESENCE_INITIAL", 
@@ -441,7 +389,7 @@ export function initWebSocketLayer({ app, server, sessionMiddleware }) {
           })
         );
         
-        console.log(`📊 Sent initial presence data to user ${userId}: ${presenceData.length} contacts`);
+        console.log(`📊 Sent initial presence to user ${userId}: ${presenceData.length} contacts`);
       }
     } catch (error) {
       console.error("Error sending initial presence data:", error);
@@ -498,23 +446,24 @@ export function initWebSocketLayer({ app, server, sessionMiddleware }) {
   // 8️⃣ REAL-TIME EVENT EXPORTS (FIXED SIGNATURES)
   //
   
-  // 🟢 FIXED: Correct function signatures for routes compatibility
+  // ✅ FIXED: Correct broadcast functions
   app.set("broadcastNewMessage", (data, recipients) => {
     connectionStats.totalMessages++;
-    console.log(`🎯 WebSocket: Broadcasting NEW_MESSAGE to ${recipients.length} recipients`, {
-      messageId: data.id,
-      conversationId: data.conversation_id,
-      recipients: recipients
-    });
+    
+    // ✅ CRITICAL: Enhanced logging
+    console.log(`🎯 [NEW_MESSAGE] Broadcasting message ID ${data.id} to recipients:`, recipients);
+    console.log(`   Conversation: ${data.conversation_id}, Sender: ${data.sender_id}`);
+    console.log(`   Message text: ${data.message_text?.substring(0, 50)}...`);
+    
     return broadcastToUsers(recipients, {
       type: "NEW_MESSAGE",
-      message: data, // Keep as 'message' for frontend compatibility
+      message: data,
       conversationId: data.conversation_id,
     });
   });
 
   app.set("broadcastEditedMessage", (data, recipients) => {
-    console.log(`🎯 WebSocket: Broadcasting MESSAGE_EDITED to ${recipients.length} recipients`);
+    console.log(`🎯 [MESSAGE_EDITED] Broadcasting to:`, recipients);
     return broadcastToUsers(recipients, {
       type: "MESSAGE_EDITED",
       message: data,
@@ -523,7 +472,7 @@ export function initWebSocketLayer({ app, server, sessionMiddleware }) {
   });
 
   app.set("broadcastDeletedMessage", (messageId, recipients) => {
-    console.log(`🎯 WebSocket: Broadcasting MESSAGE_DELETED to ${recipients.length} recipients`);
+    console.log(`🎯 [MESSAGE_DELETED] Broadcasting to:`, recipients);
     return broadcastToUsers(recipients, {
       type: "MESSAGE_DELETED",
       messageId: messageId,
@@ -531,7 +480,7 @@ export function initWebSocketLayer({ app, server, sessionMiddleware }) {
   });
 
   app.set("broadcastSeenMessage", (conversationId, messageIds, toUserId) => {
-    console.log(`🎯 WebSocket: Broadcasting MESSAGE_SEEN to user ${toUserId}`);
+    console.log(`🎯 [MESSAGE_SEEN] Broadcasting to user ${toUserId}`);
     return broadcastToUsers([toUserId], {
       type: "MESSAGE_SEEN",
       conversationId,
@@ -540,19 +489,12 @@ export function initWebSocketLayer({ app, server, sessionMiddleware }) {
     });
   });
 
-  /**
-   * 🔔 Notifications broadcast
-   * Used by: routes/notifications.js
-   * Signature expected there:
-   *   const broadcast = req.app.get("broadcastNotification");
-   *   if (broadcast) broadcast([targetUserId], { message: notification.message });
-   */
   app.set("broadcastNotification", (recipients, payload) => {
     const recipientArray = Array.isArray(recipients) ? recipients : [recipients];
     console.log(
-      "🔔 Broadcasting notification to:",
+      "🔔 [NOTIFICATION] Broadcasting to:",
       recipientArray,
-      "Payload type:",
+      "Type:",
       payload?.type
     );
 
@@ -563,34 +505,24 @@ export function initWebSocketLayer({ app, server, sessionMiddleware }) {
     });
   });
 
-  /**
-   * ❤️ Likes broadcast
-   * In posts.js:
-   *   const broadcast = req.app.get("broadcastLike");
-   *   if (broadcast) broadcast({ postId, like_count: newCount });
-   */
-  app.set("broadcastLike", ({ postId, like_count }) =>
-    broadcastToAll({
+  app.set("broadcastLike", ({ postId, like_count }) => {
+    console.log(`❤️ [LIKE_UPDATE] Broadcasting for post ${postId}`);
+    return broadcastToAll({
       type: "LIKE_UPDATE",
       data: { postId, like_count },
-    })
-  );
+    });
+  });
 
-  /**
-   * 💬 Comments broadcast
-   * In comments.js:
-   *   const broadcast = req.app.get("broadcastComment");
-   *   if (broadcast) broadcast(commentData);
-   */
-  app.set("broadcastComment", (commentData) =>
-    broadcastToAll({
+  app.set("broadcastComment", (commentData) => {
+    console.log(`💬 [NEW_COMMENT] Broadcasting for post ${commentData.post_id}`);
+    return broadcastToAll({
       type: "NEW_COMMENT",
       data: commentData,
-    })
-  );
+    });
+  });
 
   //
-  // 9️⃣ WEBSOCKET CONNECTION HANDLER (ENHANCED)
+  // 9️⃣ WEBSOCKET MESSAGE HANDLER (FIXED TYPING)
   //
   wss.on("connection", (wsSocket, req) => {
     const uid = req.session?.user?.id;
@@ -602,114 +534,146 @@ export function initWebSocketLayer({ app, server, sessionMiddleware }) {
     registerSocket(uid, wsSocket, req);
     setupHeartbeat(wsSocket);
 
-    // In the ws.js message handler (around line 300), update the switch statement:
-
-wsSocket.on("message", (raw) => {
-  let data;
-  try {
-    data = JSON.parse(raw.toString());
-    connectionStats.totalMessages++;
-    
-    // Update last activity
-    if (connectionDebug.has(uid)) {
-      const debugInfo = connectionDebug.get(uid);
-      debugInfo.lastActivity = new Date().toISOString();
-      connectionDebug.set(uid, debugInfo);
-    }
-  } catch (error) {
-    console.log("❌ Invalid WebSocket message format from user", uid, "Raw:", raw.toString());
-    return;
-  }
-
-  // Any message = still alive
-  wsSocket.isAlive = true;
-
-  console.log(`📨 WebSocket message from user ${uid}:`, data);
-
-  switch (data.type) {
-    case "TYPING":
-      if (data.toUserId && data.conversationId) {
-        console.log(`⌨️ Typing indicator from ${uid} to ${data.toUserId}`);
-        broadcastToUsers([data.toUserId], {
-          type: "TYPING",
-          conversationId: data.conversationId,
-          isTyping: data.isTyping,
-          fromUserId: uid,
-          timestamp: data.timestamp || new Date().toISOString(),
-        });
-      } else {
-        console.log(`⚠️ Invalid TYPING message format from ${uid}:`, data);
+    wsSocket.on("message", (raw) => {
+      let data;
+      try {
+        data = JSON.parse(raw.toString());
+        connectionStats.totalMessages++;
+        
+        if (connectionDebug.has(uid)) {
+          const debugInfo = connectionDebug.get(uid);
+          debugInfo.lastActivity = new Date().toISOString();
+          connectionDebug.set(uid, debugInfo);
+        }
+      } catch (error) {
+        console.log("❌ Invalid WebSocket message from user", uid, "Raw:", raw.toString());
+        return;
       }
-      break;
 
-    case "PONG":
       wsSocket.isAlive = true;
-      console.log(`❤️ PONG received from user ${uid}`);
-      break;
 
-    case "PRESENCE_UPDATE": {
-      console.log(`👤 Presence update from user ${uid}`);
-      const userData = onlineUsers.get(uid) || {
-        connectionCount: 0,
-        lastSeen: null,
-        isOnline: false,
-      };
-      userData.lastSeen = new Date();
-      onlineUsers.set(uid, userData);
-      
-      // Broadcast presence to all users in conversations with this user
-      broadcastPresence(uid, true);
-      break;
-    }
+      console.log(`📨 WebSocket message from user ${uid}:`, data.type);
 
-    case "DEBUG_REQUEST":
-      console.log(`🔍 Debug request from user ${uid}`);
-      if (wsSocket.readyState === ws.OPEN) {
-        wsSocket.send(JSON.stringify({
-          type: "DEBUG_RESPONSE",
-          userId: uid,
-          connectionCount: userSockets.get(uid)?.size || 0,
-          online: onlineUsers.get(uid)?.isOnline || false,
-          onlineUsers: Array.from(onlineUsers.keys()),
-          totalConnections: connectionStats.activeConnections,
-          timestamp: new Date().toISOString()
-        }));
+      switch (data.type) {
+        case "TYPING":
+          // ✅ FIXED: Handle both old and new format
+          const conversationId = data.conversationId;
+          const isTyping = data.isTyping;
+          
+          if (conversationId !== undefined && isTyping !== undefined) {
+            console.log(`⌨️ [TYPING] User ${uid} ${isTyping ? "started" : "stopped"} typing in conversation ${conversationId}`);
+            
+            // Get conversation participants to broadcast to
+            pool.query(
+              `SELECT user_id FROM conversation_participants WHERE conversation_id = $1 AND user_id != $2`,
+              [conversationId, uid]
+            ).then(({ rows }) => {
+              const participants = rows.map(r => r.user_id);
+              if (participants.length > 0) {
+                broadcastToUsers(participants, {
+                  type: "TYPING",
+                  conversationId,
+                  isTyping,
+                  fromUserId: uid,
+                  timestamp: data.timestamp || new Date().toISOString(),
+                });
+                console.log(`📤 [TYPING] Broadcasted to participants:`, participants);
+              }
+            }).catch(err => {
+              console.error("Error getting conversation participants:", err);
+            });
+          } else {
+            console.log(`⚠️ [TYPING] Invalid format from ${uid}:`, data);
+          }
+          break;
+
+        case "PONG":
+          wsSocket.isAlive = true;
+          console.log(`❤️ PONG received from user ${uid}`);
+          break;
+
+        case "PRESENCE_UPDATE": {
+          console.log(`👤 [PRESENCE] Update from user ${uid}`);
+          const userData = onlineUsers.get(uid) || {
+            connectionCount: 0,
+            lastSeen: null,
+            isOnline: false,
+          };
+          userData.lastSeen = new Date();
+          onlineUsers.set(uid, userData);
+          broadcastPresence(uid, true);
+          break;
+        }
+
+        case "DEBUG_REQUEST":
+          console.log(`🔍 [DEBUG] Request from user ${uid}:`, data.message || 'No message');
+          if (wsSocket.readyState === ws.OPEN) {
+            // Test message to confirm WebSocket is working
+            wsSocket.send(JSON.stringify({
+              type: "DEBUG_RESPONSE",
+              userId: uid,
+              serverTime: new Date().toISOString(),
+              connectionCount: userSockets.get(uid)?.size || 0,
+              online: onlineUsers.get(uid)?.isOnline || false,
+              totalConnections: connectionStats.activeConnections,
+              message: "WebSocket server is working!"
+            }));
+            
+            // Also send a test NEW_MESSAGE to verify message delivery
+            if (data.testMessage === true) {
+              setTimeout(() => {
+                wsSocket.send(JSON.stringify({
+                  type: "NEW_MESSAGE",
+                  conversationId: "test",
+                  message: {
+                    id: 999999,
+                    conversation_id: "test",
+                    sender_id: "server",
+                    sender_username: "System",
+                    message_text: "Test message from WebSocket server",
+                    created_at: new Date().toISOString(),
+                    is_read: false
+                  }
+                }));
+                console.log(`✅ Sent test NEW_MESSAGE to user ${uid}`);
+              }, 100);
+            }
+          }
+          break;
+
+        case "MESSAGE_SEEN":
+          console.log(`👀 [SEEN] Message seen from user ${uid}:`, data);
+          if (data.conversationId && data.messageIds && data.toUserId) {
+            broadcastToUsers([data.toUserId], {
+              type: "MESSAGE_SEEN",
+              conversationId: data.conversationId,
+              messageIds: data.messageIds,
+              seenAt: data.timestamp || new Date().toISOString(),
+              fromUserId: uid
+            });
+          }
+          break;
+
+        default:
+          console.log(`❓ [UNKNOWN] Message type from user ${uid}:`, data.type, data);
       }
-      break;
-
-    case "MESSAGE_SEEN":
-      console.log(`👀 Message seen from user ${uid}:`, data);
-      if (data.conversationId && data.messageIds && data.toUserId) {
-        broadcastToUsers([data.toUserId], {
-          type: "MESSAGE_SEEN",
-          conversationId: data.conversationId,
-          messageIds: data.messageIds,
-          seenAt: data.timestamp || new Date().toISOString(),
-          fromUserId: uid
-        });
-      }
-      break;
-
-    default:
-      console.log(`❓ Unknown WebSocket message type from user ${uid}:`, data.type);
-  }
-});
+    });
 
     wsSocket.on("close", (code, reason) => {
-      console.log(`WebSocket closed for user ${uid}: ${code} - ${reason}`);
+      console.log(`🔌 WebSocket closed for user ${uid}: ${code} - ${reason}`);
       clearInterval(wsSocket.pingInterval);
       unregisterSocket(wsSocket);
     });
 
     wsSocket.on("error", (error) => {
-      console.error(`WebSocket error for user ${uid}:`, error);
+      console.error(`❌ WebSocket error for user ${uid}:`, error);
       clearInterval(wsSocket.pingInterval);
       unregisterSocket(wsSocket);
     });
   });
 
   //
-  // 🔟 HTTP → WS UPGRADE HANDLER (Fixed for rolling sessions)
+  // 🔟 HTTP → WS UPGRADE HANDLER
   //
   server.on("upgrade", (req, socket, head) => {
     const clientIp =
@@ -721,7 +685,6 @@ wsSocket.on("message", (raw) => {
       return socket.destroy();
     }
 
-    // ✅ FIX: Create a mock Response object so 'rolling: true' doesn't crash
     const responseWrapper = {
       setHeader: () => {},
       getHeader: () => {},
@@ -737,6 +700,8 @@ wsSocket.on("message", (raw) => {
         return socket.destroy();
       }
 
+      console.log(`🔗 WebSocket upgrade for user ${req.session.user.id} from ${clientIp}`);
+      
       wss.handleUpgrade(req, socket, head, (wsSocket) => {
         wss.emit("connection", wsSocket, req);
       });
@@ -744,20 +709,19 @@ wsSocket.on("message", (raw) => {
   });
 
   //
-  // 1️⃣1️⃣ PERIODIC WS CLEANUP & MONITORING (ENHANCED)
+  // 1️⃣1️⃣ PERIODIC CLEANUP & MONITORING
   //
   setInterval(() => {
     wss.clients.forEach((wsSocket) => {
       if (wsSocket.isAlive === false) {
         console.log(
-          `Cleaning up dead WebSocket connection for user ${wsSocket.userId}`
+          `🧹 Cleaning up dead WebSocket for user ${wsSocket.userId}`
         );
-        return wsSocket.terminate();
+        wsSocket.terminate();
       }
     });
   }, 30000);
 
-  // Enhanced WebSocket stats function
   function getWebSocketStats() {
     return {
       activeConnections: connectionStats.activeConnections,
@@ -782,10 +746,8 @@ wsSocket.on("message", (raw) => {
     };
   }
 
-  // Expose WebSocket stats to the app
   app.set("getWebSocketStats", getWebSocketStats);
 
-  // Monitoring endpoint for WebSocket stats
   app.get("/api/ws/stats", (req, res) => {
     if (process.env.NODE_ENV !== "development" && !req.session?.user?.isAdmin) {
       return res.status(403).json({ error: "Access denied" });
@@ -795,7 +757,6 @@ wsSocket.on("message", (raw) => {
     res.json(stats);
   });
 
-  // Enhanced WebSocket health check
   app.get("/api/ws/health", (req, res) => {
     res.json({
       status: "healthy",
@@ -808,18 +769,18 @@ wsSocket.on("message", (raw) => {
     });
   });
 
-  // Log comprehensive WS stats every minute
+  // Log stats every minute
   setInterval(() => {
     if (connectionStats.activeConnections > 0) {
       console.log(
-        `📊 ENHANCED WS Stats - Active: ${connectionStats.activeConnections}, ` +
+        `📊 WS Stats - Active: ${connectionStats.activeConnections}, ` +
         `Online Users: ${onlineUsers.size}, ` +
         `Total Clients: ${wss.clients.size}, ` +
         `Total Messages: ${connectionStats.totalMessages}, ` +
         `Redis: ${redisReady ? '✅' : '❌'}`
       );
       
-      // Log connected users for debugging
+      // Log connected users
       if (userSockets.size > 0) {
         console.log(`👥 Connected users:`, Array.from(userSockets.keys()));
       }
@@ -827,12 +788,11 @@ wsSocket.on("message", (raw) => {
   }, 60000);
 
   //
-  // 1️⃣2️⃣ GRACEFUL SHUTDOWN HANDLING
+  // 1️⃣2️⃣ GRACEFUL SHUTDOWN
   //
   function gracefulShutdown() {
     console.log("🛑 Starting graceful shutdown...");
 
-    // Tell clients we're restarting
     const shutdownMsg = {
       type: "SERVER_SHUTDOWN",
       message: "Server is restarting, please reconnect in a moment",
@@ -842,12 +802,10 @@ wsSocket.on("message", (raw) => {
 
     broadcastToAll(shutdownMsg);
 
-    // Stop HTTP (server is captured from closure)
     server.close(() => {
       console.log("✅ HTTP server closed");
     });
 
-    // Close WS connections
     wss.clients.forEach((client) => {
       if (client.readyState === ws.OPEN) {
         client.close(1001, "Server restarting");
@@ -857,18 +815,15 @@ wsSocket.on("message", (raw) => {
       }
     });
 
-    // Close WS server
     wss.close(() => {
       console.log("✅ WebSocket server closed");
     });
 
-    // Close Redis
     if (redisReady) {
       if (redisSub) redisSub.quit().catch(() => {});
       if (redisPub) redisPub.quit().catch(() => {});
     }
 
-    // Force quit after timeout
     setTimeout(() => {
       console.log("⚠️ Forcing shutdown after timeout");
       process.exit(1);
@@ -889,6 +844,6 @@ wsSocket.on("message", (raw) => {
     console.error("🆘 Unhandled Rejection at:", promise, "reason:", reason);
   });
 
-  console.log("✅ ENHANCED WebSocket layer initialized (node:", nodeId, ")");
-  console.log("🔧 Features: Fixed signatures, Enhanced debugging, Better error handling");
+  console.log("✅ UPDATED WebSocket layer initialized (node:", nodeId, ")");
+  console.log("🔧 Enhanced with: Fixed typing, Better logging, Message broadcasting");
 }

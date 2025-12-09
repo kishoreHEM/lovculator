@@ -2,24 +2,22 @@ import express from "express";
 import pool from "../db.js";
 import auth from "../middleware/auth.js";
 import rateLimit from "express-rate-limit";
-import multer from "multer"; // 1. Import Multer
+import multer from "multer";
 import path from "path";
 import fs from "fs";
 
 const router = express.Router();
 
-// --- 2. Configure Image Upload Storage ---
+// --- Configure Image Upload Storage ---
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
     const dir = "uploads/messages/";
-    // Create folder if not exists
     if (!fs.existsSync(dir)) {
       fs.mkdirSync(dir, { recursive: true });
     }
     cb(null, dir);
   },
   filename: (req, file, cb) => {
-    // Unique filename: timestamp-random.ext
     const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
     cb(null, uniqueSuffix + path.extname(file.originalname));
   },
@@ -27,20 +25,28 @@ const storage = multer.diskStorage({
 
 const upload = multer({
   storage: storage,
-  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB limit
+  limits: { fileSize: 10 * 1024 * 1024 }, // Increased to 10MB for documents
   fileFilter: (req, file, cb) => {
-    if (file.mimetype.startsWith("image/")) {
+    const allowedTypes = [
+      'image/jpeg', 'image/png', 'image/gif', 'image/webp',
+      'application/pdf',
+      'application/msword',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      'text/plain'
+    ];
+    
+    if (allowedTypes.includes(file.mimetype)) {
       cb(null, true);
     } else {
-      cb(new Error("Only images are allowed"));
+      cb(new Error("Only images, PDF, Word, and text files are allowed"));
     }
   },
 });
 
 // Rate limiting configurations
 const messageLimiter = rateLimit({
-  windowMs: 1 * 60 * 1000, // 1 minute
-  max: 30, // max 30 messages per minute
+  windowMs: 1 * 60 * 1000,
+  max: 30,
   message: {
     error: "Too many messages sent. Please wait a moment.",
     code: "RATE_LIMITED"
@@ -50,8 +56,8 @@ const messageLimiter = rateLimit({
 });
 
 const conversationLimiter = rateLimit({
-  windowMs: 1 * 60 * 1000, // 1 minute
-  max: 10, // max 10 conversation creations per minute
+  windowMs: 1 * 60 * 1000,
+  max: 10,
   message: {
     error: "Too many conversation attempts. Please wait a moment.",
     code: "RATE_LIMITED"
@@ -62,20 +68,23 @@ const conversationLimiter = rateLimit({
 
 // Validation middleware
 const validateMessage = (req, res, next) => {
-  const { message_text } = req.body;
+  const { message_text, message_type } = req.body;
   
-  if (!message_text?.trim()) {
-    return res.status(400).json({ 
-      error: "Message text is required",
-      code: "MESSAGE_TEXT_REQUIRED"
-    });
-  }
-  
-  if (message_text.length > 1000) {
-    return res.status(400).json({ 
-      error: "Message too long (max 1000 characters)",
-      code: "MESSAGE_TOO_LONG"
-    });
+  // If it's text-only, validate text
+  if (message_type === 'text' || !message_type) {
+    if (!message_text?.trim()) {
+      return res.status(400).json({ 
+        error: "Message text is required",
+        code: "MESSAGE_TEXT_REQUIRED"
+      });
+    }
+    
+    if (message_text.length > 1000) {
+      return res.status(400).json({ 
+        error: "Message too long (max 1000 characters)",
+        code: "MESSAGE_TOO_LONG"
+      });
+    }
   }
   
   next();
@@ -103,13 +112,14 @@ const validateConversation = (req, res, next) => {
 
 // Sanitization helper
 const sanitizeMessage = (text) => {
+  if (!text) return '';
   return text
     .trim()
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
     .replace(/'/g, '&#39;')
     .replace(/"/g, '&#34;')
-    .substring(0, 1000); // max length
+    .substring(0, 1000);
 };
 
 // Enhanced upload route
@@ -144,7 +154,7 @@ router.post("/upload", auth, upload.single("file"), (req, res) => {
 });
 
 /* ======================================================
-   📨 1️⃣ Get all conversations for current user (FIXED)
+   📨 1️⃣ Get all conversations for current user
 ====================================================== */
 router.get("/conversations", auth, async (req, res) => {
   try {
@@ -172,6 +182,8 @@ router.get("/conversations", auth, async (req, res) => {
             SELECT 
               m.id,
               m.message_text,
+              m.message_type,
+              m.attachment_url,
               m.created_at,
               m.sender_id
             FROM messages m
@@ -210,7 +222,7 @@ router.get("/conversations", auth, async (req, res) => {
 });
 
 /* ======================================================
-   💬 2️⃣ Get or create conversation with another user (FIXED - removed deleted_at)
+   💬 2️⃣ Get or create conversation with another user
 ====================================================== */
 router.post("/conversations", auth, conversationLimiter, validateConversation, async (req, res) => {
   const client = await pool.connect();
@@ -269,7 +281,7 @@ router.post("/conversations", auth, conversationLimiter, validateConversation, a
         [conversationId]
       );
     } else {
-      // Create new conversation WITHOUT deleted_at
+      // Create new conversation
       const newConv = await client.query(
         `INSERT INTO conversations (created_at, updated_at) 
          VALUES (NOW(), NOW()) 
@@ -379,23 +391,22 @@ router.get("/conversations/:conversationId/messages", auth, async (req, res) => 
 });
 
 /* ======================================================
-   ✉️ 4. Send Message (UPDATED to handle type)
-   (Your existing code was mostly fine, just ensure it uses the body correctly)
+   ✉️ 4️⃣ Send Message (FIXED for WebSocket broadcasting)
 ====================================================== */
-router.post("/conversations/:conversationId/messages", auth, async (req, res) => { // Remove validators for now if they block images
+router.post("/conversations/:conversationId/messages", auth, async (req, res) => {
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
     
     const userId = req.user.id;
     const { conversationId } = req.params;
-    // Extract attachment info
-    const { message_text, message_type = 'text', attachment_url = null } = req.body;
+    const { message_text, message_type = 'text', attachment_url = null, filename = null, file_size = null } = req.body;
 
-    // Logic: If it's an image, text is optional
-    const finalMessageText = message_text || (message_type === 'image' ? 'Sent an image' : '');
+    console.log("📤 [API] Sending message:", { 
+      conversationId, userId, message_text, message_type, attachment_url 
+    });
 
-    // Check participant access
+    // Validate participant access
     const participantCheck = await client.query(
       "SELECT 1 FROM conversation_participants WHERE conversation_id = $1 AND user_id = $2",
       [conversationId, userId]
@@ -403,23 +414,39 @@ router.post("/conversations/:conversationId/messages", auth, async (req, res) =>
 
     if (participantCheck.rows.length === 0) {
       await client.query('ROLLBACK');
-      return res.status(403).json({ error: "Access denied" });
+      return res.status(403).json({ 
+        error: "Access denied to conversation",
+        code: "CONVERSATION_ACCESS_DENIED"
+      });
     }
 
-    // Insert message
+    // Determine message text for attachments
+    let finalMessageText = message_text;
+    if (!finalMessageText) {
+      if (message_type === 'image') finalMessageText = 'Sent an image';
+      else if (message_type === 'pdf' || message_type === 'doc' || message_type === 'txt') {
+        finalMessageText = 'Sent a document';
+      } else {
+        finalMessageText = '';
+      }
+    }
+
+    // Insert message with full attachment info
     const { rows } = await client.query(
       `
-      INSERT INTO messages (conversation_id, sender_id, message_text, message_type, attachment_url)
-      VALUES ($1, $2, $3, $4, $5)
+      INSERT INTO messages 
+        (conversation_id, sender_id, message_text, message_type, attachment_url, filename, file_size)
+      VALUES ($1, $2, $3, $4, $5, $6, $7)
       RETURNING *,
         (SELECT username FROM users WHERE id = $2) AS sender_username,
         (SELECT display_name FROM users WHERE id = $2) AS sender_display_name,
         (SELECT avatar_url FROM users WHERE id = $2) AS sender_avatar_url
       `,
-      [conversationId, userId, finalMessageText, message_type, attachment_url]
+      [conversationId, userId, finalMessageText, message_type, attachment_url, filename, file_size]
     );
 
     const message = rows[0];
+    console.log("✅ [API] Message created with ID:", message.id);
 
     // Update conversation timestamp
     await client.query(
@@ -427,54 +454,71 @@ router.post("/conversations/:conversationId/messages", auth, async (req, res) =>
       [conversationId]
     );
 
-    // Get recipients for WebSocket
-    const { rows: others } = await client.query(
-  `SELECT user_id FROM conversation_participants WHERE conversation_id = $1 AND user_id <> $2`,
-  [conversationId, userId]
-);
+    // Get recipients for WebSocket (other participants)
+    const { rows: otherParticipants } = await client.query(
+      `SELECT user_id FROM conversation_participants WHERE conversation_id = $1 AND user_id != $2`,
+      [conversationId, userId]
+    );
 
-await client.query('COMMIT');
+    await client.query('COMMIT');
 
-// 🚀 WebSocket Broadcast - IMPORTANT: Use message object, not just data
-const broadcastFn = req.app.get("broadcastNewMessage");
-if (broadcastFn) {
-  console.log(`📤 Broadcasting new message to users:`, others.map(r => r.user_id));
-  broadcastFn(message, others.map((r) => r.user_id));
-}
+    console.log("📡 [API] Broadcasting to users:", otherParticipants.map(r => r.user_id));
 
-res.json(message);
+    // ✅ CRITICAL: Get the broadcast function and call it
+    const broadcastNewMessage = req.app.get("broadcastNewMessage");
+    if (broadcastNewMessage && typeof broadcastNewMessage === 'function') {
+      console.log("🚀 [API] Calling broadcastNewMessage function");
+      try {
+        broadcastNewMessage(message, otherParticipants.map(r => r.user_id));
+        console.log("✅ [API] Broadcast function called successfully");
+      } catch (broadcastError) {
+        console.error("❌ [API] Broadcast error:", broadcastError);
+      }
+    } else {
+      console.log("⚠️ [API] broadcastNewMessage function not available on app");
+    }
+
+    res.json(message);
 
   } catch (error) {
     await client.query('ROLLBACK');
-    console.error("❌ Send message error:", error);
-    res.status(500).json({ error: "Failed to send message" });
+    console.error("❌ [API] Send message error:", error);
+    res.status(500).json({ 
+      error: "Failed to send message",
+      details: error.message
+    });
   } finally {
     client.release();
   }
 });
 
 /* ======================================================
-   👁‍🗨 5️⃣ Mark messages as seen
+   👁‍🗨 5️⃣ Mark messages as seen (FIXED for WebSocket)
 ====================================================== */
 router.post("/conversations/:conversationId/seen", auth, async (req, res) => {
+  const client = await pool.connect();
   try {
+    await client.query('BEGIN');
+    
     const userId = req.user.id;
     const { conversationId } = req.params;
 
     // Verify participant access
-    const participantCheck = await pool.query(
+    const participantCheck = await client.query(
       "SELECT 1 FROM conversation_participants WHERE conversation_id = $1 AND user_id = $2",
       [conversationId, userId]
     );
 
     if (participantCheck.rows.length === 0) {
+      await client.query('ROLLBACK');
       return res.status(403).json({ 
         error: "Access denied",
         code: "CONVERSATION_ACCESS_DENIED"
       });
     }
 
-    const { rows } = await pool.query(
+    // Mark messages as read
+    const { rows } = await client.query(
       `
       UPDATE messages
       SET is_read = true
@@ -487,14 +531,24 @@ router.post("/conversations/:conversationId/seen", auth, async (req, res) => {
       [conversationId, userId]
     );
 
-    const broadcastSeen = req.app.get("broadcastSeenMessage");
-    if (broadcastSeen && rows.length > 0) {
+    await client.query('COMMIT');
+
+    console.log("👀 [API] Messages marked as seen:", rows.length);
+
+    // ✅ CRITICAL: Broadcast seen event
+    const broadcastSeenMessage = req.app.get("broadcastSeenMessage");
+    if (broadcastSeenMessage && rows.length > 0) {
       // Group by sender to avoid duplicate notifications
       const senders = [...new Set(rows.map(row => row.sender_id))];
       
       senders.forEach(senderId => {
         const senderMessages = rows.filter(row => row.sender_id === senderId);
-        broadcastSeen(conversationId, senderMessages.map(m => m.id), senderId);
+        console.log(`📡 [API] Broadcasting seen to sender ${senderId}:`, senderMessages.map(m => m.id));
+        try {
+          broadcastSeenMessage(conversationId, senderMessages.map(m => m.id), senderId);
+        } catch (broadcastError) {
+          console.error("❌ [API] Broadcast seen error:", broadcastError);
+        }
       });
     }
 
@@ -503,11 +557,14 @@ router.post("/conversations/:conversationId/seen", auth, async (req, res) => {
       messages: rows 
     });
   } catch (error) {
+    await client.query('ROLLBACK');
     console.error("❌ Seen error:", error);
     res.status(500).json({ 
       error: "Failed to mark messages as seen",
       code: "MARK_SEEN_FAILED"
     });
+  } finally {
+    client.release();
   }
 });
 
@@ -560,9 +617,13 @@ router.put("/messages/:messageId", auth, validateMessage, async (req, res) => {
     await client.query('COMMIT');
 
     // Broadcast edit
-    const broadcastEdit = req.app.get("broadcastEditedMessage");
-    if (broadcastEdit) {
-      broadcastEdit(message, others.map((u) => u.user_id));
+    const broadcastEditedMessage = req.app.get("broadcastEditedMessage");
+    if (broadcastEditedMessage) {
+      try {
+        broadcastEditedMessage(message, others.map((u) => u.user_id));
+      } catch (broadcastError) {
+        console.error("❌ [API] Broadcast edit error:", broadcastError);
+      }
     }
 
     res.json(message);
@@ -619,9 +680,13 @@ router.delete("/messages/:messageId", auth, async (req, res) => {
 
     await client.query('COMMIT');
 
-    const broadcastDelete = req.app.get("broadcastDeletedMessage");
-    if (broadcastDelete) {
-      broadcastDelete(message.id, others.map((u) => u.user_id));
+    const broadcastDeletedMessage = req.app.get("broadcastDeletedMessage");
+    if (broadcastDeletedMessage) {
+      try {
+        broadcastDeletedMessage(message.id, others.map((u) => u.user_id));
+      } catch (broadcastError) {
+        console.error("❌ [API] Broadcast delete error:", broadcastError);
+      }
     }
 
     res.json({ 

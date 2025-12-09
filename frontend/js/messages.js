@@ -9,6 +9,175 @@
  */
 
 /* ======================================================
+   SINGLETON WEBSOCKET MANAGER (Shared by all components)
+====================================================== */
+class WebSocketManager {
+  constructor() {
+    if (WebSocketManager.instance) {
+      return WebSocketManager.instance;
+    }
+    
+    this.ws = null;
+    this.subscribers = new Map(); // eventType -> [callbacks]
+    this.reconnectAttempts = 0;
+    this.maxReconnectAttempts = 5;
+    this.reconnectTimeout = null;
+    this.heartbeatInterval = null;
+    WebSocketManager.instance = this;
+  }
+
+  async connect() {
+    if (this.ws?.readyState === WebSocket.OPEN) {
+      console.log("✅ WebSocket already connected");
+      return Promise.resolve();
+    }
+
+    return new Promise((resolve, reject) => {
+      try {
+        const protocol = window.location.protocol === "https:" ? "wss" : "ws";
+        const wsUrl = `${protocol}://${window.location.host}`;
+        console.log("🔌 Connecting WebSocket to:", wsUrl);
+        
+        this.ws = new WebSocket(wsUrl);
+
+        this.ws.addEventListener("open", () => {
+          console.log("✅ WebSocket connected");
+          this.reconnectAttempts = 0;
+          
+          // Setup heartbeat
+          this.setupHeartbeat();
+          
+          // Send initial presence
+          this.send({
+            type: "PRESENCE_UPDATE",
+            timestamp: new Date().toISOString()
+          });
+          
+          resolve();
+        });
+
+        this.ws.addEventListener("message", (event) => {
+          try {
+            const data = JSON.parse(event.data);
+            console.log("📨 WebSocket message:", data.type);
+            
+            // Notify all subscribers for this event type
+            const callbacks = this.subscribers.get(data.type) || [];
+            callbacks.forEach(callback => callback(data));
+            
+            // Also notify global subscribers
+            const allCallbacks = this.subscribers.get('*') || [];
+            allCallbacks.forEach(callback => callback(data));
+          } catch (err) {
+            console.error("WebSocket parse error:", err);
+          }
+        });
+
+        this.ws.addEventListener("close", (event) => {
+          console.log("❌ WebSocket closed:", event.code, event.reason);
+          this.handleDisconnect();
+          reject(new Error("WebSocket closed"));
+        });
+
+        this.ws.addEventListener("error", (error) => {
+          console.error("❌ WebSocket error:", error);
+          this.handleDisconnect();
+          reject(error);
+        });
+      } catch (err) {
+        console.error("WebSocket connection error:", err);
+        reject(err);
+      }
+    });
+  }
+
+  subscribe(eventType, callback) {
+    if (!this.subscribers.has(eventType)) {
+      this.subscribers.set(eventType, []);
+    }
+    this.subscribers.get(eventType).push(callback);
+    
+    // Return unsubscribe function
+    return () => {
+      const callbacks = this.subscribers.get(eventType) || [];
+      const index = callbacks.indexOf(callback);
+      if (index > -1) {
+        callbacks.splice(index, 1);
+      }
+    };
+  }
+
+  send(data) {
+    if (this.ws?.readyState === WebSocket.OPEN) {
+      console.log("📤 Sending WebSocket:", data.type);
+      this.ws.send(JSON.stringify(data));
+      return true;
+    } else {
+      console.warn("⚠️ Cannot send: WebSocket not open");
+      return false;
+    }
+  }
+
+  setupHeartbeat() {
+    if (this.heartbeatInterval) {
+      clearInterval(this.heartbeatInterval);
+    }
+    
+    this.heartbeatInterval = setInterval(() => {
+      if (this.ws?.readyState === WebSocket.OPEN) {
+        this.send({ type: "PONG" });
+      }
+    }, 25000);
+  }
+
+  handleDisconnect() {
+    if (this.heartbeatInterval) {
+      clearInterval(this.heartbeatInterval);
+      this.heartbeatInterval = null;
+    }
+    
+    if (this.reconnectAttempts >= this.maxReconnectAttempts) {
+      console.log("Max reconnection attempts reached");
+      return;
+    }
+
+    const delay = Math.min(1000 * Math.pow(2, this.reconnectAttempts), 30000);
+    
+    if (this.reconnectTimeout) {
+      clearTimeout(this.reconnectTimeout);
+    }
+    
+    this.reconnectTimeout = setTimeout(() => {
+      this.reconnectAttempts++;
+      console.log(`🔄 Reconnecting WebSocket (${this.reconnectAttempts}/${this.maxReconnectAttempts})`);
+      this.connect().catch(console.error);
+    }, delay);
+  }
+
+  disconnect() {
+    if (this.ws) {
+      this.ws.close();
+      this.ws = null;
+    }
+    
+    if (this.heartbeatInterval) {
+      clearInterval(this.heartbeatInterval);
+      this.heartbeatInterval = null;
+    }
+    
+    if (this.reconnectTimeout) {
+      clearTimeout(this.reconnectTimeout);
+      this.reconnectTimeout = null;
+    }
+    
+    this.subscribers.clear();
+  }
+}
+
+// Create singleton instance
+window.wsManager = new WebSocketManager();
+
+/* ======================================================
    1) GLOBAL MANAGER (for all pages except messages.html)
 ====================================================== */
 class MessagesManager {
@@ -22,10 +191,10 @@ class MessagesManager {
     this.currentConversation = null;
     this.isLoggedIn = false;
     this.currentUser = null;
-    this.ws = null;
     this.reconnectAttempts = 0;
     this.maxReconnectAttempts = 5;
     this.reconnectTimeout = null;
+    this.unsubscribeFunctions = [];
 
     this.init();
   }
@@ -36,7 +205,7 @@ class MessagesManager {
 
     if (this.isLoggedIn) {
       this.updateUnreadCount();
-      this.connectWebSocket();
+      await this.connectWebSocket();
     }
   }
 
@@ -65,101 +234,33 @@ class MessagesManager {
   }
 
   /* 🔌 WebSocket for real-time notifications */
-  connectWebSocket() {
+  async connectWebSocket() {
     try {
-      const protocol = window.location.protocol === "https:" ? "wss" : "ws";
-      const wsUrl = `${protocol}://${window.location.host}`;
-      this.ws = new WebSocket(wsUrl);
-
-      this.ws.addEventListener("open", () => {
-        console.log("✅ Global WS connected");
-        this.reconnectAttempts = 0;
-        this.updateConnectionStatus("connected");
-        
-        // Send presence update
-        this.sendPresenceUpdate();
-        this.ws.send(JSON.stringify({ type: "DEBUG_REQUEST" }));
-      });
-
-      this.ws.onmessage = (event) => {
-    try {
-        const data = JSON.parse(event.data);
-        console.log("📬 WS received:", data);
-
-        if (data.type === "NEW_MESSAGE") {
-            console.log("💌 Live WS new message", data);
-
-            if (window.messagesPage) {
-    console.log("🔁 Forwarding WS event to MessagesPage router");
-    window.messagesPage.handleRealtimeEvent(data);
-
-            }
-        }
-
-        if (data.type === "TYPING") {
-            if (window.messagesPage) window.messagesPage.handleTypingEvent(data);
-
-        }
-
-        if (data.type === "PRESENCE" || data.type === "PRESENCE_INITIAL" || data.type === "BULK_PRESENCE") {
-            if (window.messagesPage) window.messagesPage.handlePresenceEvent(data);
-        }
-
-        if (data.type === "MESSAGE_SEEN") {
-            if (window.messagesPage) window.messagesPage.handleSeenEvent(data);
-        }
-
+      await window.wsManager.connect();
+      
+      // Subscribe to events we care about
+      this.unsubscribeFunctions = [
+        window.wsManager.subscribe('NEW_MESSAGE', (data) => this.handleNewMessageEvent(data)),
+        window.wsManager.subscribe('NEW_NOTIFICATION', (data) => this.handleNotificationEvent(data)),
+        window.wsManager.subscribe('PRESENCE', (data) => this.handlePresenceUpdate(data)),
+        window.wsManager.subscribe('BULK_PRESENCE', (data) => this.handlePresenceUpdate(data)),
+        window.wsManager.subscribe('PRESENCE_INITIAL', (data) => this.handlePresenceUpdate(data)),
+        window.wsManager.subscribe('SERVER_SHUTDOWN', (data) => this.handleServerShutdown(data)),
+        window.wsManager.subscribe('DEBUG_RESPONSE', (data) => console.log("✅ WebSocket debug:", data.message))
+      ];
+      
+      console.log("✅ Global WebSocket connected and subscribed");
+      
     } catch (err) {
-        console.error("WS parse failed:", err);
+      console.error("Global WS connection error:", err);
     }
-};
-
-      this.ws.addEventListener("close", (event) => {
-        console.log("❌ Global WS closed:", event.code, event.reason);
-        this.updateConnectionStatus("disconnected");
-        this.reconnectWebSocket();
-      });
-
-      this.ws.addEventListener("error", (error) => {
-        console.error("Global WS error:", error);
-        this.updateConnectionStatus("error");
-      });
-
-      // Setup heartbeat
-      setInterval(() => {
-        if (this.ws?.readyState === WebSocket.OPEN) {
-          this.ws.send(JSON.stringify({ type: "PONG" }));
-        }
-      }, 25000);
-
-    } catch (err) {
-      console.error("Global WS init error:", err);
-    }
-  }
-
-  reconnectWebSocket() {
-    if (this.reconnectAttempts >= this.maxReconnectAttempts) {
-      console.log("Max reconnection attempts reached");
-      this.showReconnectNotification("Connection lost. Please refresh the page.", 0);
-      return;
-    }
-
-    const delay = Math.min(1000 * Math.pow(2, this.reconnectAttempts), 30000);
-    
-    this.reconnectTimeout = setTimeout(() => {
-      this.reconnectAttempts++;
-      console.log(`🔄 Reconnecting... (${this.reconnectAttempts}/${this.maxReconnectAttempts})`);
-      this.connectWebSocket();
-    }, delay);
   }
 
   sendPresenceUpdate() {
-    if (this.ws?.readyState === WebSocket.OPEN) {
-      this.ws.send(JSON.stringify({
-        type: "PRESENCE_UPDATE",
-        timestamp: new Date().toISOString()
-      }));
-    }
+    window.wsManager.send({
+      type: "PRESENCE_UPDATE",
+      timestamp: new Date().toISOString()
+    });
   }
 
   updateConnectionStatus(status) {
@@ -180,46 +281,9 @@ class MessagesManager {
     }
   }
 
-  handleRealtimeEvent(msg) {
-    console.log("📨 Global WS event:", msg.type);
+  handleNewMessageEvent({ conversationId, message }) {
+    console.log("💌 Global: New message received", conversationId);
     
-    switch (msg.type) {
-      case "NEW_MESSAGE":
-    console.log("💌 Realtime NEW_MESSAGE received:", msg);
-
-    // Push message instantly into UI if same chat is open
-    if (this.currentConversation && Number(this.currentConversation.id) === Number(msg.conversationId)) {
-        console.log("📌 Chat open — inserting live message");
-        this.appendMessage(msg.message);
-        this.scrollToBottom();
-        this.markConversationSeen(msg.conversationId);
-    } else {
-        console.log("📌 Chat not open — update preview badge only");
-        this.handleNewMessageNotification(msg);
-    }
-    
-    // Always refresh sidebar
-    this.loadConversations();
-    break;
-
-      case "PRESENCE":
-        this.handlePresenceUpdate(msg);
-        break;
-      case "SERVER_SHUTDOWN":
-        this.handleServerShutdown(msg);
-        break;
-      case "TYPING":
-        this.handleTypingNotification(msg);
-        break;
-      case "MESSAGE_SEEN":
-        this.handleMessageSeen(msg);
-        break;
-      default:
-        console.log("Unknown WS event type:", msg.type);
-    }
-  }
-
-  handleNewMessageNotification({ conversationId, message }) {
     // Update unread count
     this.updateUnreadCount();
     
@@ -232,9 +296,9 @@ class MessagesManager {
     this.incrementUnreadBadge();
   }
 
-  handleTypingNotification({ fromUserId, conversationId, isTyping }) {
-    // Update typing indicators across the app
-    this.updateTypingIndicator(fromUserId, conversationId, isTyping);
+  handleNotificationEvent(data) {
+    console.log("🔔 Global: Notification received", data.type);
+    // Handle notifications
   }
 
   handleMessageSeen({ conversationId, messageIds, seenAt }) {
@@ -265,13 +329,6 @@ class MessagesManager {
           indicator.title = `Last seen ${timeAgo}`;
         }
       }
-    });
-  }
-
-  updateTypingIndicator(userId, conversationId, isTyping) {
-    const indicators = document.querySelectorAll(`[data-conversation-id="${conversationId}"] .typing-indicator`);
-    indicators.forEach(indicator => {
-      indicator.style.display = isTyping ? 'block' : 'none';
     });
   }
 
@@ -544,13 +601,11 @@ class MessagesManager {
 
     // Handle page unload
     window.addEventListener('beforeunload', () => {
-      if (this.ws?.readyState === WebSocket.OPEN) {
-        this.ws.send(JSON.stringify({
-          type: "PRESENCE_UPDATE",
-          status: "away",
-          timestamp: new Date().toISOString()
-        }));
-      }
+      window.wsManager.send({
+        type: "PRESENCE_UPDATE",
+        status: "away",
+        timestamp: new Date().toISOString()
+      });
     });
 
     console.log("✅ Global message handlers attached");
@@ -558,12 +613,8 @@ class MessagesManager {
 
   // Cleanup method
   destroy() {
-    if (this.ws) {
-      this.ws.close();
-    }
-    if (this.reconnectTimeout) {
-      clearTimeout(this.reconnectTimeout);
-    }
+    this.unsubscribeFunctions.forEach(unsubscribe => unsubscribe());
+    this.unsubscribeFunctions = [];
   }
 }
 
@@ -579,17 +630,14 @@ class MessagesPage {
     this.currentConversation = null;
     this.conversations = [];
     this.currentUser = null;
-    this.ws = null;
     this.typingTimeout = null;
     this.isTyping = false;
-    this.reconnectAttempts = 0;
-    this.maxReconnectAttempts = 5;
-    this.heartbeatInterval = null;
     this.isLoadingMessages = false;
     this.hasMoreMessages = true;
     this.messageQueue = [];
     this.presenceMap = new Map();
     this.typingUsers = new Map();
+    this.unsubscribeFunctions = [];
 
     console.log("🔧 MessagesPage constructor called");
   }
@@ -612,7 +660,11 @@ class MessagesPage {
       await this.loadConversations();
       
       // 3. Connect WebSocket
-      this.connectWebSocket();
+      await this.connectWebSocket();
+
+      this.debugUnsubscribe = window.wsManager.subscribe('*', (data) => {
+      console.log("🌐 [ALL WS] Received:", data.type, data);
+    });
       
       // 4. Attach event listeners
       this.attachEventListeners();
@@ -836,8 +888,6 @@ class MessagesPage {
       })
       .join("");
 
-      
-
     // Attach event listeners
     container.querySelectorAll(".conversation-item").forEach((item) => {
       item.addEventListener("click", () => {
@@ -971,14 +1021,12 @@ class MessagesPage {
 
   async sendMessageSeen(conversationId, messageIds) {
     try {
-      if (this.ws?.readyState === WebSocket.OPEN) {
-        this.ws.send(JSON.stringify({
-          type: "MESSAGE_SEEN",
-          conversationId: conversationId,
-          messageIds: messageIds,
-          timestamp: new Date().toISOString()
-        }));
-      }
+      window.wsManager.send({
+        type: "MESSAGE_SEEN",
+        conversationId: conversationId,
+        messageIds: messageIds,
+        timestamp: new Date().toISOString()
+      });
     } catch (err) {
       console.error("❌ Send message seen error:", err);
     }
@@ -1211,115 +1259,65 @@ class MessagesPage {
   }
 
   /* 🔌 Enhanced WebSocket connection */
-connectWebSocket() {
-  console.log("🔌 Attempting WebSocket connection...");
+  async connectWebSocket() {
+    console.log("🔌 Connecting WebSocket for MessagesPage...");
 
-  try {
-    const protocol = window.location.protocol === "https:" ? "wss" : "ws";
-    const host = window.location.host;
-    const wsUrl = `${protocol}://${host}`;
-
-    console.log("🌐 WebSocket URL:", wsUrl);
-    this.ws = new WebSocket(wsUrl);
-
-    this.ws.addEventListener("open", () => {
-      console.log("✅ WebSocket CONNECTED successfully!");
-      this.reconnectAttempts = 0;
-      this.updateConnectionStatus("connected");
-
-      // Send initial presence update
-      this.sendPresenceUpdate();
-
-      // Small debug ping
-      setTimeout(() => this.testWebSocketConnection(), 1000);
-    });
-
-    // ✅ SINGLE place where all WS messages go
-    this.ws.addEventListener("message", (event) => {
-      console.log("📨 RAW WS message:", event.data);
-
-      try {
-        const msg = JSON.parse(event.data);
-        console.log("🎯 WS message type:", msg.type, msg);
-
-        // Route everything through the central handler
-        this.handleRealtimeEvent(msg);
-      } catch (err) {
-        console.error("❌ WS parse failed:", err);
-      }
-    });
-
-    this.ws.addEventListener("close", (event) => {
-      console.log("❌ WebSocket CLOSED. Code:", event.code, "Reason:", event.reason);
-      this.updateConnectionStatus("disconnected");
-      this.reconnectWebSocket();
-    });
-
-    this.ws.addEventListener("error", (error) => {
-      console.error("❌ WebSocket ERROR:", error);
-      this.updateConnectionStatus("error");
-    });
-
-    // Heartbeat
-    this.heartbeatInterval = setInterval(() => {
-      if (this.ws?.readyState === WebSocket.OPEN) {
-        console.log("❤️ Sending heartbeat PONG");
-        this.ws.send(JSON.stringify({
-          type: "PONG",
-          timestamp: new Date().toISOString()
-        }));
-      } else {
-        console.log("💔 WebSocket not open for heartbeat. State:", this.ws?.readyState);
-      }
-    }, 25000);
-  } catch (err) {
-    console.error("❌ WebSocket initialization error:", err);
-  }
-}
-
-
-  reconnectWebSocket() {
-    if (this.reconnectAttempts >= this.maxReconnectAttempts) {
-      console.log("Max reconnection attempts reached");
-      this.showReconnectNotification("Connection lost. Please refresh the page.", 0);
-      return;
-    }
-
-    const delay = Math.min(1000 * Math.pow(2, this.reconnectAttempts), 30000);
-    
-    setTimeout(() => {
-      this.reconnectAttempts++;
-      console.log(`🔄 Reconnecting... (${this.reconnectAttempts}/${this.maxReconnectAttempts})`);
-      this.connectWebSocket();
-    }, delay);
-  }
-
-  sendPresenceUpdate() {
-    if (this.ws?.readyState === WebSocket.OPEN) {
-      console.log("📤 Sending presence update");
-      this.ws.send(JSON.stringify({
+    try {
+      await window.wsManager.connect();
+      
+      // Subscribe to messaging events
+      this.unsubscribeFunctions = [
+        window.wsManager.subscribe('NEW_MESSAGE', (data) => this.handleNewMessageEvent(data)),
+        window.wsManager.subscribe('TYPING', (data) => this.handleTypingEvent(data)),
+        window.wsManager.subscribe('MESSAGE_SEEN', (data) => this.handleSeenEvent(data)),
+        window.wsManager.subscribe('PRESENCE', (data) => this.handlePresenceEvent(data)),
+        window.wsManager.subscribe('PRESENCE_INITIAL', (data) => this.handlePresenceEvent(data)),
+        window.wsManager.subscribe('BULK_PRESENCE', (data) => this.handlePresenceEvent(data)),
+        window.wsManager.subscribe('DEBUG_RESPONSE', (data) => console.log("✅ WebSocket debug:", data.message)),
+        window.wsManager.subscribe('SERVER_SHUTDOWN', (data) => this.handleServerShutdown(data))
+      ];
+      
+      // Send initial presence
+      window.wsManager.send({
         type: "PRESENCE_UPDATE",
         userId: this.currentUser?.id,
         timestamp: new Date().toISOString(),
         isOnline: true
-      }));
-    } else {
-      console.log("⚠️ Cannot send presence: WebSocket not open. State:", this.ws?.readyState);
+      });
+      
+      // Test connection
+      setTimeout(() => {
+        window.wsManager.send({
+          type: "DEBUG_REQUEST",
+          message: "WebSocket test from MessagesPage",
+          timestamp: new Date().toISOString(),
+          userId: this.currentUser?.id
+        });
+      }, 1000);
+      
+      console.log("✅ MessagesPage WebSocket connected and subscribed");
+      
+    } catch (err) {
+      console.error("❌ MessagesPage WebSocket error:", err);
     }
   }
 
+  sendPresenceUpdate() {
+    window.wsManager.send({
+      type: "PRESENCE_UPDATE",
+      userId: this.currentUser?.id,
+      timestamp: new Date().toISOString(),
+      isOnline: true
+    });
+  }
+
   testWebSocketConnection() {
-    if (this.ws?.readyState === WebSocket.OPEN) {
-      console.log("🧪 Testing WebSocket connection...");
-      this.ws.send(JSON.stringify({
-        type: "DEBUG_REQUEST",
-        message: "WebSocket test from frontend",
-        timestamp: new Date().toISOString(),
-        userId: this.currentUser?.id
-      }));
-    } else {
-      console.log("⚠️ Cannot test: WebSocket not open. State:", this.ws?.readyState);
-    }
+    window.wsManager.send({
+      type: "DEBUG_REQUEST",
+      message: "WebSocket test from frontend",
+      timestamp: new Date().toISOString(),
+      userId: this.currentUser?.id
+    });
   }
 
   updateConnectionStatus(status) {
@@ -1355,41 +1353,6 @@ connectWebSocket() {
   }
 
   /* 📡 Enhanced real-time event handling */
-  handleRealtimeEvent(msg) {
-    console.log(`🎯 Handling WebSocket event type: ${msg.type}`, msg);
-    
-    switch (msg.type) {
-      case "NEW_MESSAGE":
-        this.handleNewMessageEvent(msg);
-        break;
-      case "TYPING":
-        this.handleTypingEvent(msg);
-        break;
-      case "MESSAGE_SEEN":
-        this.handleSeenEvent(msg);
-        break;
-      case "PRESENCE":
-      case "PRESENCE_INITIAL":
-      case "BULK_PRESENCE":
-        this.handlePresenceEvent(msg);
-        break;
-      case "MESSAGE_EDITED":
-        this.handleEditedEvent(msg);
-        break;
-      case "MESSAGE_DELETED":
-        this.handleDeletedEvent(msg);
-        break;
-      case "SERVER_SHUTDOWN":
-        this.handleServerShutdown(msg);
-        break;
-      case "DEBUG_RESPONSE":
-        console.log("✅ WebSocket debug response received:", msg);
-        break;
-      default:
-        console.log("❓ Unknown WebSocket event type:", msg.type, msg);
-    }
-  }
-
   handleNewMessageEvent({ conversationId, message }) {
     console.log(`📨 NEW_MESSAGE event for conversation ${conversationId}:`, message);
     
@@ -1439,8 +1402,7 @@ connectWebSocket() {
 
     // Re-render sidebar
     this.renderConversationsList();
-}
-
+  }
 
   handleTypingEvent({ fromUserId, conversationId, isTyping, timestamp }) {
     console.log(`⌨️ TYPING event from ${fromUserId} in ${conversationId}: ${isTyping}`);
@@ -1601,32 +1563,6 @@ connectWebSocket() {
     }
   }
 
-  handleEditedEvent({ message }) {
-    if (!this.currentConversation || this.currentConversation.id !== message.conversation_id) return;
-
-    const messageEl = document.querySelector(`[data-message-id="${message.id}"]`);
-    if (messageEl) {
-      const textEl = messageEl.querySelector('.message-text');
-      if (textEl) {
-        const safeText = this.escapeHtml(message.message_text || "");
-        textEl.innerHTML = `${safeText} <small class="edited-tag">(edited)</small>`;
-      }
-    }
-  }
-
-  handleDeletedEvent({ messageId }) {
-    if (!this.currentConversation) return;
-
-    const messageEl = document.querySelector(`[data-message-id="${messageId}"]`);
-    if (messageEl) {
-      const textEl = messageEl.querySelector('.message-text');
-      if (textEl) {
-        textEl.textContent = "[This message was deleted]";
-        textEl.classList.add("deleted-message");
-      }
-    }
-  }
-
   handleServerShutdown({ message, reconnectDelay }) {
     console.log("Server shutdown:", message);
     this.showReconnectNotification(message, reconnectDelay || 5000);
@@ -1772,38 +1708,70 @@ connectWebSocket() {
   }
 
   /* 🎯 Enhanced event listeners */
-  attachEventListeners() {
-    console.log("🔧 Attaching event listeners...");
+  // In MessagesPage.attachEventListeners():
+attachEventListeners() {
+  console.log("🔧 Attaching event listeners (with deduplication)...");
 
-    // Send message button
-    const sendBtn = document.getElementById("sendMessageBtn");
-    if (sendBtn) {
-      sendBtn.addEventListener("click", () => this.sendMessage());
-    }
+  // Remove all existing event listeners first
+  this.removeEventListeners();
 
-    // Message input handling
-    const messageInput = document.getElementById("messageInput");
-    if (messageInput) {
-      messageInput.addEventListener("input", () => {
-        this.handleTyping();
-        this.autoResizeTextarea(messageInput);
+  // Send message button - prevent double clicks
+  const sendBtn = document.getElementById("sendMessageBtn");
+  if (sendBtn) {
+    let isSending = false;
+    
+    sendBtn.addEventListener("click", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      
+      if (isSending) {
+        console.log("⏳ Already sending, ignoring duplicate click");
+        return;
+      }
+      
+      isSending = true;
+      console.log("🖱️ Send button clicked");
+      
+      this.sendMessage().finally(() => {
+        isSending = false;
       });
+    });
+  }
 
-      
-      
-      messageInput.addEventListener("keydown", (e) => {
-        if (e.key === "Enter" && !e.shiftKey) {
-          e.preventDefault();
-          this.sendMessage();
+  // Message input handling - prevent duplicate Enter key events
+  const messageInput = document.getElementById("messageInput");
+  if (messageInput) {
+    let isProcessingEnter = false;
+    
+    messageInput.addEventListener("input", () => {
+      this.handleTyping();
+      this.autoResizeTextarea(messageInput);
+    });
+
+    messageInput.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" && !e.shiftKey) {
+        e.preventDefault();
+        
+        if (isProcessingEnter) {
+          console.log("⏳ Already processing Enter key");
+          return;
         }
-      });
+        
+        isProcessingEnter = true;
+        console.log("⌨️ Enter key pressed");
+        
+        this.sendMessage().finally(() => {
+          isProcessingEnter = false;
+        });
+      }
+    });
 
-      // Auto-resize
-      messageInput.addEventListener("input", function () {
-        this.style.height = "auto";
-        this.style.height = Math.min(this.scrollHeight, 120) + "px";
-      });
-    }
+    // Auto-resize
+    messageInput.addEventListener("input", function () {
+      this.style.height = "auto";
+      this.style.height = Math.min(this.scrollHeight, 120) + "px";
+    });
+  }
 
     // Search conversations
     const searchInput = document.getElementById("searchConversations");
@@ -1877,30 +1845,6 @@ connectWebSocket() {
       });
     }
 
-    // Mic (voice note) placeholder
-    const micBtn = document.getElementById("micBtn");
-    if (micBtn) {
-      micBtn.addEventListener("click", () => {
-        this.showFeatureComingSoon("Voice messages");
-      });
-    }
-
-    // Emoji picker placeholder
-    const emojiBtn = document.getElementById("emojiBtn");
-    if (emojiBtn) {
-      emojiBtn.addEventListener("click", () => {
-        this.showFeatureComingSoon("Emoji picker");
-      });
-    }
-
-    // Resize -> show both panes on desktop
-    window.addEventListener("resize", () => {
-      const container = document.querySelector(".messages-container");
-      if (window.innerWidth > 768 && container) {
-        container.classList.remove("chat-open");
-      }
-    });
-
     // Handle page visibility changes
     document.addEventListener("visibilitychange", () => {
       if (document.hidden) {
@@ -1932,60 +1876,48 @@ connectWebSocket() {
     console.log("✅ Event listeners attached");
   }
 
+  removeEventListeners() {
+  const sendBtn = document.getElementById("sendMessageBtn");
+  const messageInput = document.getElementById("messageInput");
+  
+  if (sendBtn) {
+    const newSendBtn = sendBtn.cloneNode(true);
+    sendBtn.parentNode.replaceChild(newSendBtn, sendBtn);
+  }
+  
+  if (messageInput) {
+    const newInput = messageInput.cloneNode(true);
+    messageInput.parentNode.replaceChild(newInput, messageInput);
+  }
+  
+  console.log("🧹 Removed existing event listeners");
+}
+
   handleTyping() {
-    if (!this.currentConversation || !this.ws || this.ws.readyState !== WebSocket.OPEN) {
+    if (!this.currentConversation || !window.wsManager.ws || window.wsManager.ws.readyState !== WebSocket.OPEN) {
       console.log("⚠️ Typing: No conversation or WS not ready");
       return;
     }
-    
-    const conv = this.conversations.find(c => c.id === this.currentConversation.id);
-    if (!conv || !conv.participants?.[0]) return;
-    
-    const otherUserId = conv.participants[0].id;
-    
+  
     if (!this.isTyping) {
       this.isTyping = true;
-      console.log(`⌨️ Starting typing indicator to ${otherUserId}`);
-      this.sendTypingIndicator(true, otherUserId);
+      console.log(`⌨️ Starting typing indicator in conversation ${this.currentConversation.id}`);
+      this.sendTypingIndicator(true);
     }
 
     clearTimeout(this.typingTimeout);
     this.typingTimeout = setTimeout(() => {
       if (this.isTyping) {
         this.isTyping = false;
-        console.log(`⌨️ Stopping typing indicator to ${otherUserId}`);
-        this.sendTypingIndicator(false, otherUserId);
+        console.log(`⌨️ Stopping typing indicator in conversation ${this.currentConversation.id}`);
+        this.sendTypingIndicator(false);
       }
     }, 2000);
   }
 
-  handleIncomingMessage(conversationId, message) {
-    console.log("📥 Live WS message received:", conversationId, message);
-
-    // If this chat is open append directly
-    if (this.currentConversation && this.currentConversation.id == conversationId) {
-
-        this.appendMessage(message);
-        this.scrollToBottom();
-
-        // Mark it as seen
-        this.markConversationSeen(conversationId);
-    }
-
-    // Refresh conversation sidebar to update latest preview + unread badges
-    this.loadConversations();
-}
-
-
-
-  sendTypingIndicator(isTyping, toUserId) {
-    if (!this.currentConversation || !this.ws) {
-      console.log("⚠️ Cannot send typing: No conversation or WebSocket");
-      return;
-    }
-
-    if (this.ws.readyState !== WebSocket.OPEN) {
-      console.log("⚠️ Cannot send typing: WebSocket not open. State:", this.ws.readyState);
+  sendTypingIndicator(isTyping) {
+    if (!this.currentConversation) {
+      console.log("⚠️ Cannot send typing: No conversation");
       return;
     }
 
@@ -1993,28 +1925,18 @@ connectWebSocket() {
       type: "TYPING",
       conversationId: this.currentConversation.id,
       isTyping: isTyping,
-      toUserId: toUserId,
-      timestamp: new Date().toISOString(),
-      fromUserId: this.currentUser?.id
+      timestamp: new Date().toISOString()
     };
     
     console.log("📤 Sending typing WebSocket message:", payload);
     
-    try {
-      this.ws.send(JSON.stringify(payload));
-      console.log("✅ Typing message sent successfully");
-    } catch (error) {
-      console.error("❌ Failed to send typing message:", error);
-    }
+    window.wsManager.send(payload);
   }
 
   stopTypingIndicator() {
     if (this.isTyping) {
       this.isTyping = false;
-      const conv = this.conversations.find(c => c.id === this.currentConversation?.id);
-      if (conv?.participants?.[0]) {
-        this.sendTypingIndicator(false, conv.participants[0].id);
-      }
+      this.sendTypingIndicator(false);
     }
     if (this.typingTimeout) {
       clearTimeout(this.typingTimeout);
@@ -2188,10 +2110,6 @@ connectWebSocket() {
         }
       }, 500);
     }
-  }
-
-  showFeatureComingSoon(feature) {
-    this.showError(`${feature} coming soon!`);
   }
 
   showError(message) {
@@ -2391,17 +2309,8 @@ connectWebSocket() {
   destroy() {
     this.stopTypingIndicator();
     
-    if (this.ws) {
-      this.ws.close();
-    }
-    
-    if (this.heartbeatInterval) {
-      clearInterval(this.heartbeatInterval);
-    }
-    
-    if (this.typingTimeout) {
-      clearTimeout(this.typingTimeout);
-    }
+    this.unsubscribeFunctions.forEach(unsubscribe => unsubscribe());
+    this.unsubscribeFunctions = [];
   }
 }
 
