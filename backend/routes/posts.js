@@ -164,7 +164,7 @@ router.post("/:postId/comments", auth, async (req, res) => {
         const postOwnerId = ownerResult.rows[0]?.user_id;
 
         if (postOwnerId && postOwnerId !== userId) {
-            await notifyComment(req, userId, postOwnerId, postId);
+            notifyComment(req, userId, actorId, "post", postId)
 
             const broadcastNotify = req.app.get("broadcastNotification");
             if (broadcastNotify) {

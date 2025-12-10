@@ -207,18 +207,23 @@ class NotificationManager {
   // 🔤 TEXT / TIME HELPERS
   // ================================
   formatNotificationText(notification) {
-    const { message } = notification;
+    if (notification.message) {
+        return notification.message; // do not rewrite meaning
+    }
 
-    // Backend already formats the text? Use it.
-    if (message) return this.safeText(message);
+    const name = notification.actor_display_name || "Someone";
 
-    const actorName =
-      notification.actor_display_name ||
-      notification.actor_username ||
-      "Someone";
-
-    return `<strong>${this.safeText(actorName)}</strong> sent you a notification`;
-  }
+    switch (notification.type) {
+        case "comment":
+            return `${name} commented on your post`;
+        case "like":
+            return `${name} liked your post`;
+        case "follow":
+            return `${name} started following you`;
+        default:
+            return `${name} sent a notification`;
+    }
+}
 
   safeText(str) {
     if (!str) return "";
