@@ -73,15 +73,17 @@ document.head.appendChild(style);
 // =======================================
 class AuthManager {
   // All methods must now use AUTH_API_BASE
-  static async signup(username, email, password) {
-    const res = await fetch(`${AUTH_API_BASE}/signup`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      credentials: "include",
-      body: JSON.stringify({ username, email, password }),
-    });
-    return safeParseResponse(res).then((data) => ({ res, data }));
-  }
+  static async signup(firstName, lastName, email, password) {
+  const res = await fetch(`${AUTH_API_BASE}/signup`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    credentials: "include",
+    body: JSON.stringify({ firstName, lastName, email, password }),
+  });
+
+  return safeParseResponse(res).then((data) => ({ res, data }));
+}
+
 
   static async login(email, password) {
     const res = await fetch(`${AUTH_API_BASE}/login`, {
@@ -385,59 +387,97 @@ document.addEventListener("DOMContentLoaded", () => {
   const resetPasswordForm = document.getElementById("reset-password-form");
   const verifyEmailForm = document.getElementById("verify-email-form");
 
-  // --- SIGNUP HANDLER (Updated for email verification) ---
-  if (signupForm) {
-    signupForm.addEventListener("submit", async (e) => {
-      e.preventDefault();
-      const btn = signupForm.querySelector(".btn-submit");
-      const username = document.getElementById("username").value.trim();
-      const email = document.getElementById("email").value.trim();
-      const password = document.getElementById("password").value.trim();
+  // --- SIGNUP HANDLER (Updated for new signup page + auto username + email verification) ---
+if (signupForm) {
+  signupForm.addEventListener("submit", async (e) => {
+    e.preventDefault();
 
-      if (!username || !email || !password)
-        return showMessage("⚠️ Please fill in all fields.", "error");
-      if (password.length < 6)
-        return showMessage("⚠️ Password must be at least 6 characters.", "error");
-      if (!email.includes('@') || !email.includes('.'))
-        return showMessage("⚠️ Please enter a valid email address.", "error");
+    const btn = signupForm.querySelector(".btn-submit");
 
-      toggleLoading(btn, true, "Signing Up...");
-      
-      try {
-        const { res, data } = await AuthManager.signup(username, email, password);
-        
-        if (res.ok) {
-          if (data.needs_verification) {
-            // Show verification modal instead of redirecting immediately
-            showVerificationModal({
-              email: email,
-              username: username
-            });
-            
-            showMessageHTML(
-              `✅ Signup successful! <strong>Check your email (${email}) to verify your account.</strong>`,
-              "success"
-            );
-            
-            // Optional: Redirect to a pending verification page
-            setTimeout(() => {
-              window.location.href = "/verify-pending.html?email=" + encodeURIComponent(email);
-            }, 5000);
-          } else {
-            showMessage("✅ Signup successful! Redirecting...", "success");
-            setTimeout(() => (window.location.href = "/profile.html"), 1200);
-          }
+    // Collect new signup fields
+    const firstName = document.getElementById("firstName").value.trim();
+    const lastName = document.getElementById("lastName").value.trim();
+    const dob = document.getElementById("dob").value.trim();
+    const gender = document.getElementById("gender").value.trim();
+    const email = document.getElementById("email").value.trim();
+    const password = document.getElementById("password").value.trim();
+
+    // Auto-generate username → firstname + random token
+    let username = (firstName + lastName).replace(/\s+/g, "").toLowerCase();
+    username += Math.floor(100 + Math.random() * 900); // ex: kishore210
+
+    // BASIC VALIDATION
+    if (!firstName || !lastName || !dob || !gender || !email || !password) {
+      return showMessage("⚠️ All fields are required!", "error");
+    }
+
+    if (password.length < 6) {
+      return showMessage("⚠️ Password must be at least 6 characters.", "error");
+    }
+
+    if (!email.includes('@')) {
+      return showMessage("⚠️ Enter valid email address.", "error");
+    }
+
+    toggleLoading(btn, true, "Signing up...");
+
+    try {
+      // Correct payload keys
+      const payload = {
+        username,
+        email,
+        password,
+        firstName,  // FIXED
+        lastName,   // FIXED
+        dob,
+        gender
+      };
+
+      console.log("📦 Sending signup payload:", payload);
+
+      const { res, data } = await fetch(`${AUTH_API_BASE}/signup`, {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      }).then(async res => ({
+        res,
+        data: await safeParseResponse(res)
+      }));
+
+      if (res.ok) {
+        // If backend flags verification needed
+        if (data.needs_verification) {
+          showVerificationModal({ email, username });
+
+          showMessageHTML(
+            `🔥 Account created!<br>📬 Check your email <strong>${email}</strong> to verify.`,
+            "success"
+          );
+
+          setTimeout(() => {
+            window.location.href = "/verify-pending.html?email=" + encodeURIComponent(email);
+          }, 5000);
+
         } else {
-          showMessage(data.error || data.message || "❌ Signup failed.", "error");
+          showMessage("🎉 Signup successful! Redirecting...", "success");
+          setTimeout(() => (window.location.href = "/profile.html"), 1500);
         }
-      } catch (err) {
-        console.error("Signup error:", err);
-        showMessage("🚫 Network error or server unreachable.", "error");
-      } finally {
-        toggleLoading(btn, false);
+
+      } else {
+        showMessage(data.error || data.message || "❌ Signup failed.", "error");
       }
-    });
-  }
+
+    } catch (err) {
+      console.error("Signup error:", err);
+      showMessage("🚫 Server unreachable.", "error");
+    } finally {
+      toggleLoading(btn, false);
+    }
+  });
+}
+
+
 
   // --- LOGIN HANDLER (Updated with email verification check) ---
   if (loginForm) {

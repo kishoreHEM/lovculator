@@ -4,92 +4,113 @@ import pool from "../db.js";
 import { sendPasswordResetEmail, sendVerificationEmail, sendWelcomeEmail } from "../routes/emailService.js"; 
 
 // ===================================================
-// 1️⃣ SIGNUP (UPDATED with email verification)
+// 1️⃣ SIGNUP (UPDATED with name merging + auto username + email verification)
 // ===================================================
 export const signup = async (req, res) => {
   try {
-    let { username, email, password } = req.body;
+    let { username, email, password, firstName, lastName } = req.body;
 
-    if (!username || !email || !password) {
-      return res.status(400).json({ error: "All fields are required." });
+    if (!firstName || !lastName || !email || !password) {
+      return res.status(400).json({ error: "All fields required" });
     }
 
     email = email.trim().toLowerCase();
+    const displayName = `${firstName} ${lastName}`.trim();
 
-    const existingUser = await pool.query(
+    // Generate username if not entered or invalid
+    let baseUsername =
+      (username && username.length >= 3)
+        ? username.trim()
+        : (firstName + lastName)
+            .replace(/\s+/g, "")
+            .replace(/[^a-zA-Z0-9]/g, "")
+            .toLowerCase();
+
+    if (!baseUsername || baseUsername.length < 3) {
+      baseUsername = "lov_user";
+    }
+
+    // Ensure username is unique
+    let uniqueUsername = baseUsername;
+    let suffix = 1;
+    let exists = await pool.query(
+      "SELECT 1 FROM users WHERE username = $1",
+      [uniqueUsername]
+    );
+
+    while (exists.rows.length > 0) {
+      uniqueUsername = `${baseUsername}${suffix}`;
+      suffix++;
+      exists = await pool.query(
+        "SELECT 1 FROM users WHERE username = $1",
+        [uniqueUsername]
+      );
+    }
+
+    // Email must be unique
+    const emailCheck = await pool.query(
       "SELECT 1 FROM users WHERE email = $1",
       [email]
     );
-    if (existingUser.rows.length > 0) {
+
+    if (emailCheck.rows.length > 0) {
       return res.status(400).json({ error: "Email already registered." });
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    // Insert user with verification fields
+    // Insert & return basic data
     const result = await pool.query(
-      `INSERT INTO users (username, email, password_hash, created_at)
-       VALUES ($1, $2, $3, NOW())
+      `INSERT INTO users (username, email, password_hash, display_name, created_at)
+       VALUES ($1, $2, $3, $4, NOW())
        RETURNING id, username, email`,
-      [username, email, hashedPassword]
+      [uniqueUsername, email, hashedPassword, displayName]
     );
 
     const newUser = result.rows[0];
-    
+
     // Generate verification token
     const verificationToken = crypto.randomBytes(32).toString('hex');
-    const tokenExpires = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
-    
-    // Save verification token
+    const tokenExpires = new Date(Date.now() + 24 * 60 * 60 * 1000);
+
     await pool.query(
       "UPDATE users SET verification_token = $1, verification_token_expires = $2 WHERE id = $3",
       [verificationToken, tokenExpires, newUser.id]
     );
-    
-    // Send verification email - FIXED URL
+
+    // Send verification email
     const verificationLink = `https://lovculator.com/verify-email.html?token=${verificationToken}`;
-    
-    // Try to send email, but don't fail signup if email fails
+
     let emailSent = false;
     try {
-      emailSent = await sendVerificationEmail(email, verificationToken, username);
+      emailSent = await sendVerificationEmail(email, verificationToken, uniqueUsername);
     } catch (emailError) {
-      console.error("📧 Email sending error (non-fatal):", emailError.message);
-      // Continue with signup even if email fails
+      console.error("📧 Email sending error:", emailError.message);
     }
-    
-    // Set session
+
+    // Create session
     req.session.user = {
       id: newUser.id,
       username: newUser.username,
       email: newUser.email,
-      email_verified: false
+      email_verified: false,
+      display_name: displayName
     };
 
-    // Return response based on email success
-    if (emailSent) {
-      res.status(201).json({
-        success: true,
-        message: "Signup successful! Please check your email to verify your account.",
-        user: newUser,
-        needs_verification: true
-      });
-    } else {
-      // Email failed, but signup succeeded - provide manual verification option
-      res.status(201).json({
-        success: true,
-        message: "Account created! Email verification failed. Please contact support or use manual verification.",
-        user: newUser,
-        needs_verification: true,
-        verification_token: verificationToken, // Include token for manual verification
-        manual_verification_url: verificationLink
-      });
-    }
+    return res.status(201).json({
+      success: true,
+      message: "Signup successful! Please verify your email",
+      username: uniqueUsername,
+      display_name: displayName,
+      needs_verification: true
+    });
+
   } catch (err) {
     console.error("❌ Signup error:", err);
     res.status(500).json({ error: "Failed to register user." });
   }
 };
+
 
 // ===================================================
 // 2️⃣ LOGIN (UPDATED with email verification check)

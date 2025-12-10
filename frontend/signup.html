@@ -3,338 +3,188 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>User Profile - Lovculator 💖</title>
-  <meta name="description" content="View your Lovculator profile — love stories, followers, and connections." />
-  <meta name="theme-color" content="#ff4b8d" />
+  <title>Signup - Lovculator</title>
+  <meta name="description" content="Create your Lovculator account and start connecting." />
 
-  <!-- Favicon Links -->
-    <link rel="apple-touch-icon" href="/images/apple-touch-icon.png">
+  <!-- Favicon -->
+  <link rel="apple-touch-icon" href="/images/apple-touch-icon.png">
+  <link rel="shortcut icon" href="/images/favicon-32x32.png" type="image/png">
+  <link rel="icon" href="/images/favicon.ico" sizes="any">
 
-    <link rel="shortcut icon" href="/images/favicon-32x32.png" type="image/png">
-
-    <link rel="icon" href="/images/favicon.ico" sizes="any">
-
-  <!-- Main Styles -->
+  <!-- Global Styles -->
   <link rel="stylesheet" href="/css/style.css" />
-</head>
-<body>
-<!-- Header -->
-<header class="header">
-  <nav class="navbar">
-    <div class="nav-brand">
-      <a href="/" class="logo" aria-label="Lovculator Home">💖 Lovculator</a>
-    </div>
 
-    <!-- Desktop menu -->
-    <ul class="nav-menu">
-      <li class="nav-item"><a href="/signup" class="nav-link">Signup</a></li>
-      <li class="nav-item"><a href="/login" class="nav-link">Login</a></li>
-      <li class="nav-item"><a href="/love-calculator" class="nav-link active">Love Calculator</a></li>
-    </ul>
-
-    <!-- Mobile elements -->
-    <button class="menu-toggle" aria-label="Toggle menu">
-      <span></span><span></span><span></span>
-    </button>
-    <div class="mobile-menu-overlay"></div>
-  </nav>
-</header>
-
+  <!-- 🔥 Page-specific Inline CSS -->
   <style>
-    /* 1. Base Styles & Reset */
-    * {
-      box-sizing: border-box;
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-    }
-    
+    * { box-sizing: border-box; }
     body {
-      background-color: #f6f8fa; /* Light, clean background */
       margin: 0;
-      padding: 0;
-      color: #24292f;
-      line-height: 1.5;
-    }
-    
-    /* 2. Full-Page Mobile Container */
-    .container {
-      display: flex;
-      flex-direction: column;
-      min-height: 100vh; /* Full viewport height for mobile */
-      align-items: center;
-      padding: 40px 15px 20px; /* Top padding and horizontal mobile safe padding */
-      width: 100%;
+      background: #f6f8fb;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial;
     }
 
-    .header {
-      text-align: center;
-      margin-bottom: 25px;
-    }
-    
-    .header svg {
-      fill: #ff4b8d; /* Lovculator primary color */
-    }
-    
-    /* 3. Responsive Auth Container */
-    .auth-container {
-      max-width: 600px; /* Optimal form width */
-      width: 100%;
-      margin: 0 auto;
-      padding: 30px;
-      background: #fff;
+    .signup-wrapper {
+      max-width: 450px;
+      background: white;
+      margin: 40px auto;
+      padding: 25px 30px;
       border-radius: 12px;
-      box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+      box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+    }
+
+    h1 {
+      font-size: 24px;
+      font-weight: 600;
+      color: #222;
       text-align: center;
-    }
-    
-    .auth-container h1 {
-      font-size: 26px;
-      font-weight: 400;
-      margin: 0 0 25px;
-      color: #333;
-    }
-    
-    /* Form Elements */
-    .form-group {
       margin-bottom: 20px;
-      text-align: left;
     }
-    
-    .form-group label {
+
+    .form-group {
+      margin-bottom: 18px;
+    }
+
+    label {
       display: block;
-      margin-bottom: 5px;
-      font-weight: 500;
       font-size: 14px;
+      font-weight: 500;
+      color: #555;
+      margin-bottom: 6px;
     }
-    
-    .form-group input {
+
+    input, select {
       width: 100%;
-      padding: 10px 12px; /* Optimized padding for mobile touch */
+      padding: 10px 12px;
+      font-size: 15px;
       border: 1px solid #d0d7de;
       border-radius: 8px;
-      box-sizing: border-box;
-      font-size: 16px; /* Larger text for mobile readability */
-      line-height: 20px;
-      margin-top: 4px;
-    }
-    
-    .form-group input:focus {
-      border-color: #ff4b8d;
       outline: none;
-      box-shadow: 0 0 0 3px rgba(255, 75, 141, 0.2);
-    }
-    
-    /* Terms Text */
-    .terms-text {
-        font-size: 12px;
-        color: #656d76;
-        margin-top: -10px;
-        margin-bottom: 20px;
-    }
-    
-    .terms-text a {
-        color: #ff4b8d;
-        text-decoration: none;
-    }
-    
-    .terms-text a:hover {
-        text-decoration: underline;
     }
 
-    /* Primary Button */
-    .btn-submit {
+    input:focus, select:focus {
+      border-color: #ff4b8d;
+      box-shadow: 0 0 0 3px rgba(255, 75, 141, 0.25);
+    }
+
+    .submit-btn {
       width: 100%;
-      padding: 12px 16px;
-      background-color: #ff4b8d; /* Lovculator primary color */
+      padding: 12px;
+      background: #ff4b8d;
       color: white;
       border: none;
-      border-radius: 8px;
-      font-size: 16px;
       font-weight: 600;
+      font-size: 16px;
+      border-radius: 8px;
       cursor: pointer;
-      margin-top: 15px;
-      transition: background-color 0.2s, transform 0.1s;
-    }
-    
-    .btn-submit:hover {
-      background-color: #e63e7f;
+      transition: 0.2s;
     }
 
-    .btn-submit:active {
-        transform: translateY(1px);
+    .submit-btn:hover {
+      background: #e23f7b;
     }
-    
-    /* Utility Links (Already have account) */
-    .link-text {
-      margin-top: 25px;
-      font-size: 14px;
-      border: 1px solid #e1e4e8;
-      border-radius: 8px;
-      padding: 15px;
+
+    .terms {
+      font-size: 12px;
+      color: #666;
+      text-align: left;
+      margin: 10px 0 20px;
+    }
+
+    .terms a {
+      color: #ff4b8d;
+    }
+
+    .footer-link {
       text-align: center;
-      background: #fafbfc;
+      margin-top: 15px;
+      font-size: 14px;
     }
-    
-    .link-text a {
+
+    .footer-link a {
       color: #ff4b8d;
       text-decoration: none;
-    }
-    
-    .link-text a:hover {
-      text-decoration: underline;
-    }
-    
-    /* Separator */
-    .divider {
-      display: flex;
-      align-items: center;
-      margin: 25px 0;
-      color: #a0a0a0;
-      font-size: 12px;
-    }
-    
-    .divider::before,
-    .divider::after {
-      content: "";
-      flex: 1;
-      border-bottom: 1px solid #e1e4e8;
-    }
-    
-    .divider span {
-      padding: 0 16px;
-    }
-    
-    /* OAuth Buttons */
-    .btn-oauth {
-      width: 100%;
-      padding: 10px 16px;
-      background-color: #fff;
-      color: #24292f;
-      border: 1px solid #d0d7de;
-      border-radius: 8px;
-      font-size: 14px;
-      font-weight: 500;
-      cursor: pointer;
-      margin-bottom: 10px;
-      line-height: 20px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      transition: background-color 0.2s;
-    }
-    
-    .btn-oauth:hover {
-      background-color: #f6f8fa;
-    }
-    
-    .btn-oauth svg {
-      margin-right: 8px;
     }
 
     #error-message {
-      color: #cf222e;
-      font-size: 14px;
-      margin-bottom: 15px;
-      text-align: left;
-    }
-
-    /* Footer adjustments for better mobile spacing */
-    .footer {
-      max-width: 380px;
-      width: 100%;
-      margin: 40px auto 0;
-      padding: 10px;
       text-align: center;
-      font-size: 12px;
-      color: #656d76;
-    }
-    
-    .footer-links {
-      display: flex;
-      flex-wrap: wrap;
-      justify-content: center;
-      gap: 12px 16px;
-      margin-top: 10px;
-    }
-    
-    .footer-links a {
-      color: #656d76;
-      text-decoration: none;
-    }
-    
-    .footer-links a:hover {
-      text-decoration: underline;
-      color: #ff4b8d;
+      font-size: 14px;
+      font-weight: 500;
+      margin-bottom: 12px;
+      min-height: 18px;
     }
   </style>
+
 </head>
 
 <body>
-  <div class="container">
-    <div class="header">
-      <svg height="40" aria-hidden="true" viewBox="0 0 24 24" version="1.1" width="40" data-view-component="true" fill="currentColor">
-          <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
-      </svg>
-    </div>
-    
-    <div class="auth-container">
-      <h1>Create Your Lovculator Account</h1>
 
-      <button class="btn-oauth">
-        <svg width="16" height="16" viewBox="0 0 24 24">
-          <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
-          <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
-          <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
-          <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
-        </svg>
-        Sign up with Google
-      </button>
-      
-      <button class="btn-oauth">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="#000000">
-          <path d="M12.152 6.896c-.948 0-2.415-1.078-3.96-1.04-2.04.027-3.91 1.183-4.961 3.014-2.117 3.675-.546 9.103 1.519 12.09 1.013 1.454 2.208 3.09 3.792 3.039 1.52-.065 2.09-.987 3.935-.987 1.831 0 2.35.987 3.96.948 1.637-.026 2.676-1.48 3.676-2.948 1.156-1.688 1.636-3.325 1.662-3.415-.039-.013-3.182-1.221-3.22-4.857-.026-3.04 2.48-4.494 2.597-4.559-1.429-2.09-3.623-2.324-4.39-2.376-2-.156-3.675 1.09-4.61 1.09zM15.53 3.83c.843-1.012 1.4-2.427 1.245-3.83-1.207.052-2.662.805-3.532 1.818-.78.896-1.454 2.338-1.273 3.714 1.338.104 2.715-.688 3.559-1.701"/>
-        </svg>
-        Sign up with Apple
-      </button>
-      
-      <div class="divider"><span>or with Email</span></div>
-
-      <form id="signup-form" method="POST">
-        <div class="form-group">
-          <label for="username">Username</label>
-          <input type="text" id="username" name="username" required autocomplete="nickname" />
-        </div>
-
-        <div class="form-group">
-          <label for="email">Email address</label>
-          <input type="email" id="email" name="email" required autocomplete="email" />
-        </div>
-
-        <div class="form-group">
-          <label for="password">Password</label>
-          <input type="password" id="password" name="password" required autocomplete="new-password" />
-        </div>
-
-        <p id="error-message"></p>
-
-        <p class="terms-text">
-            By clicking "Sign Up", you agree to Lovculator's <a href="/terms.html">Terms of Service</a> and <a href="/privacy.html">Privacy Policy</a>.
-        </p>
-
-        <button type="submit" class="btn-submit">Sign Up</button>
-      </form>
-
-      <div class="link-text">
-        Already have an account? <a href="/login.html">Log In</a>
+  <header class="header">
+    <nav class="navbar">
+      <div class="nav-brand">
+        <a href="/" class="logo">Lovculator</a>
       </div>
-    </div>
-    
-    <div class="footer">
-      <div class="footer-links">
-        <a href="terms.html">Terms</a>
-        <a href="privacy.html">Privacy</a>
-        <a href="contact.html">Contact Support</a>
+    </nav>
+  </header>
+
+  <div class="signup-wrapper">
+    <h1>Create Your Account</h1>
+
+    <form id="signup-form">
+
+      <!-- First Name -->
+      <div class="form-group">
+        <label>First Name *</label>
+        <input type="text" id="firstName" placeholder="Enter your name" required />
       </div>
-    </div>
+
+      <!-- Last Name -->
+      <div class="form-group">
+        <label>Last Name *</label>
+        <input type="text" id="lastName" placeholder="Surname" required />
+      </div>
+
+      <!-- Date of birth -->
+      <div class="form-group">
+        <label>Date of Birth *</label>
+        <input type="date" id="dob" required />
+      </div>
+
+      <!-- Gender -->
+      <div class="form-group">
+        <label>Gender *</label>
+        <select id="gender" required>
+          <option value="">Select gender</option>
+          <option value="male">Male</option>
+          <option value="female">Female</option>
+          <option value="other">Other</option>
+        </select>
+      </div>
+
+      <!-- Email -->
+      <div class="form-group">
+        <label>Email *</label>
+        <input type="email" id="email" placeholder="you@example.com" required autocomplete="email" />
+      </div>
+
+      <!-- Password -->
+      <div class="form-group">
+        <label>Password *</label>
+        <input type="password" id="password" placeholder="Enter password" required autocomplete="new-password" />
+      </div>
+
+      <p id="error-message"></p>
+
+      <p class="terms">
+        By signing up, you agree to our <a href="/terms.html">Terms</a> and <a href="/privacy.html">Privacy Policy</a>.
+      </p>
+
+      <button type="submit" class="submit-btn btn-submit">Sign Up</button>
+
+      <div class="footer-link">
+        Already have an account? <a href="/login.html">Log in</a>
+      </div>
+
+    </form>
   </div>
 
   <script src="/js/auth.js"></script>
