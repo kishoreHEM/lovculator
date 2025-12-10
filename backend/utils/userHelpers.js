@@ -1,4 +1,4 @@
-import pool from "../db.js";  // adjust path if your db file is elsewhere
+import pool from "../db.js";
 
 export async function generateUniqueUsername(firstName) {
   const base = firstName.trim().toLowerCase().replace(/[^a-z0-9]/g, "");

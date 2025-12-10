@@ -4,49 +4,62 @@ import pool from "../db.js";
 import { sendPasswordResetEmail, sendVerificationEmail, sendWelcomeEmail } from "../routes/emailService.js"; 
 import { generateUniqueUsername } from "../utils/userHelpers.js";
 
-// ===================================================
-// 1️⃣ SIGNUP (full version with name storage + username auto + verification)
-// ===================================================
+// =====================================
+//  Signup with First & Last Name
+// =====================================
 export const signup = async (req, res) => {
   try {
-    let { first_name, last_name, email, password } = req.body;
-
-    // Normalize
-    email = email?.trim()?.toLowerCase();
+    let { first_name, last_name, email, password, dob, gender } = req.body;
 
     if (!first_name || !last_name || !email || !password) {
-      return res.status(400).json({ error: "All fields required." });
+      return res.status(400).json({ error: "All fields are required." });
     }
 
-    // Check email duplicate
-    const existingEmail = await pool.query(
+    email = email.trim().toLowerCase();
+
+    const existing = await pool.query(
       "SELECT 1 FROM users WHERE email = $1",
       [email]
     );
-
-    if (existingEmail.rows.length > 0) {
-      return res.status(400).json({ error: "Email already registered." });
+    if (existing.rows.length > 0) {
+      return res.status(400).json({ error: "Email already exists." });
     }
 
-    // Format display name
+    // Display name
     const displayName = `${first_name} ${last_name}`.trim();
 
-    // Create UNIQUE username
+    // Auto username
     const username = await generateUniqueUsername(first_name);
 
-    // Hash password
-    const hashedPassword = await bcrypt.hash(password, 10);
+    const hashed = await bcrypt.hash(password, 10);
 
-    // Insert new user
     const result = await pool.query(
-      `INSERT INTO users 
-       (first_name, last_name, display_name, username, email, password_hash, created_at)
-       VALUES ($1, $2, $3, $4, $5, $6, NOW())
+      `INSERT INTO users (
+         first_name,
+         last_name,
+         display_name,
+         username,
+         email,
+         password_hash,
+         gender,
+         date_of_birth,
+         created_at
+       ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,NOW())
        RETURNING id, username, email, display_name`,
-      [first_name, last_name, displayName, username, email, hashedPassword]
+      [
+        first_name,
+        last_name,
+        displayName,
+        username,
+        email,
+        hashed,
+        gender,
+        dob
+      ]
     );
 
     const newUser = result.rows[0];
+
 
     // Generate email verification token
     const verificationToken = crypto.randomBytes(32).toString("hex");
