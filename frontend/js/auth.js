@@ -387,85 +387,96 @@ document.addEventListener("DOMContentLoaded", () => {
   const resetPasswordForm = document.getElementById("reset-password-form");
   const verifyEmailForm = document.getElementById("verify-email-form");
 
-  // --- SIGNUP HANDLER (Updated & Backend-Aligned) ---
+  // --- SIGNUP HANDLER (First/Last Name, DOB, Gender, Email, Password) ---
 if (signupForm) {
   signupForm.addEventListener("submit", async (e) => {
     e.preventDefault();
 
     const btn = signupForm.querySelector(".btn-submit");
 
-    const firstName = document.getElementById("firstName")?.value.trim();
-    const lastName = document.getElementById("lastName")?.value.trim();
-    const dob = document.getElementById("dob")?.value.trim();
-    const gender = document.getElementById("gender")?.value.trim();
-    const email = document.getElementById("email")?.value.trim();
-    const password = document.getElementById("password")?.value.trim();
+    const firstNameInput = document.getElementById("firstName");
+    const lastNameInput = document.getElementById("lastName");
+    const dobInput = document.getElementById("dob");
+    const genderInput = document.getElementById("gender");
+
+    if (!firstNameInput || !lastNameInput || !dobInput || !genderInput) {
+      console.warn("⚠️ Signup page mismatch — fields missing");
+      return;
+    }
+
+    const firstName = firstNameInput.value.trim();
+    const lastName = lastNameInput.value.trim();
+    const dob = dobInput.value.trim();
+    const gender = genderInput.value.trim();
+
+    const email = document.getElementById("email").value.trim();
+    const password = document.getElementById("password").value.trim();
 
     if (!firstName || !lastName || !dob || !gender || !email || !password) {
-      return showMessage("⚠️ All fields are required!", "error");
+      return showMessage("⚠️ All fields required!", "error");
     }
 
     if (password.length < 6) {
-      return showMessage("⚠️ Password must be at least 6 characters.", "error");
+      return showMessage("⚠️ Password must be 6+ chars", "error");
     }
 
     if (!email.includes("@")) {
-      return showMessage("⚠️ Enter valid email address.", "error");
+      return showMessage("⚠️ Valid email required", "error");
     }
 
-    toggleLoading(btn, true, "Signing up...");
+    toggleLoading(btn, true, "Creating account...");
 
     try {
       const payload = {
-        firstName,
-        lastName,
+        first_name: firstName,
+        last_name: lastName,
+        dob,
+        gender,
         email,
         password,
-        dob,
-        gender
       };
 
-      console.log("📦 Sending signup payload:", payload);
+      console.log("📌 Sending signup:", payload);
 
       const { res, data } = await fetch(`${AUTH_API_BASE}/signup`, {
         method: "POST",
         credentials: "include",
-        headers: {
-          "Content-Type": "application/json"
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
-      }).then(async res => ({
+      }).then(async (res) => ({
         res,
-        data: await safeParseResponse(res)
+        data: await safeParseResponse(res),
       }));
 
       if (res.ok) {
         if (data.needs_verification) {
-          showVerificationModal({ email });
+          showVerificationModal({ email, username: data.user?.username });
 
           showMessageHTML(
-            `🔥 Account created!<br>📬 Check your email <strong>${email}</strong> to verify.`,
+            `🎉 Account created! <br> 📬 Please verify your email (${email})`,
             "success"
           );
 
           setTimeout(() => {
-            window.location.href = "/verify-pending.html?email=" + encodeURIComponent(email);
+            window.location.href =
+              "/verify-pending.html?email=" + encodeURIComponent(email);
           }, 5000);
         } else {
           showMessage("🎉 Signup successful! Redirecting...", "success");
           setTimeout(() => (window.location.href = "/profile.html"), 1200);
         }
       } else {
-        showMessage(data.error || data.message || "❌ Signup failed.", "error");
+        showMessage(data.error || "Signup failed", "error");
       }
     } catch (err) {
       console.error("Signup error:", err);
-      showMessage("🚫 Server unreachable.", "error");
+      showMessage("🚫 Cannot reach server.", "error");
     } finally {
       toggleLoading(btn, false);
     }
   });
 }
+
 
 
   // --- LOGIN HANDLER (Updated with email verification check) ---

@@ -1,91 +1,76 @@
 import bcrypt from "bcryptjs";
 import crypto from "crypto";
-import pool from "../db.js";
-import { sendPasswordResetEmail, sendVerificationEmail, sendWelcomeEmail } from "../routes/emailService.js"; 
+import pool from "../db.js"; 
 import { generateUniqueUsername } from "../utils/userHelpers.js";
+import { sendPasswordResetEmail, sendVerificationEmail, sendWelcomeEmail } from "../routes/emailService.js";
 
 // =====================================
 //  Signup with First & Last Name
 // =====================================
 export const signup = async (req, res) => {
   try {
-    let { first_name, last_name, email, password, dob, gender } = req.body;
+    let { first_name, last_name, dob, gender, email, password } = req.body;
 
     if (!first_name || !last_name || !email || !password) {
-      return res.status(400).json({ error: "All fields are required." });
+      return res.status(400).json({ error: "All fields required." });
     }
 
     email = email.trim().toLowerCase();
 
-    const existing = await pool.query(
-      "SELECT 1 FROM users WHERE email = $1",
-      [email]
-    );
-    if (existing.rows.length > 0) {
-      return res.status(400).json({ error: "Email already exists." });
+    const exists = await pool.query("SELECT 1 FROM users WHERE email = $1", [
+      email,
+    ]);
+    if (exists.rows.length > 0) {
+      return res.status(400).json({ error: "Email already registered." });
     }
 
-    // Display name
     const displayName = `${first_name} ${last_name}`.trim();
-
-    // Auto username
     const username = await generateUniqueUsername(first_name);
 
-    const hashed = await bcrypt.hash(password, 10);
+    const hashedPassword = await bcrypt.hash(password, 10);
 
     const result = await pool.query(
       `INSERT INTO users (
-         first_name,
-         last_name,
-         display_name,
-         username,
-         email,
-         password_hash,
-         gender,
-         date_of_birth,
-         created_at
-       ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,NOW())
-       RETURNING id, username, email, display_name`,
+        first_name,
+        last_name,
+        display_name,
+        username,
+        email,
+        password_hash,
+        gender,
+        date_of_birth,
+        created_at
+      ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,NOW())
+      RETURNING id, username, email, display_name`,
       [
         first_name,
         last_name,
         displayName,
         username,
         email,
-        hashed,
+        hashedPassword,
         gender,
-        dob
+        dob,
       ]
     );
 
     const newUser = result.rows[0];
 
-
-    // Generate email verification token
     const verificationToken = crypto.randomBytes(32).toString("hex");
-    const tokenExpires = new Date(Date.now() + 24 * 60 * 60 * 1000);
+    const expiry = new Date(Date.now() + 24 * 60 * 60 * 1000);
 
-    // Store verification token
     await pool.query(
-      `UPDATE users 
-       SET verification_token = $1, verification_token_expires = $2 
-       WHERE id = $3`,
-      [verificationToken, tokenExpires, newUser.id]
+      "UPDATE users SET verification_token=$1, verification_token_expires=$2 WHERE id=$3",
+      [verificationToken, expiry, newUser.id]
     );
 
-    // Try sending email
     let emailSent = false;
     try {
-      emailSent = await sendVerificationEmail(
-        newUser.email,
-        verificationToken,
-        newUser.username
-      );
+      emailSent = await sendVerificationEmail(email, verificationToken, username);
     } catch (err) {
-      console.error("📧 Email send failed:", err.message);
+      console.error("Email sending failed:", err);
     }
 
-    // Set session
     req.session.user = {
       id: newUser.id,
       username: newUser.username,
@@ -95,21 +80,14 @@ export const signup = async (req, res) => {
 
     return res.status(201).json({
       success: true,
-      message: "Signup successful. Verify your email.",
       user: newUser,
       needs_verification: true,
-      ...(emailSent
-        ? {}
-        : {
-            fallback_manual_link: `https://lovculator.com/verify-email.html?token=${verificationToken}`,
-          }),
     });
-  } catch (error) {
-    console.error("❌ Signup error:", error);
-    return res.status(500).json({ error: "Signup failed, try again." });
+  } catch (err) {
+    console.error("SIGNUP ERROR:", err);
+    return res.status(500).json({ error: "Failed to register user." });
   }
 };
-
 // ===================================================
 // 2️⃣ LOGIN (UPDATED with email verification check)
 // ===================================================
