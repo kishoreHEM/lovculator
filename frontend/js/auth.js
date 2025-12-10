@@ -394,11 +394,23 @@ if (signupForm) {
 
     const btn = signupForm.querySelector(".btn-submit");
 
-    // Collect new signup fields
-    const firstName = document.getElementById("firstName").value.trim();
-    const lastName = document.getElementById("lastName").value.trim();
-    const dob = document.getElementById("dob").value.trim();
-    const gender = document.getElementById("gender").value.trim();
+    // Collect new signup fields safely
+    const firstNameInput = document.getElementById("firstName");
+    const lastNameInput = document.getElementById("lastName");
+    const dobInput = document.getElementById("dob");
+    const genderInput = document.getElementById("gender");
+
+    // Prevent crashes if fields missing
+    if (!firstNameInput || !lastNameInput || !dobInput || !genderInput) {
+      console.warn("⚠️ Signup fields missing — skipping signup handler on this page");
+      return;
+    }
+
+    const firstName = firstNameInput.value.trim();
+    const lastName = lastNameInput.value.trim();
+    const dob = dobInput.value.trim();
+    const gender = genderInput.value.trim();
+
     const email = document.getElementById("email").value.trim();
     const password = document.getElementById("password").value.trim();
 
@@ -422,13 +434,13 @@ if (signupForm) {
     toggleLoading(btn, true, "Signing up...");
 
     try {
-      // Correct payload keys
+      // Use backend expected naming
       const payload = {
         username,
         email,
         password,
-        firstName,  // FIXED
-        lastName,   // FIXED
+        first_name: firstName,
+        last_name: lastName,
         dob,
         gender
       };
@@ -446,7 +458,7 @@ if (signupForm) {
       }));
 
       if (res.ok) {
-        // If backend flags verification needed
+        // Email verification flow
         if (data.needs_verification) {
           showVerificationModal({ email, username });
 
@@ -458,10 +470,9 @@ if (signupForm) {
           setTimeout(() => {
             window.location.href = "/verify-pending.html?email=" + encodeURIComponent(email);
           }, 5000);
-
         } else {
           showMessage("🎉 Signup successful! Redirecting...", "success");
-          setTimeout(() => (window.location.href = "/profile.html"), 1500);
+          setTimeout(() => (window.location.href = "/profile.html"), 1200);
         }
 
       } else {
@@ -476,8 +487,6 @@ if (signupForm) {
     }
   });
 }
-
-
 
   // --- LOGIN HANDLER (Updated with email verification check) ---
   if (loginForm) {
