@@ -328,88 +328,128 @@ class NotificationManager {
   }
 
   // ================================
-  // 🔔 REALTIME EVENT HANDLERS
-  // ================================
-  handleNewNotification(data) {
-    console.log("🔔 WebSocket Notification:", data);
+// 🔔 REALTIME EVENT HANDLERS
+// ================================
+handleNewNotification(data) {
+    console.log("🔔 WebSocket Notification received:", data);
 
-    // Payload shapes to support:
-    // { type: 'NEW_NOTIFICATION', notification: {...} }
-    // { type: 'NEW_NOTIFICATION', ...notificationFields }
+    // 🛡 Detect proper payload shape
     const notification = data.notification || data;
 
-    // 1. Update count
-    this.notificationCount++;
-    this.updateNotificationBadgeUI();
+    // 🛑 Prevent duplicate increment when the backend unread count syncs later
+    // If notification object says it's already read → don't increment
+    if (!notification.is_read && !notification.read) {
+        this.notificationCount++;
+        this.updateNotificationBadgeUI();
+    }
 
-    // 2. Toast text
+    // 🔄 Always sync unread count from server (keeps UI 100% accurate)
+    this.updateNotificationBadge();
+
+    // 🎉 Toast display
     const msgText =
-      notification.message ||
-      data.message ||
-      "You have a new notification";
-    this.showToast(msgText);
-  }
+        notification.message ||
+        data.message ||
+        "📩 You received a new notification";
 
-  handleNewMessage(data) {
+    this.showToast(this.safeText(msgText));
+}
+
+
+// ================================
+// 💌 REALTIME MESSAGE HANDLER
+// ================================
+handleNewMessage(data) {
     console.log("💌 WebSocket Message Notification:", data);
+
+    // 🔄 Refresh message badge from server
     this.updateMessageBadge();
 
-    // If not already on messages page, show toast
+    // 🛡 Only show toast if user is NOT inside messages page
     if (!window.location.pathname.includes("messages")) {
-      const msg = data.message || {};
-      const sender =
-        msg.sender_display_name ||
-        msg.sender_username ||
-        msg.from_username ||
-        "Someone";
-      this.showToast(`New message from ${sender}`);
+        const msg = data.message || {};
+        const sender =
+            msg.sender_display_name ||
+            msg.sender_username ||
+            msg.from_username ||
+            "Someone";
+
+        this.showToast(`💬 New message from ${this.safeText(sender)}`);
     }
-  }
+}
+
 
   // ================================
-  // 🍞 TOAST UI
-  // ================================
-  showToast(message) {
+// ✨ NEW BEAUTIFUL TOAST UI
+// ================================
+showToast(message) {
+
+    // Create container if missing (stacks nicely)
+    let container = document.getElementById("toastContainer");
+    if (!container) {
+        container = document.createElement("div");
+        container.id = "toastContainer";
+        container.style.cssText = `
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            z-index: 10000;
+        `;
+        document.body.appendChild(container);
+    }
+
+    // Create toast element
     const toast = document.createElement("div");
-    toast.className = "toast-popup";
+    toast.className = "toast-minimal";
     toast.innerHTML = `
-      <div style="display:flex; align-items:center; gap:10px;">
-        <span>🔔</span>
-        <span>${this.safeText(message)}</span>
-      </div>
+        <span style="margin-right:6px;">🔔</span>
+        ${this.safeText(message)}
     `;
 
     toast.style.cssText = `
-      position: fixed;
-      top: 20px;
-      right: 20px;
-      background: #333;
-      color: white;
-      padding: 12px 20px;
-      border-radius: 8px;
-      box-shadow: 0 4px 15px rgba(0,0,0,0.2);
-      z-index: 10000;
-      font-size: 14px;
-      opacity: 0;
-      transform: translateY(-20px);
-      transition: all 0.3s ease;
+        background: rgba(30, 30, 30, 0.90);
+        color: white;
+        padding: 8px 14px;
+        border-radius: 20px;
+        font-size: 13px;
+        display: flex;
+        align-items: center;
+        box-shadow: 0 2px 6px rgba(0,0,0,0.25);
+        opacity: 0;
+        transform: translateY(-10px);
+        transition: all 0.25s ease-in-out;
+        cursor: pointer;
+        max-width: 260px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
     `;
 
-    document.body.appendChild(toast);
+    // Add to container
+    container.appendChild(toast);
 
-    // Animate in
+    // Animate IN
     setTimeout(() => {
-      toast.style.opacity = "1";
-      toast.style.transform = "translateY(0)";
-    }, 50);
+        toast.style.opacity = "1";
+        toast.style.transform = "translateY(0)";
+    }, 30);
 
-    // Animate out
-    setTimeout(() => {
-      toast.style.opacity = "0";
-      toast.style.transform = "translateY(-20px)";
-      setTimeout(() => toast.remove(), 300);
-    }, 4000);
-  }
+    // Tap to dismiss early
+    toast.addEventListener("click", () => dismiss());
+
+    // Auto dismiss
+    const dismiss = () => {
+        toast.style.opacity = "0";
+        toast.style.transform = "translateY(-10px)";
+        setTimeout(() => toast.remove(), 250);
+    };
+
+    setTimeout(dismiss, 3000);
+}
+
 
   // ================================
   // ⏱ BACKUP POLLING
