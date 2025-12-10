@@ -10,10 +10,22 @@ const router = express.Router();
 router.get("/", auth, async (req, res) => {
     try {
         const userId = req.user.id;
-        const { filter = "all", page = 1, limit = 20 } = req.query;
+        const page = Number(req.query.page) || 1;
+        const limit = Number(req.query.limit) || 20;
+        const filter = req.query.filter || "all";
         const offset = (page - 1) * limit;
 
-        let baseQuery = `
+        let whereClause = "WHERE n.user_id = $1";
+        let queryParams = [userId];
+
+        if (filter === "unread") {
+            whereClause += " AND n.is_read = false";
+        } else if (filter !== "all") {
+            whereClause += ` AND n.type = $2`;
+            queryParams.push(filter);
+        }
+
+        const notificationQuery = `
             SELECT 
                 n.id,
                 n.type,
@@ -26,37 +38,37 @@ router.get("/", auth, async (req, res) => {
                 u.avatar_url AS actor_avatar_url
             FROM notifications n
             LEFT JOIN users u ON n.actor_id = u.id
-            WHERE n.user_id = $1
+            ${whereClause}
+            ORDER BY n.created_at DESC
+            LIMIT $${queryParams.length + 1}
+            OFFSET $${queryParams.length + 2}
         `;
 
-        let countQuery = `SELECT COUNT(*) FROM notifications WHERE user_id = $1`;
-        let params = [userId];
+        const countQuery = `
+            SELECT COUNT(*) 
+            FROM notifications n 
+            LEFT JOIN users u ON n.actor_id = u.id
+            ${whereClause}
+        `;
 
-        if (filter === "unread") {
-            baseQuery += ` AND n.is_read = false`;
-            countQuery += ` AND is_read = false`;
-        } else if (filter !== "all") {
-            params.push(filter);
-            baseQuery += ` AND n.type = $${params.length}`;
-            countQuery += ` AND type = $${params.length}`;
-        }
-
-        params.push(Number(limit), Number(offset));
-        baseQuery += ` ORDER BY n.created_at DESC LIMIT $${params.length - 1} OFFSET $${params.length}`;
+        const paramsWithLimit = [...queryParams, limit, offset];
 
         const [notificationsResult, countResult] = await Promise.all([
-            pool.query(baseQuery, params),
-            pool.query(countQuery, params.slice(0, params.length - 2))
+            pool.query(notificationQuery, paramsWithLimit),
+            pool.query(countQuery, queryParams)
         ]);
+
+        const total = Number(countResult.rows[0].count);
+        const totalPages = Math.ceil(total / limit);
 
         res.json({
             success: true,
             notifications: notificationsResult.rows,
             pagination: {
-                page: Number(page),
-                total: Number(countResult.rows[0].count),
-                totalPages: Math.ceil(Number(countResult.rows[0].count) / limit),
-                hasMore: Number(page) < Math.ceil(Number(countResult.rows[0].count) / limit)
+                page,
+                total,
+                totalPages,
+                hasMore: page < totalPages
             }
         });
 
@@ -143,7 +155,6 @@ router.get("/unread-count", auth, async (req, res) => {
 
 /* ======================================================
    🎯 HELPER: Create notification & Broadcast Real-Time
-   ⚠️ IMPORTANT: Caller must pass 'req' object!
 ====================================================== */
 export const createNotification = async (req, {
     userId,
@@ -153,7 +164,6 @@ export const createNotification = async (req, {
     link = null
 }) => {
     try {
-        // 1. Save to Database
         const result = await pool.query(
             `INSERT INTO notifications (user_id, actor_id, type, message, link, is_read, created_at)
              VALUES ($1, $2, $3, $4, $5, false, NOW())
@@ -166,18 +176,15 @@ export const createNotification = async (req, {
 
         const notification = result.rows[0];
 
-        // 2. Broadcast via WebSocket (The Real-Time Magic 🌟)
-        if (req && req.app) {
-            const broadcast = req.app.get("broadcastNotification");
-            if (broadcast) {
-                console.log(`📡 Broadcasting notification to user ${userId}`);
-                broadcast(userId, {
-                    type: "NEW_NOTIFICATION",
-                    notification: notification
-                });
-            } else {
-                console.log("⚠️ Broadcast function not found on app");
-            }
+        // WebSocket Broadcast
+        const broadcast = req?.app?.get("broadcastNotification");
+        if (broadcast) {
+            broadcast(userId, {
+                type: "NEW_NOTIFICATION",
+                notification
+            });
+        } else {
+            console.log("⚠️ Notification broadcast handler missing");
         }
 
         return notification;
@@ -188,21 +195,12 @@ export const createNotification = async (req, {
 };
 
 /* ======================================================
-   🔔 EXPORTED NOTIFY FUNCTIONS
-   ⚠️ Remember to update your route files (posts.js, etc.)
-   to pass 'req' as the first argument!
+   🔔 EXPORT NOTIFY SHORTCUTS
 ====================================================== */
-
 export const notifyLike = async (req, targetUserId, actorId, postType, postId) => {
-    // Don't notify if user is liking their own content
     if (parseInt(targetUserId) === parseInt(actorId)) return;
-
     try {
-        const actor = await pool.query("SELECT display_name, username FROM users WHERE id = $1", [actorId]);
-        if (!actor.rows.length) return;
-
-        const name = actor.rows[0].display_name || actor.rows[0].username;
-
+        const name = await fetchActorName(actorId);
         return await createNotification(req, {
             userId: targetUserId,
             actorId,
@@ -216,15 +214,9 @@ export const notifyLike = async (req, targetUserId, actorId, postType, postId) =
 };
 
 export const notifyComment = async (req, targetUserId, actorId, postType, postId) => {
-    // Don't notify if user is commenting on their own content
     if (parseInt(targetUserId) === parseInt(actorId)) return;
-
     try {
-        const actor = await pool.query("SELECT display_name, username FROM users WHERE id = $1", [actorId]);
-        if (!actor.rows.length) return;
-
-        const name = actor.rows[0].display_name || actor.rows[0].username;
-
+        const name = await fetchActorName(actorId);
         return await createNotification(req, {
             userId: targetUserId,
             actorId,
@@ -238,15 +230,9 @@ export const notifyComment = async (req, targetUserId, actorId, postType, postId
 };
 
 export const notifyFollow = async (req, targetUserId, actorId) => {
-    // Don't notify if user is following themselves
     if (parseInt(targetUserId) === parseInt(actorId)) return;
-
     try {
-        const actor = await pool.query("SELECT display_name, username FROM users WHERE id = $1", [actorId]);
-        if (!actor.rows.length) return;
-
-        const name = actor.rows[0].display_name || actor.rows[0].username;
-
+        const name = await fetchActorName(actorId);
         return await createNotification(req, {
             userId: targetUserId,
             actorId,
@@ -258,5 +244,17 @@ export const notifyFollow = async (req, targetUserId, actorId) => {
         console.error("notifyFollow failed:", err);
     }
 };
+
+/* ======================================================
+   📌 Helper to get display_name or username
+====================================================== */
+async function fetchActorName(actorId) {
+    const result = await pool.query(
+        "SELECT display_name, username FROM users WHERE id = $1",
+        [actorId]
+    );
+    const user = result.rows[0];
+    return user?.display_name || user?.username || "Someone";
+}
 
 export default router;
