@@ -110,11 +110,6 @@ router.post("/:postId/like", auth, async (req, res) => {
         // Notify only when liking, not unliking – and not your own post
         if (postOwnerId && postOwnerId !== userId && is_liked) {
             await notifyLike(req, post.user_id, req.user.id, "post", postId);
-
-            const broadcastNotify = req.app.get("broadcastNotification");
-            if (broadcastNotify) {
-                broadcastNotify({ type: "NEW_NOTIFICATION" }, [postOwnerId]);
-            }
         }
 
         // 🔥 Real-time LIKE broadcast
@@ -137,44 +132,44 @@ router.post("/:postId/like", auth, async (req, res) => {
 router.post("/:postId/comments", auth, async (req, res) => {
     try {
         const postId = req.params.postId;
-        const userId = req.user.id;
+        const actorId = req.user.id;   // 👈 correct name
         const { content } = req.body;
 
         if (!content || !content.trim()) {
             return res.status(400).json({ error: "Comment cannot be empty" });
         }
 
+        // 1️⃣ Insert comment
         await pool.query(
             `INSERT INTO post_comments (post_id, user_id, content)
              VALUES ($1, $2, $3)`,
-            [postId, userId, content.trim()]
+            [postId, actorId, content.trim()]
         );
 
+        // 2️⃣ Update comment count
         const countResult = await pool.query(
             `SELECT COUNT(*) AS commentCount FROM post_comments WHERE post_id = $1`,
             [postId]
         );
-
         const commentCount = Number(countResult.rows[0].commentCount);
 
+        // 3️⃣ Get post owner
         const ownerResult = await pool.query(
             `SELECT user_id FROM posts WHERE id = $1`,
             [postId]
         );
+
         const postOwnerId = ownerResult.rows[0]?.user_id;
 
-        if (postOwnerId && postOwnerId !== userId) {
-            notifyComment(req, userId, actorId, "post", postId)
-
-            const broadcastNotify = req.app.get("broadcastNotification");
-            if (broadcastNotify) {
-                broadcastNotify({ type: "NEW_NOTIFICATION" }, [postOwnerId]);
-            }
+        // 4️⃣ Notify post owner (ONLY if someone else commented)
+        if (postOwnerId && postOwnerId !== actorId) {
+            await notifyComment(req, postOwnerId, actorId, "post", postId);
         }
 
-        const broadcast = req.app.get("broadcastComment");
-        if (broadcast) {
-            broadcast({
+        // 5️⃣ Broadcast comment count update
+        const broadcastComment = req.app.get("broadcastComment");
+        if (broadcastComment) {
+            broadcastComment({
                 type: "COMMENT_ADDED",
                 postId,
                 commentCount
@@ -188,6 +183,7 @@ router.post("/:postId/comments", auth, async (req, res) => {
         res.status(500).json({ error: "Failed to add comment" });
     }
 });
+
 
 /* ======================================================
    📘 GET COMMENTS ONLY
