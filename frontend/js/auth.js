@@ -387,38 +387,20 @@ document.addEventListener("DOMContentLoaded", () => {
   const resetPasswordForm = document.getElementById("reset-password-form");
   const verifyEmailForm = document.getElementById("verify-email-form");
 
-  // --- SIGNUP HANDLER (Updated for new signup page + auto username + email verification) ---
+  // --- SIGNUP HANDLER (Updated & Backend-Aligned) ---
 if (signupForm) {
   signupForm.addEventListener("submit", async (e) => {
     e.preventDefault();
 
     const btn = signupForm.querySelector(".btn-submit");
 
-    // Collect new signup fields safely
-    const firstNameInput = document.getElementById("firstName");
-    const lastNameInput = document.getElementById("lastName");
-    const dobInput = document.getElementById("dob");
-    const genderInput = document.getElementById("gender");
+    const firstName = document.getElementById("firstName")?.value.trim();
+    const lastName = document.getElementById("lastName")?.value.trim();
+    const dob = document.getElementById("dob")?.value.trim();
+    const gender = document.getElementById("gender")?.value.trim();
+    const email = document.getElementById("email")?.value.trim();
+    const password = document.getElementById("password")?.value.trim();
 
-    // Prevent crashes if fields missing
-    if (!firstNameInput || !lastNameInput || !dobInput || !genderInput) {
-      console.warn("⚠️ Signup fields missing — skipping signup handler on this page");
-      return;
-    }
-
-    const firstName = firstNameInput.value.trim();
-    const lastName = lastNameInput.value.trim();
-    const dob = dobInput.value.trim();
-    const gender = genderInput.value.trim();
-
-    const email = document.getElementById("email").value.trim();
-    const password = document.getElementById("password").value.trim();
-
-    // Auto-generate username → firstname + random token
-    let username = (firstName + lastName).replace(/\s+/g, "").toLowerCase();
-    username += Math.floor(100 + Math.random() * 900); // ex: kishore210
-
-    // BASIC VALIDATION
     if (!firstName || !lastName || !dob || !gender || !email || !password) {
       return showMessage("⚠️ All fields are required!", "error");
     }
@@ -427,20 +409,18 @@ if (signupForm) {
       return showMessage("⚠️ Password must be at least 6 characters.", "error");
     }
 
-    if (!email.includes('@')) {
+    if (!email.includes("@")) {
       return showMessage("⚠️ Enter valid email address.", "error");
     }
 
     toggleLoading(btn, true, "Signing up...");
 
     try {
-      // Use backend expected naming
       const payload = {
-        username,
+        firstName,
+        lastName,
         email,
         password,
-        first_name: firstName,
-        last_name: lastName,
         dob,
         gender
       };
@@ -450,7 +430,9 @@ if (signupForm) {
       const { res, data } = await fetch(`${AUTH_API_BASE}/signup`, {
         method: "POST",
         credentials: "include",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json"
+        },
         body: JSON.stringify(payload),
       }).then(async res => ({
         res,
@@ -458,9 +440,8 @@ if (signupForm) {
       }));
 
       if (res.ok) {
-        // Email verification flow
         if (data.needs_verification) {
-          showVerificationModal({ email, username });
+          showVerificationModal({ email });
 
           showMessageHTML(
             `🔥 Account created!<br>📬 Check your email <strong>${email}</strong> to verify.`,
@@ -474,11 +455,9 @@ if (signupForm) {
           showMessage("🎉 Signup successful! Redirecting...", "success");
           setTimeout(() => (window.location.href = "/profile.html"), 1200);
         }
-
       } else {
         showMessage(data.error || data.message || "❌ Signup failed.", "error");
       }
-
     } catch (err) {
       console.error("Signup error:", err);
       showMessage("🚫 Server unreachable.", "error");
@@ -487,6 +466,7 @@ if (signupForm) {
     }
   });
 }
+
 
   // --- LOGIN HANDLER (Updated with email verification check) ---
   if (loginForm) {

@@ -2,115 +2,100 @@ import bcrypt from "bcryptjs";
 import crypto from "crypto";
 import pool from "../db.js";
 import { sendPasswordResetEmail, sendVerificationEmail, sendWelcomeEmail } from "../routes/emailService.js"; 
+import { generateUniqueUsername } from "../utils/userHelpers.js";
 
 // ===================================================
-// 1️⃣ SIGNUP (UPDATED with name merging + auto username + email verification)
+// 1️⃣ SIGNUP (full version with name storage + username auto + verification)
 // ===================================================
 export const signup = async (req, res) => {
   try {
-    let { username, email, password, firstName, lastName } = req.body;
+    let { first_name, last_name, email, password } = req.body;
 
-    if (!firstName || !lastName || !email || !password) {
-      return res.status(400).json({ error: "All fields required" });
+    // Normalize
+    email = email?.trim()?.toLowerCase();
+
+    if (!first_name || !last_name || !email || !password) {
+      return res.status(400).json({ error: "All fields required." });
     }
 
-    email = email.trim().toLowerCase();
-    const displayName = `${firstName} ${lastName}`.trim();
-
-    // Generate username if not entered or invalid
-    let baseUsername =
-      (username && username.length >= 3)
-        ? username.trim()
-        : (firstName + lastName)
-            .replace(/\s+/g, "")
-            .replace(/[^a-zA-Z0-9]/g, "")
-            .toLowerCase();
-
-    if (!baseUsername || baseUsername.length < 3) {
-      baseUsername = "lov_user";
-    }
-
-    // Ensure username is unique
-    let uniqueUsername = baseUsername;
-    let suffix = 1;
-    let exists = await pool.query(
-      "SELECT 1 FROM users WHERE username = $1",
-      [uniqueUsername]
-    );
-
-    while (exists.rows.length > 0) {
-      uniqueUsername = `${baseUsername}${suffix}`;
-      suffix++;
-      exists = await pool.query(
-        "SELECT 1 FROM users WHERE username = $1",
-        [uniqueUsername]
-      );
-    }
-
-    // Email must be unique
-    const emailCheck = await pool.query(
+    // Check email duplicate
+    const existingEmail = await pool.query(
       "SELECT 1 FROM users WHERE email = $1",
       [email]
     );
 
-    if (emailCheck.rows.length > 0) {
+    if (existingEmail.rows.length > 0) {
       return res.status(400).json({ error: "Email already registered." });
     }
 
+    // Format display name
+    const displayName = `${first_name} ${last_name}`.trim();
+
+    // Create UNIQUE username
+    const username = await generateUniqueUsername(first_name);
+
+    // Hash password
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    // Insert & return basic data
+    // Insert new user
     const result = await pool.query(
-      `INSERT INTO users (username, email, password_hash, display_name, created_at)
-       VALUES ($1, $2, $3, $4, NOW())
-       RETURNING id, username, email`,
-      [uniqueUsername, email, hashedPassword, displayName]
+      `INSERT INTO users 
+       (first_name, last_name, display_name, username, email, password_hash, created_at)
+       VALUES ($1, $2, $3, $4, $5, $6, NOW())
+       RETURNING id, username, email, display_name`,
+      [first_name, last_name, displayName, username, email, hashedPassword]
     );
 
     const newUser = result.rows[0];
 
-    // Generate verification token
-    const verificationToken = crypto.randomBytes(32).toString('hex');
+    // Generate email verification token
+    const verificationToken = crypto.randomBytes(32).toString("hex");
     const tokenExpires = new Date(Date.now() + 24 * 60 * 60 * 1000);
 
+    // Store verification token
     await pool.query(
-      "UPDATE users SET verification_token = $1, verification_token_expires = $2 WHERE id = $3",
+      `UPDATE users 
+       SET verification_token = $1, verification_token_expires = $2 
+       WHERE id = $3`,
       [verificationToken, tokenExpires, newUser.id]
     );
 
-    // Send verification email
-    const verificationLink = `https://lovculator.com/verify-email.html?token=${verificationToken}`;
-
+    // Try sending email
     let emailSent = false;
     try {
-      emailSent = await sendVerificationEmail(email, verificationToken, uniqueUsername);
-    } catch (emailError) {
-      console.error("📧 Email sending error:", emailError.message);
+      emailSent = await sendVerificationEmail(
+        newUser.email,
+        verificationToken,
+        newUser.username
+      );
+    } catch (err) {
+      console.error("📧 Email send failed:", err.message);
     }
 
-    // Create session
+    // Set session
     req.session.user = {
       id: newUser.id,
       username: newUser.username,
       email: newUser.email,
       email_verified: false,
-      display_name: displayName
     };
 
     return res.status(201).json({
       success: true,
-      message: "Signup successful! Please verify your email",
-      username: uniqueUsername,
-      display_name: displayName,
-      needs_verification: true
+      message: "Signup successful. Verify your email.",
+      user: newUser,
+      needs_verification: true,
+      ...(emailSent
+        ? {}
+        : {
+            fallback_manual_link: `https://lovculator.com/verify-email.html?token=${verificationToken}`,
+          }),
     });
-
-  } catch (err) {
-    console.error("❌ Signup error:", err);
-    res.status(500).json({ error: "Failed to register user." });
+  } catch (error) {
+    console.error("❌ Signup error:", error);
+    return res.status(500).json({ error: "Signup failed, try again." });
   }
 };
-
 
 // ===================================================
 // 2️⃣ LOGIN (UPDATED with email verification check)
