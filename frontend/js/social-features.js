@@ -122,13 +122,18 @@ async function handleLike(likeBtn) {
         const json = await res.json();
         console.log("✅ Like response:", json);
 
-        // Update UI
-        likeBtn.classList.toggle("liked", json.is_liked);
+        // Update heart icon color dynamically
+const icon = likeBtn.querySelector("svg");
+if (icon) {
+    if (json.is_liked) {
+        icon.setAttribute("fill", "#e91e63");
+        icon.setAttribute("stroke", "#e91e63");
+    } else {
+        icon.setAttribute("fill", "none");
+        icon.setAttribute("stroke", "currentColor");
+    }
+}
 
-        const countSpan = likeBtn.querySelector(".like-count");
-        if (countSpan) {
-            countSpan.textContent = json.like_count || json.likes_count || 0;
-        }
 
         // Show notification
         if (json.is_liked) {

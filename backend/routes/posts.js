@@ -68,12 +68,12 @@ router.post("/", auth, upload.single("image"), async (req, res) => {
 router.post("/:postId/like", auth, async (req, res) => {
     try {
         const postId = req.params.postId;
-        const userId = req.user.id;
+        const actorId = req.user.id;
 
         // Check if already liked
         const check = await pool.query(
             `SELECT 1 FROM post_likes WHERE post_id = $1 AND user_id = $2`,
-            [postId, userId]
+            [postId, actorId]
         );
 
         let is_liked = false;
@@ -82,40 +82,45 @@ router.post("/:postId/like", auth, async (req, res) => {
             // UNLIKE
             await pool.query(
                 `DELETE FROM post_likes WHERE post_id = $1 AND user_id = $2`,
-                [postId, userId]
+                [postId, actorId]
             );
         } else {
             // LIKE
             await pool.query(
                 `INSERT INTO post_likes (post_id, user_id) VALUES ($1, $2)`,
-                [postId, userId]
+                [postId, actorId]
             );
             is_liked = true;
         }
 
-        // Current LIKE count
+        // Updated like count
         const { rows } = await pool.query(
             `SELECT COUNT(*) AS like_count FROM post_likes WHERE post_id = $1`,
             [postId]
         );
         const like_count = Number(rows[0].like_count);
 
-        // Post owner details
+        // Find post owner
         const ownerResult = await pool.query(
             `SELECT user_id FROM posts WHERE id = $1`,
             [postId]
         );
         const postOwnerId = ownerResult.rows[0]?.user_id;
 
-        // Notify only when liking, not unliking – and not your own post
-        if (postOwnerId && postOwnerId !== userId && is_liked) {
-            await notifyLike(req, post.user_id, req.user.id, "post", postId);
+        // Notify only when liking and not self-like
+        if (postOwnerId && postOwnerId !== actorId && is_liked) {
+            await notifyLike(req, postOwnerId, actorId, "post", postId);
         }
 
-        // 🔥 Real-time LIKE broadcast
+        // Realtime broadcast
         const broadcast = req.app.get("broadcastLike");
         if (broadcast) {
-            broadcast({ type: "LIKE_UPDATED", postId, like_count, is_liked });
+            broadcast({
+                type: "LIKE_UPDATED",
+                postId,
+                like_count,
+                is_liked
+            });
         }
 
         res.json({ success: true, like_count, is_liked });
@@ -125,6 +130,7 @@ router.post("/:postId/like", auth, async (req, res) => {
         res.status(500).json({ error: "Failed to like/unlike post" });
     }
 });
+
 
 /* ======================================================
    💬 ADD COMMENT + REALTIME + NOTIFICATION
