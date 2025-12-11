@@ -2,140 +2,200 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Signup - Lovculator</title>
-  <meta name="description" content="Create your Lovculator account and start connecting." />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Sign Up • Lovculator 💖</title>
+  <meta name="theme-color" content="#ff4b8d" />
 
-  <!-- Favicon -->
-  <link rel="apple-touch-icon" href="/images/apple-touch-icon.png">
-  <link rel="shortcut icon" href="/images/favicon-32x32.png" type="image/png">
-  <link rel="icon" href="/images/favicon.ico" sizes="any">
-
-  <!-- Global Styles -->
-  <link rel="stylesheet" href="/css/style.css" />
-
-  <!-- 🔥 Page-specific Inline CSS -->
   <style>
-    * { box-sizing: border-box; }
+    * {
+      box-sizing: border-box;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    }
+
     body {
       margin: 0;
-      background: #f6f8fb;
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial;
+      padding: 0;
+      background: #f0f2f5;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
     }
 
-    .signup-wrapper {
-      max-width: 450px;
-      background: white;
-      margin: 40px auto;
-      padding: 25px 30px;
+    .page-wrapper {
+      display: flex;
+      max-width: 1000px;
+      width: 100%;
+      padding: 20px;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 40px;
+    }
+
+    /* LEFT SIDE */
+    .left-section {
+      flex: 1;
+      min-width: 260px;
+    }
+
+    .brand-title {
+      font-size: 52px;
+      font-weight: 700;
+      color: #ff4b8d;
+      margin-bottom: 10px;
+    }
+
+    .brand-tagline {
+      font-size: 22px;
+      color: #333;
+      max-width: 340px;
+      line-height: 1.3;
+    }
+
+    /* SIGNUP CARD */
+    .signup-card {
+      width: 390px;
+      background: #fff;
+      padding: 24px;
       border-radius: 12px;
-      box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+      box-shadow: 0 2px 12px rgba(0,0,0,0.15);
     }
 
-    h1 {
-      font-size: 24px;
-      font-weight: 600;
-      color: #222;
+    .signup-card h2 {
       text-align: center;
-      margin-bottom: 20px;
+      margin-bottom: 18px;
+      color: #333;
+      font-weight: 600;
     }
 
     .form-group {
-      margin-bottom: 18px;
+      margin-bottom: 14px;
+      text-align: left;
     }
 
-    label {
-      display: block;
+    .form-group label {
       font-size: 14px;
       font-weight: 500;
-      color: #555;
-      margin-bottom: 6px;
+      margin-bottom: 5px;
+      display: block;
     }
 
-    input, select {
+    .form-group input,
+    .form-group select {
       width: 100%;
-      padding: 10px 12px;
-      font-size: 15px;
+      padding: 12px;
       border: 1px solid #d0d7de;
       border-radius: 8px;
-      outline: none;
+      font-size: 15px;
     }
 
-    input:focus, select:focus {
+    .form-group input:focus,
+    .form-group select:focus {
       border-color: #ff4b8d;
-      box-shadow: 0 0 0 3px rgba(255, 75, 141, 0.25);
+      outline: none;
+      box-shadow: 0 0 0 3px rgba(255,75,141,0.25);
     }
 
-    .submit-btn {
+    /* FIRST + LAST NAME ROW */
+    .name-row {
+      display: flex;
+      gap: 12px;
+    }
+
+    .name-row .form-group {
+      flex: 1;
+    }
+
+    /* STACK ON MOBILE */
+    @media(max-width: 540px) {
+      .name-row {
+        flex-direction: column;
+      }
+    }
+
+    .btn-submit {
       width: 100%;
       padding: 12px;
       background: #ff4b8d;
       color: white;
-      border: none;
-      font-weight: 600;
       font-size: 16px;
+      font-weight: 600;
       border-radius: 8px;
+      border: none;
       cursor: pointer;
-      transition: 0.2s;
     }
 
-    .submit-btn:hover {
-      background: #e23f7b;
-    }
-
-    .terms {
-      font-size: 12px;
-      color: #666;
-      text-align: left;
-      margin: 10px 0 20px;
-    }
-
-    .terms a {
-      color: #ff4b8d;
-    }
-
-    .footer-link {
-      text-align: center;
-      margin-top: 15px;
-      font-size: 14px;
-    }
-
-    .footer-link a {
-      color: #ff4b8d;
-      text-decoration: none;
+    .btn-submit:hover {
+      background: #e63e7f;
     }
 
     #error-message {
-      text-align: center;
+      color: #cf222e;
       font-size: 14px;
-      font-weight: 500;
-      margin-bottom: 12px;
-      min-height: 18px;
+      margin-top: 4px;
+      margin-bottom: 10px;
+    }
+
+    .login-link {
+      text-align: center;
+      margin-top: 16px;
+      font-size: 14px;
+    }
+
+    .login-link a {
+      color: #ff4b8d;
+      font-weight: 600;
+      text-decoration: none;
+    }
+
+    /* RESPONSIVE LAYOUT */
+    @media(max-width: 900px) {
+      .page-wrapper {
+        flex-direction: column;
+        text-align: center;
+      }
+
+      .signup-card {
+        width: 100%;
+        max-width: 390px;
+      }
     }
   </style>
-
 </head>
 
 <body>
 
-  <div class="signup-wrapper">
-    <h1>Create Your Account</h1>
+<div class="page-wrapper">
+
+  <!-- LEFT SIDE -->
+  <div class="left-section">
+    <div class="brand-title">Lovculator</div>
+    <div class="brand-tagline">
+      Create your account and start your love journey 💖
+    </div>
+  </div>
+
+  <!-- SIGNUP CARD -->
+  <div class="signup-card">
+    <h2>Create Your Account</h2>
 
     <form id="signup-form">
 
-      <!-- First Name -->
-      <div class="form-group">
-        <label>First Name *</label>
-        <input type="text" id="firstName" placeholder="Enter your name" required />
+      <!-- First + Last Name -->
+      <div class="name-row">
+        <div class="form-group">
+          <label>First Name *</label>
+          <input type="text" id="firstName" placeholder="Enter your name" required />
+        </div>
+
+        <div class="form-group">
+          <label>Last Name *</label>
+          <input type="text" id="lastName" placeholder="Surname" required />
+        </div>
       </div>
 
-      <!-- Last Name -->
-      <div class="form-group">
-        <label>Last Name *</label>
-        <input type="text" id="lastName" placeholder="Surname" required />
-      </div>
-
-      <!-- Date of birth -->
+      <!-- Date of Birth -->
       <div class="form-group">
         <label>Date of Birth *</label>
         <input type="date" id="dob" required />
@@ -166,19 +226,16 @@
 
       <p id="error-message"></p>
 
-      <p class="terms">
-        By signing up, you agree to our <a href="/terms.html">Terms</a> and <a href="/privacy.html">Privacy Policy</a>.
-      </p>
-
-      <button type="submit" class="submit-btn btn-submit">Sign Up</button>
-
-      <div class="footer-link">
-        Already have an account? <a href="/login.html">Log in</a>
-      </div>
-
+      <button class="btn-submit">Create Account</button>
     </form>
+
+    <div class="login-link">
+      Already have an account? <a href="/login.html">Log in</a>
+    </div>
   </div>
 
-  <script src="/js/auth.js"></script>
+</div>
+
+<script src="/js/auth.js"></script>
 </body>
 </html>
