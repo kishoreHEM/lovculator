@@ -1933,32 +1933,70 @@ body.modal-open {
     color: inherit;
     }
 
-    /* Mobile Sidebar Styles */
-@media (max-width: 1024px) {
-    .main-sidebar {
-        position: fixed;
-        left: -280px; /* Hide off-screen by default */
-        top: 0;
-        bottom: 0;
-        width: 280px;
-        z-index: 1000;
-        transition: left 0.3s ease;
-        /* existing styles... */
-    }
-
-    .main-sidebar.active {
-        left: 0; /* Slide in when active */
-    }
-    
-    .mobile-menu-overlay {
-        /* ... styles for overlay ... */
-        display: none;
-    }
-    
-    .mobile-menu-overlay.active {
-        display: block;
-    }
+    /* mobile-menu CSS (paste into /css/layout.css or style.css) */
+.mobile-menu-btn {
+  display: none; /* visible only on small screens */
+  background: transparent;
+  border: none;
+  font-size: 20px;
+  padding: 8px;
+  cursor: pointer;
+  color: #ff4b8d;
 }
 
+.sidebar-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.45);
+  z-index: 9998;
+  transition: opacity 0.25s ease;
+}
+
+.sidebar-overlay.active {
+  display: block;
+  opacity: 1;
+}
+
+.main-sidebar.mobile-sidebar {
+  position: fixed;
+  top: 0;
+  left: -280px;
+  width: 280px;
+  height: 100vh;
+  background: #fff;
+  z-index: 9999;
+  transition: left 0.28s ease;
+  overflow-y: auto;
+  box-shadow: 0 12px 30px rgba(0,0,0,0.12);
+}
+
+.main-sidebar.mobile-sidebar.open {
+  left: 0;
+}
+
+.mobile-sidebar-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.mobile-user-card { display:flex; gap:10px; align-items:center; }
+.user-sidebar-avatar { width:44px; height:44px; border-radius:50%; object-fit:cover; }
+
+.mobile-nav { padding: 12px; display:flex; flex-direction:column; gap:8px; }
+.sidebar-item { display:flex; align-items:center; gap:12px; padding:12px; border-radius:8px; text-decoration:none; color:#222; }
+.sidebar-item .icon { width:28px; text-align:center; }
+.sidebar-badge { margin-left:auto; background:#eee; color:#333; padding:2px 8px; border-radius:999px; font-size:12px; }
+
+.mobile-logout { padding:12px; border-top:1px solid #f0f0f0; display:flex; flex-direction:column; gap:8px; }
+.btn-logout { background: transparent; border:1px solid #ff4b8d; color:#ff4b8d; padding:8px; border-radius:8px; cursor:pointer; }
+
+/* show mobile button on small screens */
+@media (max-width: 900px) {
+  .mobile-menu-btn { display: inline-flex; align-items:center; justify-content:center; }
+}
 
 }

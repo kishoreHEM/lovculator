@@ -5,30 +5,64 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Friends • Lovculator</title>
 
+    <link rel="stylesheet" href="/css/layout.css" />
     <link rel="stylesheet" href="/css/style.css" />
-    <link rel="stylesheet" href="/css/friends.css" />
+    <link rel="stylesheet" href="/css/friends.css"/>
+    
+    <link rel="apple-touch-icon" href="/images/apple-touch-icon.png">
+    <link rel="shortcut icon" href="/images/favicon-32x32.png" type="image/png">
+    <link rel="icon" href="/images/favicon.ico" sizes="any">
 </head>
 
-<body>
+<body class="app-layout">
 
-<div class="page-wrapper">
+    <div id="global-header"></div>
+    <div id="global-mobile-menu"></div>
 
-    <h1 class="page-title">Your Friends</h1>
+    <div class="app-container">
+        <aside class="main-sidebar">
+        <div class="user-card">
+            <img src="/images/default-avatar.png" alt="User" class="user-sidebar-avatar" id="sidebarAvatar">
+            <div class="user-info">
+                <h4 id="sidebarUserName">User Name</h4>
+                <p id="sidebarUserBio">Love seeker</p>
+            </div>
+        </div>
+        <nav class="sidebar-nav">
+             <a href="/friends.html" class="sidebar-item active">
+                <span>Followers</span> 
+            </a>
+            </nav>
+    </aside>
+        <main class="main-content-area">
+            <div class="page-wrapper">
+                <h1 class="page-title">Your Friends</h1>
 
-    <!-- Tabs -->
-    <div class="tabs">
-        <div class="tab active" data-tab="followers">Followers</div>
-        <div class="tab" data-tab="following">Following</div>
-        <div class="tab" data-tab="suggestions">Suggestions</div>
+                <div class="tabs">
+                    <div class="tab active" data-tab="followers">Followers</div>
+                    <div class="tab" data-tab="following">Following</div>
+                    <div class="tab" data-tab="suggestions">Suggestions</div>
+                </div>
+
+                <div id="followers-list" class="user-list">
+                    <div class="loading-spinner"></div>
+                </div>
+                <div id="following-list" class="user-list" style="display:none;"></div>
+                <div id="suggestions-list" class="user-list" style="display:none;"></div>
+            </div>
+        </main>
     </div>
 
-    <!-- Lists -->
-    <div id="followers-list" class="user-list"></div>
-    <div id="following-list" class="user-list" style="display:none;"></div>
-    <div id="suggestions-list" class="user-list" style="display:none;"></div>
+<script src="/js/auth.js"></script>
+<script src="/js/messages.js"></script> 
+<script src="/js/notifications.js"></script>
 
-</div>
+<script src="/js/layout-manager.js"></script>
+
+<script src="/js/global-header.js"></script>
+<script src="/js/global-mobile-menu.js"></script>
 
 <script src="/js/friends.js"></script>
+<script src="/js/profile.js"></script>
 </body>
 </html>

@@ -15,41 +15,11 @@
     <link rel="icon" href="/Images/favicon.ico" sizes="any">
     
     <!-- CSS -->
-    <link rel="stylesheet" href="/css/style.css">
+    <link rel="stylesheet" href="/css/style.css"/>
+    <link rel="stylesheet" href="/css/layout.css"/>
 </head>
 <body>
-    <!-- Instagram Style Header -->
-    <header class="header">
-    <nav class="navbar">
-        <div class="nav-brand">
-            <a href="/" class="logo" aria-label="Lovculator Home">
-                💖 Lovculator
-            </a>
-        </div>
-        
-        <!-- Regular desktop menu -->
-        <ul class="nav-menu">
-            <li class="nav-item"><a href="/" class="nav-link">🏠 Home</a></li>
-            <li class="nav-item"><a href="love-stories" class="nav-link active">📖 Love Stories</a></li>
-            <li class="nav-item"><a href="record" class="nav-link">📊 Records</a></li>
-            <li class="nav-item"><a href="about" class="nav-link">ℹ️ About</a></li>
-            <li class="nav-item"><a href="contact" class="nav-link">📞 Contact</a></li>
-        </ul>
-
-        <!-- Search box (if needed) -->
-        <div class="nav-search">
-            <!-- Add search input if you want search functionality -->
-        </div>
-
-        <!-- Mobile elements -->
-        <button class="menu-toggle" aria-label="Toggle menu">
-            <span></span>
-            <span></span>
-            <span></span>
-        </button>
-        <div class="mobile-menu-overlay"></div>
-    </nav>
-</header>
+    <div id="global-header"></div>
 
     <div class="container">
         <main class="main-content">
@@ -208,7 +178,8 @@
 </footer>
     </div>
 
-    <script src="js/navigation.js"></script>
+    <script src="/js/global-header.js"></script>
+    <script src="/js/layout.js"></script>
     <script src="js/contact.js"></script>
 </body>
 </html> 

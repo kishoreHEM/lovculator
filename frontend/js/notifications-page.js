@@ -9,14 +9,68 @@ class NotificationsPage {
     }
 
     init() {
+        // Only run logic if the container exists (we are on the notifications page)
         if (document.getElementById("notificationsContainer")) {
             this.loadUserData();
             this.attachEventListeners();
             this.loadNotifications();
+            
+            // ✅ NEW: Start listening for real-time events
+            this.subscribeToRealTimeEvents();
         }
     }
 
-    // --- Data Loading & Auth ---
+    // ==========================================
+    // 🔌 REAL-TIME LISTENERS (NEW)
+    // ==========================================
+    async subscribeToRealTimeEvents() {
+        // Wait for the shared WebSocket Manager (defined in messages.js)
+        if (!window.wsManager) {
+            setTimeout(() => this.subscribeToRealTimeEvents(), 500);
+            return;
+        }
+
+        try {
+            // Subscribe to the global NEW_NOTIFICATION event
+            window.wsManager.subscribe("NEW_NOTIFICATION", (data) => {
+                this.handleRealTimeNotification(data);
+            });
+            console.log("✅ NotificationsPage subscribed to real-time updates");
+        } catch (error) {
+            console.error("Failed to subscribe in NotificationsPage:", error);
+        }
+    }
+
+    handleRealTimeNotification(data) {
+        const notification = data.notification || data;
+
+        // 1. Filter Check
+        // If user is on "Likes" tab but receives a "Comment", ignore it for this list
+        if (this.currentFilter !== 'all' && this.currentFilter !== notification.type) {
+            return;
+        }
+
+        // 2. Prepare UI
+        const container = document.getElementById("notificationsContainer");
+        const emptyState = document.getElementById("emptyState");
+
+        if (emptyState) emptyState.classList.add("hidden");
+        if (container) container.classList.remove("hidden");
+
+        // 3. Create Element & Prepend
+        const element = this.createNotificationElement(notification);
+        
+        // Add a "new" class for highlighting/animation
+        element.classList.add("slide-in-new");
+        
+        if (container) {
+            container.prepend(element);
+        }
+    }
+
+    // ==========================================
+    // 👤 DATA LOADING & AUTH
+    // ==========================================
 
     async loadUserData() {
         try {
@@ -57,25 +111,24 @@ class NotificationsPage {
         });
     }
 
-    // --- Event Handling ---
+    // ==========================================
+    // 🖱 EVENT HANDLING
+    // ==========================================
 
     attachEventListeners() {
+        // Tab Filters
         document.querySelectorAll(".tab-btn").forEach((btn) => {
             btn.addEventListener("click", (e) => {
                 this.handleFilterChange(e.target.dataset.filter);
             });
         });
 
-        document
-            .getElementById("markAllRead")
-            ?.addEventListener("click", () => this.markAllAsReadClientSide());
-        document
-            .getElementById("clearAll")
-            ?.addEventListener("click", () => this.clearAllNotifications());
-        document
-            .getElementById("loadMoreNotifications")
-            ?.addEventListener("click", () => this.loadMoreNotifications());
+        // Action Buttons
+        document.getElementById("markAllRead")?.addEventListener("click", () => this.markAllAsReadClientSide());
+        document.getElementById("clearAll")?.addEventListener("click", () => this.clearAllNotifications());
+        document.getElementById("loadMoreNotifications")?.addEventListener("click", () => this.loadMoreNotifications());
 
+        // Dropdown Logic
         const userAvatar = document.getElementById("userAvatar");
         const userDropdown = document.getElementById("userDropdown");
 
@@ -86,10 +139,7 @@ class NotificationsPage {
             });
 
             document.addEventListener("click", (e) => {
-                if (
-                    !userAvatar.contains(e.target) &&
-                    !userDropdown.contains(e.target)
-                ) {
+                if (!userAvatar.contains(e.target) && !userDropdown.contains(e.target)) {
                     userDropdown.classList.add("hidden");
                 }
             });
@@ -97,20 +147,19 @@ class NotificationsPage {
     }
 
     handleFilterChange(filter) {
-        document
-            .querySelectorAll(".tab-btn")
-            .forEach((btn) => btn.classList.remove("active"));
-        document
-            .querySelector(`[data-filter="${filter}"]`)
-            ?.classList.add("active");
+        document.querySelectorAll(".tab-btn").forEach((btn) => btn.classList.remove("active"));
+        document.querySelector(`[data-filter="${filter}"]`)?.classList.add("active");
 
         this.currentFilter = filter;
         this.currentPage = 1;
         this.hasMore = true;
+        this.unreadNotificationIds = [];
         this.loadNotifications(true);
     }
 
-    // --- Core Notification Logic ---
+    // ==========================================
+    // 🔔 CORE LOGIC
+    // ==========================================
 
     async loadNotifications(isFilterChange = false) {
         if (this.isLoading && !isFilterChange) return;
@@ -127,27 +176,23 @@ class NotificationsPage {
             if (!response.ok) throw new Error("Failed to load notifications");
 
             const data = await response.json();
-            const notifications = Array.isArray(data.notifications)
-                ? data.notifications
-                : [];
+            const notifications = Array.isArray(data.notifications) ? data.notifications : [];
 
-            // Track unread ids
+            // Track unread ids locally
             if (notifications.length) {
                 const newUnread = notifications
                     .filter((n) => !n.is_read && !n.read)
                     .map((n) => n.id);
-                this.unreadNotificationIds = [
-                    ...new Set([...this.unreadNotificationIds, ...newUnread]),
-                ];
+                this.unreadNotificationIds = [...new Set([...this.unreadNotificationIds, ...newUnread])];
             }
 
             this.displayNotifications(notifications, this.currentPage === 1);
 
-            // ✅ read pagination.hasMore (backend sends pagination object)
+            // Handle Pagination
             const pagination = data.pagination || {};
             this.hasMore = !!pagination.hasMore;
-
             this.updateLoadMoreButton();
+
         } catch (error) {
             console.error("Error loading notifications:", error);
             this.showError("Failed to load notifications.");
@@ -173,14 +218,14 @@ class NotificationsPage {
         emptyState?.classList.add("hidden");
         container.classList.remove("hidden");
 
+        // Deduplicate
         const uniqueNotifications = Array.from(
             new Map(notifications.map((n) => [n.id, n])).values()
         );
 
         const fragment = document.createDocumentFragment();
         uniqueNotifications.forEach((notification) => {
-            const notificationElement =
-                this.createNotificationElement(notification);
+            const notificationElement = this.createNotificationElement(notification);
             fragment.appendChild(notificationElement);
         });
         container.appendChild(fragment);
@@ -193,11 +238,8 @@ class NotificationsPage {
         div.dataset.notificationId = notification.id;
 
         const iconClass = `type-${notification.type}`;
-        const timeAgo = this.formatTimeAgo(notification.created_at);
-        const actorAvatar =
-            notification.actor?.avatar_url ||
-            notification.actor_avatar_url ||
-            "/images/default-avatar.png";
+        const timeAgo = this.formatTimeAgo(notification.created_at || notification.createdAt || new Date());
+        const actorAvatar = notification.actor?.avatar_url || notification.actor_avatar_url || "/images/default-avatar.png";
 
         div.innerHTML = `
             <div class="notification-icon ${iconClass}">
@@ -209,35 +251,21 @@ class NotificationsPage {
                 >
             </div>
             <div class="notification-content">
-                <p class="notification-text">${this.formatNotificationText(
-                    notification
-                )}</p>
+                <p class="notification-text">${this.formatNotificationText(notification)}</p>
                 <div class="notification-meta">
                     <span class="notification-time">${timeAgo}</span>
-                    ${
-                        notification.context
-                            ? `<span class="notification-context">${this.safeText(
-                                  notification.context
-                              )}</span>`
-                            : ""
-                    }
+                    ${notification.context ? `<span class="notification-context">${this.safeText(notification.context)}</span>` : ""}
                 </div>
-                ${
-                    !isRead
-                        ? `
+                ${!isRead ? `
                     <div class="notification-actions">
-                        <button class="notification-action-btn" data-id="${
-                            notification.id
-                        }" data-action="mark-read">Mark as read</button>
+                        <button class="notification-action-btn" data-id="${notification.id}" data-action="mark-read">Mark as read</button>
                     </div>
-                `
-                        : ""
-                }
+                ` : ""}
             </div>
             ${!isRead ? '<div class="unread-dot"></div>' : ""}
         `;
 
-        // Click on notification item (except buttons)
+        // Click on notification item
         div.addEventListener("click", (e) => {
             if (!e.target.closest(".notification-action-btn")) {
                 this.handleNotificationClick(notification);
@@ -256,86 +284,56 @@ class NotificationsPage {
         return div;
     }
 
-    /**
-     * ✅ FIXED: Always respects backend message
-     * - Uses notification.message if present
-     * - Only falls back to type-based text when message is missing
-     * - Avoids weird text like "commented on your 20"
-     */
     formatNotificationText(notification) {
         if (notification.message) {
-            // Backend already builds: "Kishore commented on your post"
             return this.safeText(notification.message);
         }
 
-        const actorName =
-            notification.actor_display_name ||
-            (notification.actor && notification.actor.display_name) ||
-            notification.actor_username ||
-            (notification.actor && notification.actor.username) ||
-            "Someone";
+        const actorName = notification.actor_display_name || 
+                          (notification.actor && notification.actor.display_name) || 
+                          notification.actor_username || 
+                          (notification.actor && notification.actor.username) || 
+                          "Someone";
         const safeName = this.safeText(actorName);
 
         switch (notification.type) {
-            case "like":
-                return `${safeName} liked your post`;
-            case "comment":
-                return `${safeName} commented on your post`;
-            case "follow":
-                return `${safeName} started following you`;
-            case "message":
-                return `${safeName} sent you a message`;
-            case "system":
-                return this.safeText(notification.message || "System notification");
-            default:
-                return this.safeText(
-                    notification.message || "You have a new notification"
-                );
+            case "like": return `${safeName} liked your post`;
+            case "comment": return `${safeName} commented on your post`;
+            case "follow": return `${safeName} started following you`;
+            case "message": return `${safeName} sent you a message`;
+            case "system": return this.safeText(notification.message || "System notification");
+            default: return this.safeText(notification.message || "You have a new notification");
         }
     }
 
     async handleNotificationClick(notification) {
-        // Mark as read if needed
         if (!notification.read && !notification.is_read) {
             this.optimisticMarkAsRead(notification.id);
             this.markAsRead(notification.id);
         }
 
-        // ✅ Prefer backend link when provided
         if (notification.link) {
             window.location.href = notification.link;
             return;
         }
 
-        // Fallback logic (in case older notifications lack `link`)
         const data = notification.data || {};
-
         switch (notification.type) {
             case "like":
             case "comment":
-                if (data.post_id) {
-                    window.location.href = `/post.html?id=${data.post_id}`;
-                }
+                if (data.post_id) window.location.href = `/post.html?id=${data.post_id}`;
                 break;
             case "follow":
-                if (data.user_id) {
-                    window.location.href = `/profile.html?user=${data.user_id}`;
-                }
+                if (data.user_id) window.location.href = `/profile.html?user=${data.user_id}`;
                 break;
             case "message":
-                if (data.conversation_id) {
-                    window.location.href = `/messages.html?conversation=${data.conversation_id}`;
-                }
-                break;
-            default:
+                if (data.conversation_id) window.location.href = `/messages.html?conversation=${data.conversation_id}`;
                 break;
         }
     }
 
     optimisticMarkAsRead(notificationId) {
-        const item = document.querySelector(
-            `.notification-item[data-notification-id="${notificationId}"]`
-        );
+        const item = document.querySelector(`.notification-item[data-notification-id="${notificationId}"]`);
         if (item) {
             item.classList.remove("unread");
             item.querySelector(".unread-dot")?.remove();
@@ -350,41 +348,36 @@ class NotificationsPage {
                 method: "POST",
                 credentials: "include",
             });
+            // Update global badge
+            if (window.notificationManager) {
+                window.notificationManager.updateNotificationBadge();
+            }
         } catch (error) {
             console.error("Error marking notification as read:", error);
         }
     }
 
     async markAllAsReadClientSide() {
-        if (!this.unreadNotificationIds || this.unreadNotificationIds.length === 0) {
-            const unreadElements = document.querySelectorAll(
-                ".notification-item.unread"
-            );
-            unreadElements.forEach((el) => {
-                const id = el.dataset.notificationId;
-                if (id) this.unreadNotificationIds.push(id);
+        document.querySelectorAll(".notification-item.unread").forEach((item) => {
+            item.classList.remove("unread");
+            item.querySelector(".unread-dot")?.remove();
+            item.querySelector(".notification-actions")?.remove();
+        });
+
+        try {
+            await fetch('/api/notifications/mark-all-read', {
+                method: 'POST',
+                credentials: 'include'
             });
+            
+            this.unreadNotificationIds = [];
+            
+            if (window.notificationManager) {
+                window.notificationManager.updateNotificationBadge();
+            }
+        } catch (err) {
+            console.error("Failed to mark all read", err);
         }
-
-        if (this.unreadNotificationIds.length === 0) return;
-
-        document
-            .querySelectorAll(".notification-item.unread")
-            .forEach((item) => {
-                item.classList.remove("unread");
-                item.querySelector(".unread-dot")?.remove();
-                item.querySelector(".notification-actions")?.remove();
-            });
-
-        const promises = this.unreadNotificationIds.map((id) =>
-            fetch(`/api/notifications/${id}/read`, {
-                method: "POST",
-                credentials: "include",
-            }).catch((err) => console.error(`Failed to mark ${id}`, err))
-        );
-
-        this.unreadNotificationIds = [];
-        await Promise.allSettled(promises);
     }
 
     async clearAllNotifications() {
@@ -401,9 +394,11 @@ class NotificationsPage {
                 const emptyState = document.getElementById("emptyState");
                 if (container) container.innerHTML = "";
                 emptyState?.classList.remove("hidden");
-                document
-                    .getElementById("loadMoreContainer")
-                    ?.classList.add("hidden");
+                document.getElementById("loadMoreContainer")?.classList.add("hidden");
+                
+                if (window.notificationManager) {
+                    window.notificationManager.updateNotificationBadge();
+                }
             }
         } catch (error) {
             console.error("Error clearing notifications:", error);
@@ -475,7 +470,7 @@ class NotificationsPage {
     }
 }
 
-// ✅ Inline page-specific CSS (spinner, error state, avatar)
+// ✅ Inline page-specific CSS with Animation
 const pageErrorStyles = `
     .error-state { text-align: center; padding: 40px 20px; color: #e74c3c; }
     .error-icon { font-size: 48px; margin-bottom: 16px; }
@@ -492,6 +487,16 @@ const pageErrorStyles = `
         border: 2px solid #fff;
         box-shadow: 0 2px 4px rgba(0,0,0,0.1);
     }
+    
+    /* NEW: Slide-in Animation for Real-Time notifications */
+    @keyframes slideInDown {
+        from { opacity: 0; transform: translateY(-20px); background-color: #ff4b8d11; }
+        to { opacity: 1; transform: translateY(0); background-color: white; }
+    }
+    .slide-in-new {
+        animation: slideInDown 0.5s ease-out forwards;
+    }
+
     @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 `;
 
