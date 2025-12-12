@@ -463,7 +463,7 @@ if (signupForm) {
           }, 5000);
         } else {
           showMessage("🎉 Signup successful! Redirecting...", "success");
-          setTimeout(() => (window.location.href = "/profile.html"), 1200);
+          setTimeout(() => (window.location.href = "/profile"), 1200);
         }
       } else {
         showMessage(data.error || "Signup failed", "error");
@@ -476,8 +476,6 @@ if (signupForm) {
     }
   });
 }
-
-
 
   // --- LOGIN HANDLER (Updated with email verification check) ---
   if (loginForm) {
@@ -517,14 +515,14 @@ if (signupForm) {
             );
             
             setTimeout(() => {
-              window.location.href = "/profile.html";
+              window.location.href = "/profile";
             }, 1500);
             
           } else {
             // Fully verified - proceed normally
             showMessage("✅ Login successful! Redirecting...", "success");
             setTimeout(() => {
-              window.location.href = "/profile.html";
+              window.location.href = "/profile";
             }, 1200);
           }
         } else {
@@ -696,7 +694,7 @@ if (signupForm) {
 // =======================================
 // 📧 AUTO-CHECK VERIFICATION ON PROFILE PAGE
 // =======================================
-if (window.location.pathname.includes('/profile.html')) {
+if (window.location.pathname.includes('/profile')) {
   document.addEventListener('DOMContentLoaded', async () => {
     // Wait a bit for session to load
     setTimeout(async () => {

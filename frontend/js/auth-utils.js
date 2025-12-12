@@ -375,7 +375,7 @@ function validateSession() {
     sessionStorage.removeItem('__logout_timestamp');
     
     // If on protected page, redirect
-    const protectedPages = ['/profile.html', '/messages.html'];
+    const protectedPages = ['/profile', '/messages'];
     const currentPath = window.location.pathname;
     
     if (protectedPages.some(page => currentPath.includes(page))) {
