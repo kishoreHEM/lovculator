@@ -201,11 +201,11 @@ class LoveStories {
         <div class="story-card" data-story-id="${story.id}">
             <div class="story-card-header">
                 <div class="story-user-info">
-                    <a href="/profile.html?user=${encodeURIComponent(authorUsername)}" class="story-user-link">
+                    <a href="/profile/${encodeURIComponent(authorUsername)}" class="story-user-link">
                         <img src="${authorAvatar}" alt="${authorName}" class="story-avatar" />
                     </a>
                     <div class="story-user-details">
-                        <a href="/profile.html?user=${encodeURIComponent(authorUsername)}" class="story-username-link">
+                        <a href="/profile/${encodeURIComponent(authorUsername)}" class="story-username-link">
                             <h4 class="story-username">${authorName}</h4>
                         </a>
                         <span class="story-date">${date}</span>
@@ -269,7 +269,6 @@ class LoveStories {
                 </div>
             </div>
             
-            <!-- COMMENTS SECTION -->
             <div class="comments-section hidden" id="comments-${story.id}">
                 <div class="comment-form">
                     <input type="text" class="comment-input" placeholder="Add a comment..." 
@@ -277,13 +276,11 @@ class LoveStories {
                     <button class="comment-submit">Post</button>
                 </div>
                 <div class="comments-list" id="comments-list-${story.id}">
-                    <!-- Comments will be loaded by social-features.js -->
-                </div>
+                    </div>
             </div>
         </div>
     `;
     }
-
     getEmptyStateHTML() {
         return `
             <div class="empty-state">

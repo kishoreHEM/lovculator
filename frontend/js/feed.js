@@ -109,11 +109,11 @@ function createPostCard(post) {
 
     const isOwner = window.currentUserId && (parseInt(post.user_id) === parseInt(window.currentUserId));
 
-    // ✅ FIXED HTML STRUCTURE BELOW
+    // ✅ FIXED: Uses Clean URLs directly (No Redirect needed)
     card.innerHTML = `
         <div class="post-header">
             <div class="post-user-info">
-                <a href="/profile.html?user=${encodeURIComponent(post.username)}" class="post-user-link">
+                <a href="/profile/${encodeURIComponent(post.username)}" class="post-user-link">
                     <img 
                         src="${avatar}" 
                         class="post-avatar" 
@@ -122,7 +122,7 @@ function createPostCard(post) {
                     />
                 </a>
                 <div class="post-user-details">
-                    <a href="/profile.html?user=${encodeURIComponent(post.username)}" class="post-username-link">
+                    <a href="/profile/${encodeURIComponent(post.username)}" class="post-username-link">
                         <h4 class="post-username">${post.display_name || post.username}</h4>
                     </a>
                     <span class="post-time">${timeAgo}</span>

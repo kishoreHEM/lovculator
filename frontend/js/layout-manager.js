@@ -42,7 +42,7 @@ class LayoutManager {
         const msgBtn = document.getElementById("messagesBtn");
         if (msgBtn) {
             msgBtn.addEventListener("click", () => {
-                window.location.href = "/messages.html";
+                window.location.href = "/messages";
             });
         }
 
@@ -50,7 +50,7 @@ class LayoutManager {
         if (logoutBtn) {
             logoutBtn.addEventListener("click", async () => {
                 await fetch("/api/auth/logout", { method: "POST", credentials: "include" });
-                window.location.href = "/login.html";
+                window.location.href = "/login";
             });
         }
     }
@@ -242,10 +242,10 @@ class LayoutManager {
             this.loadHomeContent();
         } else if (path === "/love-calculator") {
             this.loadLoveCalculator();
-        } else if (path === "/love-stories.html") {
+        } else if (path === "/love-stories") {
             this.loadLoveStories();
-        } else if (path === "/notifications.html") {
-            window.location.href = "/notifications.html";
+        } else if (path === "/notifications") {
+            window.location.href = "/notifications";
         } else {
             window.location.href = path;
         }
@@ -280,7 +280,7 @@ class LayoutManager {
             <div class="content-section">
                 <h2>💑 Love Calculator</h2>
                 <p>Calculate your love compatibility!</p>
-                <button class="btn-primary" onclick="window.location.href='/love-calculator.html'">
+                <button class="btn-primary" onclick="window.location.href='/love-calculator'">
                     Go to Love Calculator
                 </button>
             </div>
@@ -295,7 +295,7 @@ class LayoutManager {
             <div class="content-section">
                 <h2>📖 Love Stories</h2>
                 <p>Beautiful stories from our community.</p>
-                <button class="btn-primary" onclick="window.location.href='/love-stories.html'">
+                <button class="btn-primary" onclick="window.location.href='/love-stories'">
                     Browse Stories
                 </button>
             </div>

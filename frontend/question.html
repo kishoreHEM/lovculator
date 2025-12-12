@@ -68,7 +68,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const navItems = document.querySelectorAll('.nav-icon-item, .sidebar-item');
     navItems.forEach(item => {
         item.classList.remove('active');
-        if (item.getAttribute('href') === '/answers.html' || item.textContent.includes('Answers')) {
+        if (item.getAttribute('href') === '/answer' || item.textContent.includes('Answers')) {
             item.classList.add('active');
         }
     });

@@ -107,42 +107,68 @@
         this.showLoading("profileInfoContainer");
         this.showLoading("userStoriesContainer");
 
-        // load session (if any)
+        // 1. Load current logged-in user session
         await this.loadCurrentSession();
 
+        // 2. Determine which profile to show
         const params = new URLSearchParams(window.location.search);
-        const usernameParam = params.get("user");
+        let usernameParam = params.get("user");
 
+        // ✅ FALLBACK: If ?user= is missing, check path (e.g. /profile/john)
+        if (!usernameParam) {
+            const pathParts = window.location.pathname.split('/').filter(Boolean);
+            const profileIndex = pathParts.indexOf('profile');
+            if (profileIndex !== -1 && pathParts[profileIndex + 1]) {
+                usernameParam = decodeURIComponent(pathParts[profileIndex + 1]);
+            }
+        }
+
+        // 3. Decide: Show "Other User" or "Me"
         if (usernameParam && (!this.currentUser || usernameParam !== this.currentUser.username)) {
-          // viewing another user's profile
+          // Case A: Viewing someone else
           const other = await this.fetchUserByUsername(usernameParam);
-          if (!other) return this.handleNotFound();
+          
+          if (!other) {
+             return this.handleNotFound();
+          }
+          
           this.viewedUser = other;
+          // Check if I am actually viewing my own profile via URL
           this.isOwnProfile = this.currentUser && this.currentUser.id === other.id;
+          
         } else if (this.currentUser) {
-          // viewing own profile
-          // fetch fresh profile for current user (use username if available)
+          // Case B: No param, or param matches me -> Show my own profile
+          // Fetch fresh data to ensure we have latest stats
           const fresh = await this.fetchUserById(this.currentUser.id);
           this.viewedUser = fresh || this.currentUser;
           this.isOwnProfile = true;
+          
         } else {
-          // not logged in and no username specified
-          // redirect to login (or show message)
-          // We'll show an unauthorized message
+          // Case C: Not logged in AND no user specified
           return this.handleUnauthorized();
         }
 
+        // 4. Render the page
         this.renderProfileDetails(this.viewedUser, this.isOwnProfile);
         await this.loadUserStories(this.viewedUser.id);
 
-        // attach tabs, edit handlers, follow handlers
+        // 5. Attach Event Handlers
         this.attachTabHandlers();
-        this.attachEditProfileHandlers();
-        this.attachAvatarUploadHandler();
-        this.attachGlobalMessageButtonHandler();
         
-        // Explicitly attach logout handler here to ensure it catches elements rendered
-        this.attachLogoutHandler();
+        // Only attach edit handlers if it's MY profile
+        if (this.isOwnProfile) {
+            this.attachEditProfileHandlers();
+            this.attachAvatarUploadHandler();
+            this.attachLogoutHandler();
+        } else {
+            // If viewing someone else, hide the edit/logout buttons if they exist in HTML
+            const editBtn = document.getElementById("editProfileBtn");
+            const logoutBtn = document.getElementById("profileCardLogoutBtn");
+            if (editBtn) editBtn.style.display = 'none';
+            if (logoutBtn) logoutBtn.style.display = 'none';
+        }
+        
+        this.attachGlobalMessageButtonHandler();
 
       } catch (err) {
         console.error("❌ Profile init failed:", err);
@@ -718,11 +744,11 @@
         <div class="story-card" data-story-id="${id}">
           <div class="story-card-header">
             <div class="story-user-info">
-              <a href="/profile.html?user=${encodeURIComponent(authorUsername)}" class="story-user-link">
+              <a href="/profile/${encodeURIComponent(authorUsername)}" class="story-user-link">
                 <img src="${avatar}" alt="${authorName}" class="story-avatar" onerror="this.onerror=null; this.src='/images/default-avatar.png'" />
               </a>
               <div class="story-user-details">
-                <a href="/profile.html?user=${encodeURIComponent(authorUsername)}" class="story-username-link">
+                <a href="/profile/${encodeURIComponent(authorUsername)}" class="story-username-link">
                   <h4 class="story-username">${authorName}</h4>
                 </a>
                 <span class="story-date">${date}</span>
@@ -838,7 +864,7 @@
           const bio = user.bio || user.user?.bio || "";
           return `
             <div class="user-card" data-user-id="${uid}">
-              <a href="/profile.html?user=${encodeURIComponent(username)}">
+              <a href="/profile/${encodeURIComponent(username)}">
                 <img src="${avatar}" alt="${name}" class="user-avatar" onerror="this.onerror=null; this.src='/images/default-avatar.png'" />
               </a>
               <div class="user-info">
@@ -970,7 +996,7 @@
             const message = it.message || it.text || it.summary || "";
             let link = "";
             if (it.type === "story_like" && it.story_id) link = `<a href="/stories.html?story=${it.story_id}" class="activity-link">View Story</a>`;
-            else if (it.type === "new_follower" && it.actor_username) link = `<a href="/profile.html?user=${encodeURIComponent(it.actor_username)}" class="activity-link">View</a>`;
+            else if (it.type === "new_follower" && it.actor_username) link = `<a href="/profile/${encodeURIComponent(it.actor_username)}" class="activity-link">View</a>`;
             else link = `<a href="/activity.html" class="activity-link">Details</a>`;
             return `<div class="activity-item"><div class="activity-message">${message}</div><div class="activity-meta">${link} • <span>${date}</span></div></div>`;
           })

@@ -6,7 +6,16 @@ if (!window.API_BASE) {
 }
 
 // Get slug from URL
-const slug = new URLSearchParams(window.location.search).get("slug");
+// Get slug from URL (Handles "/question/slug" or fallback to "?slug=")
+let slug = new URLSearchParams(window.location.search).get("slug");
+
+if (!slug) {
+    const pathParts = window.location.pathname.split('/').filter(Boolean);
+    // If URL is /question/my-cool-title, slug is the last part
+    if (pathParts.includes('question')) {
+        slug = pathParts[pathParts.length - 1];
+    }
+}
 
 // Make functions globally available
 window.loadQuestion = async function() {
@@ -167,7 +176,7 @@ function showNotFound(message = "Question not found") {
             <div class="not-found">
                 <h2>${message}</h2>
                 <p>The question you're looking for doesn't exist or has been removed.</p>
-                <a href="/answers.html" class="back-btn">Back to Questions</a>
+                <a href="/answer" class="back-btn">Back to Questions</a>
             </div>
         `;
     }
@@ -183,7 +192,7 @@ function renderAnswerList(question, answers) {
     if (answers.length === 0) {
         answersContainer.innerHTML = `
             <div class="empty-answers">
-                <p>No answers yet. Be the first to answer! 💭</p>
+                <p>No answer yet. Be the first to answer! 💭</p>
             </div>
         `;
         return;
@@ -211,7 +220,7 @@ function renderAnswerList(question, answers) {
                              onerror="this.src='/images/default-avatar.png'">
                         <div class="answer-user-info">
                             <div class="answer-user-name">
-                                <a href="/profile.html?user=${encodeURIComponent(userName)}" class="user-link">
+                                <a href="/profile/${encodeURIComponent(userName)}" class="user-link">
                                     ${userName}
                                 </a>
                                 ${userId && userId !== window.currentUserId ? 

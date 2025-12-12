@@ -228,6 +228,19 @@ app.get("/health", (req, res) => {
   });
 });
 
+// 🔥 Redirect *.html → clean URL (EXCEPT components)
+app.get("/*.html", (req, res, next) => {
+  // 🛑 STOP: Do not redirect component files!
+  if (req.path.includes("/components/")) {
+    return next(); // Pass to static middleware to serve the file
+  }
+
+  // Otherwise, redirect pages (e.g. profile.html -> /profile)
+  const clean = req.path.replace(".html", "");
+  return res.redirect(301, clean || "/");
+});
+
+
 //
 // 🔟 STATIC FILES (Frontend & Uploads)
 //
@@ -288,33 +301,36 @@ app.use("/api/follow", followRoutes(pool));
 app.use(trackPageVisit);
 
 //
-// 1️⃣2️⃣ FRONTEND PAGES (HTML files)
+// 1️⃣2️⃣ FRONTEND PAGES (AUTO-MAPPED CLEAN URLS)
 //
-const pages = [
-  "index",
-  "login",
-  "signup",
-  "profile",
-  "love-calculator",
-  "record",
-  "about",
-  "contact",
-  "privacy",
-  "terms",
-  "admin-analytics",
-  "messages",
-];
 
-pages.forEach((p) =>
-  app.get(p === "index" ? "/" : `/${p}`, (req, res) =>
-    res.sendFile(path.join(frontendPath, `${p}.html`))
-  )
-);
+// Get all .html files inside /frontend directory
+const htmlFiles = fs
+  .readdirSync(frontendPath)
+  .filter((file) => file.endsWith(".html"));
 
-// SEO-friendly question page, e.g. /questions/why-love-hurts
-app.get("/questions/:slug", (req, res) => {
+// Example: "profile.html" → "profile"
+htmlFiles.forEach((file) => {
+  const routePath =
+    file === "index.html"
+      ? "/"                       // index → /
+      : "/" + file.replace(".html", "");  // "profile.html" → "/profile"
+
+  app.get(routePath, (req, res) => {
+    res.sendFile(path.join(frontendPath, file));
+  });
+});
+
+// SEO-friendly question page
+app.get("/question/:slug", (req, res) => {
   res.sendFile(path.join(frontendPath, "question.html"));
 });
+
+// 🆕 Clean profile slug route
+app.get("/profile/:username", (req, res) => {
+  res.sendFile(path.join(frontendPath, "profile.html"));
+});
+
 
 //
 // 1️⃣3️⃣ 404 & GLOBAL ERROR HANDLER

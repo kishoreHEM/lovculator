@@ -1,34 +1,45 @@
+// global-header.js
 async function loadGlobalHeader() {
-    try {
-        const container = document.getElementById("global-header");
-        if (!container) return;
+  try {
+    const container = document.getElementById("global-header");
+    if (!container) return;
 
-        const res = await fetch("/components/header.html", { cache: "no-store" });
-        const html = await res.text();
+    // Use relative path so browser uses current origin + protocol
+    const componentPath = "/components/header.html";
 
-        container.innerHTML = html;
+    // Try normal fetch
+    const res = await fetch(componentPath, { cache: "no-store", credentials: "same-origin" });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
 
-        // ⭐ VERY IMPORTANT ⭐
-        // Now that header exists, reattach event listeners
-        if (window.layoutManager && typeof window.layoutManager.rebindHeaderEvents === "function") {
-            window.layoutManager.rebindHeaderEvents();
-        }
+    const html = await res.text();
+    container.innerHTML = html;
 
-        // After loading header.html
-if (window.layoutManager && window.layoutManager.bindMobileMenuToggle) {
-    window.layoutManager.bindMobileMenuToggle();
-}
-
-
-        // Refresh badges AFTER header is ready
-        if (window.layoutManager) {
-            window.layoutManager.refreshNotificationBadge();
-            window.layoutManager.refreshMessageBadge();
-        }
-
-    } catch (err) {
-        console.error("Failed to load global header:", err);
+    // Rebind header events & refresh badges after header is injected
+    if (window.layoutManager && typeof window.layoutManager.rebindHeaderEvents === "function") {
+      window.layoutManager.rebindHeaderEvents();
     }
+    if (window.layoutManager) {
+      window.layoutManager.refreshNotificationBadge();
+      window.layoutManager.refreshMessageBadge();
+    }
+
+  } catch (err) {
+    console.error("Failed to load global header:", err);
+
+    // Fallback: try absolute same-origin URL (useful in some proxy setups)
+    try {
+      const alt = `${location.protocol}//${location.host}/components/header.html`;
+      const r2 = await fetch(alt, { cache: "no-store", credentials: "same-origin" });
+      if (r2.ok) {
+        document.getElementById("global-header").innerHTML = await r2.text();
+        if (window.layoutManager?.rebindHeaderEvents) window.layoutManager.rebindHeaderEvents();
+      } else {
+        console.warn("Fallback fetch failed:", r2.status);
+      }
+    } catch (e2) {
+      console.error("Fallback fetch also failed:", e2);
+    }
+  }
 }
 
 document.addEventListener("DOMContentLoaded", loadGlobalHeader);

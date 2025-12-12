@@ -108,7 +108,7 @@ window.loadQuestions = async function() {
                         </div>
 
                         <!-- Question Text -->
-                        <a href="/question.html?slug=${questionSlug}" class="question-title">
+                        <a href="/question/${questionSlug}" class="question-title">
                             ${questionText}
                         </a>
 
@@ -137,7 +137,7 @@ window.loadQuestions = async function() {
 
                         <!-- Question Actions -->
                         <div class="question-actions">
-                            <a class="answer-btn" href="/question.html?slug=${questionSlug}">
+                            <a class="answer-btn" href="/question/${questionSlug}">
                                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                     <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
                                 </svg>
