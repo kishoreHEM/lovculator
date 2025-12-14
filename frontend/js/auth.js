@@ -458,8 +458,9 @@ if (signupForm) {
           );
 
           setTimeout(() => {
+            // ✅ FIX: Use clean URL directly
             window.location.href =
-              "/verify-pending.html?email=" + encodeURIComponent(email);
+              "/verify-pending?email=" + encodeURIComponent(email);
           }, 5000);
         } else {
           showMessage("🎉 Signup successful! Redirecting...", "success");

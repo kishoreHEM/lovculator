@@ -235,9 +235,13 @@ app.get("/*.html", (req, res, next) => {
     return next(); // Pass to static middleware to serve the file
   }
 
-  // Otherwise, redirect pages (e.g. profile.html -> /profile)
-  const clean = req.path.replace(".html", "");
-  return res.redirect(301, clean || "/");
+  // Remove .html extension
+  const cleanPath = req.path.replace(".html", "");
+  
+  // ✅ FIX: Preserve Query String (e.g. ?token=xyz or ?email=abc)
+  const queryString = req.url.indexOf('?') !== -1 ? req.url.substring(req.url.indexOf('?')) : "";
+  
+  return res.redirect(301, (cleanPath || "/") + queryString);
 });
 
 
