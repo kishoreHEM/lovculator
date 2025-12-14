@@ -1,5 +1,5 @@
-const CACHE_NAME = "lovculator-static-v2.2.0";
-const API_CACHE_NAME = "lovculator-api-v2.2.0";
+const CACHE_NAME = "lovculator-static-v2.3.0";
+const API_CACHE_NAME = "lovculator-api-v2.3.0";
 
 //
 // STATIC PRE-CACHE FILES
@@ -89,43 +89,56 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
-  // 2. HTML Pages: Network First → Cache Fallback → Offline Page
-  if (request.mode === "navigate" || request.destination === "document") {
+  // In the FETCH STRATEGY section, modify the HTML Pages handling:
+if (request.mode === "navigate" || request.destination === "document") {
+    // Check if this is a clean question URL
+    const cleanUrl = new URL(request.url);
+    const isQuestionSlug = cleanUrl.pathname.startsWith("/question/") && 
+                          cleanUrl.pathname.split('/').filter(Boolean).length > 1;
+    
+    // Create a cache key that preserves the original clean URL
+    const cacheKey = isQuestionSlug ? '/question.html' : request;
+    
     event.respondWith(
-      fetch(request)
-        .then((response) => {
-          if (!response || !response.ok) {
-             throw new Error("Network error");
-          }
-          
-          // ✅ FIX: Clone IMMEDIATELY before the stream is used
-          const responseToCache = response.clone();
-          
-          caches.open(CACHE_NAME).then((cache) => {
-             cache.put(request, responseToCache); 
-          });
-          
-          return response;
-        })
-        .catch(async () => {
-          const cachedResponse = await caches.match(request, { ignoreSearch: true });
-          if (cachedResponse) return cachedResponse;
-
-          const pathResponse = await caches.match(url.pathname);
-          if (pathResponse) return pathResponse;
-
-          const offlineResponse = await caches.match("/offline.html");
-          if (offlineResponse) return offlineResponse;
-
-          return new Response("You are offline.", {
-            status: 503,
-            headers: { "Content-Type": "text/plain" }
-          });
-        })
+        fetch(request)
+            .then((response) => {
+                if (!response || !response.ok) {
+                    throw new Error("Network error");
+                }
+                
+                // Clone response before caching
+                const responseToCache = response.clone();
+                
+                caches.open(CACHE_NAME).then((cache) => {
+                    // Cache with the clean URL as key
+                    cache.put(request, responseToCache);
+                });
+                
+                return response;
+            })
+            .catch(async () => {
+                // Try to get from cache using original request
+                const cachedResponse = await caches.match(request);
+                if (cachedResponse) return cachedResponse;
+                
+                // For question slugs, try to serve question.html
+                if (isQuestionSlug) {
+                    const questionHtml = await caches.match('/question.html');
+                    if (questionHtml) return questionHtml;
+                }
+                
+                // Try offline page
+                const offlineResponse = await caches.match("/offline.html");
+                if (offlineResponse) return offlineResponse;
+                
+                return new Response("You are offline.", {
+                    status: 503,
+                    headers: { "Content-Type": "text/plain" }
+                });
+            })
     );
     return;
-  }
-
+}
   // 3. Static Assets (JS/CSS/Images): Cache First -> Network Fallback
   if (["style", "script", "image", "font"].includes(request.destination)) {
     event.respondWith(
