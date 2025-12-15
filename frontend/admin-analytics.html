@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>User Profile - Lovculator 💖</title>
+  <title>analytics - Lovculator</title>
   <meta name="description" content="View your Lovculator profile — love stories, followers, and connections." />
   <meta name="theme-color" content="#ff4b8d" />
 
@@ -19,25 +19,11 @@
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
-<!-- Header -->
 <header class="header">
-  <nav class="navbar">
+  <nav class="navbar" style="justify-content: center;">
     <div class="nav-brand">
-      <a href="/" class="logo" aria-label="Lovculator Home">💖 Lovculator</a>
+      <a href="/" class="logo" aria-label="Lovculator Home">Lovculator Admin</a>
     </div>
-
-    <!-- Desktop menu -->
-    <ul class="nav-menu">
-      <li class="nav-item"><a href="/signup" class="nav-link">Signup</a></li>
-      <li class="nav-item"><a href="/login" class="nav-link">Login</a></li>
-      <li class="nav-item"><a href="/love-calculator" class="nav-link active">Love Calculator</a></li>
-    </ul>
-
-    <!-- Mobile elements -->
-    <button class="menu-toggle" aria-label="Toggle menu">
-      <span></span><span></span><span></span>
-    </button>
-    <div class="mobile-menu-overlay"></div>
   </nav>
 </header>
 
@@ -148,30 +134,33 @@
   </div>
 
   <script>
-    // -----------------------------------------
-    // API Base Setup
-    // -----------------------------------------
     const API_DOMAIN = window.location.hostname.includes("localhost")
       ? "http://localhost:3001"
       : "https://lovculator.com";
 
-    // -----------------------------------------
-    // Load Analytics Function
-    // -----------------------------------------
     async function loadAnalytics() {
-      document.body.insertAdjacentHTML('beforeend', '<p class="loading">Loading analytics data...</p>');
+      // Show loading
+      const loadingEl = document.createElement('p');
+      loadingEl.className = 'loading';
+      loadingEl.textContent = 'Loading analytics data...';
+      document.body.appendChild(loadingEl);
+
       try {
+        // Fetch all data in parallel
         const [statsRes, recentRes, dailyRes] = await Promise.all([
           fetch(`${API_DOMAIN}/api/analytics/stats`, { credentials: 'include' }),
           fetch(`${API_DOMAIN}/api/analytics/recent`, { credentials: 'include' }),
           fetch(`${API_DOMAIN}/api/analytics/daily`, { credentials: 'include' })
         ]);
 
+        // Check for API errors (like 500 or 401)
+        if (!statsRes.ok || !recentRes.ok || !dailyRes.ok) {
+          throw new Error("One or more API requests failed. Check server logs.");
+        }
+
         const stats = await statsRes.json();
         const recent = await recentRes.json();
         const daily = await dailyRes.json();
-
-        document.querySelector('.loading')?.remove();
 
         // 1. Daily Chart
         new Chart(document.getElementById("dailyChart"), {
@@ -200,63 +189,68 @@
               backgroundColor: "#ff4b8d",
               borderRadius: 6
             }]
+          },
+          options: {
+            indexAxis: 'y', // Horizontal bar chart is better for paths
           }
         });
 
         // 3. Recent List
         const list = document.getElementById("recentVisits");
         list.innerHTML = "";
-        recent.forEach(v => {
-          const li = document.createElement("li");
-          li.innerHTML = `<strong>${v.path}</strong><span>${new Date(v.visit_time).toLocaleString()}</span>`;
-          list.appendChild(li);
-        });
+        if (recent.length === 0) {
+           list.innerHTML = "<li>No recent visits found.</li>";
+        } else {
+           recent.forEach(v => {
+             const li = document.createElement("li");
+             const time = new Date(v.visit_time).toLocaleTimeString();
+             const userDisplay = v.username ? `👤 ${v.username}` : 'Guest';
+             li.innerHTML = `
+               <div style="display:flex; flex-direction:column;">
+                 <strong>${v.path}</strong>
+                 <small>${userDisplay}</small>
+               </div>
+               <span>${time}</span>
+             `;
+             list.appendChild(li);
+           });
+        }
 
       } catch (err) {
-        console.error("Analytics Error:", err);
-        // Only alert if we actually failed to load data
-        // alert("Failed to load charts. Check console."); 
+        console.error("Analytics Load Error:", err);
+        const errDiv = document.createElement('div');
+        errDiv.style.color = 'red';
+        errDiv.style.textAlign = 'center';
+        errDiv.innerHTML = `<p>⚠️ Failed to load data. Make sure you are an Admin and the database table exists.</p>`;
+        document.body.appendChild(errDiv);
+      } finally {
+        // Always remove loading text
+        if(loadingEl) loadingEl.remove();
       }
     }
 
-    // -----------------------------------------
-    // ✅ ADMIN CHECK (Debug Version)
-    // -----------------------------------------
     document.addEventListener("DOMContentLoaded", async () => {
+      // 1. Check Admin
       try {
-        console.log("Checking admin status...");
-        
-        const response = await fetch(`${API_DOMAIN}/api/auth/me`, { 
-          credentials: "include",
-          cache: "no-store" // Force fresh request
-        });
-        
+        const response = await fetch(`${API_DOMAIN}/api/auth/me`, { credentials: "include" });
+        if (!response.ok) throw new Error("Not logged in");
         const data = await response.json();
-        console.log("Admin Check Response:", data);
+        
+        // Handle different wrapper formats { user: ... } vs { data: { user: ... } }
+        const user = data.user || data.data?.user;
 
-        // ✅ FIXED LOGIC: Look inside data.user
-        const user = data.user || null;
-
-        if (!user) {
-          alert("Debug: User is null. You are not logged in.");
-          window.location.href = "/login.html";
-          return;
+        if (!user || user.is_admin !== true) {
+           alert("⛔ Access Denied: Admins Only");
+           window.location.href = "/";
+           return;
         }
 
-        if (user.is_admin !== true) {
-          // DEBUG: Show why it failed
-          alert(`Debug Access Denied.\nUsername: ${user.username}\nIs Admin: ${user.is_admin}`);
-          window.location.href = "/login.html";
-          return;
-        }
-
-        // If we get here, you are an admin!
-        console.log("✅ Admin verified. Loading charts...");
+        // 2. Load Data if Admin
         await loadAnalytics();
 
       } catch (err) {
-        console.error("Check Failed:", err);
-        alert("Error checking admin status: " + err.message);
+        console.log("Auth check failed", err);
+        window.location.href = "/login.html";
       }
     });
   </script>

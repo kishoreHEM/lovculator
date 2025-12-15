@@ -1,43 +1,31 @@
-// backend/routes/analytics.js
 import express from "express";
 import { checkAdmin } from "../middleware/checkAdmin.js";
 
 const router = express.Router();
 
 export default (pool) => {
-  /**
-   * ==============================================================
-   * 1️⃣  Most Visited Pages (Top 10)
-   * Endpoint: GET /api/analytics/stats
-   * ==============================================================
-   */
-  // 📊 Get total visits per page (Admin only)
+  // 1️⃣ Most Visited Pages
   router.get("/stats", checkAdmin, async (req, res) => {
     try {
       const result = await pool.query(`
-        SELECT path, COUNT(*) AS total_visits
+        SELECT path, COUNT(*)::int AS total_visits
         FROM page_visits
         GROUP BY path
         ORDER BY total_visits DESC
+        LIMIT 20
       `);
       res.json(result.rows);
     } catch (err) {
-      console.error("⚠️ Analytics fetch error:", err.message);
-      res.status(500).json({ error: "Failed to fetch analytics" });
+      console.error("Stats error:", err.message);
+      res.json([]); // Return empty array instead of crashing
     }
   });
 
-  /**
-   * ==============================================================
-   * 2️⃣  Recent Visits (Latest 10)
-   * Endpoint: GET /api/analytics/recent
-   * ==============================================================
-   */
-  // 🕒 Get latest 10 visits (Admin only)
+  // 2️⃣ Recent Visits
   router.get("/recent", checkAdmin, async (req, res) => {
     try {
       const result = await pool.query(`
-        SELECT pv.path, pv.ip_address, pv.user_agent, pv.visit_time, u.username
+        SELECT pv.path, pv.visit_time, u.username
         FROM page_visits pv
         LEFT JOIN users u ON pv.user_id = u.id
         ORDER BY pv.visit_time DESC
@@ -45,35 +33,29 @@ export default (pool) => {
       `);
       res.json(result.rows);
     } catch (err) {
-      console.error("⚠️ Recent visits fetch error:", err.message);
-      res.status(500).json({ error: "Failed to fetch recent visits" });
+      console.error("Recent error:", err.message);
+      res.json([]); 
     }
   });
 
-
-  /**
-   * ==============================================================
-   * 3️⃣  Daily Visit Trends (Last 14 days)
-   * Endpoint: GET /api/analytics/daily
-   * ==============================================================
-   */
-  // 📅 Get daily visits (last 14 days) - ADD checkAdmin HERE
-router.get("/daily", checkAdmin, async (req, res) => { // <--- Added checkAdmin
-  try {
-    const result = await pool.query(`
-      SELECT DATE(visit_time) AS visit_date, COUNT(*) AS visits
-      FROM page_visits
-      WHERE visit_time >= NOW() - INTERVAL '14 days'
-      GROUP BY visit_date
-      ORDER BY visit_date ASC
-    `);
-    res.json(result.rows);
-  } catch (err) {
-    console.error("⚠️ Daily visits fetch error:", err.message);
-    res.status(500).json({ error: "Failed to fetch daily visits" });
-  }
-});
-
+  // 3️⃣ Daily Trends (Fixed SQL Syntax)
+  router.get("/daily", checkAdmin, async (req, res) => {
+    try {
+      // ✅ FIX: Using GROUP BY 1 (positional) is safer for aliases in Postgres
+      // ✅ FIX: Extended interval to 60 days so you can see your old data
+      const result = await pool.query(`
+        SELECT TO_CHAR(visit_time, 'YYYY-MM-DD') AS visit_date, COUNT(*)::int AS visits
+        FROM page_visits
+        WHERE visit_time >= NOW() - INTERVAL '60 days' 
+        GROUP BY 1
+        ORDER BY 1 ASC
+      `);
+      res.json(result.rows);
+    } catch (err) {
+      console.error("Daily error:", err.message);
+      res.json([]); 
+    }
+  });
 
   /**
    * ==============================================================

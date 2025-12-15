@@ -159,6 +159,7 @@ app.use(
           "https://lovculator.com",
           "https://www.lovculator.com",
           "http://localhost:3001",
+          "https://cdn.jsdelivr.net",
         ],
 
         // ❗ Important: allow inline event handlers (onclick, etc.)
@@ -183,6 +184,7 @@ app.use(
           "wss://lovculator.com",
           "ws://localhost:3001",
           process.env.FRONTEND_URL,
+          "https://cdn.jsdelivr.net",
         ].filter(Boolean),
 
         frameSrc: ["'self'"],
