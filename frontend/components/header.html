@@ -1,6 +1,189 @@
-<header class="main-header">
-  <div class="header-left">
+<style>
+  /* --- Base / Desktop Styles --- */
+  .main-header {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    z-index: 1000;
     
+    /* CRITICAL FIX 1: Allow dropdowns to hang outside the header */
+    overflow: visible; 
+
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.8rem 1.5rem;
+    background-color: #ffffff;
+    border-bottom: 1px solid #eee;
+    box-sizing: border-box;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+  }
+
+  .header-left {
+    display: flex;
+    align-items: center;
+  }
+
+  .logo {
+    font-weight: 800;
+    font-size: 1.6rem;
+    color: #222;
+    text-decoration: none;
+    letter-spacing: -0.5px;
+  }
+
+  .header-nav-center {
+    display: flex;
+    gap: 20px;
+  }
+
+  .header-right {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    /* CRITICAL FIX 2: Ensure this container doesn't clip the dropdown */
+    overflow: visible;
+    position: relative;
+  }
+
+  /* Icons Base Style */
+  .nav-icon-item, .header-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #5f6368;
+    text-decoration: none;
+    padding: 10px;
+    border-radius: 50%;
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+
+  .nav-icon-item.active {
+    color: #e91e63;
+    background-color: transparent;
+  }
+  
+  .nav-icon-item.active svg {
+    stroke-width: 2.5px;
+  }
+
+  .nav-icon-item:hover, .header-icon:hover {
+    background-color: #f5f5f5;
+    color: #222;
+  }
+
+  .notification-badge, .message-badge {
+    position: absolute;
+    top: 6px;
+    right: 6px;
+    width: 8px;
+    height: 8px;
+    background-color: #ff3b30;
+    border-radius: 50%;
+    border: 1px solid #fff;
+  }
+  
+  /* Generic Hidden Utility */
+  .hidden { display: none; }
+
+  .user-avatar {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    object-fit: cover;
+    cursor: pointer;
+    border: 1px solid #eee;
+  }
+
+  /* --- DROPDOWN FIXES (UPDATED) --- */
+  .user-menu { 
+    position: relative; 
+    /* CRITICAL FIX 3: Ensure parent is relative for absolute positioning */
+  }
+
+  .user-dropdown {
+    position: absolute;
+    right: 0;
+    top: 50px; /* Adjusted to sit nicely below avatar */
+    width: 200px;
+    background: #ffffff;
+    border: 1px solid #eee;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.15); /* Stronger shadow */
+    border-radius: 12px;
+    padding: 8px 0;
+    
+    /* CRITICAL FIX 4: Ensure it floats on top of everything */
+    z-index: 9999; 
+    
+    /* Default state is hidden */
+    display: none;
+  }
+
+  /* CRITICAL FIX 5: Use !important to override .hidden class */
+  .user-dropdown.show { 
+    display: block !important; 
+  } 
+
+  .user-dropdown a {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 20px;
+    color: #333;
+    text-decoration: none;
+    font-size: 14px;
+    transition: background 0.2s;
+  }
+  .user-dropdown a:hover { 
+    background-color: #f9f9f9; 
+    color: #e91e63;
+  }
+
+  /* --- MOBILE LAYOUT FIXES --- */
+  @media (max-width: 768px) {
+    .main-header {
+      flex-wrap: wrap;
+      padding: 12px 16px 0 16px; 
+      gap: 0; 
+      height: auto;
+    }
+
+    .header-left {
+      order: 1;
+      flex: 1;
+      margin-bottom: 8px; 
+    }
+
+    .header-right {
+      order: 2;
+      margin-bottom: 8px;
+    }
+
+    .header-nav-center {
+      order: 3;
+      width: 100%;
+      justify-content: space-between;
+      border-top: 1px solid #f0f0f0; 
+      padding: 8px 4px 12px 4px; 
+      margin-left: -16px; 
+      margin-right: -16px;
+      width: calc(100% + 32px); 
+      background-color: #fff; 
+    }
+
+    .nav-icon-item {
+      flex: 1;
+      border-radius: 8px;
+    }
+  }
+</style>
+
+<header class="main-header" id="global-header-content">
+  <div class="header-left">
     <a href="/" class="logo">Lovculator</a>
   </div>
 

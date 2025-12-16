@@ -1,142 +1,218 @@
+/* friends.css - Fully Responsive Grid Layout */
+
 body {
-    font-family: "Inter", "Poppins", sans-serif;
-    background: #f7f7f7;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    background-color: #f0f2f5;
     margin: 0;
     padding: 0;
-    color: #222;
+    color: #050505;
 }
 
-.page-wrapper {
-    max-width: 850px;
+/* --- Layout Containers --- */
+.app-container {
+    max-width: 1200px;
     margin: 0 auto;
-    padding: 20px;
+    /* Sufficient padding to clear fixed header */
+    padding-top: 80px; 
+    padding-bottom: 60px;
+    box-sizing: border-box;
+}
+
+.main-content-area {
+    width: 100%;
+    padding: 0 20px;
+    box-sizing: border-box;
 }
 
 .page-title {
-    text-align: center;
     font-size: 1.8rem;
     font-weight: 700;
-    color: #ff4b8d;
+    color: #1c1e21;
     margin-bottom: 20px;
 }
 
-/* Tabs */
+/* --- Responsive Tabs (Scrollable on Mobile) --- */
 .tabs {
     display: flex;
-    background: #fff;
-    border-radius: 12px;
-    padding: 10px;
-    margin-bottom: 25px;
-    border: 1px solid #ddd;
+    gap: 10px;
+    margin-bottom: 20px;
+    overflow-x: auto; /* Allow scrolling on very small screens */
+    white-space: nowrap;
+    padding-bottom: 5px; /* Space for scrollbar if visible */
+    scrollbar-width: none; /* Hide scrollbar Firefox */
 }
+.tabs::-webkit-scrollbar { display: none; } /* Hide scrollbar Chrome */
 
 .tab {
-    flex: 1;
-    text-align: center;
-    padding: 12px;
-    border-radius: 8px;
-    cursor: pointer;
+    padding: 8px 16px;
+    border-radius: 20px;
     font-weight: 600;
-    color: #555;
+    font-size: 0.95rem;
+    color: #65676b;
+    background: #e4e6eb;
+    cursor: pointer;
+    border: none;
     transition: 0.2s;
+    flex-shrink: 0; /* Prevent tabs from squishing */
 }
 
 .tab.active {
-    background: #ff4b8d;
+    background: #e91e63; /* Lovculator Pink */
     color: #fff;
 }
 
-/* User cards */
-.user-card {
-    background: #fff;
-    padding: 16px;
-    border-radius: 12px;
-    border: 1px solid #ddd;
-    margin-bottom: 16px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    box-shadow: 0 1px 4px rgba(0,0,0,0.07);
+.tab:hover:not(.active) {
+    background-color: #d8dadf;
 }
 
-.user-info {
+/* --- THE GRID SYSTEM --- */
+.user-list {
+    display: grid;
+    /* Desktop Default: Auto-fit columns, roughly 200px wide */
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 12px;
+}
+
+/* --- User Card Styles --- */
+.user-card {
+    background: #fff;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+    border: 1px solid #ddd;
     display: flex;
-    align-items: center;
-    gap: 15px;
+    flex-direction: column;
+    height: 100%; /* Match height of neighbors */
+    position: relative;
+}
+
+.user-card:hover {
+    box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+    border-color: #ccc;
+}
+
+/* Image Aspect Ratio Wrapper */
+.card-image-wrapper {
+    width: 100%;
+    aspect-ratio: 1 / 1; /* Perfect Square */
+    background-color: #f0f2f5;
+    position: relative;
 }
 
 .user-avatar {
-    width: 54px;
-    height: 54px;
-    border-radius: 50%;
+    width: 100%;
+    height: 100%;
     object-fit: cover;
-    border: 2px solid #ff4b8d30;
+    display: block;
+}
+
+/* Info Section */
+.user-info {
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    flex-grow: 1; /* Pushes content to fill space */
+    justify-content: space-between;
 }
 
 .user-details {
-    display: flex;
-    flex-direction: column;
+    margin-bottom: 12px;
 }
 
 .user-name {
-    font-size: 1rem;
+    font-size: 1.05rem;
     font-weight: 600;
+    color: #050505;
+    margin-bottom: 2px;
+    line-height: 1.3;
+    
+    /* Truncate text if too long */
+    display: -webkit-box;
+    -webkit-line-clamp: 2; /* Show max 2 lines */
+    -webkit-box-orient: vertical;
+    overflow: hidden;
 }
 
 .user-username {
-    color: #777;
     font-size: 0.85rem;
+    color: #65676b;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
+/* Button Styling */
 .follow-btn, .unfollow-btn {
-    padding: 8px 16px;
-    border-radius: 18px;
+    width: 100%;
+    padding: 8px 0;
+    border-radius: 6px;
     font-size: 0.9rem;
     font-weight: 600;
     cursor: pointer;
-    transition: 0.2s;
+    border: none;
+    transition: background 0.1s;
 }
 
 .follow-btn {
-    border: 1px solid #ff4b8d;
-    background: #ff4b8d;
-    color: #fff;
+    background-color: #e91e63; /* Pink */
+    color: white;
 }
-
-.follow-btn:hover {
-    background: #ff6ba1;
-}
+.follow-btn:hover { background-color: #d81b60; }
 
 .unfollow-btn {
-    border: 1px solid #aaa;
-    background: #f2f2f2;
-    color: #444;
+    background-color: #e4e6eb; /* Light Gray */
+    color: #050505;
 }
+.unfollow-btn:hover { background-color: #d8dadf; }
 
-.unfollow-btn:hover {
-    background: #e3e3e3;
-}
-
-/* Empty state */
-.empty-state {
+/* States */
+.loading-spinner, .empty-state {
+    grid-column: 1 / -1; /* Span full width */
     text-align: center;
     padding: 40px;
-    color: #777;
-    background: #fff;
-    border-radius: 12px;
-    border: 1px solid #ddd;
-    margin-top: 25px;
+    color: #65676b;
 }
 
-@media (max-width: 600px) {
-    .user-card {
-        flex-direction: column;
-        text-align: center;
-        gap: 10px;
+.empty-state {
+    background: #fff;
+    border-radius: 8px;
+    border: 1px solid #eee;
+    padding: 60px 20px;
+}
+
+/* --- MOBILE SPECIFIC STYLES --- */
+@media (max-width: 768px) {
+    .app-container {
+        /* Reduce top padding slightly for mobile header */
+        padding-top: 70px; 
     }
 
-    .user-info {
-        flex-direction: column;
+    .main-content-area {
+        padding: 0 10px; /* Smaller side margins on mobile */
     }
-    
+
+    .page-title {
+        font-size: 1.5rem; /* Smaller title */
+        margin-bottom: 15px;
+    }
+
+    /* GRID FIX: Force 2 Columns on Mobile */
+    .user-list {
+        grid-template-columns: 1fr 1fr; /* Two equal columns */
+        gap: 8px; /* Tighter gap */
+    }
+
+    /* Smaller adjustments for tight spaces */
+    .user-info {
+        padding: 8px; /* Less padding inside card */
+    }
+
+    .user-name {
+        font-size: 0.95rem;
+    }
+
+    .follow-btn, .unfollow-btn {
+        padding: 6px 0; /* Smaller button */
+        font-size: 0.85rem;
+    }
 }

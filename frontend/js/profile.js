@@ -592,7 +592,7 @@
       // FIX: Select ALL logout buttons (Header ID, Profile Card ID, classes, links)
       // This handles the conflict where header ID usually wins
       const logoutButtons = document.querySelectorAll(
-        "#logoutBtn, #profileCardLogoutBtn, .profile-logout-btn, a[href='/logout'], a[href='/logout.html']"
+        "#logoutBtn, #profileCardLogoutBtn, .profile-logout-btn, a[href='/logout'], a[href='/logout']"
       );
       
       if (!logoutButtons || logoutButtons.length === 0) return;
@@ -636,16 +636,16 @@
             }
 
             // 6️⃣ Prevent history back showing profile cached page
-            window.history.pushState(null, null, "/login.html");
-            window.history.replaceState(null, null, "/login.html");
+            window.history.pushState(null, null, "/login");
+            window.history.replaceState(null, null, "/login");
 
             // 7️⃣ Redirect with cache busting so browser reloads clean
             const cb = Date.now();
-            window.location.replace(`/login.html?logout=${cb}`);
+            window.location.replace(`/login?logout=${cb}`);
 
           } catch (err) {
             console.error("❌ Logout error", err);
-            window.location.replace(`/login.html?fail=${Date.now()}`);
+            window.location.replace(`/login?fail=${Date.now()}`);
           }
         });
       });
@@ -905,7 +905,7 @@
     async toggleFollow(targetId, buttonEl) {
       if (!window.currentUserId) {
         showNotification("Please log in to follow", "error");
-        setTimeout(() => (window.location.href = "/login.html"), 800);
+        setTimeout(() => (window.location.href = "/login"), 800);
         return;
       }
 
@@ -995,9 +995,9 @@
             const date = it.date ? new Date(it.date).toLocaleString() : it.created_at ? new Date(it.created_at).toLocaleString() : "";
             const message = it.message || it.text || it.summary || "";
             let link = "";
-            if (it.type === "story_like" && it.story_id) link = `<a href="/stories.html?story=${it.story_id}" class="activity-link">View Story</a>`;
+            if (it.type === "story_like" && it.story_id) link = `<a href="/love-stories?story=${it.story_id}" class="activity-link">View Story</a>`;
             else if (it.type === "new_follower" && it.actor_username) link = `<a href="/profile/${encodeURIComponent(it.actor_username)}" class="activity-link">View</a>`;
-            else link = `<a href="/activity.html" class="activity-link">Details</a>`;
+            else link = `<a href="/activity" class="activity-link">Details</a>`;
             return `<div class="activity-item"><div class="activity-message">${message}</div><div class="activity-meta">${link} • <span>${date}</span></div></div>`;
           })
           .join("");
@@ -1048,7 +1048,7 @@
             window.messagesManager.openMessagesModal(Number(userId));
           } else {
             // fallback to messages page
-            window.location.href = `/messages.html?user=${encodeURIComponent(userId)}`;
+            window.location.href = `/messages?user=${encodeURIComponent(userId)}`;
           }
         },
         true
@@ -1067,7 +1067,7 @@
     handleUnauthorized() {
       // if not logged in, either redirect or show a helpful message
       showNotification("Please login to view this page", "error");
-      setTimeout(() => (window.location.href = "/login.html"), 900);
+      setTimeout(() => (window.location.href = "/login"), 900);
     }
 
     // -------------------------

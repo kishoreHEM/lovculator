@@ -6,10 +6,11 @@
 
 body {
     font-family: -apple-system,system-ui,BlinkMacSystemFont,'Segoe UI',Roboto,Oxygen-Sans,Ubuntu,Cantarell,'Helvetica Neue',sans-serif;
-    background: #f0f2f5; /* Changed from #fafafa to match layout.css */
+    background: #f0f2f5;
     min-height: 100vh;
     line-height: 1.6;
     padding: 0;
+    padding-top: 60px;
     color: #262626;
     margin: 0;
     overflow-x: hidden;
@@ -30,12 +31,9 @@ body {
 
 /* 🌸 Centered Content Wrapper */
 .feed-container {
-  max-width: 700px;
-  margin: 30px auto;
-  padding: 0 16px;
-  max-width: 720px;
-  margin: 40px auto;
-  padding: 0 16px;
+    max-width: 700px;
+    margin: auto;
+    padding: 0px;
 }
 
 /* Instagram Style Header */
@@ -57,189 +55,189 @@ body {
    ====================================================== */
 
 .navbar {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 0 20px;
-  height: 60px;
-  position: relative;
-  width: 100%;
-  box-sizing: border-box;
-  background: #fff;
-  border-bottom: 1px solid #eee;
-  z-index: 1000;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 20px;
+    height: 60px;
+    position: relative;
+    width: 100%;
+    box-sizing: border-box;
+    background: #fff;
+    border-bottom: 1px solid #eee;
+    z-index: 1000;
 }
 
 /* Brand */
 .nav-brand {
-  display: flex;
-  align-items: center;
+    display: flex;
+    align-items: center;
 }
 
 .nav-brand .logo {
-  color: #ff4b8d;
-  font-size: 24px;
-  font-weight: 700;
-  text-decoration: none;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  letter-spacing: -0.5px;
+    color: #ff4b8d;
+    font-size: 24px;
+    font-weight: 700;
+    text-decoration: none;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    letter-spacing: -0.5px;
 }
 
 /* Search placeholder (hidden for now) */
 .nav-search {
-  display: none;
+    display: none;
 }
 
 /* Menu Items */
 .nav-menu {
-  display: flex;
-  list-style: none;
-  gap: 22px;
-  align-items: center;
-  margin: 0;
-  padding: 0;
-  transition: all 0.3s ease;
+    display: flex;
+    list-style: none;
+    gap: 22px;
+    align-items: center;
+    margin: 0;
+    padding: 0;
+    transition: all 0.3s ease;
 }
 
 .nav-link {
-  color: #333;
-  text-decoration: none;
-  font-size: 17px;
-  transition: all 0.3s ease;
-  display: flex;
-  align-items: center;
-  padding: 8px 14px;
-  border-radius: 6px;
-  position: relative;
-  font-weight: 500;
+    color: #333;
+    text-decoration: none;
+    font-size: 17px;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    padding: 8px 14px;
+    border-radius: 6px;
+    position: relative;
+    font-weight: 500;
 }
 
 .nav-link:hover,
 .nav-link:focus {
-  color: #ff4b8d;
-  background: rgba(255, 75, 141, 0.08);
-  outline: none;
+    color: #ff4b8d;
+    background: rgba(255, 75, 141, 0.08);
+    outline: none;
 }
 
 .nav-link.active {
-  color: #ff4b8d;
-  font-weight: 600;
-  background: rgba(255, 75, 141, 0.1);
-  box-shadow: inset 0 -2px 0 #ff4b8d;
+    color: #ff4b8d;
+    font-weight: 600;
+    background: rgba(255, 75, 141, 0.1);
+    box-shadow: inset 0 -2px 0 #ff4b8d;
 }
 
 /* ======================================================
    📱 Mobile Navigation
    ====================================================== */
 .menu-toggle {
-  display: none;
-  flex-direction: column;
-  justify-content: space-between;
-  width: 26px;
-  height: 20px;
-  background: none;
-  border: none;
-  cursor: pointer;
-  z-index: 1001;
-  position: relative;
-  transition: transform 0.3s ease;
+    display: none;
+    flex-direction: column;
+    justify-content: space-between;
+    width: 26px;
+    height: 20px;
+    background: none;
+    border: none;
+    cursor: pointer;
+    z-index: 1001;
+    position: relative;
+    transition: transform 0.3s ease;
 }
 
 .menu-toggle span {
-  display: block;
-  height: 3px;
-  width: 100%;
-  background: #333;
-  border-radius: 3px;
-  transition: all 0.3s ease;
-  transform-origin: center;
+    display: block;
+    height: 3px;
+    width: 100%;
+    background: #333;
+    border-radius: 3px;
+    transition: all 0.3s ease;
+    transform-origin: center;
 }
 
 .menu-toggle.active span:nth-child(1) {
-  transform: rotate(45deg) translate(5px, 6px);
-  background: #ff4b8d;
+    transform: rotate(45deg) translate(5px, 6px);
+    background: #ff4b8d;
 }
 .menu-toggle.active span:nth-child(2) {
-  opacity: 0;
-  transform: scale(0);
+    opacity: 0;
+    transform: scale(0);
 }
 .menu-toggle.active span:nth-child(3) {
-  transform: rotate(-45deg) translate(6px, -6px);
-  background: #ff4b8d;
+    transform: rotate(-45deg) translate(6px, -6px);
+    background: #ff4b8d;
 }
 
 .menu-toggle:focus {
-  outline: 2px solid #ff4b8d;
-  outline-offset: 2px;
-  border-radius: 4px;
+    outline: 2px solid #ff4b8d;
+    outline-offset: 2px;
+    border-radius: 4px;
 }
 
 /* ======================================================
    🌙 Mobile Menu Dropdown
    ====================================================== */
 @media (max-width: 768px) {
-  .menu-toggle {
-    display: flex;
-  }
+    .menu-toggle {
+        display: flex;
+    }
 
-  .nav-menu {
-    position: fixed;
-    top: 60px;
-    left: 0;
-    right: 0;
-    background: white;
-    flex-direction: column;
-    align-items: center;
-    padding: 20px 0;
-    border-top: 1px solid #eee;
-    box-shadow: 0 6px 15px rgba(0, 0, 0, 0.1);
-    transform: translateY(-100%);
-    opacity: 0;
-    pointer-events: none;
-    transition: all 0.4s ease;
-    z-index: 999;
-  }
+    .nav-menu {
+        position: fixed;
+        top: 60px;
+        left: 0;
+        right: 0;
+        background: white;
+        flex-direction: column;
+        align-items: center;
+        padding: 20px 0;
+        border-top: 1px solid #eee;
+        box-shadow: 0 6px 15px rgba(0, 0, 0, 0.1);
+        transform: translateY(-100%);
+        opacity: 0;
+        pointer-events: none;
+        transition: all 0.4s ease;
+        z-index: 999;
+    }
 
-  .nav-menu.active {
-    transform: translateY(0);
-    opacity: 1;
-    pointer-events: auto;
-  }
+    .nav-menu.active {
+        transform: translateY(0);
+        opacity: 1;
+        pointer-events: auto;
+    }
 
-  .nav-link {
-    font-size: 1rem;
-    padding: 12px 18px;
-    width: 100%;
-    text-align: center;
-  }
+    .nav-link {
+        font-size: 1rem;
+        padding: 12px 18px;
+        width: 100%;
+        text-align: center;
+    }
 }
 
 /* ======================================================
    🌫️ Mobile Overlay
    ====================================================== */
 .mobile-menu-overlay {
-  display: none;
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.45);
-  z-index: 998;
-  opacity: 0;
-  transition: opacity 0.3s ease;
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.45);
+    z-index: 998;
+    opacity: 0;
+    transition: opacity 0.3s ease;
 }
 
 .mobile-menu-overlay.active {
-  display: block;
-  opacity: 1;
+    display: block;
+    opacity: 1;
 }
 
 /* Small glow when hovering active tab */
 .nav-link.active:hover {
-  background: rgba(255, 75, 141, 0.15);
-  box-shadow: inset 0 -3px 0 #ff4b8d;
+    background: rgba(255, 75, 141, 0.15);
+    box-shadow: inset 0 -3px 0 #ff4b8d;
 }
 
 /* Main Content */
@@ -278,8 +276,6 @@ body {
     align-items: center;
     gap: 12px;
 }
-
-
 
 .post-username {
     font-weight: 600;
@@ -758,91 +754,89 @@ body {
 
 /* Modern Social Share Section */
 .share-buttons {
-  display: none;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 18px;
-  padding: 40px 30px;
-  margin: 40px auto 20px;
-  background: #ffffff;
-  border: 1px solid #eaeaea;
-  border-radius: 20px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
-  max-width: 600px;
-  opacity: 0;
-  transform: translateY(25px);
-  transition: all 0.5s ease;
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 18px;
+    padding: 40px 30px;
+    margin: 40px auto 20px;
+    background: #ffffff;
+    border: 1px solid #eaeaea;
+    border-radius: 20px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+    max-width: 600px;
+    opacity: 0;
+    transform: translateY(25px);
+    transition: all 0.5s ease;
 }
 
 .share-buttons.show {
-  display: flex;
-  animation: fadeInUp 0.6s ease forwards;
+    display: flex;
+    animation: fadeInUp 0.6s ease forwards;
 }
 
 @keyframes fadeInUp {
-  from {
-    opacity: 0;
-    transform: translateY(25px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+    from {
+        opacity: 0;
+        transform: translateY(25px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
 
 .share-section-title {
-  font-size: 1.4rem;
-  font-weight: 700;
-  text-align: center;
-  margin-bottom: 10px;
-  background: linear-gradient(135deg, #ff4b8d, #ff6b6b);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
+    font-size: 1.4rem;
+    font-weight: 700;
+    text-align: center;
+    margin-bottom: 10px;
+    background: linear-gradient(135deg, #ff4b8d, #ff6b6b);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
 }
 
 .share-section-title::before {
-  content: "🎉";
-  font-size: 1.2rem;
+    content: "🎉";
+    font-size: 1.2rem;
 }
 
 /* Individual Share Buttons */
 .share-btn {
-  background: #ffffff;
-  border: 1px solid #eee;
-  padding: 14px 26px;
-  border-radius: 12px;
-  font-weight: 700;
-  font-size: 15px;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 10px;
-  max-width: 360px;
-  color: #000;
+    background: #ffffff;
+    border: 1px solid #eee;
+    padding: 14px 26px;
+    border-radius: 12px;
+    font-weight: 700;
+    font-size: 15px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    max-width: 360px;
+    color: #000;
 }
 
 .share-btn:hover {
-  background: #fff;
-  transform: translateY(-3px);
-  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
+    background: #fff;
+    transform: translateY(-3px);
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
 }
 
 .share-btn svg {
-  width: 18px;
-  height: 18px;
-  flex-shrink: 0;
+    width: 18px;
+    height: 18px;
+    flex-shrink: 0;
 }
-
-
 
 .stories-header {
     display: flex;
@@ -862,168 +856,166 @@ body {
     font-size: 1rem;
 }
 
-
 /* =========================================
    💬 Comment Section — Lovculator v2 (Clean)
    ========================================= */
 .comments-section {
-  position: relative;
-  z-index: 2;
-  background: #fff;
-  margin-top: 20px;
-  padding: 15px;
-  border-top: 1px solid #eee;
-  border-radius: 12px;
+    position: relative;
+    z-index: 2;
+    background: #fff;
+    margin-top: 20px;
+    padding: 15px;
+    border-top: 1px solid #eee;
+    border-radius: 12px;
 }
 
 /* --- Comment Input Form --- */
 .comment-form {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  margin-bottom: 18px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 18px;
 }
 
 .comment-input {
-  flex: 1;
-  padding: 10px 15px;
-  border: 1px solid #ddd;
-  border-radius: 25px;
-  font-size: 0.9rem;
-  background: #fafafa;
-  transition: all 0.3s ease;
-  font-family: inherit;
+    flex: 1;
+    padding: 10px 15px;
+    border: 1px solid #ddd;
+    border-radius: 25px;
+    font-size: 0.9rem;
+    background: #fafafa;
+    transition: all 0.3s ease;
+    font-family: inherit;
 }
 
 .comment-input:focus {
-  outline: none;
-  border-color: #ff4b8d;
-  background: #fff;
-  box-shadow: 0 0 0 2px rgba(255, 75, 141, 0.1);
+    outline: none;
+    border-color: #ff4b8d;
+    background: #fff;
+    box-shadow: 0 0 0 2px rgba(255, 75, 141, 0.1);
 }
 
 .comment-submit {
-  background: #ff4b8d;
-  color: #fff;
-  border: none;
-  padding: 10px 18px;
-  border-radius: 25px;
-  cursor: pointer;
-  font-size: 0.9rem;
-  font-weight: 600;
-  transition: all 0.3s ease;
+    background: #ff4b8d;
+    color: #fff;
+    border: none;
+    padding: 10px 18px;
+    border-radius: 25px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    font-weight: 600;
+    transition: all 0.3s ease;
 }
 
 .comment-submit:hover {
-  background: #ff6b6b;
-  transform: translateY(-1px);
+    background: #ff6b6b;
+    transform: translateY(-1px);
 }
 
 /* --- Comments List --- */
 .comments-list {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
 }
 
 /* --- Individual Comment --- */
 .comment {
-  display: flex;
-  align-items: flex-start;
-  gap: 10px;
-  padding: 10px;
-  background: #fafafa;
-  border-radius: 12px;
-  font-size: 0.9rem;
-  animation: fadeInComment 0.25s ease;
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 10px;
+    background: #fafafa;
+    border-radius: 12px;
+    font-size: 0.9rem;
+    animation: fadeInComment 0.25s ease;
 }
 
 @keyframes fadeInComment {
-  from {
-    opacity: 0;
-    transform: translateY(-4px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+    from {
+        opacity: 0;
+        transform: translateY(-4px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
 
 /* --- Comment Avatar --- */
 .comment img,
 .comment-avatar {
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
-  object-fit: cover;
-  flex-shrink: 0;
-  background: #eee;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    object-fit: cover;
+    flex-shrink: 0;
+    background: #eee;
 }
 
 /* --- Comment Content --- */
 .comment-body {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
 }
 
 .comment-author {
-  font-weight: 600;
-  font-size: 0.9rem;
-  color: #222;
+    font-weight: 600;
+    font-size: 0.9rem;
+    color: #222;
 }
 
 .comment-time {
-  font-size: 0.75rem;
-  color: #999;
-  margin-left: 6px;
+    font-size: 0.75rem;
+    color: #999;
+    margin-left: 6px;
 }
 
 .comment-text {
-  color: #333;
-  line-height: 1.5;
-  font-size: 0.9rem;
+    color: #333;
+    line-height: 1.5;
+    font-size: 0.9rem;
 }
 
 /* --- Comment Actions (Like/Reply) --- */
 .comment-actions {
-  display: flex;
-  gap: 15px;
-  margin-top: 6px;
+    display: flex;
+    gap: 15px;
+    margin-top: 6px;
 }
 
 .comment-like,
 .comment-reply {
-  background: none;
-  border: none;
-  color: #666;
-  cursor: pointer;
-  font-size: 0.8rem;
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  border-radius: 6px;
-  padding: 3px 6px;
-  transition: all 0.2s ease;
+    background: none;
+    border: none;
+    color: #666;
+    cursor: pointer;
+    font-size: 0.8rem;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    border-radius: 6px;
+    padding: 3px 6px;
+    transition: all 0.2s ease;
 }
 
 .comment-like:hover,
 .comment-reply:hover {
-  color: #ff4b8d;
-  background: #f5f5f5;
+    color: #ff4b8d;
+    background: #f5f5f5;
 }
 
 .comment-like.liked {
-  color: #ff4b8d;
-  font-weight: 600;
+    color: #ff4b8d;
+    font-weight: 600;
 }
 
 /* --- Smooth show/hide --- */
 .comments-section.hidden {
-  display: none !important;
+    display: none !important;
 }
-
 
 /* Floating Action Button */
 .fab-container {
@@ -2240,8 +2232,7 @@ footer {
     padding: 2rem 20px;
     margin-top: auto;
     width: 100%;
-    /* 🟢 Crucial for aligning with main content area */
-    max-width: 680px; 
+    max-width: 680px;
     margin-left: auto;
     margin-right: auto;
     box-sizing: border-box;
@@ -2249,8 +2240,7 @@ footer {
 
 .footer-content {
     max-width: 100%;
-    /* 🟢 CLEANUP: Removed redundant margin-left: auto */
-    margin: 0 auto; 
+    margin: 0 auto;
     text-align: center;
 }
 
@@ -2635,16 +2625,6 @@ footer {
         font-size: 1.3rem;
     }
 
-    .nav-menu {
-        width: 100%;
-        right: -100%;
-        padding: 70px 0 20px 0;
-    }
-
-    .nav-item {
-        padding: 0 20px;
-    }
-
     .main-content {
         padding: 15px 10px;
         gap: 15px;
@@ -2656,12 +2636,6 @@ footer {
 
     .calculator-content {
         padding: 20px 15px;
-    }
-
-    .post-avatar {
-        width: 46px;
-        height: 46px;
-        font-size: 14px;
     }
 
     .love-percentage {
@@ -2741,11 +2715,11 @@ footer {
 }
 
 @media (min-width: 600px) {
-  .share-buttons {
-    flex-direction: row;
-    flex-wrap: wrap;
-    gap: 16px 20px;
-  }
+    .share-buttons {
+        flex-direction: row;
+        flex-wrap: wrap;
+        gap: 16px 20px;
+    }
 }
 
 /* Reduced motion support */
@@ -3050,31 +3024,31 @@ footer {
 }
 
 .story-avatar {
-  width: 60px;
-  height: 60px;
-  border-radius: 50%;
-  object-fit: cover;
-  border: 2px solid #ff4b8d20;
-  overflow: hidden;
-  display: block;
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 2px solid #ff4b8d20;
+    overflow: hidden;
+    display: block;
 }
 
 .story-user-link img.story-avatar {
-  width: 60px;
-  height: 60px;
-  border-radius: 50%;
-  object-fit: cover;
-  display: block;
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    object-fit: cover;
+    display: block;
 }
 
 .story-user-link {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 60px;
-  height: 60px;
-  border-radius: 50%;
-  overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    overflow: hidden;
 }
 
 .story-username {
@@ -3182,43 +3156,6 @@ footer {
 }
 
 /* Records Page Specific Styles */
-.calculator-post {
-    background: white;
-    border: 1px solid #dbdbdb;
-    border-radius: 12px;
-    width: 100%;
-    max-width: 600px;
-    overflow: hidden;
-    margin: 0 auto;
-}
-
-.calculator-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 16px;
-    border-bottom: 1px solid #dbdbdb;
-}
-
-.post-user {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-}
-
-
-
-.post-username {
-    font-weight: 600;
-    font-size: 20px;
-    color: #262626;
-}
-
-.calculator-content {
-    padding: 30px;
-}
-
-/* Privacy Notice */
 .privacy-notice {
     background: #fff3f7;
     border: 1px solid #ffd1e0;
@@ -3421,7 +3358,6 @@ footer {
     margin: 0;
 }
 
-
 /* Focus styles for accessibility */
 .action-btn:focus {
     outline: 2px solid #ff4b8d;
@@ -3594,188 +3530,179 @@ footer {
    🌸 QUORA-LIKE FEED LAYOUT POLISH
 ====================================================== */
 
-/* Feed container - centers all posts */
-.feed-container {
-    max-width: 680px; /* Match main-content-area max-width */
-    margin: 0 auto;
-    padding: 0;
-    width: 100%;
-}
-
 /* Adjust card spacing */
 .story-card {
-  background: #fff;
+    background: #fff;
     border-radius: 0px;
     padding: 16px;
     margin: 15px auto;
     box-shadow: 0 2px 10px rgba(0,0,0,0.06);
     width: 100%;
     max-width: 680px;
-
 }
 
 .story-card:hover {
-  background: #fafafa;
+    background: #fafafa;
 }
 
 /* Smooth spacing between sections */
 .story-card:last-child {
-  border-bottom: none;
+    border-bottom: none;
 }
 
 /* Fix gradient fade color */
 .story-content::after {
-  background: linear-gradient(transparent, #f6f7f8);
+    background: linear-gradient(transparent, #f6f7f8);
 }
 
 /* Header layout fine-tuned */
 .story-card-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 12px;
-  margin-bottom: 12px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 12px;
 }
 
 .story-author-info {
-  display: flex;
-  align-items: center;
-  gap: 12px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
 }
 
 .story-author-avatar {
-  width: 46px;
-  height: 46px;
-  border-radius: 50%;
-  overflow: hidden;
-  flex-shrink: 0;
-  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.1);
+    width: 46px;
+    height: 46px;
+    border-radius: 50%;
+    overflow: hidden;
+    flex-shrink: 0;
+    box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.1);
 }
 
 .story-author-avatar-fallback {
-  background: #ff4b8d;
-  color: #fff;
-  font-size: 1.2rem;
-  font-weight: bold;
+    background: #ff4b8d;
+    color: #fff;
+    font-size: 1.2rem;
+    font-weight: bold;
 }
 
 /* Name and meta info */
 .story-couple h4 {
-  font-size: 1rem;
-  font-weight: 700;
-  margin: 0;
-  color: #222;
+    font-size: 1rem;
+    font-weight: 700;
+    margin: 0;
+    color: #222;
 }
 
 .story-meta {
-  font-size: 0.82rem;
-  color: #8e8e8e;
-  display: flex;
-  align-items: center;
-  gap: 6px;
+    font-size: 0.82rem;
+    color: #8e8e8e;
+    display: flex;
+    align-items: center;
+    gap: 6px;
 }
 
 /* Follow button refined */
 .follow-button {
-  border: 1px solid #ff4b8d;
-  color: #ff4b8d;
-  border-radius: 20px;
-  padding: 5px 14px;
-  font-weight: 600;
-  background: transparent;
-  cursor: pointer;
-  transition: all 0.2s ease;
+    border: 1px solid #ff4b8d;
+    color: #ff4b8d;
+    border-radius: 20px;
+    padding: 5px 14px;
+    font-weight: 600;
+    background: transparent;
+    cursor: pointer;
+    transition: all 0.2s ease;
 }
 
 .follow-button:hover {
-  background: #ff4b8d;
-  color: #fff;
+    background: #ff4b8d;
+    color: #fff;
 }
 
 /* Story title + content */
 .story-title {
-  font-size: 1.25rem;
-  font-weight: 600;
-  color: #222;
-  margin-bottom: 10px;
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: #222;
+    margin-bottom: 10px;
 }
 
 .story-content {
-  color: #444;
-  font-size: 0.95rem;
-  line-height: 1.6;
-  margin-bottom: 12px;
-  max-height: 4.8em;
-  overflow: hidden;
-  position: relative;
-  transition: max-height 0.3s ease;
+    color: #444;
+    font-size: 0.95rem;
+    line-height: 1.6;
+    margin-bottom: 12px;
+    max-height: 4.8em;
+    overflow: hidden;
+    position: relative;
+    transition: max-height 0.3s ease;
 }
 
 .story-content.expanded {
-  max-height: 1000px;
-  overflow: hidden;
+    max-height: 1000px;
+    overflow: hidden;
 }
 
 .read-more {
-  color: #ff4b8d;
-  border: none;
-  background: none;
-  font-weight: 600;
-  cursor: pointer;
-  font-size: 0.9rem;
-  margin-top: 4px;
+    color: #ff4b8d;
+    border: none;
+    background: none;
+    font-weight: 600;
+    cursor: pointer;
+    font-size: 0.9rem;
+    margin-top: 4px;
 }
 
 .read-more:hover {
-  text-decoration: underline;
+    text-decoration: underline;
 }
 
 /* Footer styling */
 .story-footer {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  border-top: 1px solid #eee;
-  padding-top: 12px;
-  margin-top: 8px;
-  flex-wrap: wrap;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-top: 1px solid #eee;
+    padding-top: 12px;
+    margin-top: 8px;
+    flex-wrap: wrap;
 }
 
 .story-actions {
-  display: flex;
-  gap: 20px;
+    display: flex;
+    gap: 20px;
 }
 
 .story-action {
-  background: none;
-  border: none;
-  color: #666;
-  font-size: 0.9rem;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  cursor: pointer;
-  padding: 4px 6px;
-  border-radius: 6px;
-  transition: color 0.2s ease, background 0.2s ease;
+    background: none;
+    border: none;
+    color: #666;
+    font-size: 0.9rem;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    cursor: pointer;
+    padding: 4px 6px;
+    border-radius: 6px;
+    transition: color 0.2s ease, background 0.2s ease;
 }
 
 .story-action:hover {
-  color: #ff4b8d;
-  background: #f5f5f5;
+    color: #ff4b8d;
+    background: #f5f5f5;
 }
 
 .story-action.liked {
-  color: #ff4b8d;
-  font-weight: 600;
+    color: #ff4b8d;
+    font-weight: 600;
 }
 
 .story-mood {
-  font-size: 0.85rem;
-  background: #eee;
-  color: #333;
-  padding: 4px 10px;
-  border-radius: 14px;
+    font-size: 0.85rem;
+    background: #eee;
+    color: #333;
+    padding: 4px 10px;
+    border-radius: 14px;
 }
 
 /* Users List */
@@ -3803,14 +3730,6 @@ footer {
     box-shadow: 0 2px 8px rgba(0,0,0,0.1);
 }
 
-.user-avatar {
-    width: 46px;
-    height: 46px;
-    border-radius: 50%;
-    object-fit: cover;
-    border: 2px solid #ff4b8d20;
-}
-
 .user-info {
     flex: 1;
 }
@@ -3833,122 +3752,6 @@ footer {
     gap: 8px;
 }
 
-.follow-btn {
-    background: #ff4b8d;
-    color: white;
-    border: none;
-    padding: 6px 12px;
-    border-radius: 15px;
-    cursor: pointer;
-    font-size: 0.8rem;
-    font-weight: 600;
-    transition: all 0.3s ease;
-}
-
-.follow-btn:hover {
-    background: #ff6b6b;
-    transform: scale(1.05);
-}
-
-.follow-btn.following {
-    background: #e0e0e0;
-    color: #333;
-}
-
-/* Activity Feed */
-.activity-feed {
-    display: flex;
-    flex-direction: column;
-    gap: 1rem;
-    padding: 1.5rem;
-    max-height: 500px;
-    overflow-y: auto;
-}
-
-.activity-item {
-    display: flex;
-    gap: 12px;
-    padding: 12px;
-    background: #fafafa;
-    border-radius: 8px;
-    border: 1px solid #f0f0f0;
-    transition: all 0.3s ease;
-}
-
-.activity-item:hover {
-    background: white;
-    border-color: #ff4b8d;
-    transform: translateX(5px);
-}
-
-.activity-icon {
-    font-size: 1.2rem;
-    flex-shrink: 0;
-    margin-top: 2px;
-}
-
-.activity-content {
-    flex: 1;
-}
-
-.activity-text {
-    color: #262626;
-    margin-bottom: 4px;
-    line-height: 1.4;
-}
-
-.activity-text strong {
-    color: #ff4b8d;
-}
-
-.activity-time {
-    font-size: 0.75rem;
-    color: #8e8e8e;
-}
-
-/* Empty States */
-.empty-state {
-    text-align: center;
-    padding: 4rem 2rem;
-    color: #666;
-    background: #f8f9fa;
-    border-radius: 12px;
-    border: 2px dashed #e0e0e0;
-    margin: 1.5rem;
-}
-
-.empty-state h3 {
-    margin: 0 0 1rem 0;
-    color: #333;
-    font-size: 1.5rem;
-}
-
-.empty-state p {
-    margin: 0 0 2rem 0;
-    font-size: 1.1rem;
-    line-height: 1.5;
-}
-
-.empty-state .btn {
-    margin: 0 5px;
-}
-
-/* Error States */
-.error-state {
-    text-align: center;
-    padding: 3rem;
-    color: #666;
-    background: #fff5f5;
-    border: 1px solid #fed7d7;
-    border-radius: 8px;
-    margin: 1.5rem;
-}
-
-.error-state h3 {
-    color: #e53e3e;
-    margin: 0 0 1rem 0;
-}
-
 /* Enhanced Edit Profile Modal */
 .modal {
     display: none;
@@ -3963,12 +3766,6 @@ footer {
 .modal.active {
     display: flex;
     animation: fadeIn 0.3s ease;
-}
-
-.modal-overlay {
-    position: absolute;
-    inset: 0;
-    background: rgba(0, 0, 0, 0.4);
 }
 
 .modal-dialog {
@@ -4598,19 +4395,10 @@ footer {
     line-height: 1.4;
 }
 
-.activity-item {
-    padding: 12px 16px;
-    margin-bottom: 12px;
-    background: white;
-    border-radius: 8px;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-}
-
-
 /* --- Global Button Styles (Consolidated) --- */
 .btn-primary, .btn-secondary {
     padding: 8px 14px;
-    border-radius: 25px; /* Use pill shape for modern consistency */
+    border-radius: 25px;
     cursor: pointer;
     font-weight: 600;
     border: none;
@@ -4623,7 +4411,7 @@ footer {
 }
 
 .btn-primary:hover {
-    background: #e63e7f; /* Slightly darker Lovculator pink */
+    background: #e63e7f;
 }
 
 .btn-secondary {
@@ -4637,284 +4425,180 @@ footer {
 
 /* 🌸 Ask/Post Trigger Bar (Top Section Like Quora) */
 .ask-post-bar {
-  width: 100%;
-  max-width: 680px;
-  margin: 80px auto 20px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 12px 20px;
-  background: #fff;
-  border: 1px solid #eee;
-  border-radius: 0px;
-  box-shadow: 0 4px 10px rgba(0,0,0,0.06);
-  position: relative;
-  z-index: 5;
+    width: 100%;
+    max-width: 680px;
+    margin: 80px auto 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 20px;
+    background: #fff;
+    border: 1px solid #eee;
+    border-radius: 0px;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.06);
+    position: relative;
+    z-index: 5;
 }
 
 .ask-input {
-  flex: 1;
-  padding: 10px 16px;
-  background: #fafafa;
-  border: 1px solid #e5e5e5;
-  border-radius: 25px;
-  cursor: pointer;
-  color: #555;
-  transition: all 0.25s ease;
+    flex: 1;
+    padding: 10px 16px;
+    background: #fafafa;
+    border: 1px solid #e5e5e5;
+    border-radius: 25px;
+    cursor: pointer;
+    color: #555;
+    transition: all 0.25s ease;
 }
 
 .ask-input:hover {
-  background: #fff;
-  border-color: #ff4b8d;
+    background: #fff;
+    border-color: #ff4b8d;
 }
 
 .ask-buttons {
-  display: flex;
-  gap: 10px;
-  margin-left: 15px;
+    display: flex;
+    gap: 10px;
+    margin-left: 15px;
 }
 
 .ask-btn, .post-btn {
-  border: none;
-  border-radius: 25px;
-  padding: 8px 18px;
-  font-weight: 600;
-  font-size: 0.9rem;
-  cursor: pointer;
-  transition: all 0.3s ease;
+    border: none;
+    border-radius: 25px;
+    padding: 8px 18px;
+    font-weight: 600;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
 }
 
 .ask-btn {
-  background: #ff4b8d;
-  color: #fff;
+    background: #ff4b8d;
+    color: #fff;
 }
 
 .ask-btn:hover {
-  background: #e63e7f;
+    background: #e63e7f;
 }
 
 .post-btn {
-  background: #eee;
-  color: #333;
+    background: #eee;
+    color: #333;
 }
 
 .post-btn:hover {
-  background: #ddd;
+    background: #ddd;
 }
 
 /* 🧠 Fullscreen Modal Overlay */
-.modal-overlay {
-  position: fixed;
-  top: 0; left: 0; right: 0; bottom: 0;
-  background: rgba(0,0,0,0.6);
-  display: none;
-  justify-content: center;
-  align-items: center;
-  z-index: 9999;
-  animation: fadeInModal 0.25s ease;
-}
-
-/* 🪄 Quora-style Modal Box */
-.modal-box.ask-modal {
-  background: #fff;
-  width: 90%;
-  max-width: 650px;
-  border-radius: 12px;
-  box-shadow: 0 10px 25px rgba(0,0,0,0.15);
-  padding: 20px 25px;
-  animation: slideUp 0.3s ease;
-}
-
 /* ✨ Tabs: Add Question / Create Post */
 .modal-tabs {
-  display: flex;
-  border-bottom: 2px solid #eee;
-  margin-bottom: 15px;
+    display: flex;
+    border-bottom: 2px solid #eee;
+    margin-bottom: 15px;
 }
 
 .tab-btn {
-  flex: 1;
-  text-align: center;
-  background: none;
-  border: none;
-  padding: 5px;
-  font-weight: 600;
-  font-size: 1rem;
-  cursor: pointer;
-  transition: all 0.2s ease;
+    flex: 1;
+    text-align: center;
+    background: none;
+    border: none;
+    padding: 5px;
+    font-weight: 600;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
 }
 
 .tab-btn.active {
-  color: white;
-  border-bottom: 3px solid #ff4b8d;
+    color: white;
+    border-bottom: 3px solid #ff4b8d;
 }
 
 /* 💡 Tip Box */
 .tip-box {
-  background: #f5f7ff;
-  border: 1px solid #dce3ff;
-  border-radius: 8px;
-  padding: 12px 15px;
-  font-size: 0.9rem;
-  color: #333;
-  margin-bottom: 15px;
+    background: #f5f7ff;
+    border: 1px solid #dce3ff;
+    border-radius: 8px;
+    padding: 12px 15px;
+    font-size: 0.9rem;
+    color: #333;
+    margin-bottom: 15px;
 }
 
 .tip-box h4 {
-  color: #0033cc;
-  font-size: 0.95rem;
-  margin-bottom: 8px;
+    color: #0033cc;
+    font-size: 0.95rem;
+    margin-bottom: 8px;
 }
 
 .tip-box ul {
-  margin: 0;
-  padding-left: 18px;
-  line-height: 1.5;
+    margin: 0;
+    padding-left: 18px;
+    line-height: 1.5;
 }
 
 /* 📝 Text Area */
 .question-input {
-  width: 100%;
-  border: 1px solid #ddd;
-  border-radius: 8px;
-  padding: 12px;
-  font-size: 1rem;
-  min-height: 100px;
-  resize: vertical;
-  font-family: inherit;
-  transition: border-color 0.3s ease, box-shadow 0.3s ease;
+    width: 100%;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    padding: 12px;
+    font-size: 1rem;
+    min-height: 100px;
+    resize: vertical;
+    font-family: inherit;
+    transition: border-color 0.3s ease, box-shadow 0.3s ease;
 }
 
 .question-input:focus {
-  outline: none;
-  border-color: #ff4b8d;
-  box-shadow: 0 0 0 2px rgba(255, 75, 141, 0.2);
-}
-
-/* Footer (Buttons at Bottom) */
-.modal-footer {
-  display: flex;
-  justify-content: flex-end;
-  gap: 10px;
-  margin-top: 15px;
-}
-
-.btn-primary {
-  background: #ff4b8d;
-  color: #fff;
-  border: none;
-  border-radius: 25px;
-  padding: 8px 18px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.btn-primary:hover {
-  background: #e63e7f;
-}
-
-.btn-secondary {
-  background: #eee;
-  border: none;
-  border-radius: 25px;
-  padding: 8px 18px;
-  font-weight: 600;
-  cursor: pointer;
-}
-
-.btn-secondary:hover {
-  background: #ddd;
-}
-
-/* Hidden Utility */
-.hidden {
-  display: none !important;
+    outline: none;
+    border-color: #ff4b8d;
+    box-shadow: 0 0 0 2px rgba(255, 75, 141, 0.2);
 }
 
 /* 🔄 Smooth Animations */
 @keyframes fadeInModal {
-  from { opacity: 0; }
-  to { opacity: 1; }
+    from { opacity: 0; }
+    to { opacity: 1; }
 }
 
 @keyframes slideUp {
-  from { transform: translateY(10px); opacity: 0; }
-  to { transform: translateY(0); opacity: 1; }
+    from { transform: translateY(10px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
 }
-
 
 /* 🔧 FIX: Proper modal layering and interaction */
-.modal-overlay {
-  position: fixed !important;
-  top: 0; left: 0; right: 0; bottom: 0;
-  background: rgba(0, 0, 0, 0.7);
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  z-index: 99999 !important; /* 👈 Highest layer to stay above header */
-  padding: 20px;
+/* 🪄 Quora-style Modal Box */
+.modal-box.ask-modal {
+    background: #fff;
+    width: 90%;
+    max-width: 650px;
+    border-radius: 12px;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.15);
+    padding: 20px 25px;
+    animation: slideUp 0.3s ease;
 }
 
-.modal-overlay.hidden {
-  display: none !important;
-}
-
-.modal-content,
-.modal-box {
-  background: #fff;
-  border-radius: 14px;
-  width: 90%;
-  max-width: 500px;
-  max-height: 90vh;
-  overflow-y: auto;
-  box-shadow: 0 12px 40px rgba(0,0,0,0.3);
-  position: relative;
-  z-index: 100000 !important; /* Ensure clickable inside */
-  animation: fadeInModal 0.25s ease;
-}
-
-/* Ensure modal clicks work */
-.modal-overlay * {
-  pointer-events: auto;
-}
-
-/* Optional: smooth entrance */
-@keyframes fadeInModal {
-  from { opacity: 0; transform: scale(0.95); }
-  to { opacity: 1; transform: scale(1); }
-}
-
-/* Prevent background scrolling when modal is open */
-body.modal-open {
-  overflow: hidden;
-}
 .ask-user-avatar {
-  width: 48px;
-  height: 48px;
-  border-radius: 50%;
-  object-fit: cover;
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    object-fit: cover;
 }
 
 /* Add to your components.css file */
 
 .post-header {
-    /* 🟢 Set container for absolute positioning */
     position: relative;
-    /* Ensure user details are aligned */
-    align-items: center; 
+    align-items: center;
     margin-bottom: 10px;
-}
-
-.post-user {
-    /* Ensures the user name and time are side-by-side with other post header elements */
-    flex-grow: 1; 
 }
 
 /* 🟢 Style and position the Follow Button */
 .follow-author-btn {
     position: absolute;
-    top: 5px; /* Adjust as needed */
+    top: 5px;
     right: 0;
     background: none;
     border: 1px solid #ddd;
@@ -4944,4 +4628,3 @@ body.modal-open {
     padding-top: 10px;
     margin-top: 12px;
 }
-
