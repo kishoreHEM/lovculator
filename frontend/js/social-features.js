@@ -157,7 +157,7 @@ if (icon) {
             showNotification('Request timeout. Please check your connection.', 'error');
         } else if (err.message?.includes('401') || err.message?.includes('Unauthorized')) {
             showNotification('Please log in to like!', 'error');
-            setTimeout(() => (window.location.href = '/login.html'), 1200);
+            setTimeout(() => (window.location.href = '/login'), 1200);
         } else if (err.message?.includes('500')) {
             showNotification('Server error. Please try again later.', 'error');
         } else {
@@ -364,7 +364,7 @@ async function handleCommentSubmit(commentSubmitBtn) {
         } else if (err.message.includes('401') || err.message.includes('Unauthorized')) {
             showNotification('Please log in to comment!', 'error');
             setTimeout(() => {
-                window.location.href = '/login.html?redirect=' + encodeURIComponent(window.location.pathname);
+                window.location.href = '/login?redirect=' + encodeURIComponent(window.location.pathname);
             }, 1500);
         } else if (err.message.includes('400')) {
             showNotification(err.message || 'Invalid comment format.', 'error');
@@ -584,7 +584,7 @@ async function handleFollow(followBtn) {
             showNotification('Request timeout. Please check your connection.', 'error');
         } else if (error.message.includes('401') || error.message.includes('Unauthorized')) {
             showNotification('Please log in to follow users.', 'error');
-            setTimeout(() => (window.location.href = '/login.html'), 1500);
+            setTimeout(() => (window.location.href = '/login'), 1500);
         } else if (error.message.includes('500')) {
             showNotification('Server error. Please try again later.', 'error');
         } else {

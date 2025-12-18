@@ -4,7 +4,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const btnPost = document.getElementById("btnPost");
     const openPostModal = document.getElementById("openPostModal");
 
-    if (btnStory) btnStory.addEventListener("click", () => window.location.href = "/love-stories.html");
+    if (btnStory) btnStory.addEventListener("click", () => window.location.href = "/love-stories");
     if (btnQuestion) btnQuestion.addEventListener("click", () => openPostModal?.click());
     if (btnPost) btnPost.addEventListener("click", () => openPostModal?.click());
 

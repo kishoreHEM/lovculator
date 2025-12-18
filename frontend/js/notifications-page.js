@@ -321,13 +321,13 @@ class NotificationsPage {
         switch (notification.type) {
             case "like":
             case "comment":
-                if (data.post_id) window.location.href = `/post.html?id=${data.post_id}`;
+                if (data.post_id) window.location.href = `/post?id=${data.post_id}`;
                 break;
             case "follow":
-                if (data.user_id) window.location.href = `/profile.html?user=${data.user_id}`;
+                if (data.user_id) window.location.href = `/profile?user=${data.user_id}`;
                 break;
             case "message":
-                if (data.conversation_id) window.location.href = `/messages.html?conversation=${data.conversation_id}`;
+                if (data.conversation_id) window.location.href = `/messages?conversation=${data.conversation_id}`;
                 break;
         }
     }

@@ -132,7 +132,7 @@ class NotificationManager {
         dropdown.innerHTML = `
       <div class="dropdown-header">
         <h4>Notifications</h4>
-        <a href="/notifications.html" class="see-all-link">See All</a>
+        <a href="/notifications" class="see-all-link">See All</a>
       </div>
       <div class="dropdown-content">
         ${
@@ -174,7 +174,7 @@ class NotificationManager {
         }
       </div>
       <div class="dropdown-footer">
-        <a href="/notifications.html">View all notifications</a>
+        <a href="/notifications">View all notifications</a>
       </div>
     `;
 

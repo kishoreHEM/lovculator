@@ -54,13 +54,13 @@ async function checkSession() {
     
     if (!res.ok) {
       // If on protected page and session invalid, redirect
-      const protectedPages = ['/profile.html', '/messages.html', '/admin-analytics.html'];
+      const protectedPages = ['/profile', '/messages', '/admin-analytics'];
       const currentPage = window.location.pathname;
       
       if (protectedPages.some(page => currentPage.includes(page))) {
         console.log("🛡️ Session invalid on protected page, redirecting...");
         setTimeout(() => {
-          window.location.replace('/login.html?session_expired=true');
+          window.location.replace('/login?session_expired=true');
         }, 100);
       }
       return null;
@@ -111,8 +111,8 @@ function showLoginRequiredPopup() {
       <h3>💖 Please Log In to Continue</h3>
       <p>You need an account to like, comment, or follow.</p>
       <div class="popup-buttons">
-        <a href="/login.html" class="btn btn-login">Log In</a>
-        <a href="/signup.html" class="btn btn-signup">Sign Up</a>
+        <a href="/login" class="btn btn-login">Log In</a>
+        <a href="/signup" class="btn btn-signup">Sign Up</a>
       </div>
     </div>
   `;
@@ -233,14 +233,14 @@ async function nuclearLogout() {
     
     // 6. Redirect with cache prevention
     const cacheBuster = `logout_${timestamp}_${Math.random().toString(36).substr(2, 9)}`;
-    const redirectUrl = `/login.html?logout=true&cb=${cacheBuster}&t=${timestamp}`;
+    const redirectUrl = `/login?logout=true&cb=${cacheBuster}&t=${timestamp}`;
     
     // 7. Execute redirect
     executeRedirect(redirectUrl);
     
   } catch (err) {
     console.error("❌ Nuclear logout error:", err);
-    window.location.href = `/login.html?logout_error=${Date.now()}`;
+    window.location.href = `/login?logout_error=${Date.now()}`;
   }
 }
 
@@ -278,7 +278,7 @@ async function forceLogout() {
     
     // Redirect with cache prevention
     const uniqueId = Date.now() + '_' + Math.random().toString(36).substr(2, 9);
-    const redirectUrl = `/login.html?logout=true&uid=${uniqueId}`;
+    const redirectUrl = `/login?logout=true&uid=${uniqueId}`;
     
     // Replace history to prevent back button
     window.history.replaceState(null, '', redirectUrl);
@@ -288,7 +288,7 @@ async function forceLogout() {
     
   } catch (err) {
     console.error("❌ Force logout error:", err);
-    window.location.href = `/login.html?error=${Date.now()}`;
+    window.location.href = `/login?error=${Date.now()}`;
   }
 }
 
@@ -309,7 +309,7 @@ function simpleLogout() {
   }).catch(() => {});
   
   // Redirect
-  window.location.href = `/login.html?simple_logout=${cacheBuster}`;
+  window.location.href = `/login?simple_logout=${cacheBuster}`;
 }
 
 // ============================================
@@ -354,7 +354,7 @@ function executeRedirect(redirectUrl) {
   
   // Strategy 3: location.href as fallback
   setTimeout(() => {
-    if (window.location.pathname !== '/login.html') {
+    if (window.location.pathname !== '/login') {
       window.location.href = redirectUrl;
     }
   }, 50);
@@ -379,7 +379,7 @@ function validateSession() {
     const currentPath = window.location.pathname;
     
     if (protectedPages.some(page => currentPath.includes(page))) {
-      window.location.replace('/login.html?recent_logout=true');
+      window.location.replace('/login?recent_logout=true');
       return false;
     }
   }

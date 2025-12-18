@@ -255,7 +255,7 @@ function showVerificationModal(userData) {
 
   modal.querySelector('#contact-support').onclick = (e) => {
     e.preventDefault();
-    window.location.href = '/contact.html';
+    window.location.href = '/contact';
   };
 }
 
@@ -612,7 +612,7 @@ if (signupForm) {
         const { res, data } = await AuthManager.resetPassword(token, newPassword);
         if (res.ok) {
           showMessage("✅ Password reset successful! Redirecting to login...", "success");
-          setTimeout(() => (window.location.href = "/login.html"), 1500);
+          setTimeout(() => (window.location.href = "/login"), 1500);
         } else {
           showMessage(data.error || "❌ Reset failed. The link may have expired.", "error");
         }
@@ -653,7 +653,7 @@ if (signupForm) {
         if (res.ok) {
           showMessage("✅ Email verified successfully! Redirecting to login...", "success");
           setTimeout(() => {
-            window.location.href = "/login.html?verified=true";
+            window.location.href = "/login?verified=true";
           }, 2000);
         } else {
           showMessage(data.error || "❌ Verification failed. The link may have expired.", "error");
