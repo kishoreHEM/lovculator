@@ -43,6 +43,8 @@ import postsRouter from "./routes/posts.js";
 import feedRouter from "./routes/feed.js";
 import commentsRouter from "./routes/comments.js";
 import followRoutes from "./routes/follow.js";
+import adminRoutes from "./routes/admin.js";
+
 
 //
 // 3️⃣ PATH RESOLUTION & FRONTEND ROOT
@@ -287,6 +289,52 @@ app.use((req, res, next) => {
   next();
 });
 
+// 🔐 Admin static assets (CSS / JS)
+app.use(
+  "/admin-assets",
+  express.static(path.join(process.cwd(), "public/admin"))
+);
+
+// 🔐 Admin UI (HTML)
+app.get("/admin", async (req, res) => {
+  // 1. Check Session
+  const userId = req.session?.user?.id;
+  if (!userId) {
+    return res.redirect("/login?redirect=/admin");
+  }
+
+  try {
+    // 2. Verify Admin Status
+    const { rows } = await pool.query(
+      "SELECT is_admin FROM users WHERE id = $1",
+      [userId]
+    );
+
+    if (!rows[0]?.is_admin) {
+      return res.status(403).send("Forbidden: Admins only.");
+    }
+
+    // 3. Locate admin.html (Prioritize public/admin, fallback to frontend)
+    const adminPathPublic = path.join(process.cwd(), "public/admin/admin.html");
+    const adminPathFrontend = path.join(frontendPath, "admin.html");
+
+    if (fs.existsSync(adminPathPublic)) {
+       return res.sendFile(adminPathPublic);
+    } else if (fs.existsSync(adminPathFrontend)) {
+       return res.sendFile(adminPathFrontend);
+    } else {
+       // Graceful error if file is missing everywhere
+       return res.status(404).send("Error: admin.html not found. Please ensure it is in the 'frontend' folder.");
+    }
+
+  } catch (err) {
+    console.error("Admin route error:", err);
+    res.status(500).send("Server Error");
+  }
+});
+
+
+
 //
 // 1️⃣1️⃣ API ROUTES
 //
@@ -305,6 +353,8 @@ app.use("/api/posts", postsRouter);
 app.use("/api/posts", commentsRouter);
 app.use("/api/follow", followRoutes(pool));
 app.use(trackPageVisit);
+app.use("/admin", adminRoutes);
+
 
 //
 // 1️⃣2️⃣ FRONTEND PAGES (AUTO-MAPPED CLEAN URLS)

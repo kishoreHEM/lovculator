@@ -415,7 +415,7 @@ class MessagesManager {
 
   showLoginPrompt() {
     if (confirm("You need to log in to send messages. Go to login page?")) {
-      window.location.href = "/login.html?redirect=" + encodeURIComponent(window.location.pathname);
+      window.location.href = "/login?redirect=" + encodeURIComponent(window.location.pathname);
     }
   }
 
@@ -428,7 +428,7 @@ class MessagesManager {
     }
 
     try {
-      let url = "/messages.html";
+      let url = "/messages";
       const params = new URLSearchParams();
       
       if (targetUserId) params.append("user", targetUserId);
@@ -716,13 +716,13 @@ class MessagesPage {
       }
 
       console.error("❌ Auth failed, redirecting to login");
-      window.location.href = "/login.html?redirect=" + 
+      window.location.href = "/login?redirect=" + 
         encodeURIComponent(window.location.pathname + window.location.search);
       return false;
 
     } catch (error) {
       console.error("❌ Auth check error:", error);
-      window.location.href = "/login.html?redirect=" + 
+      window.location.href = "/login?redirect=" + 
         encodeURIComponent(window.location.pathname + window.location.search);
       return false;
     }

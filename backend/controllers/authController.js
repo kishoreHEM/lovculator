@@ -124,7 +124,8 @@ export const login = async (req, res) => {
       id: user.id,
       username: user.username,
       email: user.email,
-      email_verified: user.email_verified
+      email_verified: user.email_verified,
+      is_admin: user.is_admin,
     };
 
     req.session.save((err) => {

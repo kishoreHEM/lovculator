@@ -103,7 +103,7 @@ router.post("/test-send-email", requireAuth, async (req, res) => {
         success: true,
         message: `Test email sent to ${testEmail}`,
         test_token: testToken,
-        verification_url: `https://lovculator.com/verify-email.html?token=${testToken}`
+        verification_url: `https://lovculator.com/verify-email?token=${testToken}`
       });
     } else {
       res.status(500).json({ 

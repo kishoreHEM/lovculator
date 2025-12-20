@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Admin Panel – Lovculator</title>
+  <link rel="stylesheet" href="admin.css">
+  <style>
+    /* Tab Styles */
+    .admin-tabs { display: flex; gap: 10px; margin-bottom: 20px; border-bottom: 2px solid #eee; padding-bottom: 10px; }
+    .tab-btn { padding: 10px 20px; border: none; background: #f0f0f0; cursor: pointer; border-radius: 5px; font-weight: bold; }
+    .tab-btn.active { background: #ff4b8d; color: white; }
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
+    table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+    th, td { padding: 10px; border: 1px solid #ddd; text-align: left; }
+    th { background: #f9f9f9; }
+    .delete-btn { background: #ff4444; color: white; border: none; padding: 5px 10px; cursor: pointer; border-radius: 3px; }
+  </style>
+</head>
+<body>
+  <h1>🔐 Lovculator Super Admin</h1>
+
+  <div class="admin-tabs">
+    <button class="tab-btn active" onclick="switchTab('users')">Users</button>
+    <button class="tab-btn" onclick="switchTab('stories')">Love Stories</button>
+    <button class="tab-btn" onclick="switchTab('comments')">Comments</button>
+    <button class="tab-btn" onclick="switchTab('follows')">Follows</button>
+    <button class="tab-btn" onclick="switchTab('likes')">Likes</button>
+  </div>
+
+  <div id="users" class="tab-content active">
+    <div class="actions">
+      <button id="deleteTests">Delete Test Users</button>
+      <button id="deleteImages">Delete Test Images</button>
+    </div>
+    <table>
+      <thead><tr><th>ID</th><th>Username</th><th>Email</th><th>Role</th><th>Action</th></tr></thead>
+      <tbody id="usersTableBody"></tbody>
+    </table>
+  </div>
+
+  <div id="stories" class="tab-content">
+    <table>
+      <thead><tr><th>ID</th><th>Title</th><th>Author</th><th>Date</th><th>Action</th></tr></thead>
+      <tbody id="storiesTableBody"></tbody>
+    </table>
+  </div>
+
+  <div id="comments" class="tab-content">
+    <table>
+      <thead><tr><th>ID</th><th>Comment</th><th>User</th><th>Date</th><th>Action</th></tr></thead>
+      <tbody id="commentsTableBody"></tbody>
+    </table>
+  </div>
+
+  <div id="follows" class="tab-content">
+    <table>
+      <thead><tr><th>ID</th><th>Follower</th><th>Following</th><th>Date</th><th>Action</th></tr></thead>
+      <tbody id="followsTableBody"></tbody>
+    </table>
+  </div>
+
+  <div id="likes" class="tab-content">
+    <table>
+      <thead><tr><th>ID</th><th>User</th><th>Story</th><th>Date</th><th>Action</th></tr></thead>
+      <tbody id="likesTableBody"></tbody>
+    </table>
+  </div>
+
+  <script src="admin.js"></script>
+</body>
+</html>

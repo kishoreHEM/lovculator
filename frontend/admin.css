@@ -1,0 +1,49 @@
+body {
+  font-family: Arial, sans-serif;
+  background: #f6f7fb;
+  padding: 30px;
+}
+
+h1 {
+  margin-bottom: 20px;
+}
+
+.actions {
+  margin-bottom: 20px;
+}
+
+button {
+  padding: 10px 14px;
+  margin-right: 10px;
+  cursor: pointer;
+  border: none;
+  background: #e91e63;
+  color: white;
+  border-radius: 6px;
+}
+
+button:hover {
+  opacity: 0.9;
+}
+
+table {
+  width: 100%;
+  background: white;
+  border-collapse: collapse;
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+th, td {
+  padding: 12px;
+  border-bottom: 1px solid #eee;
+  text-align: left;
+}
+
+th {
+  background: #fafafa;
+}
+
+.delete {
+  background: #ff3b30;
+}
