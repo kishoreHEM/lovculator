@@ -146,20 +146,24 @@ deleteImagesBtn?.addEventListener("click", async () => {
 });
 
 /* =====================================================
-   ADMIN PANEL JS — ALL CONTROLS
+   ADMIN PANEL JS — FULL CONTROL
 ===================================================== */
 
-// --- TAB SWITCHING ---
+// --- TABS ---
 window.switchTab = (tabName) => {
   document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
   document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
   
   document.getElementById(tabName).classList.add('active');
-  event.target.classList.add('active'); // Highlight button
+  // Highlight the button that was clicked
+  const btn = Array.from(document.querySelectorAll('.tab-btn')).find(b => b.textContent.toLowerCase().includes(tabName.replace('stories','love').slice(0,3)));
+  if(btn) btn.classList.add('active');
+  else event.target.classList.add('active');
 
-  // Load data when tab opens
   if(tabName === 'users') loadUsers();
+  if(tabName === 'posts') loadPosts();
   if(tabName === 'stories') loadStories();
+  if(tabName === 'questions') loadQuestions();
   if(tabName === 'comments') loadComments();
   if(tabName === 'follows') loadFollows();
   if(tabName === 'likes') loadLikes();
@@ -172,43 +176,64 @@ async function apiCall(endpoint, method = "GET") {
     if (!res.ok) throw new Error("API Error");
     return method === "GET" ? await res.json() : true;
   } catch (err) {
-    alert("Operation failed");
+    alert("Operation failed. Check server logs.");
     return null;
   }
 }
 
-// --- 1. LOAD USERS ---
+// --- DATA LOADERS ---
 async function loadUsers() {
   const users = await apiCall("users");
   if (!users) return;
-  const tbody = document.getElementById("usersTableBody");
-  tbody.innerHTML = users.map(u => `
+  document.getElementById("usersTableBody").innerHTML = users.map(u => `
     <tr>
       <td>${u.id}</td>
       <td>${u.username || "-"}</td>
       <td>${u.email}</td>
       <td>${u.is_admin ? "Admin" : "User"}</td>
       <td><button class="delete-btn" onclick="deleteItem('users', ${u.id})">Delete</button></td>
-    </tr>
-  `).join("");
+    </tr>`).join("");
 }
 
-// --- 2. LOAD STORIES ---
+async function loadPosts() {
+  const data = await apiCall("posts");
+  if (!data) return;
+  document.getElementById("postsTableBody").innerHTML = data.map(p => `
+    <tr>
+      <td>${p.id}</td>
+      <td>${p.content || "Image Post"}...</td>
+      <td>${p.username}</td>
+      <td>${new Date(p.created_at).toLocaleDateString()}</td>
+      <td><button class="delete-btn" onclick="deleteItem('posts', ${p.id})">Delete</button></td>
+    </tr>`).join("");
+}
+
 async function loadStories() {
   const data = await apiCall("stories");
   if (!data) return;
   document.getElementById("storiesTableBody").innerHTML = data.map(s => `
     <tr>
       <td>${s.id}</td>
-      <td>${s.story_title || "No Title"}</td>
+      <td>${s.story_title || "-"}</td>
       <td>${s.username}</td>
       <td>${new Date(s.created_at).toLocaleDateString()}</td>
       <td><button class="delete-btn" onclick="deleteItem('stories', ${s.id})">Delete</button></td>
-    </tr>
-  `).join("");
+    </tr>`).join("");
 }
 
-// --- 3. LOAD COMMENTS ---
+async function loadQuestions() {
+  const data = await apiCall("questions");
+  if (!data) return;
+  document.getElementById("questionsTableBody").innerHTML = data.map(q => `
+    <tr>
+      <td>${q.id}</td>
+      <td>${q.question || "-"}...</td>
+      <td>${q.username}</td>
+      <td>${new Date(q.created_at).toLocaleDateString()}</td>
+      <td><button class="delete-btn" onclick="deleteItem('questions', ${q.id})">Delete</button></td>
+    </tr>`).join("");
+}
+
 async function loadComments() {
   const data = await apiCall("comments");
   if (!data) return;
@@ -219,11 +244,9 @@ async function loadComments() {
       <td>${c.username}</td>
       <td>${new Date(c.created_at).toLocaleDateString()}</td>
       <td><button class="delete-btn" onclick="deleteItem('comments', ${c.id})">Delete</button></td>
-    </tr>
-  `).join("");
+    </tr>`).join("");
 }
 
-// --- 4. LOAD FOLLOWS ---
 async function loadFollows() {
   const data = await apiCall("follows");
   if (!data) return;
@@ -234,11 +257,9 @@ async function loadFollows() {
       <td>→ ${f.following}</td>
       <td>${new Date(f.created_at).toLocaleDateString()}</td>
       <td><button class="delete-btn" onclick="deleteItem('follows', ${f.id})">Unfollow</button></td>
-    </tr>
-  `).join("");
+    </tr>`).join("");
 }
 
-// --- 5. LOAD LIKES ---
 async function loadLikes() {
   const data = await apiCall("likes");
   if (!data) return;
@@ -249,24 +270,32 @@ async function loadLikes() {
       <td>${l.story_title}</td>
       <td>${new Date(l.created_at).toLocaleDateString()}</td>
       <td><button class="delete-btn" onclick="deleteItem('likes', ${l.id})">Remove</button></td>
-    </tr>
-  `).join("");
+    </tr>`).join("");
 }
 
-// --- GENERIC DELETE FUNCTION ---
+// --- ACTIONS ---
 window.deleteItem = async (type, id) => {
-  if (!confirm(`Are you sure you want to delete this ${type.slice(0, -1)}?`)) return;
-  
+  if (!confirm(`Are you sure you want to delete this?`)) return;
   const success = await apiCall(`${type}/${id}`, "DELETE");
   if (success) {
-    // Reload the current tab's data
-    if(type === 'users') loadUsers();
-    if(type === 'stories') loadStories();
-    if(type === 'comments') loadComments();
-    if(type === 'follows') loadFollows();
-    if(type === 'likes') loadLikes();
+    // Reload active tab
+    const activeTab = document.querySelector('.tab-content.active').id;
+    window.switchTab(activeTab);
   }
 };
+
+// Bulk Actions
+document.getElementById("deleteTests")?.addEventListener("click", async () => {
+  if (!confirm("Delete ALL users with 'test' or 'example' in email? This includes ALL their posts, stories, etc.")) return;
+  const res = await apiCall("cleanup/test-users", "DELETE");
+  if (res) { alert(`Deleted ${res.deleted} test users.`); loadUsers(); }
+});
+
+document.getElementById("deleteImages")?.addEventListener("click", async () => {
+  if (!confirm("Clean up unused images?")) return;
+  await apiCall("cleanup/images", "DELETE");
+  alert("Images cleaned.");
+});
 
 /* =========================
    INIT

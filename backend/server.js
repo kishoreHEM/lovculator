@@ -408,6 +408,19 @@ app.use((error, req, res, next) => {
   });
 });
 
+
+// ✅ NEW: Route for Shared Love Stories
+// Serves love-stories.html when visiting /stories/123
+app.get("/stories/:id", (req, res) => {
+  res.sendFile(path.join(frontendPath, "love-stories.html"));
+});
+
+// ✅ NEW: Route for Shared Posts
+// Serves index.html (feed) when visiting /post/123
+app.get("/post/:id", (req, res) => {
+  res.sendFile(path.join(frontendPath, "index.html"));
+});
+
 //
 // 1️⃣4️⃣ ATTACH REAL-TIME LAYER (WebSocket + Redis-ready)
 //
