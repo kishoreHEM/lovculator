@@ -1830,36 +1830,41 @@ attachEventListeners() {
     }
 
     // File attachment
-    const attachBtn = document.getElementById("attachBtn");
-    const attachInput = document.getElementById("attachInput");
-    if (attachBtn && attachInput) {
-      attachBtn.addEventListener("click", () => {
-        attachInput.click();
-      });
-      
-      attachInput.addEventListener("change", async (e) => {
-        const file = e.target.files[0];
-        if (!file) return;
-        
-        console.log("📎 File selected:", file.name, file.type, file.size);
-        
-        // Show uploading state
-        const uploadId = this.showUploadingState(file.name);
-        
-        try {
-          const meta = await this.uploadAttachment(file);
-          if (meta) {
-            await this.sendMessage(meta);
-          }
-        } catch (error) {
-          console.error("❌ File upload failed:", error);
-          this.showError("Failed to upload file");
-        } finally {
-          this.removeUploadingState(uploadId);
-          e.target.value = "";
-        }
-      });
+const attachBtn = document.getElementById("attachBtn");
+const attachInput = document.getElementById("attachInput");
+
+if (attachBtn && attachInput) {
+  // ✅ FIX 1: Use .onclick to prevent multiple click triggers
+  attachBtn.onclick = (e) => {
+    e.preventDefault(); // Stop default button behavior
+    attachInput.click();
+  };
+  
+  // ✅ FIX 2: Use .onchange to ensure file is processed only ONCE
+  attachInput.onchange = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    
+    console.log("📎 File selected:", file.name, file.type, file.size);
+    
+    // Show uploading state
+    // Note: Ensure 'this' context is correct. If strict mode issues arise, use arrow functions or bind.
+    const uploadId = this.showUploadingState(file.name);
+    
+    try {
+      const meta = await this.uploadAttachment(file);
+      if (meta) {
+        await this.sendMessage(meta);
+      }
+    } catch (error) {
+      console.error("❌ File upload failed:", error);
+      this.showError("Failed to upload file");
+    } finally {
+      this.removeUploadingState(uploadId);
+      attachInput.value = ""; // Reset value so the same file can be selected again
     }
+  };
+}
 
     // Handle page visibility changes
     document.addEventListener("visibilitychange", () => {

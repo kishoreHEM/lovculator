@@ -11,54 +11,39 @@
   <link rel="shortcut icon" href="/images/favicon-32x32.png" type="image/png" />
   <link rel="icon" href="/images/favicon.ico" sizes="any" />
 
-  <!-- Global styles -->
   <link rel="stylesheet" href="/css/style.css" />
   <link rel="stylesheet" href="/css/messages.css" />
   <link rel="stylesheet" href="/css/layout.css"/>
   
-  <!-- Typing indicator CSS -->
   <style>
-    .typing-indicator {
-      display: flex;
-      align-items: center;
-      gap: 4px;
-    }
-    
-    .typing-indicator span {
-      width: 6px;
-      height: 6px;
-      background: #666;
-      border-radius: 50%;
-      display: inline-block;
-      animation: typing 1.4s infinite ease-in-out both;
-    }
-    
+    /* Typing Indicator & Skeleton Styles */
+    .typing-indicator { display: flex; align-items: center; gap: 4px; }
+    .typing-indicator span { width: 6px; height: 6px; background: #666; border-radius: 50%; display: inline-block; animation: typing 1.4s infinite ease-in-out both; }
     .typing-indicator span:nth-child(1) { animation-delay: -0.32s; }
     .typing-indicator span:nth-child(2) { animation-delay: -0.16s; }
-    
-    @keyframes typing {
-      0%, 80%, 100% { transform: scale(0.6); opacity: 0.6; }
-      40% { transform: scale(1); opacity: 1; }
-    }
-    
-    .typing-active {
-      color: #ff4b8d !important;
-    }
+    @keyframes typing { 0%, 80%, 100% { transform: scale(0.6); opacity: 0.6; } 40% { transform: scale(1); opacity: 1; } }
+    .typing-active { color: #ff4b8d !important; }
+
+    /* Skeleton Loading */
+    .conversation-skeleton { display: flex; align-items: center; padding: 12px 16px; gap: 12px; }
+    .avatar-skeleton { width: 50px; height: 50px; border-radius: 50%; background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%); background-size: 200% 100%; animation: loading 1.5s infinite; }
+    .info-skeleton { flex: 1; }
+    .line-skeleton { height: 12px; background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%); background-size: 200% 100%; animation: loading 1.5s infinite; border-radius: 6px; margin-bottom: 6px; }
+    .line-skeleton.short { width: 70%; }
+    @keyframes loading { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
   </style>
 </head>
 
 <body class="messages-page">
   <div id="global-header"></div>
+
   <main class="messages-layout-wrapper">
     <div class="messages-container">
-      <!-- LEFT: CONVERSATIONS LIST -->
       <aside class="conversations-sidebar">
         <div class="conversations-header">
           <div class="conversations-header-top">
             <h1><span>💬</span> Messages</h1>
-            <button class="new-chat-btn" type="button" id="newChatBtn">
-              + New
-            </button>
+            <button class="new-chat-btn" type="button" id="newChatBtn">+ New</button>
           </div>
 
           <div class="search-container">
@@ -72,30 +57,16 @@
           <div class="loading-conversations">
             <div class="conversation-skeleton">
               <div class="avatar-skeleton"></div>
-              <div class="info-skeleton">
-                <div class="line-skeleton"></div>
-                <div class="line-skeleton short"></div>
-              </div>
+              <div class="info-skeleton"><div class="line-skeleton"></div><div class="line-skeleton short"></div></div>
             </div>
             <div class="conversation-skeleton">
               <div class="avatar-skeleton"></div>
-              <div class="info-skeleton">
-                <div class="line-skeleton"></div>
-                <div class="line-skeleton short"></div>
-              </div>
-            </div>
-            <div class="conversation-skeleton">
-              <div class="avatar-skeleton"></div>
-              <div class="info-skeleton">
-                <div class="line-skeleton"></div>
-                <div class="line-skeleton short"></div>
-              </div>
+              <div class="info-skeleton"><div class="line-skeleton"></div><div class="line-skeleton short"></div></div>
             </div>
           </div>
         </div>
       </aside>
 
-      <!-- RIGHT: CHAT PANEL -->
       <section class="messages-main" id="messagesMain">
         <header class="messages-header">
           <div class="current-chat-info">
@@ -116,17 +87,14 @@
           </div>
         </div>
 
-        <!-- Upload indicator will be injected here -->
         <div class="message-input-container" id="messageInputContainer" style="display: none">
           <div class="message-input-wrapper">
             <button id="attachBtn" type="button" title="Attach file" class="chat-action-btn">📎</button>
             <input type="file" id="attachInput" accept="image/*,.pdf,.doc,.docx,.txt" style="display: none" />
 
-            <button id="emojiBtn" type="button" title="Emoji (coming soon)" class="chat-action-btn">😊</button>
-
+            <button id="emojiBtn" type="button" title="Emoji" class="chat-action-btn">😊</button>
             <textarea id="messageInput" placeholder="Type a message..." rows="1"></textarea>
-
-            <button id="micBtn" type="button" title="Voice message (coming soon)" class="chat-action-btn">🎙️</button>
+            <button id="micBtn" type="button" title="Voice message" class="chat-action-btn">🎙️</button>
 
             <button id="sendMessageBtn" title="Send">
               <span style="font-size: 18px">➤</span>
@@ -137,258 +105,66 @@
     </div>
   </main>
 
-  <div id="offlineIndicator" style="display: none;">
+  <div id="offlineIndicator" style="display: none; position: fixed; top: 0; left: 0; width: 100%; background: #e74c3c; color: white; text-align: center; padding: 5px; z-index: 9999;">
     You are offline. Trying to reconnect...
-  </div>
-
-  <!-- WebSocket Debug Panel -->
-  <div id="debugPanel" style="position: fixed; bottom: 10px; right: 10px; background: rgba(0,0,0,0.8); color: white; padding: 10px; border-radius: 5px; font-size: 12px; z-index: 10000; max-width: 300px; display: none;">
-    <h4 style="margin: 0 0 5px 0;">WebSocket Debug</h4>
-    <div id="debugInfo"></div>
-    <button onclick="testWebSocket()" style="background: #ff4b8d; color: white; border: none; padding: 5px 10px; border-radius: 3px; margin-top: 5px; cursor: pointer;">Test WS</button>
-    <button onclick="toggleDebug()" style="background: #666; color: white; border: none; padding: 5px 10px; border-radius: 3px; margin-top: 5px; cursor: pointer;">Close</button>
   </div>
 
   <script src="/js/global-header.js"></script>
   <script src="/js/layout-manager.js"></script>
   <script src="/js/auth.js"></script>
-  <script src="/js/messages.js"></script>
+  <script src="/js/messages.js"></script> 
   <script src="/js/profile.js"></script>
 
-
   <script>
-    // Ensure MessagesManager doesn't interfere
     document.addEventListener("DOMContentLoaded", () => {
       console.log("📱 Messages page DOM loaded");
       
-      // If MessagesManager exists, destroy it (we use singleton WS manager)
+      // 1. Clean up global widget to avoid conflicts
       if (window.messagesManager && typeof window.messagesManager.destroy === 'function') {
-        console.log("🔄 Destroying MessagesManager on messages page");
         window.messagesManager.destroy();
         window.messagesManager = null;
       }
       
-      // Initialize MessagesPage after a slight delay
+      // 2. Initialize the main Messages Page Logic
       setTimeout(() => {
         if (window.messagesPage && typeof window.messagesPage.init === 'function') {
-          console.log("🚀 Initializing MessagesPage...");
           window.messagesPage.init().catch(error => {
             console.error("❌ MessagesPage init failed:", error);
           });
-        } else {
-          console.error("❌ MessagesPage not available");
         }
       }, 100);
     });
 
-    // Network status handling
+    // Network Status Handling
     window.addEventListener("offline", () => {
-      console.log("📶 Device is offline");
-      const offlineEl = document.getElementById("offlineIndicator");
-      if (offlineEl) offlineEl.style.display = "block";
-      
-      if (window.messagesPage) {
-        window.messagesPage.updateConnectionStatus("disconnected");
-      }
+      document.getElementById("offlineIndicator").style.display = "block";
+      if (window.messagesPage) window.messagesPage.updateConnectionStatus("disconnected");
     });
 
     window.addEventListener("online", () => {
-      console.log("📶 Device is back online");
-      const offlineEl = document.getElementById("offlineIndicator");
-      if (offlineEl) offlineEl.style.display = "none";
-      
-      // Refresh conversations when coming back online
+      document.getElementById("offlineIndicator").style.display = "none";
       if (window.messagesPage) {
         window.messagesPage.updateConnectionStatus("connected");
         window.messagesPage.loadConversations();
       }
     });
 
-    // Handle page visibility changes
+    // Page Visibility (Updates Online/Away Status)
     document.addEventListener("visibilitychange", () => {
-      if (window.messagesPage) {
-        if (document.hidden) {
-          console.log("📄 Page hidden - sending away status");
-          // Send away status via WebSocket
-          if (window.wsManager) {
-            window.wsManager.send({
-              type: "PRESENCE_UPDATE",
-              status: "away",
-              timestamp: new Date().toISOString()
-            });
-          }
-        } else {
-          console.log("📄 Page visible - sending online status");
-          // Send online status and refresh
-          if (window.wsManager) {
-            window.wsManager.send({
-              type: "PRESENCE_UPDATE",
-              timestamp: new Date().toISOString()
-            });
-          }
-          // Refresh data
-          if (window.messagesPage) {
-            window.messagesPage.loadConversations();
-          }
-        }
+      if (!window.wsManager) return;
+      
+      if (document.hidden) {
+        window.wsManager.send({ type: "PRESENCE_UPDATE", status: "away", timestamp: new Date().toISOString() });
+      } else {
+        window.wsManager.send({ type: "PRESENCE_UPDATE", timestamp: new Date().toISOString() });
+        if (window.messagesPage) window.messagesPage.loadConversations();
       }
     });
 
-    // Handle beforeunload
+    // Cleanup on Exit
     window.addEventListener("beforeunload", () => {
-      console.log("🔄 Page unloading - cleaning up...");
-      if (window.messagesPage) {
-        window.messagesPage.stopTypingIndicator();
-        
-        // Send away status
-        if (window.wsManager) {
-          window.wsManager.send({
-            type: "PRESENCE_UPDATE",
-            status: "away",
-            timestamp: new Date().toISOString()
-          });
-        }
-      }
-    });
-
-    // Debug functions
-    function toggleDebug() {
-      const panel = document.getElementById('debugPanel');
-      panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
-    }
-
-    function testWebSocket() {
-      console.log("🧪 Testing WebSocket...");
-      if (window.wsManager) {
-        // Test WebSocket connection
-        window.wsManager.send({
-          type: "DEBUG_REQUEST",
-          message: "Manual test from debug panel",
-          timestamp: new Date().toISOString(),
-          userId: window.currentUser?.id
-        });
-        
-        // Update debug info
-        updateDebugInfo();
-      } else {
-        console.log("❌ wsManager not available");
-      }
-    }
-
-    function getWebSocketState(state) {
-      const states = {
-        0: 'CONNECTING',
-        1: 'OPEN',
-        2: 'CLOSING',
-        3: 'CLOSED'
-      };
-      return states[state] || 'UNKNOWN';
-    }
-
-    function updateDebugInfo() {
-      let info = '';
-      
-      if (window.wsManager?.ws) {
-        const ws = window.wsManager.ws;
-        info += `
-          <div>WS State: ${getWebSocketState(ws.readyState)} (${ws.readyState})</div>
-          <div>Connected: ${ws.readyState === 1 ? '✅' : '❌'}</div>
-        `;
-      } else {
-        info += `<div>WS Manager: Not initialized</div>`;
-      }
-      
-      info += `
-        <div>User ID: ${window.currentUser?.id || 'Not logged in'}</div>
-        <div>Username: ${window.currentUser?.username || 'None'}</div>
-        <div>Current Conv: ${window.messagesPage?.currentConversation?.id || 'None'}</div>
-        <div>MessagesPage: ${window.messagesPage ? '✅' : '❌'}</div>
-        <div>wsManager: ${window.wsManager ? '✅' : '❌'}</div>
-      `;
-      
-      document.getElementById('debugInfo').innerHTML = info;
-    }
-
-    // Update debug info every 3 seconds
-    setInterval(updateDebugInfo, 3000);
-
-    // Add keyboard shortcut for debug (Ctrl+Shift+D)
-    document.addEventListener('keydown', (e) => {
-      if (e.ctrlKey && e.shiftKey && e.key === 'D') {
-        toggleDebug();
-        e.preventDefault();
-      }
-      // Alt+Shift+D also works
-      if (e.altKey && e.shiftKey && e.key === 'D') {
-        toggleDebug();
-        e.preventDefault();
-      }
-    });
-
-    // New chat button handler
-    document.getElementById('newChatBtn').addEventListener('click', () => {
-      const userId = prompt("Enter user ID to start chat:");
-      if (userId && window.messagesPage) {
-        window.messagesPage.startConversationWithUser(userId);
-      }
-    });
-
-    // Search clear button handler
-    document.getElementById('searchClearBtn').addEventListener('click', () => {
-      const searchInput = document.getElementById('searchConversations');
-      searchInput.value = '';
-      if (window.messagesPage) {
-        window.messagesPage.filterConversations('');
-      }
-    });
-
-    // Back button handler
-    document.getElementById('backToList').addEventListener('click', () => {
-      if (window.messagesPage) {
-        window.messagesPage.closeChat();
-      }
+      if (window.messagesPage) window.messagesPage.stopTypingIndicator();
     });
   </script>
-
-  <!-- Inline CSS for loading skeleton -->
-  <style>
-    .conversation-skeleton {
-      display: flex;
-      align-items: center;
-      padding: 12px 16px;
-      gap: 12px;
-    }
-    
-    .avatar-skeleton {
-      width: 50px;
-      height: 50px;
-      border-radius: 50%;
-      background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
-      background-size: 200% 100%;
-      animation: loading 1.5s infinite;
-    }
-    
-    .info-skeleton {
-      flex: 1;
-    }
-    
-    .line-skeleton {
-      height: 12px;
-      background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
-      background-size: 200% 100%;
-      animation: loading 1.5s infinite;
-      border-radius: 6px;
-      margin-bottom: 6px;
-    }
-    
-    .line-skeleton.short {
-      width: 70%;
-    }
-    
-    @keyframes loading {
-      0% { background-position: 200% 0; }
-      100% { background-position: -200% 0; }
-    }
-  </style>
 </body>
 </html>
