@@ -4482,7 +4482,7 @@ footer {
     padding: 10px 16px; /* Taller click area */
     text-align: left;
     color: #65676b;
-    font-size: 1rem;
+    font-size: 0.8rem;
     cursor: pointer;
     transition: background 0.2s;
 }
@@ -4720,19 +4720,7 @@ body.modal-open {
     color: #ff4b8d;
 }
 
-/* Follow Button */
-.follow-author-btn {
-    padding: 8px 16px;
-    border-radius: 20px;
-    border: 1px solid #ff4b8d;
-    background: white;
-    color: #ff4b8d;
-    font-weight: 600;
-    font-size: 0.9rem;
-    cursor: pointer;
-    transition: all 0.2s;
-    white-space: nowrap;
-}
+
 
 .follow-author-btn:hover {
     background: #fff0f6;
@@ -4792,7 +4780,6 @@ body.modal-open {
     cursor: pointer;
     font-weight: 600;
     transition: all 0.2s;
-    color: #65676b;
     font-size: 0.9rem;
 }
 
@@ -6038,7 +6025,6 @@ body.modal-open {
     .share-btn {
         width: 100%;
         font-size: 14px;
-        padding: 12px 20px;
     }
 
     .container {

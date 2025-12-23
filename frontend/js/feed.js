@@ -20,20 +20,28 @@ document.addEventListener("DOMContentLoaded", () => {
     loadFeed();
 });
 
-// Helper: Build safe avatar URL (Matches profile.js logic)
+// ✅ SECURITY: XSS Protection Helper
+function escapeHtml(unsafe) {
+    if (typeof unsafe !== 'string') return "";
+    return unsafe
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+}
+
+// Helper: Build safe avatar URL
 function getAvatarURL(url) {
     if (!url || url === "null" || url === "undefined") {
         return "/images/default-avatar.png";
     }
-    // If full URL, return as is
     if (url.startsWith("http://") || url.startsWith("https://")) {
         return url;
     }
-    // If relative path (starts with /), return as is (browser handles it) or prepend ASSET_BASE
     if (url.startsWith("/")) {
         return `${window.ASSET_BASE || ''}${url}`;
     }
-    // If just filename, prepend uploads path
     return `${window.ASSET_BASE || ''}/uploads/avatars/${url}`;
 }
 
@@ -95,6 +103,7 @@ function createPostCard(post) {
     const card = document.createElement("div");
     card.className = "post-card";
     
+    // Add data attributes for social-features.js to find
     card.dataset.postId = post.id; 
     card.dataset.id = post.id; 
 
@@ -107,9 +116,16 @@ function createPostCard(post) {
         timeAgo = new Date(post.created_at).toLocaleDateString();
     }
 
-    const isOwner = window.currentUserId && (parseInt(post.user_id) === parseInt(window.currentUserId));
+    // Ensure we parse IDs safely for comparison
+    const currentUserId = window.currentUserId ? parseInt(window.currentUserId) : null;
+    const postUserId = parseInt(post.user_id);
+    const isOwner = currentUserId && (postUserId === currentUserId);
 
-    // ✅ FIXED: Uses Clean URLs directly (No Redirect needed)
+    // Prepare safe strings
+    const safeUsername = escapeHtml(post.username);
+    const safeDisplayName = escapeHtml(post.display_name || post.username);
+    const safeContent = escapeHtml(post.content || "");
+
     card.innerHTML = `
         <div class="post-header">
             <div class="post-user-info">
@@ -117,13 +133,13 @@ function createPostCard(post) {
                     <img 
                         src="${avatar}" 
                         class="post-avatar" 
-                        alt="${post.username}" 
+                        alt="${safeUsername}" 
                         onerror="this.onerror=null; this.src='/images/default-avatar.png'" 
                     />
                 </a>
                 <div class="post-user-details">
                     <a href="/profile/${encodeURIComponent(post.username)}" class="post-username-link">
-                        <h4 class="post-username">${post.display_name || post.username}</h4>
+                        <h4 class="post-username">${safeDisplayName}</h4>
                     </a>
                     <span class="post-time">${timeAgo}</span>
                 </div>
@@ -138,7 +154,7 @@ function createPostCard(post) {
         </div>
 
         <div class="post-content">
-            <p style="white-space: pre-wrap; word-break: break-word; line-height: 1.6;">${post.content || ""}</p>
+            <p style="white-space: pre-wrap; word-break: break-word; line-height: 1.6;">${safeContent}</p>
         </div>
 
         ${post.image_url ? `
@@ -174,7 +190,7 @@ function createPostCard(post) {
             <button class="post-action share-btn share-action-toggle" 
                     data-id="${post.id}" 
                     data-share-url="${window.location.origin}/post/${post.id}"
-                    data-share-title="Post by ${post.username}">
+                    data-share-title="Post by ${safeUsername}">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                     <circle cx="18" cy="5" r="3"></circle>
                     <circle cx="6" cy="12" r="3"></circle>
