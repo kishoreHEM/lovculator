@@ -252,7 +252,7 @@ router.post("/:id/like", isAuthenticated, async (req, res) => {
       
       if (storyAuthorId !== userId) {
         try {
-            await notifyLike(storyAuthorId, userId, 'story', storyId);
+            await notifyLike(req, storyAuthorId, userId, 'story', storyId);
         } catch (notifyError) {
             console.error("Failed to send notification, but continuing:", notifyError);
         }

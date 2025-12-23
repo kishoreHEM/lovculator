@@ -4381,7 +4381,7 @@ footer {
     width: 100%;
     max-width: 680px;
     margin: 0 auto; /* Keeps it perfectly centered */
-    display: flex;
+    
     flex-direction: column;
 }
 

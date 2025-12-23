@@ -65,36 +65,70 @@ document.addEventListener('keypress', (e) => {
 });
 
 // ==============================================
-// 1. LIKE HANDLER (IMPROVED ERROR HANDLING)
+// 1. LIKE HANDLER (UPDATED FOR POSTS, STORIES, QUESTIONS & ANSWERS)
 // ==============================================
 async function handleLike(likeBtn) {
     if (!likeBtn) return;
     
+    // 1. Robust ID Retrieval
     const id = likeBtn.dataset.id || 
                likeBtn.dataset.postId || 
+               likeBtn.dataset.answerId || // ✅ Added answerId
+               likeBtn.dataset.questionId || // ✅ Added questionId
                likeBtn.closest("[data-story-id]")?.dataset.storyId ||
-               likeBtn.closest("[data-post-id]")?.dataset.postId;
+               likeBtn.closest("[data-post-id]")?.dataset.postId ||
+               likeBtn.closest("[data-answer-id]")?.dataset.answerId || // ✅ Added answerId lookup
+               likeBtn.closest("[data-question-id]")?.dataset.questionId; // ✅ Added questionId lookup
 
     if (!id) {
-        console.error("❌ Missing story/post ID for like");
+        console.error("❌ Missing ID for like action");
         return;
     }
 
     // Store original state for rollback
     const originalLikedState = likeBtn.classList.contains('liked');
-    const originalCount = likeBtn.querySelector(".like-count")?.textContent || 0;
+    const likeCountSpan = likeBtn.querySelector(".like-count");
+    const originalCount = likeCountSpan?.textContent || 0;
     
     likeBtn.disabled = true;
 
     try {
-        const isStory = likeBtn.closest(".story-card") || window.location.pathname.includes("love-stories");
-        const url = isStory
-            ? `${window.API_BASE}/stories/${id}/like`
-            : `${window.API_BASE}/posts/${id}/like`;
+        // 2. Determine Context (Story vs Post vs Question vs Answer)
+        const isStory = likeBtn.closest(".story-card") || 
+                        likeBtn.closest("[data-story-id]") ||
+                        window.location.pathname.includes("love-stories");
+        
+        // Check for specific data-type attribute (common in renderAnswerList) or class
+        const isAnswer = likeBtn.dataset.type === 'answer' || 
+                         likeBtn.closest(".answer-card") || 
+                         likeBtn.closest("[data-answer-id]");
+                         
+        const isQuestion = likeBtn.dataset.type === 'question' ||
+                           likeBtn.closest(".question-container") || 
+                           likeBtn.closest("[data-question-id]");
+
+        // 3. Construct Correct URL
+        let url;
+        let typeLabel = "Post"; // For notification text
+
+        if (isStory) {
+            url = `${window.API_BASE}/stories/${id}/like`;
+            typeLabel = "Story";
+        } else if (isAnswer) {
+            // ✅ ROUTES TO QUESTIONS BACKEND (Answer Like)
+            url = `${window.API_BASE}/questions/answers/${id}/like`;
+            typeLabel = "Answer";
+        } else if (isQuestion) {
+            // ✅ ROUTES TO QUESTIONS BACKEND (Question Like)
+            url = `${window.API_BASE}/questions/${id}/like`;
+            typeLabel = "Question";
+        } else {
+            // Default to Post
+            url = `${window.API_BASE}/posts/${id}/like`;
+        }
 
         console.log(`📡 Making like request to: ${url}`);
         
-        // Add timeout to prevent hanging
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 10000);
 
@@ -111,9 +145,7 @@ async function handleLike(likeBtn) {
             try {
                 const errorData = await res.json();
                 errorMessage = errorData.error || errorData.message || errorMessage;
-                console.error("❌ Server error response:", errorData);
             } catch (parseError) {
-                // If response isn't JSON, use status text
                 errorMessage = res.statusText || errorMessage;
             }
             throw new Error(errorMessage);
@@ -122,35 +154,55 @@ async function handleLike(likeBtn) {
         const json = await res.json();
         console.log("✅ Like response:", json);
 
-        // Update heart icon color dynamically
-const icon = likeBtn.querySelector("svg");
-if (icon) {
-    if (json.is_liked) {
-        icon.setAttribute("fill", "#e91e63");
-        icon.setAttribute("stroke", "#e91e63");
-    } else {
-        icon.setAttribute("fill", "none");
-        icon.setAttribute("stroke", "currentColor");
-    }
-}
+        // 4. Update UI (Icon & Count)
+        const icon = likeBtn.querySelector("svg");
+        if (icon) {
+            if (json.is_liked) {
+                icon.setAttribute("fill", "#e91e63");
+                icon.setAttribute("stroke", "#e91e63");
+                likeBtn.classList.add("liked");
+            } else {
+                icon.setAttribute("fill", "none");
+                icon.setAttribute("stroke", "currentColor");
+                likeBtn.classList.remove("liked");
+            }
+        }
+        
+        // Update the count number if returned from server
+        if (likeCountSpan && json.like_count !== undefined) {
+            likeCountSpan.textContent = json.like_count;
+        }
 
-
-        // Show notification
+        // 5. Show Notification
         if (json.is_liked) {
-            showNotification('Story Liked! ❤️', 'success');
-            window.simpleStats?.trackLike?.();
+            showNotification(`${typeLabel} Liked! ❤️`, 'success');
+            if (window.simpleStats?.trackLike) {
+                 window.simpleStats.trackLike({ type: typeLabel.toLowerCase(), id });
+            }
         } else {
-            showNotification('Story Unliked 💔', 'success');
+            showNotification(`${typeLabel} Unliked 💔`, 'success');
         }
 
     } catch (err) {
         console.error("❌ Like error:", err);
         
         // Rollback UI changes
-        likeBtn.classList.toggle("liked", originalLikedState);
-        const countSpan = likeBtn.querySelector(".like-count");
-        if (countSpan) {
-            countSpan.textContent = originalCount;
+        if (likeBtn.classList.contains("liked") !== originalLikedState) {
+            likeBtn.classList.toggle("liked");
+            const icon = likeBtn.querySelector("svg");
+            if (icon) {
+                 if (originalLikedState) {
+                    icon.setAttribute("fill", "#e91e63");
+                    icon.setAttribute("stroke", "#e91e63");
+                 } else {
+                    icon.setAttribute("fill", "none");
+                    icon.setAttribute("stroke", "currentColor");
+                 }
+            }
+        }
+        
+        if (likeCountSpan) {
+            likeCountSpan.textContent = originalCount;
         }
         
         if (err.name === 'AbortError') {
@@ -194,24 +246,27 @@ function handleCommentToggle(commentToggleBtn) {
 }
 
 // ==============================================
-// 3. COMMENT SUBMIT HANDLER (FIXED FOR BOTH POSTS & STORIES)
+// 3. COMMENT SUBMIT HANDLER (UPDATED FOR POSTS, STORIES & ANSWERS)
 // ==============================================
 async function handleCommentSubmit(commentSubmitBtn) {
     // Get the closest parent container that has an ID
-    const container = commentSubmitBtn.closest('[data-story-id], [data-post-id], [data-id], .story-card, .post-card');
+    // ✅ Updated to include .answer-card
+    const container = commentSubmitBtn.closest('[data-story-id], [data-post-id], [data-id], [data-answer-id], .story-card, .post-card, .answer-card');
     
     if (!container) {
         console.error('No container found for comment');
-        showNotification('Unable to find post/story', 'error');
+        showNotification('Unable to find post/story/answer', 'error');
         return;
     }
 
     // Extract ID from all possible locations
     const id = container.dataset.storyId || 
                container.dataset.postId || 
+               container.dataset.answerId || // ✅ Added answerId
                container.dataset.id ||
                commentSubmitBtn.dataset.storyId ||
                commentSubmitBtn.dataset.postId ||
+               commentSubmitBtn.dataset.answerId || // ✅ Added answerId
                commentSubmitBtn.dataset.id;
     
     if (!id) {
@@ -223,7 +278,8 @@ async function handleCommentSubmit(commentSubmitBtn) {
     // Find the input element - check multiple selectors
     const inputSelectors = [
         `input[data-post-id="${id}"]`,
-        `input[data-story-id="${id}"]`, 
+        `input[data-story-id="${id}"]`,
+        `input[data-answer-id="${id}"]`, // ✅ Added answer selector
         `#commentInput-${id}`,
         `input.comment-input`,
         container.querySelector('.comment-input')
@@ -265,15 +321,27 @@ async function handleCommentSubmit(commentSubmitBtn) {
     commentSubmitBtn.textContent = "Posting...";
 
     try {
-        // Determine if it's a story or post
+        // Determine Context: Story, Post, or Answer
         const isStory = container.classList.contains('story-card') || 
                         container.hasAttribute('data-story-id') ||
                         window.location.pathname.includes("love-stories");
 
-        const endpoint = isStory ? "stories" : "posts";
-        const url = `${window.API_BASE}/${endpoint}/${id}/comments`;
+        // ✅ NEW: Detect Answer Context
+        const isAnswer = container.classList.contains('answer-card') || 
+                         container.hasAttribute('data-answer-id');
 
-        console.log(`📡 Comment request: ${url} (${isStory ? 'story' : 'post'})`);
+        let url;
+        if (isStory) {
+            url = `${window.API_BASE}/stories/${id}/comments`;
+        } else if (isAnswer) {
+            // ✅ ROUTES TO THE NEW ANSWERS ENDPOINT
+            url = `${window.API_BASE}/questions/answers/${id}/comments`;
+        } else {
+            // Default to Post
+            url = `${window.API_BASE}/posts/${id}/comments`;
+        }
+
+        console.log(`📡 Comment request: ${url}`);
 
         // Add timeout
         const controller = new AbortController();
@@ -283,7 +351,7 @@ async function handleCommentSubmit(commentSubmitBtn) {
             method: "POST",
             body: JSON.stringify({ 
                 text: text,
-                content: text,  // Try both field names
+                content: text,  // Backend uses 'content'
                 comment: text
             }),
             headers: { "Content-Type": "application/json" },
@@ -299,13 +367,11 @@ async function handleCommentSubmit(commentSubmitBtn) {
                 const errorData = await res.json();
                 console.error("Server error details:", errorData);
                 
-                // Common error field names
                 errorMessage = errorData.message || 
                               errorData.error || 
                               errorData.detail || 
                               errorMessage;
                               
-                // Check for validation errors
                 if (errorData.errors) {
                     errorMessage = Object.values(errorData.errors).join(', ');
                 }
@@ -322,6 +388,7 @@ async function handleCommentSubmit(commentSubmitBtn) {
         const countSelectors = [
             `[data-story-id="${id}"] .comment-count`,
             `[data-post-id="${id}"] .comment-count`,
+            `[data-answer-id="${id}"] .comment-count`, // ✅ Check answer count
             `[data-id="${id}"] .comment-count`,
             container.querySelector('.comment-count'),
             container.querySelector('.comment-btn span'),
@@ -349,16 +416,15 @@ async function handleCommentSubmit(commentSubmitBtn) {
         
         // Track analytics
         if (window.simpleStats?.trackComment) {
-            window.simpleStats.trackComment({ type: isStory ? 'story' : 'post', id });
+            const type = isStory ? 'story' : (isAnswer ? 'answer' : 'post');
+            window.simpleStats.trackComment({ type, id });
         }
 
     } catch (err) {
         console.error("❌ Comment error:", err);
         
-        // Put text back in input if error
         if (input) input.value = text;
         
-        // Show appropriate error
         if (err.name === 'AbortError') {
             showNotification('Request timeout. Please try again.', 'error');
         } else if (err.message.includes('401') || err.message.includes('Unauthorized')) {
@@ -380,14 +446,20 @@ async function handleCommentSubmit(commentSubmitBtn) {
 }
 
 // ==============================================
-// 5. LOAD COMMENTS (FIXED FOR BOTH POSTS & STORIES)
+// 5. LOAD COMMENTS (FIXED FOR POSTS, STORIES & ANSWERS)
 // ==============================================
 async function loadComments(id) {
-    // Determine if it's a story or post by checking the page or DOM
-    const container = document.querySelector(`[data-story-id="${id}"], [data-post-id="${id}"], [data-id="${id}"]`);
+    // Determine context: Story, Post, or Answer
+    // ✅ Updated selector to look for answer IDs as well
+    const container = document.querySelector(`[data-story-id="${id}"], [data-post-id="${id}"], [data-id="${id}"], [data-answer-id="${id}"]`);
+    
     const isStory = container?.classList.contains('story-card') || 
                     container?.hasAttribute('data-story-id') ||
                     window.location.pathname.includes("love-stories");
+    
+    // ✅ ADDED: Detect Answer Context
+    const isAnswer = container?.classList.contains('answer-card') || 
+                     container?.hasAttribute('data-answer-id');
     
     const commentsList = document.getElementById(`comments-list-${id}`);
     
@@ -399,10 +471,19 @@ async function loadComments(id) {
     commentsList.innerHTML = '<p style="text-align:center; padding: 10px;">Loading comments...</p>';
 
     try {
-        const endpoint = isStory ? "stories" : "posts";
-        const url = `${window.API_BASE}/${endpoint}/${id}/comments`;
+        // ✅ UPDATED: URL Selection Logic
+        let url;
+        if (isStory) {
+            url = `${window.API_BASE}/stories/${id}/comments`;
+        } else if (isAnswer) {
+            // Backend: router.get("/answers/:id/comments")
+            url = `${window.API_BASE}/questions/answers/${id}/comments`;
+        } else {
+            // Default to Post
+            url = `${window.API_BASE}/posts/${id}/comments`;
+        }
 
-        console.log(`📡 Loading comments: ${url}`);
+        console.log(`📡 Loading comments from: ${url}`);
 
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 10000);
@@ -438,7 +519,8 @@ async function loadComments(id) {
             comments = data.data;
         }
         
-        console.log('Loaded comments:', comments.length, 'for', isStory ? 'story' : 'post', id);
+        const typeLabel = isStory ? 'story' : (isAnswer ? 'answer' : 'post');
+        console.log(`Loaded ${comments.length} comments for ${typeLabel} ${id}`);
 
         if (!comments || comments.length === 0) {
             commentsList.innerHTML = '<p class="empty-state-comment">Be the first to comment! 💬</p>';
@@ -499,7 +581,7 @@ async function loadComments(id) {
 }
 
 // ==============================================
-// 6. FOLLOW HANDLER
+// 6. FOLLOW HANDLER (ROBUST VERSION)
 // ==============================================
 async function handleFollow(followBtn) {
     if (!window.currentUserId) {
@@ -507,7 +589,12 @@ async function handleFollow(followBtn) {
         return;
     }
 
-    const userId = followBtn.dataset.userId || followBtn.dataset.authorId;
+    // ✅ ROBUST ID LOOKUP: Checks button first, then searches parents
+    // This ensures it works inside Answer Cards, Question Headers, etc.
+    const userId = followBtn.dataset.userId || 
+                   followBtn.dataset.authorId || 
+                   followBtn.closest('[data-user-id]')?.dataset.userId ||
+                   followBtn.closest('[data-author-id]')?.dataset.authorId;
     
     if (!userId) {
         console.error("❌ Could not find user ID for follow action.");
@@ -515,7 +602,8 @@ async function handleFollow(followBtn) {
         return;
     }
     
-    if (parseInt(userId) === window.currentUserId) {
+    // Prevent self-follow
+    if (parseInt(userId) === parseInt(window.currentUserId)) {
         showNotification("You cannot follow yourself.", "error");
         return;
     }
@@ -531,6 +619,7 @@ async function handleFollow(followBtn) {
         followBtn.classList.toggle('following', !isCurrentlyFollowing);
         followBtn.textContent = !isCurrentlyFollowing ? 'Following' : '+ Follow';
 
+        // Add timeout to prevent hanging
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 10000);
 
@@ -556,15 +645,15 @@ async function handleFollow(followBtn) {
 
         const result = await response.json();
         
-        // Update UI based on API response
-        followBtn.classList.toggle('following', result.is_following);
-        followBtn.textContent = result.is_following ? 'Following' : '+ Follow';
-
-        // Update all follow buttons for this user
+        // Update ALL follow buttons for this user on the page
+        // (Useful if the same user appears in multiple Answers or Comments)
         document.querySelectorAll(`[data-user-id="${userId}"], [data-author-id="${userId}"]`)
             .forEach(btn => {
-                btn.classList.toggle('following', result.is_following);
-                btn.textContent = result.is_following ? 'Following' : '+ Follow';
+                // Ensure we only update actual follow buttons, not container divs
+                if(btn.classList.contains('follow-btn') || btn.classList.contains('follow-author-btn')) {
+                    btn.classList.toggle('following', result.is_following);
+                    btn.textContent = result.is_following ? 'Following' : '+ Follow';
+                }
             });
 
         if (result.is_following) {
@@ -576,7 +665,7 @@ async function handleFollow(followBtn) {
     } catch (error) {
         console.error("❌ Follow toggle failed:", error);
         
-        // Revert optimistic update
+        // Revert optimistic update on error
         followBtn.className = originalClass;
         followBtn.textContent = originalText;
         

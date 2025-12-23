@@ -96,6 +96,61 @@ body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Ro
 .dropdown-item.unread { background: #fff5f8; border-left: 3px solid #e91e63; }
 .dropdown-empty { padding: 20px; text-align: center; color: #999; font-size: 13px; }
 
+/* Message Dropdown Item Styling */
+.dropdown-item.message-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 15px;
+    border-bottom: 1px solid #f0f2f5;
+    text-decoration: none;
+    transition: background 0.2s;
+}
+
+.dropdown-item.message-item:hover {
+    background-color: #f7f8fa;
+}
+
+.dropdown-item.message-item:last-child {
+    border-bottom: none;
+}
+
+/* Avatar Circle */
+.msg-avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 1px solid #e4e6eb;
+    flex-shrink: 0; /* Prevents shrinking */
+}
+
+/* Text Container */
+.msg-info {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    overflow: hidden; /* Needed for text truncation */
+}
+
+/* Sender Name */
+.msg-sender {
+    font-size: 14px;
+    font-weight: 600;
+    color: #1c1e21;
+    margin-bottom: 2px;
+}
+
+/* Message Snippet (Truncated) */
+.msg-text {
+    font-size: 13px;
+    color: #65676b;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 200px; /* Adjust based on dropdown width */
+}
+
 /* Mobile Adjustment: Full width or Fixed below top bar */
 @media (max-width: 768px) {
   .dropdown-panel {
@@ -188,7 +243,7 @@ body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Ro
 
     <div class="header-avatar-area mobile-only">
       <button class="user-avatar-btn mobile-avatar-trigger">
-        <img src="/images/default-avatar.png" class="user-avatar-img" onerror="this.src='https://via.placeholder.com/32'">
+        <img src="/images/default-avatar.png" class="user-avatar-img" onerror="this.src='/images/default-avatar.png'">
       </button>
       <div class="user-dropdown mobile-dropdown">
         <a href="/profile">Profile</a>
@@ -235,7 +290,7 @@ body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Ro
 
     <div class="header-avatar-area">
       <button class="user-avatar-btn desktop-avatar-trigger">
-        <img src="/images/default-avatar.png" class="user-avatar-img" onerror="this.src='https://via.placeholder.com/32'">
+        <img src="/images/default-avatar.png" class="user-avatar-img" onerror="this.src='/images/default-avatar.png'">
       </button>
       <div class="user-dropdown desktop-dropdown">
         <a href="/profile">Profile</a>

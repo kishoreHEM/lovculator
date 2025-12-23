@@ -183,7 +183,7 @@ function showNotFound(message = "Question not found") {
 }
 
 /* ---------------------------------------------------------
-   ANSWER LIST (Now includes like/comment/follow/share)
+   ANSWER LIST (Fixed Follow Button State)
 --------------------------------------------------------- */
 function renderAnswerList(question, answers) {
     const answersContainer = document.getElementById("answersContainer");
@@ -209,10 +209,14 @@ function renderAnswerList(question, answers) {
             const likeCount = answer.likes_count || answer.like_count || 0;
             const commentCount = answer.comments_count || answer.comment_count || 0;
             const userAvatar = answer.profile_image_url || answer.avatar_url || answer.author_avatar || '/images/default-avatar.png';
+            
+            // ✅ NEW: Check following status from backend
+            const isFollowing = answer.user_following || false;
+            const followText = isFollowing ? "Following" : "+ Follow";
+            const followClass = isFollowing ? "follow-btn following" : "follow-btn";
 
             return `
                 <div class="answer-card" data-answer-id="${answerId}" data-user-id="${userId}">
-                    <!-- Answer Header -->
                     <div class="answer-header">
                         <img src="${userAvatar}" 
                              alt="${userName}" 
@@ -224,20 +228,18 @@ function renderAnswerList(question, answers) {
                                     ${userName}
                                 </a>
                                 ${userId && userId !== window.currentUserId ? 
-                                    `<button class="follow-btn" data-user-id="${userId}">+ Follow</button>` : 
+                                    `<button class="${followClass}" data-user-id="${userId}">${followText}</button>` : 
                                     ''}
                             </div>
                             ${userBio ? `<div class="answer-user-bio">${userBio}</div>` : ''}
                         </div>
                     </div>
 
-                    <!-- Answer Body -->
                     <div class="answer-body">${answerText}</div>
 
-                    <!-- Answer Actions -->
                     <div class="answer-actions">
-                        <button class="like-button" data-id="${answerId}" data-type="answer">
-                            <svg width="20" height="20" viewBox="0 0 24 24" fill="${answer.user_liked ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="2">
+                        <button class="like-button ${answer.user_liked ? 'liked' : ''}" data-id="${answerId}" data-type="answer">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="${answer.user_liked ? '#e91e63' : 'none'}" stroke="${answer.user_liked ? '#e91e63' : 'currentColor'}" stroke-width="2">
                                 <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
                             </svg>
                             <span class="like-count">${likeCount}</span>
@@ -251,7 +253,7 @@ function renderAnswerList(question, answers) {
                         </button>
 
                         <button class="share-btn" 
-                                data-share-url="https://lovculator.com/answer/${answerId}"
+                                data-share-url="https://lovculator.com/questions/${question.slug}#answer-${answerId}"
                                 data-share-title="${userName}'s answer"
                                 data-share-text="${answerText.substring(0, 100)}...">
                             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -263,7 +265,6 @@ function renderAnswerList(question, answers) {
                         </button>
                     </div>
 
-                    <!-- Comment Section -->
                     <div id="comments-${answerId}" class="comments-section hidden">
                         <div class="comment-form">
                             <input type="text" 
@@ -272,9 +273,7 @@ function renderAnswerList(question, answers) {
                                    placeholder="Write a comment…">
                             <button class="comment-submit" data-answer-id="${answerId}">Post</button>
                         </div>
-                        <div class="comments-list" id="comments-list-${answerId}">
-                            <!-- Comments will be loaded here -->
-                        </div>
+                        <div class="comments-list" id="comments-list-${answerId}"></div>
                     </div>
 
                     <div class="answer-footer">

@@ -1,8 +1,9 @@
 // backend/routes/questions.js
 
 import express from "express";
-import pool from "../db.js"; // ✅ Standard import
-import auth from "../middleware/auth.js"; // ✅ Standard middleware
+import pool from "../db.js"; 
+import auth from "../middleware/auth.js"; 
+import { notifyLike, notifyComment } from "./notifications.js"; 
 
 const router = express.Router();
 
@@ -26,7 +27,6 @@ router.post("/", auth, async (req, res) => {
   try {
     const { question, description, tags } = req.body;
     
-    // ✅ Fix: Use req.user.id
     if (!req.user || !req.user.id) {
         return res.status(401).json({ error: "Unauthorized" });
     }
@@ -38,14 +38,12 @@ router.post("/", auth, async (req, res) => {
       });
     }
 
-    // Generate base slug
     let slug = createSlug(question);
     const checkSlug = await pool.query(
       "SELECT slug FROM questions WHERE slug = $1",
       [slug]
     );
 
-    // If duplicate, append unique timestamp
     if (checkSlug.rows.length > 0) {
       slug = `${slug}-${Date.now().toString().slice(-5)}`;
     }
@@ -91,7 +89,7 @@ router.get("/latest", async (req, res) => {
         q.id, 
         q.question, 
         q.slug, 
-        q.description,
+        q.description, 
         q.tags,
         q.created_at,
         u.username,
@@ -127,11 +125,10 @@ router.get("/:slug", async (req, res) => {
   try {
     const { slug } = req.params;
     const userId = req.user ? req.user.id : null;
-    let questionRes;
-
+    
     const queryCondition = /^\d+$/.test(slug) ? "q.id = $2" : "q.slug = $2";
 
-    questionRes = await pool.query(
+    const questionRes = await pool.query(
       `
       SELECT 
         q.*,
@@ -185,7 +182,8 @@ router.get("/:slug", async (req, res) => {
         u.bio,
         COUNT(DISTINCT al.id) as likes_count,
         COUNT(DISTINCT ac.id) as comments_count,
-        EXISTS(SELECT 1 FROM answer_likes WHERE answer_id = a.id AND user_id = $1) as user_liked
+        EXISTS(SELECT 1 FROM answer_likes WHERE answer_id = a.id AND user_id = $1) as user_liked,
+        EXISTS(SELECT 1 FROM follows WHERE follower_id = $1 AND target_id = u.id) as user_following
       FROM answers a
       LEFT JOIN users u ON a.user_id = u.id
       LEFT JOIN answer_likes al ON a.id = al.answer_id
@@ -213,7 +211,7 @@ router.get("/:slug", async (req, res) => {
 router.post("/:id/answer", auth, async (req, res) => {
   try {
     const { id } = req.params;
-    const { answer } = req.body; // ❌ Removed `anonymous`
+    const { answer } = req.body;
     
     if (!req.user || !req.user.id) {
         return res.status(401).json({ error: "Unauthorized" });
@@ -230,7 +228,6 @@ router.post("/:id/answer", auth, async (req, res) => {
       });
     }
 
-    // Check if user already answered
     const existingAnswer = await pool.query(
       "SELECT id FROM answers WHERE question_id = $1 AND user_id = $2",
       [id, userId]
@@ -242,7 +239,6 @@ router.post("/:id/answer", auth, async (req, res) => {
       });
     }
 
-    // ✅ FIXED: Removed 'is_anonymous' from query since DB column doesn't exist
     const result = await pool.query(
       `
       INSERT INTO answers (question_id, user_id, answer_text, created_at)
@@ -252,8 +248,14 @@ router.post("/:id/answer", auth, async (req, res) => {
       [id, userId, answer.trim()]
     );
 
-    console.log(`💬 New answer added to question ID ${id} by User ${userId}`);
-    
+    const qOwner = await pool.query("SELECT user_id FROM questions WHERE id = $1", [id]);
+    if (qOwner.rows.length > 0) {
+        const ownerId = qOwner.rows[0].user_id;
+        if (ownerId !== userId) {
+            await notifyComment(req, ownerId, userId, "question", id); 
+        }
+    }
+
     res.json({ 
       success: true, 
       message: "Answer posted successfully.",
@@ -270,7 +272,7 @@ router.post("/:id/answer", auth, async (req, res) => {
 });
 
 // ======================================================
-// 5️⃣ GET /api/questions/for-you — Questions for current user
+// 5️⃣ GET /api/questions/for-you
 // ======================================================
 router.get("/for-you", auth, async (req, res) => {
   try {
@@ -282,8 +284,8 @@ router.get("/for-you", auth, async (req, res) => {
         q.id, 
         q.question, 
         q.slug, 
-        q.description,
-        q.tags,
+        q.description, 
+        q.tags, 
         q.created_at,
         u.username,
         u.display_name,
@@ -309,12 +311,12 @@ router.get("/for-you", auth, async (req, res) => {
     res.json(questionsRes.rows);
   } catch (err) {
     console.error("❌ Error fetching questions for you:", err);
-    res.status(500).json({ error: "Failed to load questions." });
+    res.json([]);
   }
 });
 
 // ======================================================
-// 6️⃣ GET /api/questions/my/questions — User's questions
+// 6️⃣ GET /api/questions/my/questions
 // ======================================================
 router.get("/my/questions", auth, async (req, res) => {
   try {
@@ -326,8 +328,8 @@ router.get("/my/questions", auth, async (req, res) => {
         q.id, 
         q.question, 
         q.slug, 
-        q.description,
-        q.tags,
+        q.description, 
+        q.tags, 
         q.created_at,
         COUNT(DISTINCT a.id) as answers_count,
         COUNT(DISTINCT l.id) as likes_count,
@@ -345,13 +347,12 @@ router.get("/my/questions", auth, async (req, res) => {
 
     res.json(questionsRes.rows);
   } catch (err) {
-    console.error("❌ Error fetching user's questions:", err);
     res.status(500).json({ error: "Failed to load questions." });
   }
 });
 
 // ======================================================
-// 7️⃣ GET /api/questions/my/answers — User's answers
+// 7️⃣ GET /api/questions/my/answers
 // ======================================================
 router.get("/my/answers", auth, async (req, res) => {
   try {
@@ -381,7 +382,6 @@ router.get("/my/answers", auth, async (req, res) => {
 
     res.json(answersRes.rows);
   } catch (err) {
-    console.error("❌ Error fetching user's answers:", err);
     res.status(500).json({ error: "Failed to load answers." });
   }
 });
@@ -393,38 +393,35 @@ router.post("/:id/like", auth, async (req, res) => {
   try {
     const { id } = req.params;
     const userId = req.user.id;
+    let is_liked = false;
 
-    // Check if already liked
     const existingLike = await pool.query(
       "SELECT id FROM question_likes WHERE question_id = $1 AND user_id = $2",
       [id, userId]
     );
 
     if (existingLike.rows.length > 0) {
-      await pool.query(
-        "DELETE FROM question_likes WHERE question_id = $1 AND user_id = $2",
-        [id, userId]
-      );
-      
-      const likeCountRes = await pool.query(
-        "SELECT COUNT(*) as count FROM question_likes WHERE question_id = $1",
-        [id]
-      );
-      
-      res.json({ is_liked: false, like_count: parseInt(likeCountRes.rows[0].count) });
+      await pool.query("DELETE FROM question_likes WHERE question_id = $1 AND user_id = $2", [id, userId]);
+      is_liked = false;
     } else {
-      await pool.query(
-        "INSERT INTO question_likes (question_id, user_id, liked_at) VALUES ($1, $2, NOW())",
-        [id, userId]
-      );
-      
-      const likeCountRes = await pool.query(
-        "SELECT COUNT(*) as count FROM question_likes WHERE question_id = $1",
-        [id]
-      );
-      
-      res.json({ is_liked: true, like_count: parseInt(likeCountRes.rows[0].count) });
+      await pool.query("INSERT INTO question_likes (question_id, user_id, liked_at) VALUES ($1, $2, NOW())", [id, userId]);
+      is_liked = true;
     }
+
+    const likeCountRes = await pool.query("SELECT COUNT(*) as count FROM question_likes WHERE question_id = $1", [id]);
+
+    if (is_liked) {
+      const qOwner = await pool.query("SELECT user_id FROM questions WHERE id = $1", [id]);
+      if (qOwner.rows.length > 0) {
+          const ownerId = qOwner.rows[0].user_id;
+          if (ownerId !== userId) {
+            await notifyLike(req, ownerId, userId, "question", id);
+          }
+      }
+    }
+
+    res.json({ is_liked, like_count: parseInt(likeCountRes.rows[0].count) });
+
   } catch (err) {
     console.error("❌ Error liking question:", err);
     res.status(500).json({ error: "Failed to like question." });
@@ -432,12 +429,13 @@ router.post("/:id/like", auth, async (req, res) => {
 });
 
 // ======================================================
-// 9️⃣ POST /api/answers/:id/like — Like an answer
+// 9️⃣ POST /api/questions/answers/:id/like — Like an answer
 // ======================================================
 router.post("/answers/:id/like", auth, async (req, res) => {
   try {
     const { id } = req.params;
     const userId = req.user.id;
+    let is_liked = false;
 
     const existingLike = await pool.query(
       "SELECT id FROM answer_likes WHERE answer_id = $1 AND user_id = $2",
@@ -445,30 +443,27 @@ router.post("/answers/:id/like", auth, async (req, res) => {
     );
 
     if (existingLike.rows.length > 0) {
-      await pool.query(
-        "DELETE FROM answer_likes WHERE answer_id = $1 AND user_id = $2",
-        [id, userId]
-      );
-      
-      const likeCountRes = await pool.query(
-        "SELECT COUNT(*) as count FROM answer_likes WHERE answer_id = $1",
-        [id]
-      );
-      
-      res.json({ is_liked: false, like_count: parseInt(likeCountRes.rows[0].count) });
+      await pool.query("DELETE FROM answer_likes WHERE answer_id = $1 AND user_id = $2", [id, userId]);
+      is_liked = false;
     } else {
-      await pool.query(
-        "INSERT INTO answer_likes (answer_id, user_id, liked_at) VALUES ($1, $2, NOW())",
-        [id, userId]
-      );
-      
-      const likeCountRes = await pool.query(
-        "SELECT COUNT(*) as count FROM answer_likes WHERE answer_id = $1",
-        [id]
-      );
-      
-      res.json({ is_liked: true, like_count: parseInt(likeCountRes.rows[0].count) });
+      await pool.query("INSERT INTO answer_likes (answer_id, user_id, liked_at) VALUES ($1, $2, NOW())", [id, userId]);
+      is_liked = true;
     }
+
+    const likeCountRes = await pool.query("SELECT COUNT(*) as count FROM answer_likes WHERE answer_id = $1", [id]);
+
+    if (is_liked) {
+        const aOwner = await pool.query("SELECT user_id FROM answers WHERE id = $1", [id]);
+        if (aOwner.rows.length > 0) {
+            const ownerId = aOwner.rows[0].user_id;
+            if (ownerId !== userId) {
+                await notifyLike(req, ownerId, userId, "answer", id);
+            }
+        }
+    }
+
+    res.json({ is_liked, like_count: parseInt(likeCountRes.rows[0].count) });
+
   } catch (err) {
     console.error("❌ Error liking answer:", err);
     res.status(500).json({ error: "Failed to like answer." });
@@ -476,7 +471,76 @@ router.post("/answers/:id/like", auth, async (req, res) => {
 });
 
 // ======================================================
-// 🔟 DELETE /api/questions/:id — Delete question
+// 🔟 POST /api/questions/answers/:id/comments — Add comment to answer
+// ======================================================
+router.post("/answers/:id/comments", auth, async (req, res) => {
+  try {
+    const { id } = req.params; 
+    const { content, text, comment } = req.body; 
+    const finalContent = content || text || comment;
+    const userId = req.user.id;
+
+    if (!finalContent || finalContent.trim().length === 0) {
+      return res.status(400).json({ error: "Comment cannot be empty." });
+    }
+
+    // ✅ FIXED: Changed 'content' to 'comment_text' to match likely database schema
+    const result = await pool.query(
+      `INSERT INTO answer_comments (answer_id, user_id, comment_text, created_at)
+       VALUES ($1, $2, $3, NOW())
+       RETURNING id, comment_text, created_at`,
+      [id, userId, finalContent.trim()]
+    );
+
+    // Notify Answer Owner
+    const answerRes = await pool.query("SELECT user_id FROM answers WHERE id = $1", [id]);
+    if (answerRes.rows.length > 0) {
+        const ownerId = answerRes.rows[0].user_id;
+        if (ownerId !== userId) {
+            await notifyComment(req, ownerId, userId, "answer", id);
+        }
+    }
+
+    res.json({ success: true, comment: result.rows[0] });
+
+  } catch (err) {
+    console.error("❌ Error adding answer comment:", err);
+    res.status(500).json({ error: "Failed to post comment." });
+  }
+});
+
+// ======================================================
+// 1️⃣1️⃣ GET /api/questions/answers/:id/comments — Get answer comments
+// ======================================================
+router.get("/answers/:id/comments", async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    // ✅ FIXED: Changed 'content' to 'comment_text' here as well
+    const { rows } = await pool.query(
+      `SELECT 
+        ac.id, 
+        ac.comment_text, 
+        ac.created_at,
+        u.username, 
+        u.display_name as author_name, 
+        u.avatar_url as author_avatar_url
+       FROM answer_comments ac
+       JOIN users u ON ac.user_id = u.id
+       WHERE ac.answer_id = $1
+       ORDER BY ac.created_at ASC`,
+      [id]
+    );
+
+    res.json(rows);
+  } catch (err) {
+    console.error("❌ Error loading answer comments:", err);
+    res.status(500).json({ error: "Failed to load comments." });
+  }
+});
+
+// ======================================================
+// 1️⃣2️⃣ DELETE /api/questions/:id
 // ======================================================
 router.delete("/:id", auth, async (req, res) => {
   try {

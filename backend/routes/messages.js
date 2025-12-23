@@ -798,4 +798,46 @@ router.get("/conversations/:conversationId/search", auth, async (req, res) => {
   }
 });
 
+/* ======================================================
+   🔔 🔟 Get recent unread messages (For Dropdown)
+====================================================== */
+router.get("/unread", auth, async (req, res) => {
+  try {
+    const userId = req.user.id;
+
+    const { rows } = await pool.query(
+      `
+      SELECT 
+        m.id,
+        m.message_text,
+        m.message_type,
+        m.created_at,
+        m.sender_id,
+        m.conversation_id,
+        u.username AS sender_name,
+        u.username,
+        u.avatar_url AS sender_avatar
+      FROM messages m
+      JOIN conversation_participants cp ON m.conversation_id = cp.conversation_id
+      JOIN users u ON m.sender_id = u.id
+      WHERE cp.user_id = $1 
+        AND m.sender_id != $1
+        AND m.is_read = false
+        AND m.deleted_at IS NULL
+      ORDER BY m.created_at DESC
+      LIMIT 5
+      `,
+      [userId]
+    );
+
+    res.json(rows);
+  } catch (error) {
+    console.error("❌ Get unread messages error:", error);
+    res.status(500).json({ 
+      error: "Failed to fetch unread messages",
+      code: "FETCH_UNREAD_FAILED"
+    });
+  }
+});
+
 export default router;
