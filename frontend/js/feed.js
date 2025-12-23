@@ -138,7 +138,7 @@ function createPostCard(post) {
         </div>
 
         <div class="post-content">
-            <p>${post.content || ""}</p>
+            <p style="white-space: pre-wrap; word-break: break-word; line-height: 1.6;">${post.content || ""}</p>
         </div>
 
         ${post.image_url ? `

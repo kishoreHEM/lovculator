@@ -44,6 +44,7 @@ import feedRouter from "./routes/feed.js";
 import commentsRouter from "./routes/comments.js";
 import followRoutes from "./routes/follow.js";
 import adminRoutes from "./routes/admin.js";
+import storyPage from "./pages/story.page.js";
 
 
 //
@@ -252,6 +253,13 @@ app.get("/*.html", (req, res, next) => {
 //
 // 🔟 STATIC FILES (Frontend & Uploads)
 //
+// 🧩 View Engine (EJS for SEO pages)
+app.set("view engine", "ejs");
+app.set("views", path.join(process.cwd(), "backend/views"));
+
+// 🔴 SEO / SSR pages FIRST
+app.use(storyPage);
+
 app.use(
   express.static(frontendPath, {
     maxAge: process.env.NODE_ENV === "production" ? "1d" : 0,
@@ -410,8 +418,8 @@ app.use((error, req, res, next) => {
 
 
 // ✅ NEW: Route for Shared Love Stories
-// Serves love-stories.html when visiting /stories/123
-app.get("/stories/:id", (req, res) => {
+// Updated to handle ID-Slug pattern for the HTML fallback
+app.get("/stories/:id(\\d+)*", (req, res) => {
   res.sendFile(path.join(frontendPath, "love-stories.html"));
 });
 

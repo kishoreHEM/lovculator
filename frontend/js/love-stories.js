@@ -12,6 +12,21 @@ window.ASSET_BASE = window.location.hostname.includes("localhost")
   ? "http://localhost:3001" 
   : "https://lovculator.com"; 
 
+
+// ==============================================
+// 🔧 Utility: Slugify helper
+// ==============================================
+function slugify(text = "") {
+  return text
+    .toString()
+    .toLowerCase()
+    .trim()
+    .replace(/[^\w\s-]/g, "")   // remove special chars
+    .replace(/\s+/g, "-")       // spaces to hyphen
+    .replace(/-+/g, "-");       // collapse multiple hyphens
+}
+
+
 // ==============================================
 // 1. DATA LAYER: LoveStoriesAPI Manager
 // ==============================================
@@ -25,13 +40,17 @@ class LoveStoriesAPI {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), this.timeout);
 
+    const headers = { ...options.headers };
+    
+    // Only set Content-Type to JSON if we are NOT sending a file (FormData)
+    if (!(options.body instanceof FormData)) {
+        headers["Content-Type"] = "application/json";
+    }
+
     try {
       const response = await fetch(`${this.apiBase}${endpoint}`, {
         method: options.method || "GET",
-        headers: {
-          "Content-Type": "application/json",
-          ...options.headers,
-        },
+        headers: headers,
         credentials: "include",
         signal: controller.signal,
         body: options.body || null,
@@ -60,9 +79,11 @@ class LoveStoriesAPI {
   }
 
   async createStory(storyData) {
+    const body = storyData instanceof FormData ? storyData : JSON.stringify(storyData);
+
     return this.request("/stories", {
       method: "POST",
-      body: JSON.stringify(storyData),
+      body: body,
     });
   }
 
@@ -84,37 +105,41 @@ class LoveStories {
     }
 
     async init() {
-        this.bindEvents(); 
+        this.bindEvents();
     }
 
     async loadStories(params = {}) {
         const queryString = new URLSearchParams(params).toString();
-        
+
         try {
-            this.stories = await this.api.request(`/stories?${queryString}`);
-            document.dispatchEvent(new CustomEvent('storiesLoaded')); 
+            const response = await this.api.request(`/stories?${queryString}`);
+
+            this.stories = Array.isArray(response)
+              ? response
+              : Array.isArray(response.stories)
+                  ? response.stories
+                  : [];
+
+            document.dispatchEvent(new CustomEvent('storiesLoaded'));
         } catch (error) {
-            console.error('Error loading stories:', error);
             this.stories = [];
-            document.dispatchEvent(new CustomEvent('storiesLoaded')); 
+            document.dispatchEvent(new CustomEvent('storiesLoaded'));
             throw error;
         }
     }
 
     bindEvents() {
-        // Only bind form/UI events, NOT social interactions
         const moodOptions = document.querySelectorAll('.mood-option');
-        if (moodOptions.length > 0) {
-            moodOptions.forEach(option => {
-                option.addEventListener('click', () => {
-                    document.querySelectorAll('.mood-option').forEach(opt => 
-                        opt.classList.remove('selected'));
-                    option.classList.add('selected');
-                    document.getElementById('selectedMood').value = 
-                        option.dataset.mood;
-                });
+        moodOptions.forEach(option => {
+            option.addEventListener('click', () => {
+                document.querySelectorAll('.mood-option')
+                    .forEach(opt => opt.classList.remove('selected'));
+
+                option.classList.add('selected');
+                document.getElementById('selectedMood').value =
+                    option.dataset.mood;
             });
-        }
+        });
     }
 
     async addStory(storyData) {
@@ -130,7 +155,6 @@ class LoveStories {
             
             window.simpleStats?.trackStory();
             
-            // Use global notification
             if (window.showNotification) {
                 window.showNotification('Your love story has been shared with everyone! 🌍', 'success');
             }
@@ -172,115 +196,188 @@ class LoveStories {
         }
     }
 
-    // Story HTML template method
-    getStoryHTML(story) {
-        const date = new Date(story.created_at).toLocaleDateString();
-        const isLong = story.love_story.length > 200;
+    // Story HTML template method - REARRANGED LAYOUT
+getStoryHTML(story) {
+    const date = new Date(story.created_at).toLocaleDateString();
+    const isLong = story.love_story && story.love_story.length > 300;
 
-        const shareUrl = `https://lovculator.com/stories/${story.id}`; 
-        const shareTitle = story.story_title;
-        const shareText = `Read this beautiful love story: ${story.story_title}`;
-        
-        // Author and Avatar Logic
-        const authorName = story.anonymous_post
-          ? "Anonymous User"
-          : story.author_display_name || story.author_username || "User";
+    // SIMPLIFIED: Use a safer approach
+    const shareUrl = `https://lovculator.com/stories/${story.id}-${slugify(story.story_title || 'love-story')}`;
+ 
+    const shareTitle = story.story_title || "Love Story";
+    const shareText = `Read this beautiful love story: ${story.story_title || "Love Story"}`;
+    
+    const authorName = story.anonymous_post
+      ? "Anonymous User"
+      : story.author_display_name || story.author_username || "User";
 
-        const authorUsername = story.author_username || '';
-        const authorAvatar = story.author_avatar_url || "/images/default-avatar.png"; 
-        
-        // Ownership Check
-        const ownerId = story.user_id; 
-        const isOwner = window.currentUserId && ownerId === window.currentUserId;
+    const authorUsername = story.author_username || '';
+    const authorAvatar = story.author_avatar_url || "/images/default-avatar.png"; 
+    
+    const ownerId = story.user_id; 
+    const isOwner = window.currentUserId && ownerId === window.currentUserId;
+    const canFollow = !story.anonymous_post && !isOwner && story.author_id;
+    const isFollowing = story.is_following_author;
 
-        // Follow button logic
-        const canFollow = !story.anonymous_post && !isOwner && story.author_id;
-        const isFollowing = story.is_following_author;
+    // Handle story text safely
+    let storyText = story.love_story || "";
+    let displayText = storyText;
+    
+    if (isLong) {
+        displayText = storyText.substring(0, 300) + '...';
+    }
 
-        return `
-        <div class="story-card" data-story-id="${story.id}">
-            <div class="story-card-header">
-                <div class="story-user-info">
-                    <a href="/profile/${encodeURIComponent(authorUsername)}" class="story-user-link">
-                        <img src="${authorAvatar}" alt="${authorName}" class="story-avatar" />
+    // 1. IMAGE (Top)
+    let imageHtml = '';
+    if (story.image_url) {
+        imageHtml = `
+        <div class="story-image-container" style="margin-bottom: 15px; border-radius: 8px; overflow: hidden;">
+            <img src="${story.image_url}" alt="Story Image" style="width: 100%; height: auto; display: block; max-height: 500px; object-fit: cover;">
+        </div>`;
+    }
+
+    // Creates a clean URL: /stories/15-the-story-title
+const slug = slugify(story.story_title || 'story');
+const storyUrl = `/stories/${story.id}-${slug}`;
+
+const titleHtml = `
+  <a href="${storyUrl}" style="text-decoration: none; color: inherit;">
+      <h3 class="story-title" style="margin-top: 0; margin-bottom: 10px; font-size: 1.4rem; color: #333; cursor: pointer;">
+          ${story.story_title || "Untitled Story"}
+      </h3>
+  </a>`;
+
+    // 3. BOTH NAMES
+    let coupleNamesHtml = '';
+    if (story.couple_names) {
+        coupleNamesHtml = `<div class="story-meta-row" style="margin-bottom: 5px; color: #666; font-weight: 500;">
+            ❤️ <strong>Couple:</strong> ${story.couple_names}
+        </div>`;
+    }
+
+    // 4. TOGETHER SINCE
+    let togetherSinceHtml = '';
+    if (story.together_since) {
+         const togetherDate = new Date(story.together_since).toLocaleDateString();
+         togetherSinceHtml = `<div class="story-meta-row" style="margin-bottom: 5px; color: #666; font-size: 0.95rem;">
+            📅 <strong>Together Since:</strong> ${togetherDate}
+         </div>`;
+    }
+
+    // 5. CATEGORY
+    let categoryHtml = '';
+    if (story.category) {
+        const catDisplay = story.category.charAt(0).toUpperCase() + story.category.slice(1);
+        categoryHtml = `<div class="story-meta-row" style="margin-bottom: 15px; display: inline-block; background: #fff0f5; padding: 4px 12px; border-radius: 15px; font-size: 0.85rem; color: #ff4b8d; font-weight: 600;">
+            ${catDisplay}
+        </div>`;
+    }
+
+    // 6. LOVE STORY CONTENT (PREVIEW ONLY)
+const contentHtml = `
+  <div class="story-content ${isLong ? '' : 'expanded'}"
+       style="white-space: pre-line; line-height: 1.6; color: #444; font-size: 1rem;">
+    ${displayText}
+  </div>
+
+  ${isLong ? `
+    <a href="/stories/${story.id}-${slugify(story.story_title || 'love-story')}"
+       class="read-more"
+       style="color:#ff4b8d; font-weight:bold; text-decoration:none;">
+       Read Full Story →
+    </a>
+  ` : ''}
+`;
+
+
+    return `
+    <div class="story-card" data-story-id="${story.id}" style="padding: 20px; background: white; border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); margin-bottom: 20px;">
+        <div class="story-card-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+            <div class="story-user-info" style="display: flex; align-items: center; gap: 10px;">
+                <a href="/profile/${encodeURIComponent(authorUsername)}" class="story-user-link">
+                    <img src="${authorAvatar}" alt="${authorName}" class="story-avatar" style="width: 40px; height: 40px; border-radius: 50%; object-fit: cover;" />
+                </a>
+                <div class="story-user-details">
+                    <a href="/profile/${encodeURIComponent(authorUsername)}" class="story-username-link" style="text-decoration: none; color: inherit;">
+                        <h4 class="story-username" style="margin: 0; font-size: 0.95rem;">${authorName}</h4>
                     </a>
-                    <div class="story-user-details">
-                        <a href="/profile/${encodeURIComponent(authorUsername)}" class="story-username-link">
-                            <h4 class="story-username">${authorName}</h4>
-                        </a>
-                        <span class="story-date">${date}</span>
-                    </div>
+                    <span class="story-date" style="font-size: 0.8rem; color: #999;">${date}</span>
                 </div>
+            </div>
 
-                ${canFollow ? `
-                    <button class="follow-btn ${isFollowing ? 'following' : ''}" 
-                          data-user-id="${story.author_id}"
-                          data-story-id="${story.id}">
-                          ${isFollowing ? 'Following' : '+ Follow'}
+            ${canFollow ? `
+                <button class="follow-btn ${isFollowing ? 'following' : ''}" 
+                      data-user-id="${story.author_id}"
+                      data-story-id="${story.id}">
+                      ${isFollowing ? 'Following' : '+ Follow'}
+                </button>
+            ` : ''}
+        </div>
+        
+        ${imageHtml}
+        ${titleHtml}
+        ${coupleNamesHtml}
+        ${togetherSinceHtml}
+        ${categoryHtml}
+        
+        <hr style="border: 0; border-top: 1px solid #eee; margin: 10px 0;">
+        
+        ${contentHtml}
+        
+        <div class="story-footer" style="margin-top: 20px; padding-top: 15px; border-top: 1px solid #f0f0f0; display: flex; justify-content: space-between; align-items: center;">
+            <span class="story-mood" style="font-size: 0.85rem; color: #888;">${this.getMoodText(story.mood)}</span>
+            <div class="story-actions" style="display: flex; gap: 15px;">
+                
+                ${isOwner ? `
+                    <button class="delete-story-button" title="Delete Story">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
                     </button>
                 ` : ''}
-            </div>
-            
-            <h3 class="story-title">${story.story_title}</h3>
-            <div class="story-content ${isLong ? '' : 'expanded'}" ${isLong ? `data-full-text="${story.love_story}"` : ''}>
-                ${isLong ? story.love_story.substring(0, 200) + '...' : story.love_story}
-            </div>
-            ${isLong ? `<button class="read-more">Read More</button>` : ''}
-            
-            <div class="story-footer">
-                <span class="story-mood">${this.getMoodText(story.mood)}</span>
-                <div class="story-actions">
-                    
-                    ${isOwner ? `
-                        <button class="delete-story-button" title="Delete Story">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
-                        </button>
-                    ` : ''}
 
-                    <button class="story-action like-button ${story.user_liked ? 'liked' : ''}">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="${story.user_liked ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="like-icon">
-                            <path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/>
-                        </svg>
-                        <span class="like-count">${story.likes_count}</span>
-                    </button>
-                    
-                    <button class="story-action comment-toggle">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="comment-icon">
-                            <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/>
-                        </svg>
-                        <span>${story.comments_count}</span>
-                    </button>
-                    
-                    <button class="story-action share-action-toggle" 
-                            data-share-url="${shareUrl}" 
-                            data-share-title="${shareTitle}"
-                            data-share-text="${shareText}">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="share-icon">
-                            <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"></path>
-                            <polyline points="16 6 12 2 8 6"></polyline>
-                            <line x1="12" y1="2" x2="12" y2="15"></line>
-                        </svg>
-                        <span class="share-count">${story.shares_count || 0}</span>
-                    </button>
+                <button class="story-action like-button ${story.user_liked ? 'liked' : ''}">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="${story.user_liked ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="like-icon">
+                        <path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/>
+                    </svg>
+                    <span class="like-count">${story.likes_count || 0}</span>
+                </button>
+                
+                <button class="story-action comment-toggle">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="comment-icon">
+                        <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/>
+                    </svg>
+                    <span>${story.comments_count || 0}</span>
+                </button>
+                
+                <button class="story-action share-action-toggle" 
+                        data-share-url="${shareUrl}" 
+                        data-share-title="${shareTitle}"
+                        data-share-text="${shareText}">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="share-icon">
+                        <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"></path>
+                        <polyline points="16 6 12 2 8 6"></polyline>
+                        <line x1="12" y1="2" x2="12" y2="15"></line>
+                    </svg>
+                    <span class="share-count">${story.shares_count || 0}</span>
+                </button>
 
-                    <button class="story-action report-story-button" title="Report Inappropriate Content">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="flag-icon"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"></path><line x1="4" y1="22" x2="4" y2="15"></line></svg>
-                    </button>
-                </div>
-            </div>
-            
-            <div class="comments-section hidden" id="comments-${story.id}">
-                <div class="comment-form">
-                    <input type="text" class="comment-input" placeholder="Add a comment..." 
-                           data-story-id="${story.id}">
-                    <button class="comment-submit">Post</button>
-                </div>
-                <div class="comments-list" id="comments-list-${story.id}">
-                    </div>
+                <button class="story-action report-story-button" title="Report">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="flag-icon"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"></path><line x1="4" y1="22" x2="4" y2="15"></line></svg>
+                </button>
             </div>
         </div>
-    `;
-    }
+        
+        <div class="comments-section hidden" id="comments-${story.id}">
+            <div class="comment-form">
+                <input type="text" class="comment-input" placeholder="Add a comment..." 
+                       data-story-id="${story.id}">
+                <button class="comment-submit">Post</button>
+            </div>
+            <div class="comments-list" id="comments-list-${story.id}">
+                </div>
+        </div>
+    </div>
+`;
+}
     getEmptyStateHTML() {
         return `
             <div class="empty-state">
@@ -368,7 +465,9 @@ class LoveStoriesPage {
 
         this.isLoading = true;
         loadMoreBtn?.classList.add('hidden');
-        this.loveStories.storiesContainer.innerHTML = '<div class="loading-indicator">Loading stories...</div>';
+        if (this.loveStories.storiesContainer) {
+            this.loveStories.storiesContainer.innerHTML = '<div class="loading-indicator">Loading stories...</div>';
+        }
 
         try {
             await this.loveStories.loadStories(apiParams);
@@ -382,7 +481,9 @@ class LoveStoriesPage {
             if (window.showNotification) {
                 window.showNotification('Failed to load stories with the current filters.', 'error');
             }
-            this.loveStories.storiesContainer.innerHTML = this.loveStories.getEmptyStateHTML();
+            if (this.loveStories.storiesContainer) {
+                this.loveStories.storiesContainer.innerHTML = this.loveStories.getEmptyStateHTML();
+            }
         }
     }
 
@@ -456,75 +557,6 @@ class LoveStoriesPage {
 }
 
 // ==============================================
-// 4. UI CLASS: StoryModal
-// ==============================================
-class StoryModal {
-    constructor(loveStoriesInstance) {
-        this.loveStories = loveStoriesInstance;
-        this.storyFab = document.getElementById('storyFab');
-        this.storyModal = document.getElementById('storyModal');
-        this.closeModal = document.getElementById('closeModal');
-        this.storyForm = document.getElementById('storyForm');
-        this.init();
-    }
-
-    init() {
-        if (!this.storyFab || !this.storyModal) return;
-        this.storyFab.addEventListener('click', (e) => {
-            e.preventDefault();
-            this.storyModal.classList.remove('hidden');
-        });
-        this.closeModal.addEventListener('click', () => {
-            this.storyModal.classList.add('hidden');
-        });
-        if (this.storyForm) {
-            this.storyForm.addEventListener('submit', (e) => this.handleSubmit(e));
-        }
-    }
-
-    async handleSubmit(e) {
-        e.preventDefault();
-        const submitBtn = this.storyForm.querySelector('.submit-story-btn');
-        submitBtn.disabled = true;
-
-        const formData = {
-            coupleNames: document.getElementById('coupleNames').value,
-            storyTitle: document.getElementById('storyTitle').value,
-            togetherSince: document.getElementById('togetherSince').value,
-            loveStory: document.getElementById('loveStory').value,
-            category: document.getElementById('storyCategory').value,
-            mood: document.getElementById('selectedMood').value,
-            allowComments: document.getElementById('allowComments').checked,
-            anonymousPost: document.getElementById('anonymousPost').checked
-        };
-
-        const backendPayload = {
-            story_title: formData.storyTitle,
-            love_story: formData.loveStory,
-            category: formData.category,
-            mood: formData.mood,
-            couple_names: formData.coupleNames,
-            together_since: formData.togetherSince,
-            allow_comments: formData.allowComments,
-            anonymous_post: formData.anonymousPost
-        };
-
-        try {
-            await this.loveStories.addStory(backendPayload);
-            this.storyModal.classList.add('hidden');
-            this.storyForm.reset();
-        } catch (error) {
-            console.error(error);
-            if (window.showNotification) {
-                window.showNotification('Failed to share story.', 'error');
-            }
-        } finally {
-            submitBtn.disabled = false;
-        }
-    }
-}
-
-// ==============================================
 // 5. GLOBAL INITIALIZATION
 // ==============================================
 function initializeLoveStories() {
@@ -537,13 +569,13 @@ function initializeLoveStories() {
     // Core Stories Manager
     const loveStories = new LoveStories(); 
     
-    // Page-specific components
+    // Page-specific components (Only if container exists)
     if (document.getElementById('storiesContainer')) {
         window.loveStoriesPage = new LoveStoriesPage(loveStories);
     }
     
-    // Story creation modal
-    if (document.getElementById('storyFab')) {
+    // Story creation modal (Works on Home Page & Stories Page)
+    if (typeof StoryModal !== 'undefined') {
         new StoryModal(loveStories);
     }
     

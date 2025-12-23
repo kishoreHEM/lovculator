@@ -1,6 +1,6 @@
 /**
  * frontend/js/notifications.js
- * ✅ Final Version: Uses shared WebSocketManager & correct data paths
+ * ✅ Final Version: Supports Mobile/Desktop Split & Static Dropdown
  */
 
 class NotificationManager {
@@ -14,69 +14,83 @@ class NotificationManager {
 
     async init() {
         console.log("🔔 NotificationManager initialized");
-        // We do NOT call setupNotificationHandlers here immediately because 
-        // the header might not exist yet. LayoutManager will handle the clicks.
-        
+
         this.updateNotificationBadge();
         this.updateMessageBadge();
 
-        // Subscribe to WebSocket events (shared manager)
+        // Subscribe to WebSocket events
         this.subscribeToRealTimeEvents();
 
-        // Fallback polling (for safety)
+        // Fallback polling
         this.startAutoRefresh();
+
+        // Attach to the Global Header buttons (if they exist yet)
+        // We use a small timeout to ensure header.html is loaded
+        setTimeout(() => this.bindHeaderEvents(), 500);
+    }
+
+    // ================================
+    // 🔗 BINDING (Connects to Header)
+    // ================================
+    bindHeaderEvents() {
+        // We hook into the clicks to Fetch Data when opened
+        const triggerFetch = () => this.fetchAndRenderNotifications();
+
+        const deskBtn = document.getElementById("deskNotifBtn");
+        const mobBtn = document.getElementById("mobNotifBtn");
+
+        if (deskBtn) deskBtn.addEventListener("click", triggerFetch);
+        if (mobBtn) mobBtn.addEventListener("click", triggerFetch);
     }
 
     // ================================
     // 🔌 REALTIME (WebSocket)
     // ================================
     async subscribeToRealTimeEvents() {
-        // Wait until wsManager exists
         if (!window.wsManager) {
-            console.log("⏳ Waiting for WebSocketManager in notifications...");
-            setTimeout(() => this.subscribeToRealTimeEvents(), 500);
+            setTimeout(() => this.subscribeToRealTimeEvents(), 1000);
             return;
         }
 
         try {
-            // Ensure connection (idempotent in your wsManager)
             await window.wsManager.connect();
 
-            // Listen for NEW_NOTIFICATION events
             window.wsManager.subscribe("NEW_NOTIFICATION", (data) => {
                 this.handleNewNotification(data);
             });
 
-            // Listen for NEW_MESSAGE events (for unread message badge)
             window.wsManager.subscribe("NEW_MESSAGE", (data) => {
                 this.handleNewMessage(data);
             });
-
-            console.log("✅ NotificationManager subscribed to WebSocket events");
         } catch (err) {
-            console.error("❌ Failed to subscribe to WS events in notifications:", err);
+            console.error("❌ WS Subscribe Error:", err);
         }
     }
 
     // ================================
-    // 🔽 DROPDOWN & FETCH
+    // 🔽 DATA FETCHING & RENDERING
     // ================================
-    async showNotifications() {
+    
+    // Called when user clicks the bell
+    async fetchAndRenderNotifications() {
+        // 1. Find the existing panel container from header.html
+        const container = document.querySelector("#notificationPanel .dropdown-content");
+        if (!container) return; // Header not loaded correctly
+
+        // Show loading state
+        container.innerHTML = '<div class="dropdown-empty">Loading...</div>';
+
         try {
-            const res = await fetch("/api/notifications?filter=all&page=1&limit=5", {
+            const res = await fetch("/api/notifications?filter=all&page=1&limit=10", {
                 credentials: "include",
             });
 
-            const data = res.ok ? await res.json() : {
-                notifications: []
-            };
-            const notifications = Array.isArray(data.notifications) ?
-                data.notifications :
-                [];
+            const data = res.ok ? await res.json() : { notifications: [] };
+            const notifications = Array.isArray(data.notifications) ? data.notifications : [];
 
-            this.renderDropdown(notifications);
+            this.renderList(notifications);
 
-            // Mark visible unread items as read
+            // Mark visible items as read locally & on server
             const unreadIds = notifications
                 .filter((n) => !n.is_read && !n.read)
                 .map((n) => n.id);
@@ -86,129 +100,57 @@ class NotificationManager {
             }
         } catch (error) {
             console.error("❌ Notification load error:", error);
-            this.renderDropdown([]);
+            container.innerHTML = '<div class="dropdown-empty">Failed to load notifications.</div>';
         }
     }
 
-    renderDropdown(notifications) {
-        const existing = document.getElementById("notificationsDropdown");
-        if (existing) existing.remove();
+    // ✅ Render into the EXISTING #notificationPanel
+    renderList(notifications) {
+        const container = document.querySelector("#notificationPanel .dropdown-content");
+        if (!container) return;
 
-        const btn = document.getElementById("notificationsBtn");
-        if (!btn) {
-            console.error("Notification button not found in DOM");
+        if (notifications.length === 0) {
+            container.innerHTML = '<div class="dropdown-empty">No new notifications</div>';
             return;
         }
 
-        // Deduplicate by ID
-        const uniqueNotifications = Array.from(
-            new Map(
-                notifications
-                .filter((n) => n && n.id != null)
-                .map((n) => [n.id, n])
-            ).values()
-        );
+        // Generate HTML
+        const html = notifications.map((n) => {
+            const formattedText = this.formatNotificationText(n);
+            const timeAgo = this.formatTime(n.created_at || n.createdAt);
+            const actorAvatar = n.actor?.avatar_url || n.actor_avatar_url || "/images/default-avatar.png";
+            const link = n.link || n.url || "#";
+            const isUnread = !n.read && !n.is_read;
 
-        const rect = btn.getBoundingClientRect();
-        const dropdown = document.createElement("div");
-        dropdown.id = "notificationsDropdown";
-        dropdown.className = "notification-dropdown";
-
-        // Positioning
-        dropdown.style.position = "absolute";
-        dropdown.style.top = `${rect.bottom + 10}px`;
-        dropdown.style.zIndex = "1000";
-
-        if (window.innerWidth < 500) {
-            dropdown.style.left = "10px";
-            dropdown.style.right = "10px";
-            dropdown.style.width = "auto";
-        } else {
-            dropdown.style.right = `${window.innerWidth - rect.right}px`;
-            dropdown.style.width = "320px";
-        }
-
-        // Render Content
-        dropdown.innerHTML = `
-      <div class="dropdown-header">
-        <h4>Notifications</h4>
-        <a href="/notifications" class="see-all-link">See All</a>
-      </div>
-      <div class="dropdown-content">
-        ${
-          uniqueNotifications.length > 0
-            ? uniqueNotifications
-                .map((n) => {
-                  const formattedText = this.formatNotificationText(n);
-                  const timeAgo = this.formatTime(n.created_at || n.createdAt);
-                  const actorAvatar =
-                    n.actor?.avatar_url ||
-                    n.actor_avatar_url ||
-                    "/images/default-avatar.png";
-                  const link = n.link || n.url || "#";
-
-                  return `
-                <div class="dropdown-notification-item ${
-                  n.read || n.is_read ? "" : "unread"
-                }" onclick="window.location.href='${link}'">
-                  <img
-                    src="${actorAvatar}"
-                    alt="User"
-                    class="notification-avatar"
-                    onerror="this.onerror=null;this.src='/images/default-avatar.png';"
-                  >
-                  <div class="notification-content">
-                    <div class="dropdown-notification-text">${formattedText}</div>
-                    <div class="dropdown-notification-time">${timeAgo}</div>
-                  </div>
-                  ${
-                    !n.read && !n.is_read
-                      ? '<div class="unread-dot"></div>'
-                      : ""
-                  }
+            return `
+                <div class="dropdown-item ${isUnread ? "unread" : ""}" onclick="window.location.href='${link}'">
+                   <div style="display:flex; align-items:center; gap:10px;">
+                      <img src="${actorAvatar}" style="width:32px; height:32px; border-radius:50%; object-fit:cover;" 
+                           onerror="this.src='/images/default-avatar.png'">
+                      <div style="flex:1;">
+                          <div style="font-size:13px; color:#333;">${formattedText}</div>
+                          <div style="font-size:11px; color:#999; margin-top:2px;">${timeAgo}</div>
+                      </div>
+                      ${isUnread ? '<div style="width:8px; height:8px; background:#e91e63; border-radius:50%;"></div>' : ''}
+                   </div>
                 </div>
-              `;
-                })
-                .join("")
-            : `<div class="no-notifications">No new notifications</div>`
-        }
-      </div>
-      <div class="dropdown-footer">
-        <a href="/notifications">View all notifications</a>
-      </div>
-    `;
+            `;
+        }).join("");
 
-        document.body.appendChild(dropdown);
-
-        // Click outside to close
-        const closeHandler = (e) => {
-            if (!dropdown.contains(e.target) && !btn.contains(e.target)) {
-                dropdown.remove();
-                document.removeEventListener("click", closeHandler);
-            }
-        };
-        setTimeout(() => document.addEventListener("click", closeHandler), 10);
+        container.innerHTML = html;
     }
 
     // ================================
-    // 🔤 TEXT / TIME HELPERS
+    // 🔤 HELPERS
     // ================================
     formatNotificationText(notification) {
-        if (notification.message) {
-            return notification.message; // do not rewrite meaning
-        }
-
+        if (notification.message) return notification.message;
         const name = notification.actor_display_name || "Someone";
-
         switch (notification.type) {
-            case "comment":
-                return `${name} commented on your post`;
-            case "like":
-                return `${name} liked your post`;
-            case "follow":
-                return `${name} started following you`;
-            default:
-                return `${name} sent a notification`;
+            case "comment": return `<strong>${name}</strong> commented on your post`;
+            case "like": return `<strong>${name}</strong> liked your post`;
+            case "follow": return `<strong>${name}</strong> started following you`;
+            default: return `<strong>${name}</strong> sent a notification`;
         }
     }
 
@@ -222,78 +164,59 @@ class NotificationManager {
     formatTime(dateString) {
         if (!dateString) return "";
         const date = new Date(dateString);
-        if (isNaN(date.getTime())) return "";
-
         const now = new Date();
-        const diff = now - date;
-        const mins = Math.floor(diff / 60000);
-        const hrs = Math.floor(diff / 3600000);
-        const days = Math.floor(diff / 86400000);
+        const diff = Math.floor((now - date) / 1000); // seconds
 
-        if (mins < 1) return "Just now";
-        if (mins < 60) return `${mins}m ago`;
-        if (hrs < 24) return `${hrs}h ago`;
-        return `${days}d ago`;
+        if (diff < 60) return "Just now";
+        if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
+        if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
+        return `${Math.floor(diff / 86400)}d ago`;
     }
 
     // ================================
-    // 🔢 BADGE COUNTS
+    // 🔢 BADGE UPDATES (Fix for Desktop + Mobile)
     // ================================
     async updateNotificationBadge() {
         try {
-            const res = await fetch("/api/notifications/unread-count", {
-                credentials: "include",
-            });
+            const res = await fetch("/api/notifications/unread-count", { credentials: "include" });
             const data = res.ok ? await res.json() : {};
             this.notificationCount = data.count || 0;
-            this.updateNotificationBadgeUI();
-        } catch (error) {
-            // Silent fail - fallback polling will re-try
-        }
-    }
-
-    updateNotificationBadgeUI() {
-        // Support both id & class (LayoutManager uses ID 'notificationBadge')
-        const badge =
-            document.getElementById("notificationBadge") ||
-            document.querySelector(".notification-badge");
-
-        if (!badge) return;
-
-        if (this.notificationCount > 0) {
-            badge.textContent =
-                this.notificationCount > 99 ? "99+" : String(this.notificationCount);
-            badge.classList.remove("hidden");
-            badge.style.display = "flex";
-        } else {
-            badge.classList.add("hidden");
-            badge.style.display = "none";
-        }
+            this.updateBadgesUI();
+        } catch (e) { /* ignore */ }
     }
 
     async updateMessageBadge() {
         try {
-            const res = await fetch("/api/messages/unread-count", {
-                credentials: "include",
-            });
+            const res = await fetch("/api/messages/unread-count", { credentials: "include" });
             const data = res.ok ? await res.json() : {};
             this.messageCount = data.count || 0;
+            this.updateBadgesUI();
+        } catch (e) { /* ignore */ }
+    }
 
-            const badge = document.getElementById("messagesBadge");
+    updateBadgesUI() {
+        // Helper to update a specific badge element
+        const setBadge = (btnId, count) => {
+            const btn = document.getElementById(btnId);
+            if (!btn) return;
+            // The badge is the <span> inside the button
+            const badge = btn.querySelector(".badge"); 
             if (!badge) return;
 
-            if (this.messageCount > 0) {
-                badge.textContent =
-                    this.messageCount > 99 ? "99+" : String(this.messageCount);
-                badge.classList.remove("hidden");
-                badge.style.display = "flex";
+            if (count > 0) {
+                badge.textContent = count > 99 ? "99+" : String(count);
+                badge.style.display = "flex"; // Show
             } else {
-                badge.classList.add("hidden");
-                badge.style.display = "none";
+                badge.style.display = "none"; // Hide
             }
-        } catch (error) {
-            // ignore
-        }
+        };
+
+        // Update BOTH Desktop and Mobile Badges
+        setBadge("deskNotifBtn", this.notificationCount);
+        setBadge("mobNotifBtn", this.notificationCount);
+
+        setBadge("deskMsgBtn", this.messageCount);
+        setBadge("mobMsgBtn", this.messageCount);
     }
 
     // ================================
@@ -301,134 +224,58 @@ class NotificationManager {
     // ================================
     async markListAsRead(ids) {
         if (!ids || ids.length === 0) return;
+        
+        // Optimistic UI Update
+        this.notificationCount = Math.max(0, this.notificationCount - ids.length);
+        this.updateBadgesUI();
 
-        // Optimistic: decrease badge
-        this.notificationCount = Math.max(
-            0,
-            this.notificationCount - ids.length
-        );
-        this.updateNotificationBadgeUI();
-
-        // Fire & forget
         ids.forEach((id) => {
-            fetch(`/api/notifications/${id}/read`, {
-                method: "POST",
-                credentials: "include",
-            }).catch((e) => console.error(`Failed to mark ${id} read`, e));
+            fetch(`/api/notifications/${id}/read`, { method: "POST", credentials: "include" })
+            .catch(e => console.error("Read mark failed", e));
         });
     }
 
     // ================================
-    // 🔔 REALTIME EVENT HANDLERS
+    // 🔔 EVENT HANDLERS
     // ================================
     handleNewNotification(data) {
-        console.log("🔔 WebSocket Notification received:", data);
-
-        // 🛡 Detect proper payload shape
-        const notification = data.notification || data;
-
-        // 🛑 Prevent duplicate increment when the backend unread count syncs later
-        if (!notification.is_read && !notification.read) {
-            this.notificationCount++;
-            this.updateNotificationBadgeUI();
-        }
-
-        // 🔄 Always sync unread count from server
-        this.updateNotificationBadge();
-
-        // 🎉 Toast display
-        const msgText =
-            notification.message ||
-            data.message ||
-            "📩 You received a new notification";
-
-        this.showToast(this.safeText(msgText));
+        const notif = data.notification || data;
+        // Increment count immediately
+        this.notificationCount++;
+        this.updateBadgesUI();
+        
+        // Show Toast
+        const msg = notif.message || "You have a new notification";
+        this.showToast(msg);
     }
 
     handleNewMessage(data) {
-        console.log("💌 WebSocket Message Notification:", data);
-
-        this.updateMessageBadge();
-
+        this.messageCount++;
+        this.updateBadgesUI();
         if (!window.location.pathname.includes("messages")) {
-            const msg = data.message || {};
-            const sender =
-                msg.sender_display_name ||
-                msg.sender_username ||
-                msg.from_username ||
-                "Someone";
-
-            this.showToast(`💬 New message from ${this.safeText(sender)}`);
+            this.showToast("You have a new message");
         }
     }
 
-    // ================================
-    // ✨ NEW BEAUTIFUL TOAST UI
-    // ================================
     showToast(message) {
+        // Reuse your existing toast logic here...
+        // (Copied from your original file for brevity)
         let container = document.getElementById("toastContainer");
         if (!container) {
             container = document.createElement("div");
             container.id = "toastContainer";
-            container.style.cssText = `
-            position: fixed;
-            top: 10px;
-            right: 10px;
-            display: flex;
-            flex-direction: column;
-            gap: 6px;
-            z-index: 10000;
-        `;
+            container.style.cssText = "position:fixed; top:20px; right:20px; z-index:10000; display:flex; flex-direction:column; gap:10px;";
             document.body.appendChild(container);
         }
-
         const toast = document.createElement("div");
-        toast.className = "toast-minimal";
-        toast.innerHTML = `
-        <span style="margin-right:6px;">🔔</span>
-        ${this.safeText(message)}
-    `;
-
-        toast.style.cssText = `
-        background: rgba(30, 30, 30, 0.90);
-        color: white;
-        padding: 8px 14px;
-        border-radius: 20px;
-        font-size: 13px;
-        display: flex;
-        align-items: center;
-        box-shadow: 0 2px 6px rgba(0,0,0,0.25);
-        opacity: 0;
-        transform: translateY(-10px);
-        transition: all 0.25s ease-in-out;
-        cursor: pointer;
-        max-width: 260px;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-    `;
-
+        toast.style.cssText = "background:#333; color:#fff; padding:10px 20px; border-radius:4px; box-shadow:0 2px 5px rgba(0,0,0,0.2); animation:fadeIn 0.3s;";
+        toast.innerHTML = `🔔 ${this.safeText(message)}`;
         container.appendChild(toast);
-
-        setTimeout(() => {
-            toast.style.opacity = "1";
-            toast.style.transform = "translateY(0)";
-        }, 30);
-
-        toast.addEventListener("click", () => dismiss());
-
-        const dismiss = () => {
-            toast.style.opacity = "0";
-            toast.style.transform = "translateY(-10px)";
-            setTimeout(() => toast.remove(), 250);
-        };
-
-        setTimeout(dismiss, 3000);
+        setTimeout(() => toast.remove(), 4000);
     }
 
     startAutoRefresh() {
         if (this.autoRefreshInterval) clearInterval(this.autoRefreshInterval);
-
         this.autoRefreshInterval = setInterval(() => {
             this.updateNotificationBadge();
             this.updateMessageBadge();
@@ -436,7 +283,16 @@ class NotificationManager {
     }
 }
 
-// ✅ FIXED: Always initialize, even if elements aren't ready yet
+// Global Init
 document.addEventListener("DOMContentLoaded", () => {
+    // Expose layoutManager methods that global-header.js looks for
+    window.layoutManager = {
+        refreshNotificationBadge: () => window.notificationManager?.updateNotificationBadge(),
+        refreshMessageBadge: () => window.notificationManager?.updateMessageBadge(),
+        // global-header.js handles the UI toggle, we handle the Data fetch
+        toggleNotifications: () => window.notificationManager?.fetchAndRenderNotifications(),
+        toggleMessages: () => { /* Add message fetch logic if needed */ }
+    };
+
     window.notificationManager = new NotificationManager();
 });

@@ -23,98 +23,6 @@
 
 <!-- 📱 Main Layout -->
 <div class="app-container">
-
-    <!-- 👈 Left Sidebar -->
-    <aside class="main-sidebar">
-        <div class="user-card">
-            <img src="/images/default-avatar.png" alt="User" class="user-sidebar-avatar" id="sidebarAvatar">
-            <div class="user-info">
-                <h4 id="sidebarUserName">User Name</h4>
-            </div>
-        </div>
-
-        <nav class="sidebar-nav">
-    
-    <a href="/friends" class="sidebar-item">
-        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#1877F2" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
-            <circle cx="8.5" cy="7" r="4"></circle>
-            <path d="M20 8v6"></path>
-            <path d="M23 11h-6"></path>
-        </svg>
-        <span>Followers</span> 
-        <span class="sidebar-badge" id="friendsCount">0</span>
-    </a>
-    
-    <a href="/answers" class="sidebar-item">
-        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#28A745" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
-        </svg>
-        <span>My Answers</span>
-        <span class="sidebar-badge" id="answersCount">0</span>
-    </a>
-    
-    <a href="/answers" class="sidebar-item">
-        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#E67E22" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <circle cx="12" cy="12" r="10"></circle>
-            <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path>
-            <line x1="12" y1="17" x2="12.01" y2="17"></line>
-        </svg>
-        <span>My Questions</span>
-        <span class="sidebar-badge" id="questionsCount">0</span>
-    </a>
-    
-    <a href="/advertise" class="sidebar-item">
-        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#1abc9c" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M11 5L6 9H2v6h4l5 4z"></path>
-            <path d="M15 9.33a4 4 0 0 1 0 5.34"></path>
-        </svg>
-        <span>Advertise With Us</span>
-    </a>
-    
-    <a href="/memories" class="sidebar-item">
-        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#9B59B6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
-            <circle cx="8.5" cy="8.5" r="1.5"></circle>
-            <polyline points="21 15 16 10 5 21"></polyline>
-        </svg>
-        <span>Memories</span>
-    </a>
-    
-    <a href="/saved" class="sidebar-item">
-        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#34495e" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path>
-        </svg>
-        <span>Saved</span>
-    </a>
-    
-    <a href="/groups" class="sidebar-item">
-        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#E74C3C" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
-            <circle cx="9" cy="7" r="4"></circle>
-            <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
-            <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
-        </svg>
-        <span>Groups</span>
-    </a>
-    
-    <a href="/events" class="sidebar-item">
-        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#F39C12" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
-            <line x1="16" y1="2" x2="16" y2="6"></line>
-            <line x1="8" y1="2" x2="8" y2="6"></line>
-            <line x1="3" y1="10" x2="21" y2="10"></line>
-        </svg>
-        <span>Events</span>
-    </a>
-</nav>
-
-        <div class="shortcuts-section">
-            <h5>Your Shortcuts</h5>
-            <a href="/love-calculator" class="shortcut-link" target="_blank">Love Calculator By Name</a>
-        </div>
-    </aside>
-
     <!-- 🎯 Main Content -->
     <main class="main-content-area">
         <div class="create-story-bar">
@@ -124,10 +32,27 @@
             </div>
 
             <div class="creation-options">
-                <button id="btnStory" class="creation-option">Love Story</button>
-                <button id="btnQuestion" class="creation-option">Ask</button>
-                <button id="btnPost" class="creation-option">Post</button>
-            </div>
+    <button id="btnStory" class="creation-option">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" fill="#ff4b8d"/>
+        </svg>
+        <span>Love Story</span>
+    </button>
+
+    <button id="btnQuestion" class="creation-option">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 17h-2v-2h2v2zm2.07-7.75l-.9.92C13.45 12.9 13 13.5 13 15h-2v-.5c0-1.1.45-2.1 1.17-2.83l1.24-1.26c.37-.36.59-.86.59-1.41 0-1.1-.9-2-2-2s-2 .9-2 2H8c0-2.21 1.79-4 4-4s4 1.79 4 4c0 .88-.36 1.68-.93 2.25z" fill="#f39c12"/>
+        </svg>
+        <span>Ask</span>
+    </button>
+
+    <button id="btnPost" class="creation-option">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V5h14v14zm-5-7l-3 3.72L9 13l-4 5h14l-5-6z" fill="#45bd62"/>
+        </svg>
+        <span>Post</span>
+    </button>
+</div>
         </div>
 
         <!-- FEED -->
@@ -237,7 +162,9 @@
     </div>
 
 </div>
-<!-- Story Creation Modal -->
+
+
+
 <div id="storyModal" class="modal-overlay hidden">
     <div class="modal-content">
         <div class="modal-header">
@@ -308,6 +235,27 @@
                 </div>
                 <input type="hidden" id="selectedMood" value="romantic">
             </div>
+
+            <div class="form-group">
+                <label>Story Image (Optional)</label>
+                <div class="image-upload-container">
+                    <input type="file" id="storyImageInput" accept="image/*" class="hidden">
+                    
+                    <button type="button" id="triggerStoryImageBtn" class="upload-btn-styled">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                            <circle cx="8.5" cy="8.5" r="1.5"></circle>
+                            <polyline points="21 15 16 10 5 21"></polyline>
+                        </svg>
+                        Add a Cover Photo
+                    </button>
+
+                    <div id="storyImagePreviewContainer" class="preview-container hidden">
+                        <img id="storyImagePreview" src="" alt="Preview">
+                        <button type="button" id="removeStoryImageBtn" class="remove-btn">×</button>
+                    </div>
+                </div>
+            </div>
             
             <div class="form-group" style="display: flex; flex-direction: column; gap: 12px;">
                 <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; margin-bottom: 0;">
@@ -331,7 +279,6 @@
     </div>
 </div>
 
-<!-- Success Message Modal -->
 <div id="successMessage" class="success-message hidden">
     <div class="success-content">
         <span class="success-icon">🎉</span>
@@ -341,11 +288,7 @@
     </div>
 </div>
 
-
-
-
-<!-- Scripts -->
- <script src="/js/notifications.js"></script>
+<script src="/js/notifications.js"></script>
 <script src="/js/layout-manager.js"></script>
 <script src="/js/auth.js"></script>
 <script src="/js/global-header.js"></script>
@@ -354,7 +297,8 @@
 <script src="/js/feed.js"></script>
 <script src="/js/social-features.js"></script>
 
-<!-- REQUIRED FOR ASK & STORY MODALS -->
+<script src="/js/love-stories.js"></script> 
+
 <script src="/js/ask-modal.js"></script>
 <script src="/js/story-modal.js"></script>
 <script src="/js/profile.js" defer></script>

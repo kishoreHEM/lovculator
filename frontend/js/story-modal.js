@@ -1,33 +1,52 @@
 // frontend/js/story-modal.js
 class StoryModal {
-    constructor(loveStoriesInstance, notificationService) {
+    constructor(loveStoriesInstance) {
         this.loveStories = loveStoriesInstance;
-        this.notifications = notificationService;
-        this.storyFab = document.getElementById('storyFab');
+        
+        // 1. Find ALL trigger buttons (Home Page + FAB)
+        this.triggers = [];
+        const btnStory = document.getElementById('btnStory'); // Home page button
+        const storyFab = document.getElementById('storyFab'); // FAB button
+        
+        if (btnStory) this.triggers.push(btnStory);
+        if (storyFab) this.triggers.push(storyFab);
+
+        // 2. Main Elements
         this.storyModal = document.getElementById('storyModal');
         this.closeModal = document.getElementById('closeModal');
         this.storyForm = document.getElementById('storyForm');
         this.successMessage = document.getElementById('successMessage');
         this.successOk = document.getElementById('successOk');
+
+        // ✅ 3. Character Counter Elements (Added Back)
         this.loveStory = document.getElementById('loveStory');
         this.charCounter = document.getElementById('charCounter');
-        
+
+        // 4. Image Upload Elements
+        this.imageInput = document.getElementById('storyImageInput');
+        this.triggerImageBtn = document.getElementById('triggerStoryImageBtn');
+        this.previewContainer = document.getElementById('storyImagePreviewContainer');
+        this.previewImage = document.getElementById('storyImagePreview');
+        this.removeImageBtn = document.getElementById('removeStoryImageBtn');
+
         this.init();
     }
 
     init() {
-        if (!this.storyFab || !this.storyModal) return;
+        if (!this.storyModal) return;
 
-        this.storyFab.addEventListener('click', (e) => this.openModal(e));
-        this.closeModal.addEventListener('click', () => this.closeModalFunc());
+        // Open Listeners
+        this.triggers.forEach(btn => {
+            btn.addEventListener('click', (e) => this.openModal(e));
+        });
+
+        // Close Logic
+        if (this.closeModal) this.closeModal.addEventListener('click', () => this.closeModalFunc());
         this.storyModal.addEventListener('click', (e) => {
             if (e.target === this.storyModal) this.closeModalFunc();
         });
 
-        if (this.loveStory && this.charCounter) {
-            this.loveStory.addEventListener('input', () => this.updateCharCounter());
-        }
-
+        // Submit Logic
         if (this.storyForm) {
             this.storyForm.addEventListener('submit', (e) => this.handleSubmit(e));
         }
@@ -36,144 +55,144 @@ class StoryModal {
             this.successOk.addEventListener('click', () => this.closeSuccessMessage());
         }
 
-        if (this.successMessage) {
-            this.successMessage.addEventListener('click', (e) => {
-                if (e.target === this.successMessage) this.closeSuccessMessage();
-            });
+        // ✅ Character Counter Listener
+        if (this.loveStory && this.charCounter) {
+            this.loveStory.addEventListener('input', () => this.updateCharCounter());
         }
 
-        document.addEventListener('keydown', (e) => {
-            if (e.key === 'Escape') {
-                this.closeModalFunc();
-                this.closeSuccessMessage();
+        // Image Upload Logic
+        if (this.triggerImageBtn && this.imageInput) {
+            this.triggerImageBtn.addEventListener('click', (e) => {
+                e.preventDefault(); 
+                this.imageInput.click();
+            });
+
+            this.imageInput.addEventListener('change', () => this.handleImageSelect());
+        }
+
+        if (this.removeImageBtn) {
+            this.removeImageBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                this.clearImage();
+            });
+        }
+    }
+
+    // ✅ NEW: Update Character Counter to 20,000
+    updateCharCounter() {
+        const count = this.loveStory.value.length;
+        this.charCounter.textContent = count;
+        
+        // Optional warning style near the limit
+        if (count > 19000) {
+            this.charCounter.style.color = 'red';
+        } else {
+            this.charCounter.style.color = '';
+        }
+
+        // Hard Limit
+        if (count > 20000) {
+            this.loveStory.value = this.loveStory.value.substring(0, 20000);
+            this.charCounter.textContent = '20000';
+        }
+    }
+
+    handleImageSelect() {
+        const file = this.imageInput.files[0];
+        if (file) {
+            // Optional: Check size (e.g. 5MB)
+            if (file.size > 5 * 1024 * 1024) {
+                alert("Image is too large (Max 5MB)");
+                this.imageInput.value = "";
+                return;
             }
-        });
+
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                this.previewImage.src = e.target.result;
+                this.previewContainer.classList.remove('hidden');
+                this.triggerImageBtn.classList.add('hidden');
+            };
+            reader.readAsDataURL(file);
+        }
+    }
+
+    clearImage() {
+        this.imageInput.value = '';
+        this.previewImage.src = '';
+        this.previewContainer.classList.add('hidden');
+        this.triggerImageBtn.classList.remove('hidden');
     }
 
     openModal(e) {
         if (e) e.preventDefault();
         this.storyModal.classList.remove('hidden');
-        this.storyModal.setAttribute('aria-hidden', 'false');
         document.body.style.overflow = 'hidden';
-        setTimeout(() => document.getElementById('coupleNames')?.focus(), 100);
-        this.previousActiveElement = document.activeElement;
+        
+        // Reset Mood
         this.resetMoodSelection();
+        // Reset Counter
+        this.updateCharCounter();
     }
 
     closeModalFunc() {
         this.storyModal.classList.add('hidden');
-        this.storyModal.setAttribute('aria-hidden', 'true');
         document.body.style.overflow = '';
-        if (this.previousActiveElement) this.previousActiveElement.focus();
+        this.storyForm.reset();
+        this.clearImage();
+        if (this.charCounter) this.charCounter.textContent = '0';
+    }
+    
+    closeSuccessMessage() {
+        if (this.successMessage) this.successMessage.classList.add('hidden');
     }
 
-    updateCharCounter() {
-        const count = this.loveStory.value.length;
-        this.charCounter.textContent = count;
-        
-        if (count > 9000) {
-            this.charCounter.classList.add('warning');
-        } else {
-            this.charCounter.classList.remove('warning');
-        }
-        
-        if (count > 10000) {
-            this.loveStory.value = this.loveStory.value.substring(0, 10000);
-            this.charCounter.textContent = '10000';
-            this.charCounter.classList.add('warning');
+    resetMoodSelection() {
+        // Reset visual selection to first option
+        const moodOptions = document.querySelectorAll('.mood-option');
+        moodOptions.forEach(opt => opt.classList.remove('selected'));
+        const firstMood = document.querySelector('.mood-option');
+        if (firstMood) {
+            firstMood.classList.add('selected');
+            const hiddenInput = document.getElementById('selectedMood');
+            if(hiddenInput) hiddenInput.value = firstMood.dataset.mood || 'romantic';
         }
     }
 
     async handleSubmit(e) {
         e.preventDefault();
-        
         const submitBtn = this.storyForm.querySelector('.submit-story-btn');
-        const btnText = submitBtn.querySelector('.btn-text');
-        const btnLoading = submitBtn.querySelector('.btn-loading');
-        
-        btnText.classList.add('hidden');
-        btnLoading.classList.remove('hidden');
+        const btnText = submitBtn.querySelector('.btn-text'); // If you have span for text
+        const btnLoading = submitBtn.querySelector('.btn-loading'); // If you have spinner
+
+        if(btnText) btnText.classList.add('hidden');
+        if(btnLoading) btnLoading.classList.remove('hidden');
         submitBtn.disabled = true;
 
-        const formData = {
-            coupleNames: document.getElementById('coupleNames').value,
-            storyTitle: document.getElementById('storyTitle').value,
-            togetherSince: document.getElementById('togetherSince').value,
-            loveStory: this.loveStory.value,
-            category: document.getElementById('storyCategory').value,
-            mood: document.getElementById('selectedMood').value,
-            allowComments: document.getElementById('allowComments').checked,
-            anonymousPost: document.getElementById('anonymousPost').checked
-        };
+        const formData = new FormData();
+        formData.append('couple_names', document.getElementById('coupleNames').value);
+        formData.append('story_title', document.getElementById('storyTitle').value);
+        formData.append('together_since', document.getElementById('togetherSince').value);
+        formData.append('love_story', this.loveStory.value);
+        formData.append('category', document.getElementById('storyCategory').value);
+        formData.append('mood', document.getElementById('selectedMood').value);
+        formData.append('allow_comments', document.getElementById('allowComments').checked);
+        formData.append('anonymous_post', document.getElementById('anonymousPost').checked);
 
-        const backendPayload = {
-            story_title: formData.storyTitle,
-            love_story: formData.loveStory,
-            category: formData.category,
-            mood: formData.mood,
-            couple_names: formData.coupleNames,
-            together_since: formData.togetherSince,
-            allow_comments: formData.allowComments,
-            anonymous_post: formData.anonymousPost
-        };
-
-        if (!backendPayload.story_title?.trim() || !backendPayload.love_story?.trim()) {
-            this.notifications.showError("Please fill in both title and story content before submitting.");
-            submitBtn.disabled = false;
-            btnText.classList.remove('hidden');
-            btnLoading.classList.add('hidden');
-            return;
+        if (this.imageInput.files[0]) {
+            formData.append('image', this.imageInput.files[0]);
         }
 
         try {
-            await this.loveStories.addStory(backendPayload);
+            await this.loveStories.addStory(formData);
             this.closeModalFunc();
-            this.showSuccessMessage();
+            if (this.successMessage) this.successMessage.classList.remove('hidden');
         } catch (error) {
-            console.error('Error submitting story:', error);
-            this.notifications.showError('Failed to share story. ' + error.message);
+            alert('Failed to share story: ' + error.message);
         } finally {
-            this.resetForm();
-            btnText.classList.remove('hidden');
-            btnLoading.classList.add('hidden');
             submitBtn.disabled = false;
+            if(btnText) btnText.classList.remove('hidden');
+            if(btnLoading) btnLoading.classList.add('hidden');
         }
     }
-
-    showSuccessMessage() {
-        if (this.successMessage) {
-            this.successMessage.classList.remove('hidden');
-            this.successMessage.setAttribute('aria-hidden', 'false');
-        }
-    }
-
-    closeSuccessMessage() {
-        if (this.successMessage) {
-            this.successMessage.classList.add('hidden');
-            this.successMessage.setAttribute('aria-hidden', 'true');
-        }
-    }
-
-    resetForm() {
-        if (this.storyForm) this.storyForm.reset();
-        if (this.charCounter) {
-            this.charCounter.textContent = '0';
-            this.charCounter.classList.remove('warning');
-        }
-    }
-
-    resetMoodSelection() {
-        document.querySelectorAll('.mood-option').forEach(opt => 
-            opt.classList.remove('selected'));
-        const firstMood = document.querySelector('.mood-option');
-        if (firstMood) {
-            firstMood.classList.add('selected');
-            document.getElementById('selectedMood').value = firstMood.dataset.mood || 'romantic';
-        }
-    }
-}
-
-// Export for use in other files
-if (typeof module !== 'undefined' && module.exports) {
-    module.exports = { StoryModal };
 }
