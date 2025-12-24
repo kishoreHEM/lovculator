@@ -4,11 +4,11 @@ import { checkAdmin } from "../middleware/checkAdmin.js";
 const router = express.Router();
 
 export default (pool) => {
-  // 1️⃣ Most Visited Pages
+  // 1️⃣ Most Visited Pages (UNIQUE USERS)
   router.get("/stats", checkAdmin, async (req, res) => {
     try {
       const result = await pool.query(`
-        SELECT path, COUNT(*)::int AS total_visits
+        SELECT path, COUNT(DISTINCT user_id)::int AS total_visits
         FROM page_visits
         GROUP BY path
         ORDER BY total_visits DESC
@@ -17,7 +17,7 @@ export default (pool) => {
       res.json(result.rows);
     } catch (err) {
       console.error("Stats error:", err.message);
-      res.json([]); // Return empty array instead of crashing
+      res.json([]); 
     }
   });
 
