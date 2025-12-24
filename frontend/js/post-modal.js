@@ -1,5 +1,3 @@
-// frontend/js/post-modal.js
-
 document.addEventListener("DOMContentLoaded", () => {
     // === Get DOM Elements ===
     const modal = document.getElementById("createPostModal");
@@ -24,63 +22,122 @@ document.addEventListener("DOMContentLoaded", () => {
 
     let selectedImage = null;
 
+    // ... inside DOMContentLoaded ...
+
+    // === EMOJI PICKER LOGIC ===
+    const emojiBtn = document.getElementById("modalEmojiBtn");
+    const emojiContainer = document.getElementById("emojiPickerContainer");
+    let picker = null;
+
+    if (emojiBtn && emojiContainer && window.picmo) {
+        
+        // 1. Initialize Picker
+        try {
+            picker = window.picmo.createPicker({
+                rootElement: emojiContainer,
+                theme: 'light', 
+                showPreview: false,
+                initialCategory: 'smileys-emotion',
+                
+                // ✅ FORCE 7 COLUMNS
+                emojisPerRow: 7, 
+                
+                // Optional: Adjust rows based on screen size
+                visibleRows: window.innerWidth < 768 ? 6 : 8 
+            });
+
+            // 2. Handle Emoji Selection
+            picker.addEventListener('emoji:select', (selection) => {
+                const emoji = selection.emoji;
+                const cursorPosition = textArea.selectionStart;
+                const text = textArea.value;
+
+                // Insert at cursor position
+                const newText = text.slice(0, cursorPosition) + emoji + text.slice(cursorPosition);
+                textArea.value = newText;
+                
+                // Move cursor after emoji
+                const newCursorPos = cursorPosition + emoji.length;
+                textArea.setSelectionRange(newCursorPos, newCursorPos);
+                textArea.focus();
+
+                // Trigger input event to update validation/char count
+                textArea.dispatchEvent(new Event('input'));
+                
+                // Optional: Close picker after selection
+                // emojiContainer.classList.add('hidden'); 
+            });
+
+        } catch (e) {
+            console.error("Failed to init emoji picker:", e);
+        }
+
+        // 3. Toggle Picker Visibility
+        emojiBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation(); // Prevent modal click listener from closing it immediately
+            emojiContainer.classList.toggle('hidden');
+        });
+
+        // 4. Close Picker when clicking outside
+        document.addEventListener('click', (e) => {
+            if (!emojiContainer.contains(e.target) && !emojiBtn.contains(e.target)) {
+                emojiContainer.classList.add('hidden');
+            }
+        });
+    }
+
     /* ==================================================
-       LOAD USER DETAILS (FINAL FIX: Use AuthManager and new response format)
-       This fixes the "Guest User" issue.
+       LOAD USER DETAILS
     ================================================== */
     async function loadUser() {
-    if (!userNameEl || !userAvatarEl || !window.AuthManager) return;
+        if (!userNameEl || !userAvatarEl || !window.AuthManager) return;
 
-    try {
-        const { res, data } = await window.AuthManager.getProfile();
+        try {
+            const { res, data } = await window.AuthManager.getProfile();
 
-        if (res.ok && data.success && data.user) {
-            const user = data.user;
-
-            userNameEl.textContent = user.display_name || user.username;
-            userAvatarEl.src = user.avatar_url || "/images/default-avatar.png";
-
-            window.currentUser = user;
-        } else {
+            if (res.ok && data.success && data.user) {
+                const user = data.user;
+                userNameEl.textContent = user.display_name || user.username;
+                userAvatarEl.src = user.avatar_url || "/images/default-avatar.png";
+                window.currentUser = user;
+            } else {
+                userNameEl.textContent = "Guest User";
+                userAvatarEl.src = "/images/default-avatar.png";
+            }
+        } catch (err) {
+            console.error("❌ Failed to load user:", err);
             userNameEl.textContent = "Guest User";
             userAvatarEl.src = "/images/default-avatar.png";
         }
-    } catch (err) {
-        console.error("❌ Failed to load user via AuthManager:", err);
-        userNameEl.textContent = "Guest User";
-        userAvatarEl.src = "/images/default-avatar.png";
     }
-}
-
 
     /* ==================================================
-       MODAL UI HANDLERS (OPEN/CLOSE)
+       MODAL UI HANDLERS
     ================================================== */
     function openModal() {
         if (!modal) return;
-        
-        // 1. Load user details
         loadUser(); 
-        
-        // 2. Show the modal (using the 'hidden' class based on your HTML)
         modal.classList.remove("hidden");
-        document.body.classList.add("modal-open"); // For background scroll prevention
+        document.body.classList.add("modal-open");
         
-        textArea?.focus();
+        // Mobile UX: Delay focus slightly to prevent keyboard jumping immediately
+        if(window.innerWidth > 768) {
+            textArea?.focus();
+        }
     }
 
     function closeModal() {
         if (!modal) return;
-
         modal.classList.add("hidden");
         document.body.classList.remove("modal-open"); 
         resetForm();
     }
 
-    // --- MAIN EVENT LISTENERS ---
     openBtn?.addEventListener("click", openModal);
     closeBtn?.addEventListener("click", closeModal);
 
+    // Close on backdrop click (Desktop only - mobile usually requires explicit close)
     modal?.addEventListener("click", (e) => {
         if (e.target === modal) {
             closeModal();
@@ -100,11 +157,10 @@ document.addEventListener("DOMContentLoaded", () => {
         const content = textArea?.value?.trim() || "";
         
         if (!content && !selectedImage) {
-            showToast('Please add some text or an image', 'error');
+            showToast('Please add text or an image', 'error');
             return;
         }
 
-        // Show loading state
         const originalText = submitBtn.innerHTML;
         if (submitBtn) {
             submitBtn.innerHTML = '<span class="loading-spinner-small"></span> Posting...';
@@ -115,14 +171,12 @@ document.addEventListener("DOMContentLoaded", () => {
             const formData = new FormData();
             formData.append('content', content);
             formData.append('type', 'post');
-            
             formData.append('privacy', privacySelect ? privacySelect.value : 'public');
             
             if (selectedImage) {
                 formData.append('image', selectedImage);
             }
 
-            // Using standard fetch here since post creation is not in AuthManager
             const response = await fetch('/api/posts', {
                 method: 'POST',
                 body: formData,
@@ -130,26 +184,22 @@ document.addEventListener("DOMContentLoaded", () => {
             });
 
             if (response.ok) {
-                showToast('Post created successfully!', 'success');
+                showToast('Post created!', 'success');
                 closeModal();
-                
-                // Reload the feed
                 if (window.loadFeed) {
                     window.loadFeed(); 
                 } else if (window.layoutManager?.loadHomeContent) {
                     window.layoutManager.loadHomeContent();
                 }
-                
             } else {
                 const error = await response.json();
-                throw new Error(error.error || error.message || 'Failed to create post');
+                throw new Error(error.error || error.message || 'Failed');
             }
 
         } catch (error) {
-            console.error('❌ Post creation error:', error);
-            showToast(error.message || 'Failed to create post. Please try again.', 'error');
+            console.error('❌ Post error:', error);
+            showToast(error.message, 'error');
         } finally {
-            // Reset button state
             if (submitBtn) {
                 submitBtn.innerHTML = originalText;
                 validate();
@@ -162,25 +212,18 @@ document.addEventListener("DOMContentLoaded", () => {
        TEXTAREA & VALIDATION
     ================================================== */
     textArea?.addEventListener("input", () => {
-        // Auto-resize textarea
+        // Auto-grow
         textArea.style.height = "auto";
-        textArea.style.height = Math.min(textArea.scrollHeight, 200) + "px";
+        textArea.style.height = textArea.scrollHeight + "px";
         
-        // Update character count
         const length = textArea.value.length;
         charCount.textContent = `${length} / 500`;
         
-        // Visual feedback for character limit
         if (charCount) {
-             if (length > 450) {
-                charCount.style.color = '#f39c12';
-            } else if (length > 490) {
-                charCount.style.color = '#e74c3c';
-            } else {
-                charCount.style.color = '#65676b';
-            }
+             if (length > 450) charCount.style.color = '#f39c12';
+             else if (length > 490) charCount.style.color = '#e74c3c';
+             else charCount.style.color = '#65676b';
         }
-       
         validate();
     });
 
@@ -188,20 +231,16 @@ document.addEventListener("DOMContentLoaded", () => {
         const content = textArea?.value?.trim() || "";
         const hasContent = content.length > 0 || selectedImage !== null;
         const withinLimit = content.length <= 500;
-        
-        if (submitBtn) {
-             submitBtn.disabled = !hasContent || !withinLimit;
-        }
+        if (submitBtn) submitBtn.disabled = !hasContent || !withinLimit;
     }
 
     /* ==================================================
-       IMAGE UPLOAD & DRAG/DROP
+       IMAGE UPLOAD
     ================================================== */
     uploadBtn?.addEventListener("click", () => fileInput?.click());
 
     fileInput?.addEventListener("change", (e) => {
-        const file = e.target.files[0];
-        handleImageFile(file);
+        handleImageFile(e.target.files[0]);
     });
 
     removeImage?.addEventListener("click", () => {
@@ -212,29 +251,24 @@ document.addEventListener("DOMContentLoaded", () => {
     });
 
     if (dropZone) {
-        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
-            dropZone.addEventListener(eventName, (e) => {
-                e.preventDefault();
-                e.stopPropagation();
-            }, false);
+        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(evt => {
+            dropZone.addEventListener(evt, (e) => { e.preventDefault(); e.stopPropagation(); }, false);
         });
-        dropZone.addEventListener("dragover", () => dropZone.classList.add("drag-over"), false);
-        dropZone.addEventListener("dragleave", () => dropZone.classList.remove("drag-over"), false);
-
+        dropZone.addEventListener("dragover", () => dropZone.classList.add("drag-over"));
+        dropZone.addEventListener("dragleave", () => dropZone.classList.remove("drag-over"));
         dropZone.addEventListener("drop", (e) => {
             dropZone.classList.remove("drag-over");
-            const file = e.dataTransfer.files[0];
-            handleImageFile(file);
-        }, false);
+            handleImageFile(e.dataTransfer.files[0]);
+        });
     }
 
     function handleImageFile(file) {
         if (!file || !file.type.startsWith('image/')) {
-            showToast('Please select an image file (JPEG, PNG, GIF)', 'error');
+            showToast('Select an image file', 'error');
             return;
         }
-        if (file.size > 5 * 1024 * 1024) { // 5MB limit
-            showToast('Image size should be less than 5MB', 'error');
+        if (file.size > 5 * 1024 * 1024) {
+            showToast('Image too large (max 5MB)', 'error');
             return;
         }
 
@@ -248,106 +282,124 @@ document.addEventListener("DOMContentLoaded", () => {
         validate();
     }
 
-
-    /* ==================================================
-       RESET MODAL FORM
-    ================================================== */
     function resetForm() {
-        if (textArea) {
-            textArea.value = "";
-            textArea.style.height = "auto";
-        }
+        if (textArea) { textArea.value = ""; textArea.style.height = "auto"; }
         selectedImage = null;
         previewContainer?.classList.add("hidden");
         if (fileInput) fileInput.value = "";
-        if (charCount) {
-            charCount.textContent = "0 / 500";
-            charCount.style.color = '#65676b';
-        }
+        if (charCount) charCount.textContent = "0 / 500";
         if (privacySelect) privacySelect.value = "public";
-
         validate();
     }
-    
-    resetForm();
 
     /* ==================================================
-       TOAST NOTIFICATION UTILITY
+       TOAST & STYLES (MOBILE ENHANCED)
     ================================================== */
     function showToast(message, type = 'info') {
-        document.querySelectorAll('.app-toast').forEach(t => t.remove());
+        const existing = document.querySelector('.app-toast');
+        if(existing) existing.remove();
 
-        const colors = {
-            success: '#4CAF50',
-            error: '#f44336',
-            info: '#2196F3',
-            warning: '#ff9800'
-        };
-
+        const colors = { success: '#4CAF50', error: '#f44336', info: '#2196F3' };
         const toast = document.createElement('div');
         toast.className = 'app-toast';
-        
-        toast.style.cssText = `
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            background: ${colors[type] || colors.info};
-            color: white;
-            padding: 12px 20px;
-            border-radius: 8px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-            z-index: 10000;
-            animation: slideInRight 0.3s ease;
-        `;
-        
-        toast.innerHTML = message;
+        toast.style.cssText = `position:fixed; top:20px; right:20px; background:${colors[type]}; color:white; padding:12px 20px; border-radius:8px; z-index:10000; animation:slideInRight 0.3s ease;`;
+        toast.textContent = message; // Safer than innerHTML
         document.body.appendChild(toast);
-
         setTimeout(() => toast.remove(), 3000);
     }
 
-    // Add CSS for required animations/spinners/visibility if not present
     if (!document.querySelector('#post-modal-styles')) {
         const style = document.createElement('style');
         style.id = 'post-modal-styles';
         style.textContent = `
-            @keyframes slideInRight {
-                from { transform: translateX(100%); opacity: 0; }
-                to { transform: translateX(0); opacity: 1; }
-            }
+            @keyframes slideInRight { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+            @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+            @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
             .loading-spinner-small {
-                width: 16px;
-                height: 16px;
-                border: 2px solid transparent;
-                border-top: 2px solid white;
-                border-radius: 50%;
-                animation: spin 1s linear infinite;
-                display: inline-block;
-                margin-right: 8px;
+                width: 14px; height: 14px; border: 2px solid rgba(255,255,255,0.3);
+                border-top-color: white; border-radius: 50%; display: inline-block;
+                animation: spin 1s linear infinite; margin-right: 8px;
             }
-            @keyframes spin {
-                0% { transform: rotate(0deg); }
-                100% { transform: rotate(360deg); }
-            }
-            /* Use this to make sure your modal container is hidden by the 'hidden' class */
-            .hidden {
-                display: none !important;
-            }
-            /* Ensure the modal overlay is centered when not hidden */
+            @keyframes spin { to { transform: rotate(360deg); } }
+
+            .hidden { display: none !important; }
+            .modal-open { overflow: hidden; }
+
+            /* BACKDROP */
             .modal-overlay:not(.hidden) {
                 display: flex;
                 position: fixed;
-                top: 0;
-                left: 0;
-                width: 100%;
-                height: 100%;
-                background: rgba(0, 0, 0, 0.5); 
+                top: 0; left: 0;
+                width: 100%; height: 100%;
+                background: rgba(0, 0, 0, 0.6);
                 z-index: 9000;
                 justify-content: center;
                 align-items: center;
+                animation: fadeIn 0.2s ease-out;
             }
-            .modal-open {
-                overflow: hidden; /* Prevent background scrolling */
+
+            /* == RESPONSIVE MODAL BOX == */
+            /* Assuming your HTML has a child inside #createPostModal, 
+               typically a div with class 'modal-content' or similar. 
+               We target the direct child div here for safety. */
+            
+            #createPostModal > div {
+                background: white;
+                width: 100%;
+                max-width: 550px;
+                border-radius: 12px;
+                box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+                display: flex;
+                flex-direction: column;
+                max-height: 90vh; /* Don't overflow desktop screen */
+                overflow: hidden;
+            }
+
+            /* --- DESKTOP STYLES --- */
+            @media (min-width: 769px) {
+                #createPostModal > div {
+                    /* Desktop Animation */
+                    transform: scale(1);
+                    transition: transform 0.2s;
+                }
+            }
+
+            /* --- MOBILE FULL SCREEN STYLES --- */
+            @media (max-width: 768px) {
+                .modal-overlay:not(.hidden) {
+                    background: white; /* Solid background on mobile */
+                    align-items: flex-start; /* Align to top */
+                }
+
+                #createPostModal > div {
+                    max-width: 100%;
+                    height: 100%;     /* Full Height */
+                    max-height: 100%; /* Override desktop restriction */
+                    border-radius: 0; /* Remove corners */
+                    box-shadow: none;
+                    animation: slideUp 0.3s ease-out; /* Slide up from bottom */
+                }
+
+                /* If you have a header class in your HTML */
+                .modal-header {
+                    padding: 15px;
+                    border-bottom: 1px solid #eee;
+                }
+
+                /* Ensure content area scrolls if keyboard opens */
+                .modal-body {
+                    flex: 1;
+                    overflow-y: auto;
+                    padding: 15px;
+                }
+
+                /* Fix footer to bottom if needed */
+                .modal-footer {
+                    padding: 15px;
+                    border-top: 1px solid #eee;
+                    background: white;
+                }
             }
         `;
         document.head.appendChild(style);

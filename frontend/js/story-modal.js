@@ -1,15 +1,29 @@
-// frontend/js/story-modal.js
 class StoryModal {
     constructor(loveStoriesInstance) {
         this.loveStories = loveStoriesInstance;
         
-        // 1. Find ALL trigger buttons (Home Page + FAB)
+        // ============================================================
+        // 1. Find ALL trigger buttons (Updated with your new IDs)
+        // ============================================================
         this.triggers = [];
-        const btnStory = document.getElementById('btnStory'); // Home page button
-        const storyFab = document.getElementById('storyFab'); // FAB button
         
+        // Old buttons (keep them just in case)
+        const btnStory = document.getElementById('btnStory'); 
+        const storyFab = document.getElementById('storyFab'); 
+        
+        // ✅ NEW BUTTONS from your HTML snippet
+        const askBarTrigger = document.getElementById('askTrigger');      // The text bar
+        const askBtnTrigger = document.getElementById('askQuestionBtn');  // The "+ LoveStory" button
+        // The main bar button from your HTML
+        const openPostModalBtn = document.getElementById('openPostModal'); 
+
+        if (openPostModalBtn) this.triggers.push(openPostModalBtn);
+        if (storyFab) this.triggers.push(storyFab);
+        // Add them to the list if they exist on the page
         if (btnStory) this.triggers.push(btnStory);
         if (storyFab) this.triggers.push(storyFab);
+        if (askBarTrigger) this.triggers.push(askBarTrigger);
+        if (askBtnTrigger) this.triggers.push(askBtnTrigger);
 
         // 2. Main Elements
         this.storyModal = document.getElementById('storyModal');
@@ -18,7 +32,7 @@ class StoryModal {
         this.successMessage = document.getElementById('successMessage');
         this.successOk = document.getElementById('successOk');
 
-        // ✅ 3. Character Counter Elements (Added Back)
+        // 3. Character Counter Elements
         this.loveStory = document.getElementById('loveStory');
         this.charCounter = document.getElementById('charCounter');
 
@@ -30,18 +44,20 @@ class StoryModal {
         this.removeImageBtn = document.getElementById('removeStoryImageBtn');
 
         this.init();
+        this.injectStyles(); 
     }
 
     init() {
         if (!this.storyModal) return;
 
-        // Open Listeners
+        // ✅ This loop now adds click listeners to your new buttons too
         this.triggers.forEach(btn => {
             btn.addEventListener('click', (e) => this.openModal(e));
         });
 
         // Close Logic
         if (this.closeModal) this.closeModal.addEventListener('click', () => this.closeModalFunc());
+        
         this.storyModal.addEventListener('click', (e) => {
             if (e.target === this.storyModal) this.closeModalFunc();
         });
@@ -55,7 +71,7 @@ class StoryModal {
             this.successOk.addEventListener('click', () => this.closeSuccessMessage());
         }
 
-        // ✅ Character Counter Listener
+        // Character Counter Listener
         if (this.loveStory && this.charCounter) {
             this.loveStory.addEventListener('input', () => this.updateCharCounter());
         }
@@ -78,31 +94,51 @@ class StoryModal {
         }
     }
 
-    // ✅ NEW: Update Character Counter to 20,000
+    /* -----------------------------------------
+       TOAST NOTIFICATION SYSTEM
+    ----------------------------------------- */
+    showToast(message, type = 'info') {
+        const existing = document.querySelector('.app-toast');
+        if(existing) existing.remove();
+
+        const colors = { success: '#4CAF50', error: '#f44336', info: '#2196F3' };
+        const toast = document.createElement('div');
+        toast.className = 'app-toast';
+        toast.style.cssText = `
+            position: fixed; top: 20px; right: 20px; 
+            background: ${colors[type] || colors.info}; 
+            color: white; padding: 12px 20px; border-radius: 8px; 
+            z-index: 10000; animation: slideInRight 0.3s ease; 
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15); font-weight: 500;
+        `;
+        toast.textContent = message;
+        document.body.appendChild(toast);
+        setTimeout(() => toast.remove(), 3000);
+    }
+
+    // Update Character Counter
     updateCharCounter() {
         const count = this.loveStory.value.length;
         this.charCounter.textContent = count;
         
-        // Optional warning style near the limit
         if (count > 19000) {
-            this.charCounter.style.color = 'red';
+            this.charCounter.style.color = '#e74c3c'; 
         } else {
-            this.charCounter.style.color = '';
+            this.charCounter.style.color = '#666';
         }
 
-        // Hard Limit
         if (count > 20000) {
             this.loveStory.value = this.loveStory.value.substring(0, 20000);
             this.charCounter.textContent = '20000';
+            this.showToast("Character limit reached!", "error");
         }
     }
 
     handleImageSelect() {
         const file = this.imageInput.files[0];
         if (file) {
-            // Optional: Check size (e.g. 5MB)
             if (file.size > 5 * 1024 * 1024) {
-                alert("Image is too large (Max 5MB)");
+                this.showToast("Image is too large (Max 5MB)", "error");
                 this.imageInput.value = "";
                 return;
             }
@@ -127,17 +163,15 @@ class StoryModal {
     openModal(e) {
         if (e) e.preventDefault();
         this.storyModal.classList.remove('hidden');
-        document.body.style.overflow = 'hidden';
+        document.body.classList.add("modal-open");
         
-        // Reset Mood
         this.resetMoodSelection();
-        // Reset Counter
         this.updateCharCounter();
     }
 
     closeModalFunc() {
         this.storyModal.classList.add('hidden');
-        document.body.style.overflow = '';
+        document.body.classList.remove("modal-open");
         this.storyForm.reset();
         this.clearImage();
         if (this.charCounter) this.charCounter.textContent = '0';
@@ -148,7 +182,6 @@ class StoryModal {
     }
 
     resetMoodSelection() {
-        // Reset visual selection to first option
         const moodOptions = document.querySelectorAll('.mood-option');
         moodOptions.forEach(opt => opt.classList.remove('selected'));
         const firstMood = document.querySelector('.mood-option');
@@ -161,12 +194,16 @@ class StoryModal {
 
     async handleSubmit(e) {
         e.preventDefault();
-        const submitBtn = this.storyForm.querySelector('.submit-story-btn');
-        const btnText = submitBtn.querySelector('.btn-text'); // If you have span for text
-        const btnLoading = submitBtn.querySelector('.btn-loading'); // If you have spinner
+        
+        if (!this.loveStory.value.trim() || !document.getElementById('storyTitle').value.trim()) {
+            this.showToast("Please fill in the title and story!", "error");
+            return;
+        }
 
-        if(btnText) btnText.classList.add('hidden');
-        if(btnLoading) btnLoading.classList.remove('hidden');
+        const submitBtn = this.storyForm.querySelector('.submit-story-btn');
+        const originalText = submitBtn.innerText;
+        
+        submitBtn.innerHTML = '<span class="loading-spinner-small"></span> Sharing...';
         submitBtn.disabled = true;
 
         const formData = new FormData();
@@ -186,13 +223,119 @@ class StoryModal {
         try {
             await this.loveStories.addStory(formData);
             this.closeModalFunc();
+            this.showToast("Story shared successfully! ❤️", "success");
+
+            // ============================================================
+            // ✅ THE FIX: Redirect if we are on the Home Page
+            // ============================================================
+            const storiesList = document.getElementById('storiesContainer');
+            
+            // If there is no 'storiesContainer' on this page, it means we are 
+            // on the Home Page (or elsewhere). We must redirect the user 
+            // so they can see their new story.
+            if (!storiesList) {
+                setTimeout(() => {
+                    // Change this URL if your page is named differently (e.g., /stories)
+                    window.location.href = '/love-stories'; 
+                }, 1000); // Small delay so they see the success toast
+            }
+            
             if (this.successMessage) this.successMessage.classList.remove('hidden');
+            
         } catch (error) {
-            alert('Failed to share story: ' + error.message);
+            this.showToast(error.message || "Failed to share story", "error");
         } finally {
             submitBtn.disabled = false;
-            if(btnText) btnText.classList.remove('hidden');
-            if(btnLoading) btnLoading.classList.add('hidden');
+            submitBtn.innerText = originalText;
         }
     }
+
+    /* -----------------------------------------
+       STYLE INJECTION (Mobile Full Screen)
+    ----------------------------------------- */
+    injectStyles() {
+        if (document.getElementById('story-modal-styles')) return;
+
+        const style = document.createElement('style');
+        style.id = 'story-modal-styles';
+        style.textContent = `
+            @keyframes slideInRight { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+            @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+            @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+            .loading-spinner-small {
+                width: 14px; height: 14px; border: 2px solid rgba(255,255,255,0.3);
+                border-top-color: white; border-radius: 50%; display: inline-block;
+                animation: spin 1s linear infinite; margin-right: 8px;
+            }
+            @keyframes spin { to { transform: rotate(360deg); } }
+
+            /* BACKDROP */
+            #storyModal:not(.hidden) {
+                display: flex;
+                position: fixed;
+                top: 0; left: 0;
+                width: 100%; height: 100%;
+                background: rgba(0, 0, 0, 0.6);
+                z-index: 9000;
+                justify-content: center;
+                align-items: center;
+                animation: fadeIn 0.2s ease-out;
+            }
+
+            
+
+            /* Modal Scroll Area */
+            .modal-scroll-area {
+                overflow-y: auto;
+                padding: 20px;
+                flex: 1;
+            }
+
+            /* DESKTOP ANIMATION */
+            @media (min-width: 769px) {
+                #storyModal > div {
+                    transform: scale(1);
+                    transition: transform 0.2s;
+                }
+            }
+
+            /* MOBILE FULL SCREEN STYLES */
+            @media (max-width: 768px) {
+                #storyModal:not(.hidden) {
+                    background: white;
+                    align-items: flex-start;
+                }
+
+                #storyModal > div {
+                    max-width: 100%;
+                    height: 100%;
+                    max-height: 100%; 
+                    border-radius: 0; 
+                    box-shadow: none;
+                    animation: slideUp 0.3s ease-out;
+                }
+                
+                .modal-scroll-area {
+                    padding: 15px;
+                }
+            }
+        `;
+        document.head.appendChild(style);
+    }
 }
+
+// ==============================================
+// 6. INITIALIZATION
+// ==============================================
+document.addEventListener('DOMContentLoaded', () => {
+    // We wait slightly to ensure window.loveStories is created by the other file
+    setTimeout(() => {
+        if (window.loveStories) {
+            window.storyModal = new StoryModal(window.loveStories);
+            console.log("✅ Story Modal Initialized");
+        } else {
+            console.error("❌ Error: window.loveStories not found. Check script loading order.");
+        }
+    }, 100);
+});

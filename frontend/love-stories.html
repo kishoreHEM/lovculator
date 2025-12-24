@@ -21,9 +21,7 @@
     <link rel="shortcut icon" href="/images/favicon-32x32.png" type="image/png">
     <link rel="icon" href="/images/favicon.ico" sizes="any">
     
-    
     <link rel="stylesheet" href="/css/style.css">
-    
     
     <script type="application/ld+json">
     {
@@ -41,18 +39,61 @@
     }
     </script>
 
+    <style>
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .btn-loading { display: none; }
+        .hidden { display: none !important; }
+        
+        /* Ensure filter bar looks good on mobile */
+        .stories-filter-bar {
+            background: #fff;
+            padding: 15px;
+            border-radius: 0px;
+            margin-bottom: 0px;
+            border-bottom: 1px solid #dddfe2;
+        }
+    </style>
 </head>
 <body class="app-layout">
 
 <div id="global-header"></div>
-<div class="app-container">
 
+<div class="app-container">
     <main class="main-content-area">    
-        <div class="ask-post-bar">
-          <div class="ask-input" id="askTrigger">What do you want to ask or share?</div>
-          <div class="ask-buttons">
-            <button class="ask-btn" id="askQuestionBtn">+ LoveStory</button>
-          </div>
+        
+        <div class="create-story-bar">
+            <div class="story-creator">
+                <img src="/images/default-avatar.png" alt="Create story" class="creator-avatar" id="creatorAvatar">
+                <button class="create-story-btn" id="openPostModal">Share your love story here...</button>
+            </div>
+        </div>
+
+        <div class="stories-filter-bar" style="margin: 0px 0; display: flex; gap: 10px; flex-wrap: wrap;">
+            <div class="search-wrapper" style="flex: 1; min-width: 200px;">
+                <input type="text" id="storySearchInput" placeholder="Search stories..." 
+                       style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 8px;">
+            </div>
+            
+            <div class="filter-wrapper">
+                <select id="categoryFilterSelect" style="padding: 10px; border: 1px solid #ddd; border-radius: 8px; background: white;">
+                    <option value="all">All Categories</option>
+                    <option value="romantic">💖 Romantic</option>
+                    <option value="proposal">💍 Proposal</option>
+                    <option value="journey">🛤️ Journey</option>
+                    <option value="longdistance">✈️ Long Distance</option>
+                </select>
+            </div>
+            
+            <div class="sort-wrapper">
+                <select id="sortStories" style="padding: 10px; border: 1px solid #ddd; border-radius: 8px; background: white;">
+                    <option value="newest">Newest First</option>
+                    <option value="popular">Most Popular</option>
+                </select>
+            </div>
+            
+            <button id="applyFiltersBtn" style="padding: 10px 20px; background: #ff4b8d; color: white; border: none; border-radius: 8px; cursor: pointer;">
+                Filter
+            </button>
         </div>
 
         <section class="stories-gallery" aria-labelledby="stories-title">
@@ -86,7 +127,6 @@
     </button>
 </div>
 
-<!-- Story Creation Modal -->
 <div id="storyModal" class="modal-overlay hidden">
     <div class="modal-content">
         <div class="modal-header">
@@ -117,9 +157,9 @@
             
             <div class="form-group">
                 <label for="loveStory">Love Story *</label>
-                <textarea id="loveStory" placeholder="Share your beautiful love story..." maxlength="20000" required></textarea>
+                <textarea id="loveStory" placeholder="Share your beautiful love story..." maxlength="10000" required></textarea>
                 <div class="char-count">
-                    <span id="charCounter">0</span>/20000
+                    <span id="charCounter">0</span>/10000
                 </div>
             </div>
             
@@ -210,29 +250,15 @@
     </div>
 </div>
 
-<!-- Add this to your existing CSS or as inline style -->
-<style>
-@keyframes spin {
-    to { transform: rotate(360deg); }
-}
-
-.btn-loading {
-    display: none;
-}
-
-.hidden {
-    display: none !important;
-}
-</style>
-
-
 <script src="/js/notifications.js"></script>
 <script src="/js/layout-manager.js"></script>
 <script src="/js/auth.js"></script>
 <script src="/js/global-header.js"></script>
 <script src="/js/messages.js"></script>
 <script src="/js/social-features.js"></script>
-<script src="/js/story-modal.js"></script>
+
 <script src="/js/love-stories.js"></script>
+<script src="/js/story-modal.js"></script>
+
 </body>
 </html>

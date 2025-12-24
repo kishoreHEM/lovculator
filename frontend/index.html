@@ -61,58 +61,76 @@
     </main>
 </div>
 
-<!-- CREATE POST MODAL -->
+<!-- 🌸 Post MODAL -->
 <div id="createPostModal" class="modal-overlay hidden">
-    <div class="modal-content post-modal">
-
+    <div class="modal-content post-modal modern-layout">
+        
         <div class="modal-header">
             <h3>Create Post</h3>
-            <button id="closePostModal" class="close-btn">✖</button>
+            <button id="closePostModal" class="close-icon-btn">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+            </button>
         </div>
 
         <div class="modal-body">
-            <div class="post-user-info">
-                <img id="modalPostAvatar" src="/images/default-avatar.png" class="post-user-avatar">
-                <span id="modalPostUserName">User Name</span>
+            <div class="user-meta-row">
+                <img id="modalPostAvatar" src="/images/default-avatar.png" class="user-avatar">
+                <div class="user-meta-details">
+                    <span id="modalPostUserName" class="user-name">User Name</span>
+                    
+                    <div class="privacy-wrapper">
+                        <select id="modalPostPrivacy" class="privacy-select-pill">
+                            <option value="public">🌍 Public</option>
+                            <option value="friends">👥 Friends</option>
+                            <option value="private">🔒 Only Me</option>
+                        </select>
+                    </div>
+                </div>
             </div>
 
-            <textarea id="modalPostContent" class="post-textarea"
-                placeholder="Share your love story or ask a question..." maxlength="500"></textarea>
+            <div class="input-area-wrapper">
+                <textarea id="modalPostContent" class="modern-textarea"
+                    placeholder="What's on your mind?" maxlength="500"></textarea>
+            </div>
 
-            <div id="modalCharCount" class="char-count">0 / 500</div>
+            <div id="modalImagePreviewContainer" class="image-preview-area hidden">
+                <div class="preview-wrapper">
+                    <img id="modalPreviewImage" src="" alt="Preview">
+                    <button id="modalRemoveImage" class="remove-img-btn">✖</button>
+                </div>
+            </div>
 
-            <div id="modalImageDropZone" class="upload-section">
-                <input type="file" id="modalImageUpload" accept="image/*" class="hidden">
-                <button id="modalImageUploadBtn" class="upload-btn">
-  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16" class="btn-icon">
-    <path d="M15 12a1 1 0 0 1-1 1H2a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1h1.172a3 3 0 0 0 2.12-.879l.828-1.172A1 1 0 0 1 6.586 3h2.828a1 1 0 0 1 .707.293l.828 1.172A3 3 0 0 0 12.828 5H14a1 1 0 0 1 1 1v6zM2 4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2h-1.172a2 2 0 0 1-1.414-.586l-.828-1.172A2 2 0 0 0 9.414 2H6.586a2 2 0 0 0-1.414.586L4.344 3.414A2 2 0 0 1 2.929 4H2z"/>
-    <path d="M8 11a2.5 2.5 0 1 1 0-5 2.5 2.5 0 0 1 0 5zm0 1a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7zM3 6.5a.5.5 0 1 1-1 0 .5.5 0 0 1 1 0z"/>
-  </svg>
-  Add Image
+            <div class="add-to-post-toolbar">
+                <span class="toolbar-label">Add to your post</span>
+                <div class="toolbar-actions">
+                    <button id="modalImageUploadBtn" class="tool-btn photo-btn" title="Photo/Video">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#45bd62" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>
+                    </button>
+                    <input type="file" id="modalImageUpload" accept="image/*" class="hidden">
+                    
+                    <button class="tool-btn tag-btn" title="Tag People (Coming Soon)">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#1877f2" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+                    </button>
+                    <button id="modalEmojiBtn" class="tool-btn emoji-btn" title="Insert Emoji">
+    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#f7b928" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="10"></circle>
+        <path d="M8 14s1.5 2 4 2 4-2 4-2"></path>
+        <line x1="9" y1="9" x2="9.01" y2="9"></line>
+        <line x1="15" y1="9" x2="15.01" y2="9"></line>
+    </svg>
 </button>
-            </div>
 
-            <div id="modalImagePreviewContainer" class="image-preview hidden">
-                <img id="modalPreviewImage">
-                <button id="modalRemoveImage" class="remove-image-btn">✖</button>
+<div id="emojiPickerContainer" class="emoji-popup hidden"></div>
+                </div>
             </div>
         </div>
 
         <div class="modal-footer">
-            <select id="modalPostPrivacy" class="privacy-select">
-                <option value="public">Public</option>
-                <option value="friends">Friends</option>
-                <option value="private">Only Me</option>
-            </select>
-
-            <button id="modalSubmitPost" class="post-btn" disabled>
-                <span class="btn-text">Post</span>
-                <span class="btn-loading hidden">⏳</span>
-            </button>
+            <button id="modalSubmitPost" class="submit-post-btn" disabled>Post</button>
+            <div id="modalCharCount" class="char-count-mini">0/500</div>
         </div>
     </div>
 </div>
-
 <!-- 🌸 ASK QUESTION MODAL -->
 <div id="askCreateModal" class="modal-overlay hidden">
 
@@ -163,7 +181,7 @@
 
 </div>
 
-
+<!-- story modal -->
 
 <div id="storyModal" class="modal-overlay hidden">
     <div class="modal-content">
@@ -302,6 +320,7 @@
 <script src="/js/ask-modal.js"></script>
 <script src="/js/story-modal.js"></script>
 <script src="/js/profile.js" defer></script>
+<script src="https://cdn.jsdelivr.net/npm/picmo@5.7.6/dist/umd/index.js"></script>
 
 </body>
 </html>

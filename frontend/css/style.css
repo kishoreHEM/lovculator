@@ -263,7 +263,7 @@ body {
 .calculator-post {
     background: white;
     border: 1px solid #dbdbdb;
-    border-radius: 12px;
+    border-radius: 0px;
     width: 100%;
     max-width: 600px;
     overflow: hidden;
@@ -272,7 +272,7 @@ body {
 .calculator-header {
     display: flex;
     align-items: center;
-    justify-content: space-between;
+    justify-content: center;
     padding: 16px;
     border-bottom: 1px solid #dbdbdb;
 }
@@ -3161,8 +3161,7 @@ footer {
 .story-card {
     background: #fff;
     border-radius: 0px;
-    padding: 16px;
-    margin: 15px auto;
+    padding: 10px;
     box-shadow: 0 2px 10px rgba(0,0,0,0.06);
     width: 100%;
     max-width: 800px;
@@ -4054,7 +4053,6 @@ footer {
 .ask-post-bar {
     width: 100%;
     max-width: 680px;
-    margin: 80px auto 20px;
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -4062,7 +4060,6 @@ footer {
     background: #fff;
     border: 1px solid #eee;
     border-radius: 0px;
-    box-shadow: 0 4px 10px rgba(0,0,0,0.06);
     position: relative;
     z-index: 5;
 }
@@ -5775,7 +5772,10 @@ body.modal-open {
         max-width: 100%;
     }
 
-    .calculator-post,
+    .calculator-post{
+    border-radius: 0px;
+    }
+
     .compatibility-guide,
     .love-tips-guide,
     .about-post,
@@ -6382,4 +6382,269 @@ body.modal-open {
 
 .faq-question:focus:not(:focus-visible) {
     outline: none;
+}
+
+/* === MODERN POST MODAL STYLES === */
+
+.modern-layout {
+    display: flex;
+    flex-direction: column;
+    padding: 0; /* Reset padding for header/footer control */
+    overflow: hidden; /* Prevent spillover */
+}
+
+/* Header */
+.modal-header {
+    display: flex;
+    justify-content: center; /* Center title like Instagram/FB */
+    align-items: center;
+    padding: 15px 20px;
+    border-bottom: 1px solid #eee;
+    position: relative;
+}
+
+.modal-header h3 {
+    margin: 0;
+    font-size: 1.1rem;
+    font-weight: 700;
+}
+
+.close-icon-btn {
+    position: absolute;
+    right: 15px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: #f0f2f5;
+    border: none;
+    border-radius: 50%;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    color: #606770;
+}
+
+/* Body */
+.modal-body {
+    padding: 15px 20px;
+    overflow-y: auto;
+    flex: 1; /* Takes available space */
+}
+
+/* User Row */
+.user-meta-row {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    margin-bottom: 15px;
+}
+
+.user-avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    object-fit: cover;
+}
+
+.user-meta-details {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+}
+
+.user-name {
+    font-weight: 600;
+    font-size: 0.95rem;
+    color: #050505;
+}
+
+/* Privacy Pill Selector */
+.privacy-select-pill {
+    background: #e4e6eb;
+    border: none;
+    border-radius: 6px;
+    padding: 2px 4px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: #050505;
+    margin-top: 2px;
+    cursor: pointer;
+}
+
+/* Text Area */
+.modern-textarea {
+    width: 100%;
+    min-height: 100px; /* Start smaller */
+    border: none;
+    outline: none;
+    resize: none;
+    font-size: 1.2rem; /* Larger font like FB */
+    font-family: inherit;
+    color: #050505;
+    margin-bottom: 10px;
+}
+
+.modern-textarea::placeholder {
+    color: #65676b;
+}
+
+/* Toolbar "Add to your post" */
+.add-to-post-toolbar {
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    padding: 8px 12px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 10px;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+}
+
+.toolbar-label {
+    font-weight: 600;
+    font-size: 0.9rem;
+    color: #050505;
+}
+
+.toolbar-actions {
+    display: flex;
+    gap: 5px;
+}
+
+.tool-btn {
+    background: none;
+    border: none;
+    padding: 6px;
+    border-radius: 50%;
+    cursor: pointer;
+    transition: background 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.tool-btn:hover {
+    background: #f2f2f2;
+}
+
+/* Image Preview */
+.image-preview-area {
+    margin: 10px 0;
+    border: 1px solid #eee;
+    border-radius: 8px;
+    padding: 5px;
+    position: relative;
+    max-height: 300px;
+    overflow: hidden;
+}
+
+.preview-wrapper {
+    position: relative;
+}
+
+.preview-wrapper img {
+    width: 100%;
+    height: auto;
+    border-radius: 6px;
+    display: block;
+}
+
+.remove-img-btn {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    background: white;
+    border: 1px solid #ccc;
+    border-radius: 50%;
+    width: 28px;
+    height: 28px;
+    cursor: pointer;
+    font-weight: bold;
+    color: #333;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Footer */
+.modal-footer {
+    padding: 15px 20px;
+    border-top: none; /* Clean look */
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.submit-post-btn {
+    width: 100%;
+    background: #ff4b8d; /* Your brand color */
+    color: white;
+    border: none;
+    padding: 10px;
+    border-radius: 6px;
+    font-size: 0.95rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.submit-post-btn:disabled {
+    background: #e4e6eb;
+    color: #bcc0c4;
+    cursor: not-allowed;
+}
+
+.char-count-mini {
+    font-size: 0.75rem;
+    color: #65676b;
+    margin-top: 8px;
+    align-self: flex-end;
+}
+
+/* =========================================
+   EMOJI PICKER STYLES
+   ========================================= */
+
+/* 1. Desktop / Default Styles */
+#emojiPickerContainer {
+    position: absolute;
+    bottom: 60px; /* Positions it above the toolbar */
+    left: 20px;
+    z-index: 10001;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    background: white;
+    /* Ensure the library knows the base width */
+    --picmo-width: 320px; 
+}
+
+/* 2. 📱 Mobile Fixes (Max Width 768px) */
+@media (max-width: 768px) {
+    #emojiPickerContainer {
+        /* Fix position to the screen center, ignoring parent containers */
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%); /* Centers it perfectly */
+    
+        
+        /* Force dimensions */
+        width: 90% !important;
+        max-width: 350px; 
+        height: auto;
+        bottom: auto; /* Reset desktop bottom */
+        
+        /* High Z-Index to sit on top of the modal backdrop */
+        z-index: 10005;
+        
+        /* Strong shadow for "popup" effect */
+        box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+        border: 1px solid #ddd;
+        
+        /* 💡 CRITICAL: Force PicMo to fit this container */
+        --picmo-width: 100%;
+        --picmo-rows: 6; /* Show fewer rows to fit small screens */
+    }
 }

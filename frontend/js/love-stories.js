@@ -335,7 +335,7 @@ class LoveStories {
         const canFollow = !story.anonymous_post && !isOwner && story.author_id;
 
         return `
-        <div class="story-card" data-story-id="${story.id}" style="padding: 20px; background: white; border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); margin-bottom: 20px;">
+        <div class="story-card" data-story-id="${story.id}" style="padding: 10px; background: white; border-radius: 0px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); margin-bottom: 1px;">
             <div class="story-card-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
                 <div class="story-user-info" style="display: flex; align-items: center; gap: 10px;">
                     <a href="/profile/${encodeURIComponent(story.author_username)}" class="story-user-link">
