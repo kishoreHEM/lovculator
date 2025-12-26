@@ -2,8 +2,7 @@
 <html lang="en">
 <head>
   <title><%= story.story_title %> | Lovculator</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <link rel="stylesheet" href="/css/layout.css"> 
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"> 
   <link rel="stylesheet" href="/css/style.css">
   
   <style>
@@ -82,34 +81,37 @@
        📱 MOBILE RESPONSIVE STYLES
        ========================================= */
     @media (max-width: 600px) {
-      .story-detail-container {
-        margin: 0;           /* Remove outer margin */
-        padding: 20px;       /* Reduce padding */
-        width: 100%;         /* Full width */
-        max-width: 100%;
-        border-radius: 0;    /* Remove corners for full-screen feel */
-        box-shadow: none;    /* Flat look on mobile */
-      }
+        .story-detail-container {
+          margin: 0;
+          padding: 20px;
+          width: 100%;
+          max-width: 100%;
+          border-radius: 0;
+          box-shadow: none;
 
-      .story-header h1 {
-        font-size: 1.6rem;   /* Smaller title */
-      }
+          /* ✅ FIX: Add extra space at the bottom so the Menu Bar doesn't cover text */
+          padding-bottom: 100px; 
+        }
 
-      .story-body {
-        font-size: 1rem;     /* Readable text size */
-        line-height: 1.6;
-      }
+        .story-header h1 {
+          font-size: 1.6rem;
+        }
 
-      .action-bar {
-        justify-content: space-between; /* Spread buttons out */
-        gap: 10px;
-      }
+        .story-body {
+          font-size: 1rem;
+          line-height: 1.6;
+        }
 
-      .action-btn {
-        padding: 8px 12px;   /* Slightly smaller buttons */
-        font-size: 0.9rem;
+        .action-bar {
+          justify-content: space-between;
+          gap: 10px;
+        }
+
+        .action-btn {
+          padding: 8px 12px;
+          font-size: 0.9rem;
+        }
       }
-    }
   </style>
 </head>
 

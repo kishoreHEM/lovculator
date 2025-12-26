@@ -7,23 +7,25 @@ class StoryModal {
         // ============================================================
         this.triggers = [];
         
-        // Old buttons (keep them just in case)
+        // --- Story Specific Buttons ---
         const btnStory = document.getElementById('btnStory'); 
         const storyFab = document.getElementById('storyFab'); 
-        
-        // ✅ NEW BUTTONS from your HTML snippet
-        const askBarTrigger = document.getElementById('askTrigger');      // The text bar
         const askBtnTrigger = document.getElementById('askQuestionBtn');  // The "+ LoveStory" button
-        // The main bar button from your HTML
-        const openPostModalBtn = document.getElementById('openPostModal'); 
 
-        if (openPostModalBtn) this.triggers.push(openPostModalBtn);
-        if (storyFab) this.triggers.push(storyFab);
-        // Add them to the list if they exist on the page
+        // --- Add only if they exist ---
         if (btnStory) this.triggers.push(btnStory);
         if (storyFab) this.triggers.push(storyFab);
-        if (askBarTrigger) this.triggers.push(askBarTrigger);
         if (askBtnTrigger) this.triggers.push(askBtnTrigger);
+
+        // ❌ REMOVED: openPostModalBtn
+        // This button ID implies it belongs to the Post Modal script (feed.js), 
+        // NOT this Story Modal script. Removing it here fixes the "double modal" issue.
+
+        // ⚠️ DECISION REQUIRED: The "Ask Bar" (Text Input)
+        // If you want the big text bar to open the STORY modal, keep this line:
+        const askBarTrigger = document.getElementById('askTrigger');
+        if (askBarTrigger) this.triggers.push(askBarTrigger);
+        // (If you want the bar to open the POST modal instead, delete the two lines above)
 
         // 2. Main Elements
         this.storyModal = document.getElementById('storyModal');

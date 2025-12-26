@@ -226,16 +226,16 @@ style.textContent = `
     .empty-state, .error-state { text-align: center; padding: 60px 20px; background: white; border-radius: 12px; border: 1px solid #dddfe2; margin: 20px 0; }
     .retry-btn { background: #ff4b8d; color: white; border: none; padding: 10px 20px; border-radius: 20px; cursor: pointer; font-weight: 600; }
     
-    .question-card { background: white; border-radius: 12px; padding: 20px; margin-bottom: 20px; box-shadow: 0 1px 2px rgba(0,0,0,0.05); border: 1px solid #f0f2f5; transition: box-shadow 0.2s; }
+    .question-card { background: white; border-radius: 0px; padding: 20px; margin-bottom: 0px; box-shadow: 0 1px 2px rgba(0,0,0,0.05); border: 1px solid #f0f2f5; transition: box-shadow 0.2s; }
     .question-card:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
 
-    .question-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+    .question-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
     .question-user-info { display: flex; align-items: center; gap: 10px; }
     .question-avatar { width: 36px; height: 36px; border-radius: 50%; object-fit: cover; }
     .question-username { font-weight: 600; font-size: 14px; color: #1c1e21; }
     .question-date { font-size: 12px; color: #65676b; }
 
-    .question-title { font-size: 1.2rem; font-weight: 700; color: #1c1e21; text-decoration: none; display: block; margin-bottom: 15px; line-height: 1.4; }
+    .question-title { font-size: 1rem; font-weight: 600; color: #1c1e21; text-decoration: none; display: block; margin-bottom: 10px; line-height: 1.4; }
     .question-title:hover { color: #ff4b8d; }
 
     .question-stats { display: flex; gap: 20px; margin-bottom: 15px; padding-bottom: 15px; border-bottom: 1px solid #f0f2f5; }
@@ -244,7 +244,7 @@ style.textContent = `
     .question-actions { display: flex; gap: 10px; }
     .answer-btn, .share-btn, .save-btn { display: flex; align-items: center; gap: 6px; padding: 8px 16px; border-radius: 20px; font-size: 14px; font-weight: 600; cursor: pointer; border: none; transition: background 0.2s; }
     
-    .answer-btn { background: #ff4b8d; color: white; text-decoration: none; }
+    .answer-btn { background: white; color: #ff4b8d; text-decoration: none; border: 1px solid #ff4b8d }
     .answer-btn:hover { background: #e83e8c; }
     
     .share-btn, .save-btn { background: #f0f2f5; color: #65676b; }
@@ -252,8 +252,8 @@ style.textContent = `
     
     /* Responsive */
     @media (max-width: 600px) {
-        .question-card { padding: 16px; }
-        .question-title { font-size: 1.1rem; }
+        .question-card { padding: 10px; }
+        .question-title { font-size: 1rem; }
         .question-actions button, .question-actions a { flex: 1; justify-content: center; }
     }
 `;

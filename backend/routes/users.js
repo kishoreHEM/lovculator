@@ -105,6 +105,36 @@ router.get("/profile/:username", async (req, res) => {
 });
 
 /* ======================================================
+   🔎 SEARCH USERS (Public)
+   Endpoint: GET /api/users/search?q=john
+====================================================== */
+router.get("/search", async (req, res) => {
+  try {
+    const { q } = req.query;
+
+    if (!q || q.trim().length === 0) {
+      return res.json([]);
+    }
+
+    // ILIKE is case-insensitive in PostgreSQL
+    const query = `
+      SELECT id, username, display_name, avatar_url, bio 
+      FROM users 
+      WHERE username ILIKE $1 OR display_name ILIKE $1
+      LIMIT 5
+    `;
+    
+    const values = [`%${q}%`];
+    const { rows } = await pool.query(query, values);
+
+    res.json(rows);
+  } catch (err) {
+    console.error("❌ Search error:", err);
+    res.status(500).json({ error: "Search failed" });
+  }
+});
+
+/* ======================================================
    3️⃣ UPDATE USER PROFILE (Requires Auth) - EXTENDED & SAFE
 ====================================================== */
 router.put("/:id", isAuthenticated, async (req, res) => {

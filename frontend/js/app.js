@@ -40,13 +40,30 @@ class LoveCalculator {
     }
 
     calculateLove(name1, name2, gender1, gender2) {
-        const nameScore = this.nameToNumber(name1) + this.nameToNumber(name2);
-        const diff = Math.abs(this.nameToNumber(name1) - this.nameToNumber(name2));
-        const genderBonus = gender1 !== gender2 ? 10 : -5;
-        let percentage = 100 - diff + genderBonus;
-        percentage += Math.random() * 10 - 5;
-        return Math.min(100, Math.max(0, Math.round(percentage)));
+    // 1. Create a combined string
+    const combined = (name1 + name2).toLowerCase();
+    
+    // 2. Generate a simple hash from the string
+    let hash = 0;   
+    for (let i = 0; i < combined.length; i++) {
+        hash = combined.charCodeAt(i) + ((hash << 5) - hash);
     }
+    
+    // 3. Normalize score between 0 and 100 using the hash
+    // Math.abs ensures positive, % 101 ensures 0-100 range
+    let baseScore = Math.abs(hash) % 101;
+
+    // 4. Apply gender logic if you still want it
+    // (Optional: You could remove this to make it purely name-based)
+    if (gender1 === gender2) {
+        baseScore -= 5; // Slight penalty for same gender (optional)
+    } else {
+        baseScore += 5; // Slight bonus for mixed gender
+    }
+
+    // 5. Clamp final result between 1 and 100
+    return Math.min(100, Math.max(1, baseScore));
+}
 
     nameToNumber(name) {
         return name.toLowerCase().split('').reduce((sum, ch) => {
@@ -58,11 +75,12 @@ class LoveCalculator {
     generateMessage(percent, gender1, gender2) {
         const p1 = gender1 === 'male' ? 'He' : 'She';
         const p2 = gender2 === 'male' ? 'he' : 'she';
-        if (percent >= 90) return `Perfect Match! 💖 ${p1} and ${p2} are made for each other!`;
-        if (percent >= 75) return `Great Compatibility! 🌟 ${p1} and ${p2} share strong chemistry!`;
-        if (percent >= 60) return `Good Match! 😊 With effort, love can blossom beautifully!`;
-        if (percent >= 45) return `Average Match 👌 Needs better understanding and communication.`;
-        return `Challenging Match 💔 ${p1} and ${p2} might face some differences.`;
+
+        if (percent >= 90) return `Soulmates! 💖 ${p1} and ${p2} are truly destined for each other!`;
+        if (percent >= 75) return `Electric Chemistry! 🌟 ${p1} and ${p2} have an amazing connection!`;
+        if (percent >= 60) return `Beautiful Match! 😊 Love is blooming wonderfully here!`;
+        if (percent >= 45) return `Promising Spark! 🌼 Every great love story starts with a friendship!`;
+        return `Unique Bond! ✨ Opposites attract, and this connection is one of a kind!`;
     }
 
     displayResult(name1, name2, percentage, message) {

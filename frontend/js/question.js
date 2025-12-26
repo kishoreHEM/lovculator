@@ -5,7 +5,6 @@ if (!window.API_BASE) {
         : "https://lovculator.com/api";
 }
 
-// Get slug from URL
 // Get slug from URL (Handles "/question/slug" or fallback to "?slug=")
 let slug = new URLSearchParams(window.location.search).get("slug");
 
@@ -45,6 +44,7 @@ window.loadQuestion = async function() {
     if (answerFormContainer) answerFormContainer.innerHTML = '';
 
     try {
+        // 1. Fetch Question Data
         const response = await fetch(`${window.API_BASE}/questions/${slug}`, {
             credentials: 'include',
             headers: {
@@ -67,11 +67,29 @@ window.loadQuestion = async function() {
         // Update page title
         document.title = `${question.question || question.title || 'Question'} • Lovculator`;
 
-        // Render question
+        // 2. ✅ NEW: Get Current User Info for the Prompt Card
+        // We attempt to get it from window.currentUser (set by header/auth). 
+        // If missing, we do a quick fetch to ensure we have the name.
+        let currentUser = window.currentUser;
+        if (!currentUser) {
+            try {
+                const authRes = await fetch(`${window.API_BASE}/auth/me`, { credentials: 'include' });
+                if (authRes.ok) {
+                    const authData = await authRes.json();
+                    currentUser = authData.user || authData;
+                    window.currentUser = currentUser;
+                }
+            } catch (e) { console.warn("Auth check failed", e); }
+        }
+
+        const myName = currentUser?.display_name || currentUser?.username || "Guest";
+        const myAvatar = currentUser?.avatar_url || "/images/default-avatar.png";
+
+        // 3. Render Question + Prompt Card
         questionContainer.innerHTML = `
             <div class="question-container">
                 <div class="question-header">
-                    <div class="question-user-info">
+                    <div class="user-meta-row">
                         <img src="${question.user_avatar || question.avatar_url || '/images/default-avatar.png'}" 
                              alt="${question.username || 'User'}" 
                              class="question-avatar">
@@ -112,6 +130,21 @@ window.loadQuestion = async function() {
                     ${(question.tags || []).map(tag => `<span class="tag">${tag}</span>`).join('')}
                 </div>
             </div>
+
+            <div class="answer-prompt-card">
+                <div class="prompt-content">
+                    <img src="${myAvatar}" alt="${myName}" class="prompt-avatar" onerror="this.src='/images/default-avatar.png'">
+                    <h3 class="prompt-title">${myName}, can you answer this question?</h3>
+                    <p class="prompt-subtitle">Help the community with a better answer.</p>
+                    <button class="prompt-answer-btn" onclick="scrollToAnswerForm()">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                            <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                        </svg>
+                        Answer
+                    </button>
+                </div>
+            </div>
         `;
 
         // Check if unanswered page
@@ -134,7 +167,7 @@ window.loadQuestion = async function() {
         }
 
         // Render answer form (if allowed)
-        if (!isUnanswered && answers.length < 20) { // Increased limit from 5 to 20
+        if (!isUnanswered && answers.length < 20) { 
             renderAnswerForm(question);
         }
 
@@ -210,14 +243,14 @@ function renderAnswerList(question, answers) {
             const commentCount = answer.comments_count || answer.comment_count || 0;
             const userAvatar = answer.profile_image_url || answer.avatar_url || answer.author_avatar || '/images/default-avatar.png';
             
-            // ✅ NEW: Check following status from backend
+            // Check following status from backend (if provided)
             const isFollowing = answer.user_following || false;
             const followText = isFollowing ? "Following" : "+ Follow";
             const followClass = isFollowing ? "follow-btn following" : "follow-btn";
 
             return `
                 <div class="answer-card" data-answer-id="${answerId}" data-user-id="${userId}">
-                    <div class="answer-header">
+                    <div class="user-meta-row">
                         <img src="${userAvatar}" 
                              alt="${userName}" 
                              class="answer-avatar"
@@ -540,7 +573,7 @@ style.textContent = `
         display: flex;
         justify-content: space-between;
         align-items: center;
-        margin-bottom: 20px;
+        margin-bottom: 0px;
     }
     
     .question-user-info {
@@ -574,7 +607,7 @@ style.textContent = `
     }
     
     .question-text {
-        font-size: 1.8rem;
+        font-size: 1rem;
         font-weight: 700;
         margin-bottom: 20px;
         line-height: 1.4;
@@ -687,7 +720,7 @@ style.textContent = `
     }
     
     .answer-body {
-        font-size: 1.1rem;
+        font-size: 1rem;
         line-height: 1.6;
         color: #1c1e21;
         margin-bottom: 25px;
@@ -934,7 +967,7 @@ style.textContent = `
         }
         
         .question-text {
-            font-size: 1.5rem;
+            font-size: 1rem;
         }
         
         .answer-actions {
@@ -970,7 +1003,7 @@ style.textContent = `
         }
         
         .question-text {
-            font-size: 1.3rem;
+            font-size: 1rem;
         }
         
         .question-user-info {
@@ -988,6 +1021,63 @@ style.textContent = `
             width: 40px;
             height: 40px;
         }
+    }
+
+    /* ✅ NEW: Answer Prompt Card CSS */
+    .answer-prompt-card {
+        background: white;
+        border-radius: 12px;
+        padding: 20px;
+        margin-bottom: 20px;
+        border: 1px solid #e0e0e0;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        text-align: center;
+    }
+    .prompt-content {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 10px;
+    }
+    .prompt-avatar {
+        width: 50px;
+        height: 50px;
+        border-radius: 50%;
+        object-fit: cover;
+        border: 2px solid #fff;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    }
+    .prompt-title {
+        font-size: 1.1rem;
+        font-weight: 700;
+        color: #1c1e21;
+        margin: 0;
+    }
+    .prompt-subtitle {
+        font-size: 0.9rem;
+        color: #65676b;
+        margin: 0 0 10px 0;
+    }
+    .prompt-answer-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        background: white;
+        color: #e91e63;
+        border: 1px solid #e91e63;
+        padding: 8px 24px;
+        border-radius: 20px;
+        font-weight: 600;
+        font-size: 14px;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+    .prompt-answer-btn:hover {
+        background: #f0f8ff;
+    }
+    .prompt-answer-btn svg {
+        width: 18px;
+        height: 18px;
     }
 `;
 document.head.appendChild(style);
