@@ -372,7 +372,7 @@ class LoveStories {
             <hr style="border: 0; border-top: 1px solid #eee; margin: 10px 0;">
             
             <div class="story-content ${isLong ? '' : 'expanded'}"
-                 style="white-space: pre-wrap; line-height: 1.6; color: #444; font-size: 1rem;">
+                 style="line-height: 1.6; color: #444; font-size: 1rem;">
                 ${displayText}
             </div>
 

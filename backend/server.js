@@ -394,7 +394,17 @@ app.get("/question/:slug", (req, res) => {
 app.get("/profile/:username", (req, res) => {
   res.sendFile(path.join(frontendPath, "profile.html"));
 });
+// ✅ NEW: Route for Shared Love Stories
+// Updated to handle ID-Slug pattern for the HTML fallback
+app.get("/stories/:id(\\d+)*", (req, res) => {
+  res.sendFile(path.join(frontendPath, "love-stories.html"));
+});
 
+// ✅ NEW: Route for Shared Posts
+// Serves index.html (feed) when visiting /post/123
+app.get("/post/:id", (req, res) => {
+  res.sendFile(path.join(frontendPath, "index.html"));
+});
 
 //
 // 1️⃣3️⃣ 404 & GLOBAL ERROR HANDLER
@@ -414,19 +424,6 @@ app.use((error, req, res, next) => {
         : error.message,
     code: "INTERNAL_SERVER_ERROR",
   });
-});
-
-
-// ✅ NEW: Route for Shared Love Stories
-// Updated to handle ID-Slug pattern for the HTML fallback
-app.get("/stories/:id(\\d+)*", (req, res) => {
-  res.sendFile(path.join(frontendPath, "love-stories.html"));
-});
-
-// ✅ NEW: Route for Shared Posts
-// Serves index.html (feed) when visiting /post/123
-app.get("/post/:id", (req, res) => {
-  res.sendFile(path.join(frontendPath, "index.html"));
 });
 
 //

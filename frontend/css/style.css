@@ -4616,8 +4616,8 @@ body.modal-open {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    margin-bottom: 16px;
-    padding-bottom: 12px;
+    margin-bottom: 10px;
+    padding-bottom: 0px;
     border-bottom: 1px solid #f0f2f5;
 }
 
@@ -4734,7 +4734,7 @@ body.modal-open {
     justify-content: space-between;
     gap: 8px;
     margin-top: 16px;
-    padding-top: 16px;
+    padding-top: 10px;
     border-top: 1px solid #f0f2f5;
 }
 
