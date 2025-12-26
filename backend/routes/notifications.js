@@ -195,8 +195,9 @@ export const createNotification = async (req, {
 };
 
 /* ======================================================
-   🔔 EXPORT NOTIFY SHORTCUTS
+   🔔 EXPORT NOTIFY SHORTCUTS (Fixed Links)
 ====================================================== */
+
 export const notifyLike = async (req, targetUserId, actorId, postType, postId) => {
     if (parseInt(targetUserId) === parseInt(actorId)) return;
     try {
@@ -206,7 +207,8 @@ export const notifyLike = async (req, targetUserId, actorId, postType, postId) =
             actorId,
             type: "like",
             message: `${name} liked your ${postType}`,
-            link: `/post.html?id=${postId}`
+            // ✅ FIX: Use the clean URL route we created
+            link: `/post/${postId}` 
         });
     } catch (err) {
         console.error("notifyLike failed:", err);
@@ -222,7 +224,8 @@ export const notifyComment = async (req, targetUserId, actorId, postType, postId
             actorId,
             type: "comment",
             message: `${name} commented on your ${postType}`,
-            link: `/post.html?id=${postId}`
+            // ✅ FIX: Use the clean URL route
+            link: `/post/${postId}`
         });
     } catch (err) {
         console.error("notifyComment failed:", err);
@@ -232,19 +235,24 @@ export const notifyComment = async (req, targetUserId, actorId, postType, postId
 export const notifyFollow = async (req, targetUserId, actorId) => {
     if (parseInt(targetUserId) === parseInt(actorId)) return;
     try {
-        const name = await fetchActorName(actorId);
+        // Note: Ideally, you should pass the 'username' here if your profile URLs use usernames.
+        // If your system supports IDs in the profile URL (e.g. /profile/123), this works.
+        // Otherwise, you might need to fetch the username along with the name.
+        
+        const name = await fetchActorName(actorId); 
+        
         return await createNotification(req, {
             userId: targetUserId,
             actorId,
             type: "follow",
             message: `${name} started following you`,
-            link: `/profile.html?user=${actorId}`
+            // ✅ FIX: Removed .html. (Ensure your profile.js can handle IDs if actorId is an ID)
+            link: `/profile/${actorId}`
         });
     } catch (err) {
         console.error("notifyFollow failed:", err);
     }
 };
-
 /* ======================================================
    📌 Helper to get display_name or username
 ====================================================== */
