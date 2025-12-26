@@ -3,22 +3,24 @@
 ========================================================== */
 
 document.addEventListener("DOMContentLoaded", () => {
-    // Ensure API_BASE is available
+    // 1. Ensure API_BASE is available
     if (!window.API_BASE) {
         window.API_BASE = window.location.hostname.includes("localhost")
             ? "http://localhost:3001/api"
             : "https://lovculator.com/api";
     }
 
-    // Ensure ASSET_BASE is available
+    // 2. Ensure ASSET_BASE is available
     if (!window.ASSET_BASE) {
         window.ASSET_BASE = window.location.hostname.includes("localhost")
             ? "http://localhost:3001"
             : "https://lovculator.com";
     }
 
+    // 3. Load the Main Feed (Background)
     loadFeed();
-    // 3. Check for Popup URL (Foreground)
+
+    // 4. Check for Popup URL (Foreground) e.g., /post/123
     const path = window.location.pathname;
     const match = path.match(/^\/post\/(\d+)$/);
     
@@ -228,19 +230,7 @@ function createPostCard(post) {
    🆕 SHARED POST POPUP LOGIC
    ========================================= */
 
-// 1. Listen for URL on load
-document.addEventListener("DOMContentLoaded", () => {
-    const path = window.location.pathname;
-    // Check if URL matches /post/123
-    const match = path.match(/^\/post\/(\d+)$/);
-    
-    if (match) {
-        const postId = match[1];
-        openPostModal(postId);
-    }
-});
-
-// 2. Function to fetch and open the modal
+// Function to fetch and open the modal
 async function openPostModal(postId) {
     try {
         // Fetch single post
