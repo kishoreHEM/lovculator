@@ -222,4 +222,65 @@ router.get("/:postId/comments", auth, async (req, res) => {
     }
 });
 
+/* ======================================================
+   🔍 GET SINGLE POST (For Popup / Shared Links)
+====================================================== */
+router.get("/:id", auth, async (req, res) => {
+    try {
+        const postId = parseInt(req.params.id);
+        const userId = req.user.id; // From 'auth' middleware
+
+        if (isNaN(postId)) {
+            return res.status(400).json({ error: "Invalid post ID" });
+        }
+
+        const { rows } = await pool.query(
+            `
+            SELECT 
+                p.id,
+                p.content,
+                p.image_url,
+                p.feeling,
+                p.privacy,
+                p.created_at,
+
+                -- OWNER DETAILS
+                u.id AS user_id,
+                u.username,
+                u.display_name,
+                COALESCE(NULLIF(NULLIF(u.avatar_url, ''), 'null'), '/images/default-avatar.png') AS avatar_url,
+
+                -- COUNTS
+                (SELECT COUNT(*)::int FROM post_likes WHERE post_id = p.id) AS like_count,
+                (SELECT COUNT(*)::int FROM post_comments WHERE post_id = p.id) AS comment_count,
+
+                -- STATUS (Check against current user)
+                EXISTS (SELECT 1 FROM post_likes WHERE post_id = p.id AND user_id = $2) AS is_liked,
+                p.user_id = $2 AS is_owner,
+                
+                -- FOLLOW STATUS (Assuming 'follows' table exists, based on your feed.js)
+                EXISTS (
+                    SELECT 1 FROM follows 
+                    WHERE follower_id = $2 AND target_id = p.user_id
+                ) AS is_following
+
+            FROM posts p
+            JOIN users u ON p.user_id = u.id
+            WHERE p.id = $1
+            `,
+            [postId, userId]
+        );
+
+        if (rows.length === 0) {
+            return res.status(404).json({ error: "Post not found" });
+        }
+
+        res.json(rows[0]);
+
+    } catch (error) {
+        console.error("❌ Get Single Post Error:", error);
+        res.status(500).json({ error: "Server error" });
+    }
+});
+
 export default router;
