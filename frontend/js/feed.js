@@ -18,6 +18,14 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     loadFeed();
+    // 3. Check for Popup URL (Foreground)
+    const path = window.location.pathname;
+    const match = path.match(/^\/post\/(\d+)$/);
+    
+    if (match) {
+        const postId = match[1];
+        openPostModal(postId);
+    }
 });
 
 // ✅ SECURITY: XSS Protection Helper
@@ -214,4 +222,88 @@ function createPostCard(post) {
     `;
 
     return card;
+}
+
+/* =========================================
+   🆕 SHARED POST POPUP LOGIC
+   ========================================= */
+
+// 1. Listen for URL on load
+document.addEventListener("DOMContentLoaded", () => {
+    const path = window.location.pathname;
+    // Check if URL matches /post/123
+    const match = path.match(/^\/post\/(\d+)$/);
+    
+    if (match) {
+        const postId = match[1];
+        openPostModal(postId);
+    }
+});
+
+// 2. Function to fetch and open the modal
+async function openPostModal(postId) {
+    try {
+        // Fetch single post
+        const res = await fetch(`${window.API_BASE}/posts/${postId}`, { 
+            credentials: "include" 
+        });
+        
+        if (!res.ok) throw new Error("Post not found");
+        
+        const post = await res.json();
+        
+        // Create Modal Overlay
+        const modal = document.createElement('div');
+        modal.className = 'post-modal-overlay';
+        Object.assign(modal.style, {
+            position: 'fixed', top: '0', left: '0', width: '100%', height: '100%',
+            background: 'rgba(0,0,0,0.6)', zIndex: '10000',
+            display: 'flex', justifyContent: 'center', alignItems: 'center',
+            padding: '10px', backdropFilter: 'blur(4px)'
+        });
+        
+        // Reuse your existing card creator!
+        const postCard = createPostCard(post);
+        // Add specific modal styles to the card
+        Object.assign(postCard.style, {
+            maxWidth: '600px', width: '100%', maxHeight: '90vh', 
+            overflowY: 'auto', margin: '0', position: 'relative'
+        });
+        
+        // Create Close Button
+        const closeBtn = document.createElement('button');
+        closeBtn.innerHTML = "&times;";
+        Object.assign(closeBtn.style, {
+            position: 'absolute', top: '10px', right: '15px',
+            background: 'rgba(0,0,0,0.5)', color: 'white', border: 'none',
+            borderRadius: '50%', width: '32px', height: '32px',
+            fontSize: '20px', cursor: 'pointer', zIndex: '10',
+            display: 'flex', alignItems: 'center', justifyContent: 'center'
+        });
+        
+        // Close Function
+        const closeModal = () => {
+            modal.remove();
+            document.body.style.overflow = ''; // Restore scrolling
+            // Silently update URL back to Feed (/) without reloading!
+            window.history.pushState({}, "", "/"); 
+        };
+
+        // Event Listeners
+        closeBtn.onclick = closeModal;
+        modal.onclick = (e) => {
+            if (e.target === modal) closeModal();
+        };
+
+        // Assemble & Inject
+        postCard.appendChild(closeBtn);
+        modal.appendChild(postCard);
+        document.body.appendChild(modal);
+        document.body.style.overflow = 'hidden'; // Lock background scrolling
+
+    } catch (err) {
+        console.error("Error opening post:", err);
+        // Fallback: Just let them see the feed if post fails
+        if (window.showNotification) showNotification("Post not found", "error");
+    }
 }
