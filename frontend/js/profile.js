@@ -265,7 +265,7 @@ const headerHTML = `
       </div>
       <div class="profile-header-text">
         <h1>${displayName}</h1>
-        <div class="username">${usernameHandle}</div>
+        <div class="username">@${usernameHandle}</div>
       </div>
       <div class="profile-header-actions">
         ${this.renderActionButtons(user, isOwnProfile)}
@@ -462,7 +462,7 @@ const headerHTML = `
               <p class="user-bio">${bio}</p>
             </div>
             <div class="user-actions">
-              <button class="follow-btn follow-toggle-btn ${isFollowing ? "following" : ""}" 
+              <button class="follow-author-btn follow-toggle-btn ${isFollowing ? "following" : ""}" 
                       data-user-id="${uid}"
                       data-user-name="${name}">
                 ${isFollowing ? "Following" : "+ Follow"}

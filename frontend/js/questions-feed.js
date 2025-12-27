@@ -76,7 +76,8 @@ window.loadQuestions = async function() {
             .map(question => {
                 const questionText = escapeHtml(question.question || question.title || '');
                 const questionSlug = escapeHtml(question.slug || question.id || '');
-                const username = escapeHtml(question.username || 'Anonymous');
+                
+                // ✅ REMOVED: Username variable
                 
                 const questionDate = question.created_at || new Date().toISOString();
                 const formattedDate = new Date(questionDate).toLocaleDateString('en-US', {
@@ -90,16 +91,7 @@ window.loadQuestions = async function() {
                 return `
                     <div class="question-card" data-question-id="${question.id}">
                         <div class="question-header">
-                            <div class="question-user-info">
-                                <img src="${question.avatar_url || '/images/default-avatar.png'}" 
-                                     alt="${username}" 
-                                     class="question-avatar"
-                                     onerror="this.src='/images/default-avatar.png'">
-                                <div class="question-user-details">
-                                    <span class="question-username">${username}</span>
-                                    <span class="question-date">${formattedDate}</span>
-                                </div>
-                            </div>
+                            <span class="question-date">Asked on ${formattedDate}</span>
                         </div>
 
                         <a href="/question/${questionSlug}" class="question-title">
@@ -145,7 +137,7 @@ window.loadQuestions = async function() {
 
         // Attach event listeners
         attachShareButtonListeners();
-        attachSaveButtonListeners(); // ✅ NEW
+        attachSaveButtonListeners();
 
     } catch (error) {
         console.error('Error loading questions:', error);
@@ -194,8 +186,6 @@ async function copyToClipboard(text) {
 function attachSaveButtonListeners() {
     document.querySelectorAll('.save-question-btn').forEach(button => {
         button.addEventListener('click', function() {
-            // Add your backend SAVE logic here later
-            // For now, toggle visual state
             const icon = this.querySelector('svg');
             this.classList.toggle('saved');
             if (this.classList.contains('saved')) {
@@ -210,13 +200,12 @@ function attachSaveButtonListeners() {
 
 // Init
 document.addEventListener('DOMContentLoaded', function() {
-    // Only load if the container exists
     if (document.getElementById('questionsFeedContainer') || document.getElementById('storiesContainer')) {
         window.loadQuestions();
     }
 });
 
-// Add CSS
+// Add CSS (Cleaned up: removed avatar/username styles)
 const style = document.createElement('style');
 style.textContent = `
     .loading-stories { text-align: center; padding: 60px 20px; color: #65676b; }
@@ -229,14 +218,12 @@ style.textContent = `
     .question-card { background: white; border-radius: 0px; padding: 20px; margin-bottom: 0px; box-shadow: 0 1px 2px rgba(0,0,0,0.05); border: 1px solid #f0f2f5; transition: box-shadow 0.2s; }
     .question-card:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
 
-    .question-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
-    .question-user-info { display: flex; align-items: center; gap: 10px; }
-    .question-avatar { width: 36px; height: 36px; border-radius: 50%; object-fit: cover; }
-    .question-username { font-weight: 600; font-size: 14px; color: #1c1e21; }
-    .question-date { font-size: 12px; color: #65676b; }
+    /* Cleaned Header */
+    .question-header { margin-bottom: 8px; }
+    .question-date { font-size: 13px; color: #8e8e8e; font-weight: 500; }
 
-    .question-title { font-size: 1rem; font-weight: 600; color: #1c1e21; text-decoration: none; display: block; margin-bottom: 10px; line-height: 1.4; }
-    .question-title:hover { color: #ff4b8d; }
+    .question-title { font-size: 1.1rem; font-weight: 700; color: #1c1e21; text-decoration: none; display: block; margin-bottom: 12px; line-height: 1.4; }
+    .question-title:hover { color: #ff4b8d; text-decoration: underline; }
 
     .question-stats { display: flex; gap: 20px; margin-bottom: 15px; padding-bottom: 15px; border-bottom: 1px solid #f0f2f5; }
     .stat-item { display: flex; align-items: center; gap: 6px; font-size: 13px; color: #65676b; }
@@ -245,14 +232,14 @@ style.textContent = `
     .answer-btn, .share-btn, .save-btn { display: flex; align-items: center; gap: 6px; padding: 8px 16px; border-radius: 20px; font-size: 14px; font-weight: 600; cursor: pointer; border: none; transition: background 0.2s; }
     
     .answer-btn { background: white; color: #ff4b8d; text-decoration: none; border: 1px solid #ff4b8d }
-    .answer-btn:hover { background: #e83e8c; }
+    .answer-btn:hover { background: #e83e8c; color: white; }
     
     .share-btn, .save-btn { background: #f0f2f5; color: #65676b; }
     .share-btn:hover, .save-btn:hover { background: #e4e6e9; color: #1c1e21; }
     
     /* Responsive */
     @media (max-width: 600px) {
-        .question-card { padding: 10px; }
+        .question-card { padding: 15px; }
         .question-title { font-size: 1rem; }
         .question-actions button, .question-actions a { flex: 1; justify-content: center; }
     }

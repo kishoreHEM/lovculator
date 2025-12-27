@@ -67,9 +67,7 @@ window.loadQuestion = async function() {
         // Update page title
         document.title = `${question.question || question.title || 'Question'} • Lovculator`;
 
-        // 2. ✅ NEW: Get Current User Info for the Prompt Card
-        // We attempt to get it from window.currentUser (set by header/auth). 
-        // If missing, we do a quick fetch to ensure we have the name.
+        // 2. Get Current User Info for the Prompt Card (Personalized for the viewer)
         let currentUser = window.currentUser;
         if (!currentUser) {
             try {
@@ -86,18 +84,11 @@ window.loadQuestion = async function() {
         const myAvatar = currentUser?.avatar_url || "/images/default-avatar.png";
 
         // 3. Render Question + Prompt Card
+        // ✅ CHANGE: Removed User Avatar/Name from Question Header. Only Date remains.
         questionContainer.innerHTML = `
             <div class="question-container">
                 <div class="question-header">
-                    <div class="user-meta-row">
-                        <img src="${question.user_avatar || question.avatar_url || '/images/default-avatar.png'}" 
-                             alt="${question.username || 'User'}" 
-                             class="question-avatar">
-                        <div class="question-user-details">
-                            <span class="question-username">${question.username || 'Anonymous'}</span>
-                            <span class="question-date">${formatDate(question.created_at)}</span>
-                        </div>
-                    </div>
+                    <span class="question-date">Asked ${formatDate(question.created_at)}</span>
                 </div>
                 
                 <h1 class="question-text">${question.question || question.title || ''}</h1>
@@ -573,44 +564,22 @@ style.textContent = `
         display: flex;
         justify-content: space-between;
         align-items: center;
-        margin-bottom: 0px;
+        margin-bottom: 8px; /* Reduced margin since avatar is gone */
     }
     
-    .question-user-info {
-        display: flex;
-        align-items: center;
-        gap: 15px;
-    }
-    
-    .question-avatar {
-        width: 60px;
-        height: 60px;
-        border-radius: 50%;
-        object-fit: cover;
-        border: 2px solid #ff4b8d20;
-    }
-    
-    .question-user-details {
-        display: flex;
-        flex-direction: column;
-    }
-    
-    .question-username {
-        font-weight: 600;
-        font-size: 16px;
-        color: #1c1e21;
-    }
+    /* Removed .question-user-info, .question-avatar, .question-username styles */
     
     .question-date {
-        font-size: 14px;
-        color: #65676b;
+        font-size: 13px;
+        color: #8e8e8e;
+        font-weight: 500;
     }
     
     .question-text {
-        font-size: 1rem;
-        font-weight: 700;
+        font-size: 1.5rem;
+        font-weight: 800;
         margin-bottom: 20px;
-        line-height: 1.4;
+        line-height: 1.3;
         color: #1c1e21;
     }
     
@@ -1023,7 +992,7 @@ style.textContent = `
         }
     }
 
-    /* ✅ NEW: Answer Prompt Card CSS */
+    /* Answer Prompt Card CSS */
     .answer-prompt-card {
         background: white;
         border-radius: 12px;

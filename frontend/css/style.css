@@ -2870,12 +2870,7 @@ footer {
 
 /* Activity Message */
 .activity-message {
-    text-align: center;
-    padding: 25px;
-    background: #f8f9ff;
     border-radius: 12px;
-    margin: 25px 0;
-    border: 1px solid #e8ecff;
 }
 
 .activity-message h3 {
@@ -4195,7 +4190,7 @@ footer {
 
 /* 🟢 Style and position the Follow Button */
 .follow-author-btn {
-    position: absolute;
+    position: relative;
     top: 5px;
     right: 0;
     background: none;

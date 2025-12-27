@@ -350,7 +350,7 @@ class LoveStories {
                 </div>
 
                 ${canFollow ? `
-                    <button class="follow-btn ${story.is_following_author ? 'following' : ''}" 
+                    <button class="follow-author-btn ${story.is_following_author ? 'following' : ''}" 
                           data-user-id="${story.author_id}"
                           data-story-id="${story.id}">
                           ${story.is_following_author ? 'Following' : '+ Follow'}
