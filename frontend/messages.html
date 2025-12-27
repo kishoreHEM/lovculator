@@ -41,15 +41,15 @@
 </head>
 
 <body class="messages-page">
+
   <div id="global-header"></div>
 
   <main class="messages-layout-wrapper">
     <div class="messages-container" id="messagesContainer">
-      <!-- SIDEBAR: Conversations List -->
       <aside class="conversations-sidebar">
         <div class="conversations-header">
           <div class="conversations-header-top">
-            <h1><span>💬</span> Messages</h1>
+            <h1><span>←</span> Messages</h1>
             <button id="newChatBtn" class="new-chat-btn" type="button" aria-label="Start new conversation">+ New</button>
           </div>
 
@@ -61,27 +61,9 @@
         </div>
 
         <div class="conversations-list" id="conversationsList">
-          <!-- Loading skeletons -->
-          <div class="loading-conversations">
-            <div class="conversation-skeleton">
-              <div class="avatar-skeleton"></div>
-              <div class="info-skeleton">
-                <div class="line-skeleton"></div>
-                <div class="line-skeleton short"></div>
-              </div>
-            </div>
-            <div class="conversation-skeleton">
-              <div class="avatar-skeleton"></div>
-              <div class="info-skeleton">
-                <div class="line-skeleton"></div>
-                <div class="line-skeleton short"></div>
-              </div>
-            </div>
           </div>
-        </div>
       </aside>
 
-      <!-- MAIN: Chat Area -->
       <section class="messages-main" id="messagesMain">
         <header class="messages-header">
           <div class="current-chat-info">
@@ -95,7 +77,6 @@
         </header>
 
         <div class="messages-list" id="messagesList">
-          <!-- Empty state -->
           <div class="empty-conversations">
             <div class="empty-icon" aria-hidden="true">💌</div>
             <h3>Start Messaging</h3>
@@ -103,375 +84,61 @@
           </div>
         </div>
 
-        <!-- Input Area (Hidden by default) -->
         <div class="message-input-container" id="messageInputContainer" style="display: none">
-          <div class="message-input-wrapper">
-            <button id="attachBtn" type="button" class="chat-action-btn" title="Attach file" aria-label="Attach file">📎</button>
-            <input type="file" id="attachInput" accept="image/*,.pdf,.doc,.docx,.txt" style="display: none" aria-label="File attachment" />
             
-            <button id="emojiBtn" type="button" class="chat-action-btn" title="Add emoji" aria-label="Add emoji">😊</button>
-            
-            <textarea id="messageInput" placeholder="Type a message..." rows="1" aria-label="Type your message"></textarea>
-            
-            <button id="micBtn" type="button" class="chat-action-btn" title="Voice message" aria-label="Record voice message">🎙️</button>
-            
-            <button id="sendMessageBtn" type="button" title="Send message" aria-label="Send message">
-              <span style="font-size: 18px" aria-hidden="true">➤</span>
-            </button>
-          </div>
+            <div id="emojiPickerContainer" class="emoji-picker-popup hidden"></div>
+
+            <div class="message-input-wrapper">
+                <div class="input-actions-left">
+                    <button id="emojiBtn" type="button" class="icon-btn" title="Add emoji">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <circle cx="12" cy="12" r="10"></circle>
+                            <path d="M8 14s1.5 2 4 2 4-2 4-2"></path>
+                            <line x1="9" y1="9" x2="9.01" y2="9"></line>
+                            <line x1="15" y1="9" x2="15.01" y2="9"></line>
+                        </svg>
+                    </button>
+                    
+                    <button id="attachBtn" type="button" class="icon-btn" title="Attach file">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"></path></svg>
+                    </button>
+                    <input type="file" id="attachInput" accept="image/*,.pdf,.doc,.docx" hidden />
+                </div>
+
+                <textarea id="messageInput" placeholder="Type a message..." rows="1"></textarea>
+
+                <div class="input-actions-right">
+                    <button id="micBtn" type="button" class="icon-btn" title="Voice Message">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg>
+                    </button>
+
+                    <button id="sendMessageBtn" type="button" class="send-btn" title="Send">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
+                    </button>
+                </div>
+            </div>
         </div>
       </section>
     </div>
   </main>
 
-  <!-- Offline Indicator -->
   <div id="offlineIndicator" role="alert" aria-live="assertive" style="display: none; position: fixed; top: 0; left: 0; width: 100%; background: #e74c3c; color: white; text-align: center; padding: 5px; z-index: 9999;">
     You are offline. Trying to reconnect...
   </div>
 
-  <!-- Connection Status Pill -->
   <div id="connectionStatus" class="connection-status" role="status" aria-live="polite" style="display: none;"></div>
 
-  <!-- Scripts -->
   <script src="/js/global-header.js"></script>
   <script src="/js/layout-manager.js"></script>
   <script src="/js/auth.js"></script>
+  
+  <script src="https://cdn.jsdelivr.net/npm/picmo@5.7.6/dist/umd/index.js"></script> 
+  
+  <script src="/js/emoji-picker.js"></script>
+  
   <script src="/js/messages.js"></script> 
+  
   <script src="/js/profile.js"></script>
 
-  <script>
-    // Initialize messagesPage global object
-    window.messagesPage = {
-      init: async function() {
-        console.log("📱 Messages page initializing...");
-        
-        // Wait for DOM to be fully ready
-        await this.waitForDOM();
-        
-        // Initialize UI interactions
-        this.initUI();
-        
-        // Load conversations
-        await this.loadConversations();
-        
-        // Set up WebSocket connection
-        this.setupWebSocket();
-        
-        console.log("✅ Messages page initialized");
-      },
-      
-      waitForDOM: function() {
-        return new Promise((resolve) => {
-          if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', resolve);
-          } else {
-            resolve();
-          }
-        });
-      },
-      
-      initUI: function() {
-        // Mobile back button
-        const backBtn = document.getElementById('backToList');
-        if (backBtn) {
-          backBtn.addEventListener('click', () => {
-            this.closeChat();
-          });
-        }
-        
-        // New chat button
-        const newChatBtn = document.getElementById('newChatBtn');
-        if (newChatBtn) {
-          newChatBtn.addEventListener('click', () => {
-            this.startNewChat();
-          });
-        }
-        
-        // Search functionality
-        const searchInput = document.getElementById('searchConversations');
-        const searchClearBtn = document.getElementById('searchClearBtn');
-        
-        if (searchInput && searchClearBtn) {
-          searchInput.addEventListener('input', (e) => {
-            this.searchConversations(e.target.value);
-            searchClearBtn.style.display = e.target.value ? 'block' : 'none';
-          });
-          
-          searchClearBtn.addEventListener('click', () => {
-            searchInput.value = '';
-            searchClearBtn.style.display = 'none';
-            this.searchConversations('');
-          });
-        }
-        
-        // Message input
-        const messageInput = document.getElementById('messageInput');
-        const sendBtn = document.getElementById('sendMessageBtn');
-        
-        if (messageInput && sendBtn) {
-          messageInput.addEventListener('input', () => {
-            this.adjustTextareaHeight(messageInput);
-            sendBtn.disabled = !messageInput.value.trim();
-          });
-          
-          messageInput.addEventListener('keypress', (e) => {
-            if (e.key === 'Enter' && !e.shiftKey) {
-              e.preventDefault();
-              this.sendMessage();
-            }
-          });
-          
-          sendBtn.addEventListener('click', () => {
-            this.sendMessage();
-          });
-        }
-        
-        // File attachment
-        const attachBtn = document.getElementById('attachBtn');
-        const attachInput = document.getElementById('attachInput');
-        
-        if (attachBtn && attachInput) {
-          attachBtn.addEventListener('click', () => {
-            attachInput.click();
-          });
-          
-          attachInput.addEventListener('change', (e) => {
-            if (e.target.files.length > 0) {
-              this.uploadFile(e.target.files[0]);
-            }
-          });
-        }
-      },
-      
-      loadConversations: async function() {
-        try {
-          const conversationsList = document.getElementById('conversationsList');
-          if (!conversationsList) return;
-          
-          // Show loading state
-          conversationsList.innerHTML = `
-            <div class="loading-conversations">
-              <div class="conversation-skeleton">
-                <div class="avatar-skeleton"></div>
-                <div class="info-skeleton">
-                  <div class="line-skeleton"></div>
-                  <div class="line-skeleton short"></div>
-                </div>
-              </div>
-              <div class="conversation-skeleton">
-                <div class="avatar-skeleton"></div>
-                <div class="info-skeleton">
-                  <div class="line-skeleton"></div>
-                  <div class="line-skeleton short"></div>
-                </div>
-              </div>
-            </div>
-          `;
-          
-          // Simulate API call (replace with actual API)
-          await new Promise(resolve => setTimeout(resolve, 800));
-          
-          // TODO: Replace with actual API call
-          // const response = await fetch('/api/conversations');
-          // const conversations = await response.json();
-          
-          // For now, show empty state
-          conversationsList.innerHTML = `
-            <div class="empty-conversations">
-              <div class="empty-icon">💬</div>
-              <h3>No conversations yet</h3>
-              <p>Start matching to begin chatting!</p>
-            </div>
-          `;
-          
-        } catch (error) {
-          console.error('Error loading conversations:', error);
-          this.showError('Failed to load conversations');
-        }
-      },
-      
-      openChat: function(conversationId, userName, userAvatar) {
-        // Update UI for chat view
-        document.getElementById('messagesContainer').classList.add('chat-open');
-        document.getElementById('currentChatName').textContent = userName || 'User';
-        
-        if (userAvatar) {
-          document.getElementById('currentChatAvatar').src = userAvatar;
-        }
-        
-        document.getElementById('currentChatStatus').textContent = 'Online';
-        document.getElementById('messageInputContainer').style.display = 'block';
-        
-        // Clear and load messages for this chat
-        this.loadMessages(conversationId);
-      },
-      
-      closeChat: function() {
-        document.getElementById('messagesContainer').classList.remove('chat-open');
-        document.getElementById('messageInputContainer').style.display = 'none';
-        document.getElementById('currentChatName').textContent = 'Select a conversation';
-        document.getElementById('currentChatStatus').textContent = 'Start chatting to connect';
-        document.getElementById('currentChatAvatar').src = '/images/default-avatar.png';
-        
-        // Clear messages list
-        const messagesList = document.getElementById('messagesList');
-        messagesList.innerHTML = `
-          <div class="empty-conversations">
-            <div class="empty-icon">💌</div>
-            <h3>Start Messaging</h3>
-            <p>Select a match from the left to start chatting.</p>
-          </div>
-        `;
-      },
-      
-      loadMessages: async function(conversationId) {
-        // TODO: Implement actual message loading
-        const messagesList = document.getElementById('messagesList');
-        messagesList.innerHTML = `
-          <div class="empty-conversations">
-            <div class="empty-icon">💌</div>
-            <h3>No messages yet</h3>
-            <p>Start the conversation!</p>
-          </div>
-        `;
-      },
-      
-      sendMessage: function() {
-        const messageInput = document.getElementById('messageInput');
-        const message = messageInput.value.trim();
-        
-        if (!message) return;
-        
-        // TODO: Implement actual message sending
-        console.log('Sending message:', message);
-        
-        // Clear input
-        messageInput.value = '';
-        this.adjustTextareaHeight(messageInput);
-        document.getElementById('sendMessageBtn').disabled = true;
-      },
-      
-      adjustTextareaHeight: function(textarea) {
-        textarea.style.height = 'auto';
-        textarea.style.height = Math.min(textarea.scrollHeight, 120) + 'px';
-      },
-      
-      uploadFile: function(file) {
-        console.log('Uploading file:', file.name);
-        // TODO: Implement file upload
-      },
-      
-      searchConversations: function(query) {
-        console.log('Searching for:', query);
-        // TODO: Implement search
-      },
-      
-      startNewChat: function() {
-        console.log('Starting new chat');
-        // TODO: Implement new chat modal/flow
-      },
-      
-      setupWebSocket: function() {
-        // TODO: Implement WebSocket connection
-        console.log('WebSocket setup would happen here');
-      },
-      
-      updateConnectionStatus: function(status) {
-        const statusElement = document.getElementById('connectionStatus');
-        if (!statusElement) return;
-        
-        statusElement.style.display = 'block';
-        statusElement.className = `connection-status ${status}`;
-        statusElement.textContent = this.getStatusText(status);
-        
-        // Auto-hide after 3 seconds for connected status
-        if (status === 'connected') {
-          setTimeout(() => {
-            statusElement.style.display = 'none';
-          }, 3000);
-        }
-      },
-      
-      getStatusText: function(status) {
-        const statusMap = {
-          'connected': 'Connected',
-          'disconnected': 'Disconnected',
-          'reconnecting': 'Reconnecting...',
-          'error': 'Connection error'
-        };
-        return statusMap[status] || 'Connecting...';
-      },
-      
-      stopTypingIndicator: function() {
-        // TODO: Implement typing indicator cleanup
-      },
-      
-      showError: function(message) {
-        console.error('Error:', message);
-        // TODO: Show user-friendly error message
-      }
-    };
-
-    // Initialize when DOM is ready
-    document.addEventListener("DOMContentLoaded", () => {
-      console.log("📱 Messages page DOM loaded");
-      
-      // Clean up any previous instances
-      if (window.messagesManager && typeof window.messagesManager.destroy === 'function') {
-        window.messagesManager.destroy();
-        window.messagesManager = null;
-      }
-      
-      // Initialize messages page
-      setTimeout(() => {
-        if (window.messagesPage && typeof window.messagesPage.init === 'function') {
-          window.messagesPage.init().catch(error => {
-            console.error("❌ MessagesPage init failed:", error);
-          });
-        }
-      }, 100);
-    });
-
-    // Network Status Handling
-    window.addEventListener("offline", () => {
-      const offlineIndicator = document.getElementById("offlineIndicator");
-      if (offlineIndicator) offlineIndicator.style.display = "block";
-      
-      if (window.messagesPage) {
-        window.messagesPage.updateConnectionStatus("disconnected");
-      }
-    });
-
-    window.addEventListener("online", () => {
-      const offlineIndicator = document.getElementById("offlineIndicator");
-      if (offlineIndicator) offlineIndicator.style.display = "none";
-      
-      if (window.messagesPage) {
-        window.messagesPage.updateConnectionStatus("connected");
-        window.messagesPage.loadConversations();
-      }
-    });
-
-    // Page Visibility (Updates Online/Away Status)
-    document.addEventListener("visibilitychange", () => {
-      if (!document.hidden && window.messagesPage) {
-        window.messagesPage.loadConversations();
-      }
-    });
-
-    // Cleanup on Exit
-    window.addEventListener("beforeunload", () => {
-      if (window.messagesPage) {
-        window.messagesPage.stopTypingIndicator();
-      }
-    });
-    
-    // Handle page back/forward navigation
-    window.addEventListener('pageshow', (event) => {
-      if (event.persisted && window.messagesPage) {
-        window.messagesPage.loadConversations();
-      }
-    });
-  </script>
-</body>
+  </body>
 </html>

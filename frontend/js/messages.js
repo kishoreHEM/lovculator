@@ -668,6 +668,14 @@ class MessagesPage {
       
       // 4. Attach event listeners
       this.attachEventListeners();
+
+      /* ✅ DEBUGGING: Check if Emoji System is working */
+      if (window.EmojiPickerManager) {
+          console.log("✅ EmojiPickerManager found. Initializing...");
+          new window.EmojiPickerManager("emojiBtn", "emojiPickerContainer", "messageInput");
+      } else {
+          console.error("❌ CRITICAL: 'EmojiPickerManager' is not defined. Did you create /js/emoji-picker.js and link it in the HTML?");
+      }
       
       // 5. Initialize notifications
       this.initializeNotifications();
