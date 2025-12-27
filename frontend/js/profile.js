@@ -91,9 +91,6 @@
 
       this.followClickHandler = null;
 
-      // FIX: Define handleFollowBtnClick as a method first
-      this.handleFollowBtnClick = this.handleFollowBtnClick.bind(this);
-
       this.init();
     }
 
@@ -143,7 +140,7 @@
         }
         
         // Always attach follow handlers (for followers/following lists)
-        this.attachFollowButtonHandlers();
+        
         this.attachGlobalMessageButtonHandler();
 
       } catch (err) {
@@ -364,16 +361,6 @@ const headerHTML = `
     }
 
     // -------------------------
-    // FIX: Define handleFollowBtnClick method
-    // -------------------------
-    handleFollowBtnClick(e) {
-      const btn = e.target.closest(".follow-btn");
-      if (!btn) return;
-      const uid = btn.dataset.userId;
-      if (uid) this.toggleFollow(uid, btn);
-    }
-
-    // -------------------------
     // Follow System (FIXED VERSION)
     // -------------------------
     async loadFollowers(userId) {
@@ -503,263 +490,140 @@ const headerHTML = `
     }
 
     attachFollowButtonHandlers() {
-      // Remove previous handler if exists
-      if (this.followClickHandler) {
-        document.removeEventListener("click", this.followClickHandler);
-      }
+  if (this.followClickHandler) {
+    document.removeEventListener("click", this.followClickHandler, true);
+  }
 
-      this.followClickHandler = (e) => {
-        const btn = e.target.closest(".follow-toggle-btn, .follow-btn");
-        if (!btn) return;
-        
-        e.preventDefault();
-        e.stopPropagation();
-        
-        const id = btn.dataset.userId || btn.getAttribute("data-user-id");
-        if (!id) {
-          console.error("Follow button missing data-user-id", btn);
-          return;
-        }
-        
-        // Check if user is trying to follow themselves
-        if (this.currentUser && this.currentUser.id == id) {
-          showNotification("You cannot follow yourself", "info");
-          return;
-        }
-        
-        this.toggleFollow(id, btn);
-      };
+  this.followClickHandler = (e) => {
+    const btn = e.target.closest(".follow-toggle-btn, .follow-btn");
+    if (!btn) return;
 
-      document.addEventListener("click", this.followClickHandler, true);
+    e.preventDefault();
+    e.stopPropagation();
+
+    const targetId = btn.dataset.userId;
+    if (!targetId) return;
+
+    // prevent self follow
+    if (this.currentUser && String(this.currentUser.id) === String(targetId)) {
+      showNotification("You cannot follow yourself", "info");
+      return;
     }
 
-    async toggleFollow(targetId, buttonEl) {
-  if (!window.currentUserId || !this.currentUser) {
+    this.toggleFollow(targetId, btn);
+  };
+
+  document.addEventListener("click", this.followClickHandler, true);
+}
+
+
+async toggleFollow(targetId, buttonEl) {
+  if (!this.currentUser || !window.currentUserId) {
     showNotification("Please log in to follow users", "error");
-    setTimeout(() => (window.location.href = "/login"), 1500);
+    setTimeout(() => (window.location.href = "/login"), 1200);
     return;
   }
 
   // Prevent self-follow
-  if (this.currentUser.id == targetId) {
+  if (String(this.currentUser.id) === String(targetId)) {
     showNotification("You cannot follow yourself", "info");
     return;
   }
 
   const originalText = buttonEl.textContent;
-  const originalClassName = buttonEl.className;
+  const originalClass = buttonEl.className;
   const userName = buttonEl.dataset.userName || "user";
-  
-  buttonEl.disabled = true;
-  buttonEl.style.opacity = "0.7";
-  buttonEl.style.cursor = "wait";
-  
-  // Optimistic UI update
+
+  // Optimistic UI
   const isNowFollowing = !buttonEl.classList.contains("following");
   buttonEl.classList.toggle("following", isNowFollowing);
   buttonEl.textContent = isNowFollowing ? "Following" : "+ Follow";
+  buttonEl.disabled = true;
 
   try {
-    console.log(`Attempting to ${isNowFollowing ? 'follow' : 'unfollow'} user ${targetId}`);
-    
-    // TRY DIFFERENT ENDPOINT FORMATS
-    let success = false;
-    let responseData = {};
-    let lastError = null;
-    
-    // Option 1: Single endpoint with action in body (most common)
-    try {
-      console.log("Trying endpoint: POST /api/follow with action in body");
-      const res = await fetch(`${this.apiBase}/follow`, {
+    const res = await fetch(
+      `${this.apiBase}/users/${targetId}/follow`,
+      {
         method: "POST",
         credentials: "include",
-        headers: { 
-          "Content-Type": "application/json",
-          "Accept": "application/json"
-        },
-        body: JSON.stringify({
-          user_id: parseInt(targetId),
-          action: isNowFollowing ? "follow" : "unfollow"
-        })
+        headers: { "Content-Type": "application/json" }
+      }
+    );
+
+    if (!res.ok) {
+      const err = await safeJson(res);
+      throw new Error(err?.error || `HTTP ${res.status}`);
+    }
+
+    const data = await safeJson(res);
+    const is_following = data.is_following ?? isNowFollowing;
+
+    // Sync ALL buttons for this user
+    document
+      .querySelectorAll(`[data-user-id="${targetId}"]`)
+      .forEach((btn) => {
+        btn.classList.toggle("following", is_following);
+        btn.textContent = is_following ? "Following" : "+ Follow";
       });
-      
-      if (res.ok) {
-        const data = await res.json();
-        responseData = data;
-        success = true;
-        console.log("✅ Success with POST /api/follow");
-      } else {
-        lastError = `POST /api/follow failed: ${res.status}`;
-      }
-    } catch (err) {
-      lastError = `POST /api/follow error: ${err.message}`;
-    }
-    
-    // Option 2: Separate endpoints for follow/unfollow
-    if (!success) {
-      try {
-        const endpoint = isNowFollowing ? "follow" : "unfollow";
-        console.log(`Trying endpoint: POST /api/users/${targetId}/${endpoint}`);
-        const res = await fetch(`${this.apiBase}/users/${targetId}/${endpoint}`, {
-          method: "POST",
-          credentials: "include",
-          headers: { 
-            "Content-Type": "application/json",
-            "Accept": "application/json"
-          }
-        });
-        
-        if (res.ok) {
-          const data = await res.json();
-          responseData = data;
-          success = true;
-          console.log(`✅ Success with POST /api/users/${targetId}/${endpoint}`);
-        } else {
-          lastError = `POST /api/users/${targetId}/${endpoint} failed: ${res.status}`;
-        }
-      } catch (err) {
-        lastError = `POST /api/users/${targetId}/${endpoint} error: ${err.message}`;
-      }
-    }
-    
-    // Option 3: Single endpoint with toggle
-    if (!success) {
-      try {
-        console.log("Trying endpoint: POST /api/users/${targetId}/follow (toggle)");
-        const res = await fetch(`${this.apiBase}/users/${targetId}/follow`, {
-          method: "POST",
-          credentials: "include",
-          headers: { 
-            "Content-Type": "application/json",
-            "Accept": "application/json"
-          },
-          body: JSON.stringify({
-            action: isNowFollowing ? "follow" : "unfollow"
-          })
-        });
-        
-        if (res.ok) {
-          const data = await res.json();
-          responseData = data;
-          success = true;
-          console.log("✅ Success with POST /api/users/${targetId}/follow (toggle)");
-        } else {
-          lastError = `POST /api/users/${targetId}/follow failed: ${res.status}`;
-        }
-      } catch (err) {
-        lastError = `POST /api/users/${targetId}/follow error: ${err.message}`;
-      }
-    }
-    
-    // Option 4: Direct PUT/PATCH to user's following status
-    if (!success) {
-      try {
-        console.log("Trying endpoint: PUT /api/users/${targetId}/following");
-        const res = await fetch(`${this.apiBase}/users/${targetId}/following`, {
-          method: "PUT",
-          credentials: "include",
-          headers: { 
-            "Content-Type": "application/json",
-            "Accept": "application/json"
-          },
-          body: JSON.stringify({
-            following: isNowFollowing
-          })
-        });
-        
-        if (res.ok) {
-          const data = await res.json();
-          responseData = data;
-          success = true;
-          console.log("✅ Success with PUT /api/users/${targetId}/following");
-        } else {
-          lastError = `PUT /api/users/${targetId}/following failed: ${res.status}`;
-        }
-      } catch (err) {
-        lastError = `PUT /api/users/${targetId}/following error: ${err.message}`;
-      }
-    }
-    
-    // If all endpoints failed
-    if (!success) {
-      throw new Error(`No working follow API found. Last error: ${lastError}`);
-    }
-    
-    // Extract follow status from response
-    const is_following = responseData.is_following ?? 
-                        responseData.following ?? 
-                        responseData.success ? isNowFollowing : !isNowFollowing;
-    
-    // Update all matching buttons on the page
-    document.querySelectorAll(`.follow-btn[data-user-id="${targetId}"], .follow-toggle-btn[data-user-id="${targetId}"]`).forEach((btn) => {
-      btn.classList.toggle("following", is_following);
-      btn.textContent = is_following ? "Following" : "+ Follow";
-    });
 
-    // Update cache
+    // Update local cache
     if (this._followingSet) {
-      if (is_following) {
-        this._followingSet.add(Number(targetId));
-      } else {
-        this._followingSet.delete(Number(targetId));
-      }
+      is_following
+        ? this._followingSet.add(Number(targetId))
+        : this._followingSet.delete(Number(targetId));
     }
 
-    // Update follower count if available
-    if (responseData.target_follower_count !== undefined) {
-      const followerCountEl = document.getElementById("profileFollowers");
-      if (followerCountEl) {
-        followerCountEl.textContent = `${responseData.target_follower_count} Followers`;
-      }
-    }
-    
-    // Update follower/following lists if they're currently visible
-    this.refreshFollowLists();
-    
-    showNotification(is_following ? `You are now following ${userName}` : `You unfollowed ${userName}`);
-    
-  } catch (err) {
-    console.error("Follow toggle error:", err);
-    
-    // Revert on error
-    buttonEl.className = originalClassName;
-    buttonEl.textContent = originalText;
-    
-    // Show appropriate error message
-    showNotification("Failed to update follow status. Check console for details.", "error");
-    
-    // Log detailed error for debugging
-    console.error("Full error details:", {
-      targetId,
-      currentUserId: this.currentUser?.id,
-      error: err.message,
-      timestamp: new Date().toISOString()
-    });
-  } finally {
-    buttonEl.disabled = false;
-    buttonEl.style.opacity = "";
-    buttonEl.style.cursor = "";
+    // Update target user's follower count
+if (data.target_follower_count !== undefined) {
+  const followersEl = document.getElementById("profileFollowers");
+  if (followersEl) {
+    followersEl.textContent = `${data.target_follower_count} Followers`;
   }
 }
 
-    // Helper method to refresh visible follow lists
-    refreshFollowLists() {
-      // Check which tab is active and refresh that content
-      const activeTab = document.querySelector(".tab-btn.active");
-      if (activeTab && this.viewedUser) {
-        const tabName = activeTab.dataset.tab;
-        const userId = this.viewedUser.id;
-        
-        switch(tabName) {
-          case "followers":
-            this.loadFollowers(userId);
-            break;
-          case "following":
-            this.loadFollowing(userId);
-            break;
-        }
-      }
-    }
+// Update current user's following count (only on own profile)
+if (data.current_user_following_count !== undefined && this.isOwnProfile) {
+  const followingEl = document.getElementById("profileFollowing");
+  if (followingEl) {
+    followingEl.textContent = `${data.current_user_following_count} Following`;
+  }
+}
+
+
+    // Refresh visible lists
+    this.refreshFollowLists();
+
+    showNotification(
+      is_following
+        ? `You are now following ${userName}`
+        : `You unfollowed ${userName}`
+    );
+
+  } catch (err) {
+    console.error("Follow toggle failed:", err);
+
+    // Revert UI
+    buttonEl.className = originalClass;
+    buttonEl.textContent = originalText;
+
+    showNotification("Failed to update follow status", "error");
+  } finally {
+    buttonEl.disabled = false;
+  }
+}
+
+
+refreshFollowLists() {
+  const activeTab = document.querySelector(".tab-btn.active");
+  if (!activeTab || !this.viewedUser) return;
+
+  const userId = this.viewedUser.id;
+  const tab = activeTab.dataset.tab;
+
+  if (tab === "followers") this.loadFollowers(userId);
+  if (tab === "following") this.loadFollowing(userId);
+}
+
 
     // -------------------------
     // Tab System
@@ -1185,7 +1049,7 @@ attachActivityProfileLinks() {
               throw new Error(err?.error || err?.message || `HTTP ${res.status}`);
             }
 
-            const data = await res.json();
+            const data = await safeJson(res);
             const newUrl = data.avatar_url || data.avatar || "/";
             const finalUrl = newUrl.startsWith("/") ? `${this.assetBase}${newUrl}` : newUrl;
             
