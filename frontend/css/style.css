@@ -1311,6 +1311,7 @@ body {
     border-radius: 12px;
     padding: 30px;   
     margin: 20px 0;
+    width: 600px;
 }
 
 .name-analysis-header {
@@ -1447,6 +1448,7 @@ body {
     width: 100%;
     max-width: 600px;
     padding: 30px;
+    margin-bottom: 10px;
 }
 
 .guide-header {
@@ -1559,7 +1561,7 @@ body {
     width: 100%;
     max-width: 600px;
     padding: 30px;
-    margin: 0 auto;
+    margin-bottom: 10px;
 }
 
 .tips-grid {
@@ -1668,7 +1670,6 @@ body {
     width: 100%;
     max-width: 600px;
     padding: 30px;
-    margin: 30px auto;
     box-shadow: 0 8px 30px rgba(0, 0, 0, 0.08);
 }
 
@@ -2341,9 +2342,9 @@ footer {
 }
 
 .prompt-content p {
-    margin-bottom: 20px;
+    margin-bottom: 15px;
     color: #262626;
-    font-size: 16px;
+    font-size: 15px;
 }
 
 .install-btn {

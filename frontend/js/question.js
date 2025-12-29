@@ -234,28 +234,31 @@ function renderAnswerList(question, answers) {
             const commentCount = answer.comments_count || answer.comment_count || 0;
             const userAvatar = answer.profile_image_url || answer.avatar_url || answer.author_avatar || '/images/default-avatar.png';
             
-            // Check following status from backend (if provided)
-            const isFollowing = answer.user_following || false;
-            const followText = isFollowing ? "Following" : "+ Follow";
-            const followClass = isFollowing ? "follow-btn following" : "follow-btn";
+            // ✅ FIX: Check multiple common property names for following status
+            const isFollowing = Boolean(answer.user_following);
 
             return `
                 <div class="answer-card" data-answer-id="${answerId}" data-user-id="${userId}">
-                    <div class="user-meta-row">
+                    <div class="user-meta-row" style="display: flex; align-items: flex-start; gap: 15px; margin-bottom: 20px;">
                         <img src="${userAvatar}" 
                              alt="${userName}" 
                              class="answer-avatar"
+                             style="width: 50px; height: 50px; border-radius: 50%; object-fit: cover;"
                              onerror="this.src='/images/default-avatar.png'">
-                        <div class="answer-user-info">
-                            <div class="answer-user-name">
-                                <a href="/profile/${encodeURIComponent(userName)}" class="user-link">
+                        <div class="answer-user-info" style="flex: 1;">
+                            <div class="answer-user-name" style="display: flex; align-items: center; gap: 12px; margin-bottom: 5px;">
+                                <a href="/profile/${encodeURIComponent(userName)}" class="user-link" style="font-weight: 600; color: #1c1e21; text-decoration: none;">
                                     ${userName}
                                 </a>
-                                ${userId && userId !== window.currentUserId ? 
-                                    `<button class="${followClass}" data-user-id="${userId}">${followText}</button>` : 
-                                    ''}
+                                ${userId && String(userId) !== String(window.currentUserId) ? `
+  <button 
+    class="follow-author-btn ${isFollowing ? 'following' : ''}" 
+    data-user-id="${userId}">
+    ${isFollowing ? 'Following' : '+ Follow'}
+  </button>
+` : ''}
                             </div>
-                            ${userBio ? `<div class="answer-user-bio">${userBio}</div>` : ''}
+                            ${userBio ? `<div class="answer-user-bio" style="font-size: 14px; color: #65676b;">${userBio}</div>` : ''}
                         </div>
                     </div>
 
@@ -277,7 +280,7 @@ function renderAnswerList(question, answers) {
                         </button>
 
                         <button class="share-btn" 
-                                data-share-url="https://lovculator.com/questions/${question.slug}#answer-${answerId}"
+                                data-share-url="https://lovculator.com/question/${question.slug || slug}#answer-${answerId}"
                                 data-share-title="${userName}'s answer"
                                 data-share-text="${answerText.substring(0, 100)}...">
                             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -933,7 +936,12 @@ style.textContent = `
         .answer-card,
         .answer-form {
             padding: 20px;
+            border-radius: 0px;
+            margin-bottom: 0px;
         }
+        .answer-prompt-card {
+            border-radius: 0px;
+       }
         
         .question-text {
             font-size: 1rem;
@@ -995,7 +1003,7 @@ style.textContent = `
     /* Answer Prompt Card CSS */
     .answer-prompt-card {
         background: white;
-        border-radius: 12px;
+        border-radius: 0px;
         padding: 20px;
         margin-bottom: 20px;
         border: 1px solid #e0e0e0;
@@ -1017,13 +1025,13 @@ style.textContent = `
         box-shadow: 0 2px 5px rgba(0,0,0,0.1);
     }
     .prompt-title {
-        font-size: 1.1rem;
-        font-weight: 700;
+        font-size: 1rem;
+        font-weight: 600;
         color: #1c1e21;
         margin: 0;
     }
     .prompt-subtitle {
-        font-size: 0.9rem;
+        font-size: 0.8rem;
         color: #65676b;
         margin: 0 0 10px 0;
     }

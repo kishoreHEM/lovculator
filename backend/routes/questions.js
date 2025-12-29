@@ -121,7 +121,9 @@ router.get("/latest", async (req, res) => {
 // ======================================================
 // 3️⃣ GET /api/questions/:slug — Fetch single question
 // ======================================================
-router.get("/:slug", async (req, res) => {
+router.get("/:slug", auth, async (req, res) => {
+
+
   try {
     const { slug } = req.params;
     const userId = req.user ? req.user.id : null;
