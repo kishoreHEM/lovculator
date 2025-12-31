@@ -83,7 +83,7 @@ function userCardHTML(user, section) {
                 </div>
             </div>
 
-            <button class="${isFollowing ? "unfollow-btn" : "follow-btn"}">
+            <button class="${isFollowing ? "follow-author-btn" : "follow-author-btn"}">
                 ${isFollowing ? "Unfollow" : "Follow"}
             </button>
         </div>

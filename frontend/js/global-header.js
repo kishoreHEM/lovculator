@@ -35,6 +35,42 @@ function initHeaderInteractions(container) {
     });
   }
 
+  const avatarBtn = container.querySelector(".user-avatar-btn"); // Adjust selector to match your header avatar button
+  const sidebar = document.getElementById("mobileSidebar");
+  const overlay = document.getElementById("sidebarOverlay");
+  const closeBtn = document.getElementById("mobileMenuClose");
+
+  if (avatarBtn) {
+    avatarBtn.addEventListener("click", (e) => {
+        const sidebar = document.getElementById("mobileSidebar");
+        const overlay = document.getElementById("sidebarOverlay");
+
+        // ✅ THE FIX: Check if sidebar exists before touching classList
+        if (sidebar && overlay) {
+            if (window.innerWidth <= 991) {
+                e.preventDefault();
+                sidebar.classList.add("active");
+                overlay.classList.add("active");
+                document.body.style.overflow = "hidden";
+            }
+        } else {
+            console.warn("Sidebar not loaded yet. Retrying...");
+        }
+    });
+
+  
+
+  // Close logic
+  const closeSidebar = () => {
+    sidebar.classList.remove("active");
+    overlay.classList.remove("active");
+    document.body.style.overflow = "";
+  };
+
+  if (closeBtn) closeBtn.onclick = closeSidebar;
+  if (overlay) overlay.onclick = closeSidebar;
+}
+
   // --- B. Avatar Dropdown Logic ---
   function setupDropdown(triggerSelector, menuSelector) {
     const trigger = container.querySelector(triggerSelector);

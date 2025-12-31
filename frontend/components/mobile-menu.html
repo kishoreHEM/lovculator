@@ -1,19 +1,118 @@
-<div id="sidebarOverlay" class="sidebar-overlay" aria-hidden="true"></div>
+<style>
+/* --- Sidebar Base Styles --- */
+.main-sidebar {
+    background: #fff;
+    width: 280px;
+    height: 100vh;
+    border-right: 1px solid #eee;
+    display: flex;
+    flex-direction: column;
+    z-index: 10001;
+    transition: transform 0.3s ease;
+}
 
-<aside class="main-sidebar mobile-sidebar" id="mobileSidebar" aria-hidden="true" role="navigation">
+/* --- Desktop Layout (Visible by default) --- */
+@media (min-width: 992px) {
+    .main-sidebar {
+        position: fixed;
+        top: 50px; /* Adjust based on your header height */
+        left: 0;
+        height: calc(100vh - 60px);
+    }
+    .mobile-menu-close, .sidebar-overlay, .mobile-sidebar-header {
+        display: none;
+    }
+}
+
+/* --- Mobile Layout (Hidden/Slide-in) --- */
+@media (max-width: 991px) {
+    .main-sidebar {
+        position: fixed;
+        top: 40px;
+        left: 0;
+        transform: translateX(-100%); /* Hidden off-screen left */
+    }
+    .main-sidebar.active {
+        transform: translateX(0); /* Slide in */
+    }
+    .sidebar-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0,0,0,0.5);
+        display: none;
+        z-index: 10000;
+    }
+    .sidebar-overlay.active {
+        display: block;
+    }
+}
+
+/* --- Content Styling --- */
+.sidebar-nav {
+    padding: 0px;
+    flex: 1;
+    overflow-y: auto;
+}
+.sidebar-nav a {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 15px;
+    text-decoration: none;
+    color: #1c1e21;
+    font-size: 15px;
+    font-weight: 500;
+    border-radius: 8px;
+    margin-bottom: 4px;
+}
+.sidebar-nav a:hover {
+    background-color: #f0f2f5;
+}
+.sidebar-nav a svg { flex-shrink: 0; }
+
+.mobile-sidebar-header {
+    padding: 20px;
+    border-bottom: 1px solid #eee;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+.mobile-user-card { display: flex; align-items: center; gap: 12px; }
+.user-sidebar-avatar { width: 40px; height: 40px; border-radius: 50%; }
+.mobile-menu-close { background: none; border: none; font-size: 24px; cursor: pointer; color: #65676b; }
+
+.shortcuts-section { padding: 20px; border-top: 1px solid #eee; }
+.shortcuts-section h5 { margin: 0 0 10px 0; color: #65676b; font-size: 13px; text-transform: uppercase; }
+.shortcut-link { font-size: 14px; color: #ff4b8d; text-decoration: none; font-weight: 600; }
+</style>
+
+<div id="sidebarOverlay" class="sidebar-overlay"></div>
+
+<aside class="main-sidebar" id="mobileSidebar">
   <div class="mobile-sidebar-header">
     <div class="mobile-user-card">
-      <img src="/images/default-avatar.png" alt="User" class="user-sidebar-avatar" id="sidebarAvatarMobile">
+      <img src="/images/default-avatar.png" class="user-sidebar-avatar" id="sidebarAvatarMobile" onerror="this.src='/images/default-avatar.png'">
       <div class="user-info">
-        <h4 id="sidebarUserNameMobile">User Name</h4>
+        <h4 id="sidebarUserNameMobile" style="margin:0; font-size: 16px;">User Name</h4>
       </div>
     </div>
     <button id="mobileMenuClose" class="mobile-menu-close" aria-label="Close menu">✕</button>
-  </div>
+</div>
 
-  <nav class="sidebar-nav mobile-nav">
-    <a href="/friends" class="sidebar-item">
-        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#1877F2" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+  <nav class="sidebar-nav">
+    <a href="/profile">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#65676b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+            <circle cx="12" cy="7" r="4"></circle>
+        </svg>
+        <span>Profile</span>
+    </a>
+
+    <a href="/friends">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#1877F2" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
             <circle cx="8.5" cy="7" r="4"></circle>
             <path d="M20 8v6"></path>
@@ -22,54 +121,39 @@
         <span>Followers</span> 
     </a>
     
-    <a href="/answer" class="sidebar-item">
-        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#28A745" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <a href="/answer">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#28A745" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
         </svg>
         <span>My Answers</span>
     </a>
     
-    <a href="/answer" class="sidebar-item">
-        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#E67E22" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <a href="/questions">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#E67E22" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <circle cx="12" cy="12" r="10"></circle>
             <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path>
             <line x1="12" y1="17" x2="12.01" y2="17"></line>
         </svg>
         <span>My Questions</span>
     </a>
-    
-    <a href="/advertise" class="sidebar-item">
-        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#1abc9c" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M11 5L6 9H2v6h4l5 4z"></path>
-            <path d="M15 9.33a4 4 0 0 1 0 5.34"></path>
+
+    <hr style="border: 0; border-top: 1px solid #eee; margin: 10px 0;">
+
+    <a href="/settings">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#65676b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="3"></circle>
+            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
         </svg>
-        <span>Advertise</span>
+        <span>Settings</span>
     </a>
-    
-    <a href="/memories" class="sidebar-item">
-        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#9B59B6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
-            <circle cx="8.5" cy="8.5" r="1.5"></circle>
-            <polyline points="21 15 16 10 5 21"></polyline>
+
+    <a href="/logout" style="color: #e74c3c;">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+            <polyline points="16 17 21 12 16 7"></polyline>
+            <line x1="21" y1="12" x2="9" y2="12"></line>
         </svg>
-        <span>Memories</span>
-    </a>
-    
-    <a href="/saved" class="sidebar-item">
-        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#34495e" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2-2z"></path>
-        </svg>
-        <span>Saved</span>
-    </a>
-    
-    <a href="/events" class="sidebar-item">
-        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#F39C12" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
-            <line x1="16" y1="2" x2="16" y2="6"></line>
-            <line x1="8" y1="2" x2="8" y2="6"></line>
-            <line x1="3" y1="10" x2="21" y2="10"></line>
-        </svg>
-        <span>Events</span>
+        <span>Logout</span>
     </a>
   </nav>
 

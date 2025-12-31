@@ -4283,11 +4283,7 @@ footer {
     color: #65676b;
 }
 
-.sidebar-nav {
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-}
+
 
 .sidebar-item {
     display: flex;
@@ -4621,7 +4617,7 @@ body.modal-open {
 .post-user-info {
     display: flex;
     align-items: center;
-    gap: 12px;
+    gap: 0px;
     flex: 1;
     margin-bottom: 0;
 }
