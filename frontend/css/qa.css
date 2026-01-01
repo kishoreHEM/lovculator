@@ -54,9 +54,7 @@ body {
   display: block; /* Ensures better click area */
 }
 
-.question-link:hover, .question-title:hover {
-  text-decoration: underline;
-}
+
 
 /* QUESTION ACTIONS (Moved from media query to global) */
 .question-actions {

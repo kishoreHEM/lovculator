@@ -3,251 +3,172 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>About - Lovculator</title>
-    <meta name="description" content="Learn about Lovculator - Your love compatibility calculator">
-    <meta name="theme-color" content="#ff4b8d">
-    
-    <!-- Favicon Links -->
-    <link rel="apple-touch-icon" href="/Images/apple-touch-icon.png">
-
-    <link rel="shortcut icon" href="/Images/favicon-32x32.png" type="image/png">
-
-    <link rel="icon" href="/Images/favicon.ico" sizes="any">
-    
+    <title>About Us - Lovculator</title>
     <link rel="stylesheet" href="/css/style.css">
+    <style>
+        /* --- About Page Specific Theme --- */
+        .about-card {
+            background: white;
+            border-radius: 12px;
+            border: 1px solid #eee;
+            overflow: hidden;
+            margin-bottom: 30px;
+        }
 
+        .about-body { padding: 40px; }
+
+        .about-section { margin-bottom: 60px; }
+        .about-section h2 { 
+            display: flex; 
+            align-items: center; 
+            gap: 12px; 
+            font-size: 1.6rem; 
+            color: #1c1e21;
+            margin-bottom: 25px;
+        }
+        .section-icon { font-size: 2rem; }
+
+        /* Feature Grid for Services */
+        .service-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 25px;
+            margin-top: 20px;
+        }
+
+        .service-item {
+            border: 1px solid #f0f2f5;
+            padding: 25px;
+            border-radius: 16px;
+            background: #ffffff;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.03);
+            transition: all 0.3s ease;
+        }
+        .service-item:hover { transform: translateY(-5px); border-color: #ff4b8d; }
+        .service-icon { font-size: 2rem; margin-bottom: 15px; display: block; }
+        .service-item h4 { margin: 0 0 10px 0; color: #1c1e21; font-size: 1.2rem; }
+        .service-item p { margin: 0; font-size: 0.95rem; color: #65676b; line-height: 1.5; }
+
+        /* Stats Section */
+        .community-stats {
+            display: flex;
+            justify-content: space-around;
+            background: #fff0f5;
+            padding: 40px;
+            border-radius: 20px;
+            margin: 40px 0;
+            text-align: center;
+        }
+        .stat-val { font-size: 2.2rem; font-weight: 800; color: #ff4b8d; display: block; }
+        .stat-label { font-size: 1rem; color: #65676b; font-weight: 600; }
+
+        .disclaimer-box {
+            background: #fdf2f2;
+            border-radius: 12px;
+            padding: 25px;
+            border-left: 6px solid #ff4b8d;
+        }
+
+        @media (max-width: 768px) {
+            
+            .about-hero h1 { font-size: 2rem; }
+            .about-body { padding: 25px; }
+            .community-stats { flex-direction: column; gap: 30px; }
+        }
+    </style>
 </head>
 <body>
-    <header class="main-header">
-    <div class="header-left">
-        <a href="/" class="logo">Lovculator</a>
-    </div>
+    <div id="global-header"></div>
 
-    <nav class="header-nav-center">
-        <a href="/" class="nav-icon-item active" aria-label="Home">
-    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-home">
-        <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
-        <polyline points="9 22 9 12 15 12 15 22"></polyline>
-    </svg>
-</a>
-        <a href="/love-stories" class="nav-icon-item" aria-label="Love Stories">
-    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-mail-heart">
-        <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
-        <polyline points="22,6 12,13 2,6"></polyline>
-        <path d="M10 14l2 2 2-2"></path>
-    </svg>
-</a>
-
-<a href="/love-calculator" class="nav-icon-item" aria-label="Love Calculator">
-    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-heart-calculator">
-        <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"></path>
-        <line x1="8" y1="11" x2="16" y2="11" stroke-dasharray="3"></line> 
-        <line x1="8" y1="14" x2="16" y2="14" stroke-dasharray="3"></line>
-    </svg>
-</a>
-
-<a href="/answers" class="nav-icon-item" aria-label="Answers">
-    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-book-open">
-        <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-4-3H2z"></path>
-        <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 4-3h6z"></path>
-    </svg>
-</a>
-    </nav>
-    <div class="header-right">
+    
         
-        <button class="header-icon" id="notificationsBtn" aria-label="Notifications">
-    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-bell">
-        <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
-        <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
-    </svg>
-    <span class="notification-badge hidden" id="notificationBadge"></span>
-</button>
-        
-        <button class="header-icon" id="messagesBtn" aria-label="Messages">
-    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-send">
-        <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
-        <polyline points="22,6 12,13 2,6"></polyline>
-    </svg>
-    <span class="message-badge hidden" id="messagesBadge"></span>
-</button>
+       
 
-        <div class="user-menu">
-            <img src="/images/default-avatar.png" alt="Profile" class="user-avatar" id="userAvatar">
-            <div class="user-dropdown hidden" id="userDropdown">
-                <a href="/profile">
-    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-user">
-        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
-        <circle cx="12" cy="7" r="4"></circle>
-    </svg>
-    My Profile
-</a>
-<a href="/settings">
-    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-settings">
-        <circle cx="12" cy="12" r="3"></circle>
-        <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2h-2a2 2 0 0 1-2-2v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0-.33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2v-2a2 2 0 0 1 2-2h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2v2a2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
-    </svg>
-    Settings
-</a>
-<a href="/logout" id="logoutBtn">
-    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-log-out">
-        <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
-        <polyline points="16 17 21 12 16 7"></polyline>
-        <line x1="21" y1="12" x2="9" y2="12"></line>
-    </svg>
-    Logout
-</a>
-            </div>
-        </div>
-    </div>
-</header>
-
-    <div class="container">
-        <main class="main-content">
-            <!-- About Post -->
-            <div class="about-post">
-                <div class="about-header">
-                    <div class="post-user">
-                        <div class="post-avatar">AU</div>
-                        <div class="post-username">About Us</div>
-                    </div>
+        <main class="main-content-area">
+             
+            <div class="about-card">
+                <div class="about-hero">
+                    <h1>Love is in the Air</h1>
+                    <p class="hero-subtitle">The ultimate destination for love stories, advice, and connection.</p>
                 </div>
                 
-                <div class="about-content">
-                    <div class="about-hero">
-                        <h1>About Lovculator</h1>
-                        <p class="hero-subtitle">Learn about our love calculation magic</p>
+                <div class="about-body">
+                    <section class="about-section">
+                        <h2><span class="section-icon">🌟</span>Our Vision</h2>
+                        <p style="font-size: 1.1rem; line-height: 1.6; color: #444;">
+                            Lovculator isn't just a calculator—it's a social space built for the romantics, the dreamers, and those seeking clarity in their relationships. We created this platform to allow people to share their most precious memories and get answers to the heart's most complex questions.
+                        </p>
+                    </section>
+
+                    <section class="about-section">
+                        <h2><span class="section-icon">🎈</span>What You Can Do Here</h2>
+                        <div class="service-grid">
+                            <div class="service-item">
+                                <span class="service-icon">📖</span>
+                                <h4>Share Love Stories</h4>
+                                <p>Write and publish your romantic journeys. From the first date to the "I do," your stories inspire our community.</p>
+                            </div>
+                            <div class="service-item">
+                                <span class="service-icon">🙋‍♀️</span>
+                                <h4>Ask Questions</h4>
+                                <p>Confused about a crush? Need relationship advice? Ask our community and get perspectives from around the world.</p>
+                            </div>
+                            <div class="service-item">
+                                <span class="service-icon">✨</span>
+                                <h4>Post Moments</h4>
+                                <p>Share daily thoughts, romantic quotes, or beautiful memories with your followers on your personal feed.</p>
+                            </div>
+                            <div class="service-item">
+                                <span class="service-icon">🔮</span>
+                                <h4>Compatibility</h4>
+                                <p>Use our famous algorithm to check the "spark" between names and explore your cosmic connection.</p>
+                            </div>
+                        </div>
+                    </section>
+
+                    <div class="community-stats">
+                        <div class="stat-item">
+                            <span class="stat-val">500+</span>
+                            <span class="stat-label">Stories Shared</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-val">1.2k+</span>
+                            <span class="stat-label">Questions Asked</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-val">100%</span>
+                            <span class="stat-label">Real Connections</span>
+                        </div>
                     </div>
 
-                    <div class="about-sections">
-                        <section class="about-section">
-                            <div class="section-icon">💖</div>
-                            <h2>Our Story</h2>
-                            <p>Lovculator was created to bring joy and entertainment to relationships. Our algorithm combines fun with psychology to provide meaningful compatibility insights that help people explore their connections in a lighthearted way.</p>
-                        </section>
-
-                        <section class="about-section">
-                            <div class="section-icon">🔮</div>
-                            <h2>How It Works</h2>
-                            <p>Our love calculator uses a sophisticated algorithm that considers multiple factors to generate compatibility results:</p>
-                            <div class="feature-grid">
-                                <div class="feature-item">
-                                    <span class="feature-emoji">📝</span>
-                                    <div>
-                                        <h4>Name Analysis</h4>
-                                        <p>Analyzing name compatibility and numerology</p>
-                                    </div>
-                                </div>
-                                <div class="feature-item">
-                                    <span class="feature-emoji">🧠</span>
-                                    <div>
-                                        <h4>Psychology</h4>
-                                        <p>Incorporating relationship psychology principles</p>
-                                    </div>
-                                </div>
-                                <div class="feature-item">
-                                    <span class="feature-emoji">🎲</span>
-                                    <div>
-                                        <h4>Entertainment</h4>
-                                        <p>Adding fun elements for enjoyable experience</p>
-                                    </div>
-                                </div>
-                                <div class="feature-item">
-                                    <span class="feature-emoji">💕</span>
-                                    <div>
-                                        <h4>Positivity</h4>
-                                        <p>Spreading love and positive vibes</p>
-                                    </div>
-                                </div>
-                            </div>
-                        </section>
-
-                        <section class="about-section">
-                            <div class="section-icon">🎯</div>
-                            <h2>Our Mission</h2>
-                            <p>To spread love and positivity while providing entertaining insights into relationship compatibility. We believe that every connection has its unique magic, and we're here to help you discover it!</p>
-                            <div class="mission-stats">
-                                <div class="stat-item">
-                                    <div class="stat-number">1000+</div>
-                                    <div class="stat-label">Love Calculations</div>
-                                </div>
-                                <div class="stat-item">
-                                    <div class="stat-number">99%</div>
-                                    <div class="stat-label">User Satisfaction</div>
-                                </div>
-                                <div class="stat-item">
-                                    <div class="stat-number">24/7</div>
-                                    <div class="stat-label">Available</div>
-                                </div>
-                            </div>
-                        </section>
-
-                        <section class="about-section">
-                            <div class="section-icon">👥</div>
-                            <h2>Behind the Scenes</h2>
-                            <p>Created with 💕 by relationship enthusiasts and developers who believe in the power of love and connection. Our team is passionate about creating tools that bring people closer together.</p>
-                            <div class="team-highlights">
-                                <div class="highlight-item">
-                                    <h4>💻 Developers</h4>
-                                    <p>Tech experts building smooth experiences</p>
-                                </div>
-                                <div class="highlight-item">
-                                    <h4>🎨 Designers</h4>
-                                    <p>Creative minds crafting beautiful interfaces</p>
-                                </div>
-                                <div class="highlight-item">
-                                    <h4>❤️ Relationship Experts</h4>
-                                    <p>Providing insights into love and compatibility</p>
-                                </div>
-                            </div>
-                        </section>
-
-                        <section class="about-section disclaimer">
-                            <div class="section-icon">⚠️</div>
-                            <h2>Important Notice</h2>
-                            <p>Lovculator is designed for <strong>entertainment purposes only</strong>. The love compatibility results are generated for fun and should not be used for making important relationship decisions. Always trust your heart and real-life experiences over any online calculator.</p>
-                        </section>
-                    </div>
+                    <section class="about-section">
+                        <div class="disclaimer-box">
+                            <h3 style="margin-top: 0; color: #c0392b;"><span class="section-icon" style="font-size: 1.2rem;">⚠️</span> Friendly Reminder</h3>
+                            <p style="margin-bottom: 0; font-size: 0.95rem; color: #666;">
+                                While we love exploring compatibility, please remember that our love calculator is for <strong>entertainment purposes only</strong>. Relationships are built on trust, communication, and time—things no algorithm can fully capture. Use our insights for fun, but always follow your heart!
+                            </p>
+                        </div>
+                    </section>
                 </div>
             </div>
+
+            <footer class="footer">
+                 <div class="footer-content">
+                    <p>💖 Lovculator - Where Stories Meet Soulmates</p>
+                    <div class="footer-links">
+                        <a href="/privacy">Privacy Policy</a>
+                        <a href="/terms">Terms of Service</a>
+                        <a href="/about">About Us</a>
+                        <a href="/contact">Contact</a>
+                    </div>
+                    <div class="footer-copyright" style="margin-top: 15px; opacity: 0.7; font-size: 0.8rem;">
+                        &copy; 2025 Lovculator. All rights reserved.
+                    </div>
+                </div>
+            </footer>
         </main>
-
-        <footer class="footer">
-    <div class="footer-content">
-        <p>💖 Lovculator - Find your perfect match</p>
-        
-        <div class="footer-links">
-            <a href="/privacy">Privacy Policy</a>
-            <a href="/terms">Terms of Service</a>
-            <a href="/about">About Us</a>
-            <a href="/contact">Contact</a>
-        </div>
-        
-        <div class="footer-social">
-    <a href="https://x.com/?lang=en" aria-label="Twitter">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-            <path d="M23.953 4.57a10 10 0 01-2.825.775 4.958 4.958 0 002.163-2.723 10.016 10.016 0 01-3.127 1.184 4.92 4.92 0 00-8.384 4.482C7.69 8.095 4.067 6.13 1.64 3.162a4.822 4.822 0 00-.666 2.475c0 1.71.87 3.213 2.188 4.096a4.904 4.904 0 01-2.228-.616v.06a4.923 4.923 0 003.946 4.827 4.996 4.996 0 01-2.212.085 4.936 4.936 0 004.604 3.417 9.867 9.867 0 01-6.102 2.105c-.39 0-.779-.023-1.17-.067a13.995 13.995 0 007.557 2.209c9.053 0 13.998-7.496 13.998-13.985 0-.21 0-.42-.015-.63A9.935 9.935 0 0024 4.59z"/>
-        </svg>
-    </a>
-    <a href="https://www.facebook.com/" aria-label="Facebook">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-            <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
-        </svg>
-    </a>
-    <a href="https://www.instagram.com/" aria-label="Instagram">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-            <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/>
-        </svg>
-    </a>
-</div>
-        
-        <div class="footer-copyright">
-            &copy; 2025 Lovculator. All rights reserved.
-        </div>
-    </div>
-</footer>
-    </div>
     </div>
 
-    <script src="js/navigation.js"></script>
+    <script src="/js/global-header.js"></script>
 </body>
 </html>

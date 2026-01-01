@@ -48,6 +48,7 @@
     .sidebar-overlay.active {
         display: block;
     }
+    .shortcuts-section { padding: 0px; border-top: 1px solid #eee; margin-bottom: 90px;}
 }
 
 /* --- Content Styling --- */
@@ -85,10 +86,9 @@
 .mobile-menu-close { background: none; border: none; font-size: 24px; cursor: pointer; color: #65676b; }
 
 .shortcuts-section { padding: 20px; border-top: 1px solid #eee; }
-.shortcuts-section h5 { margin: 0 0 10px 0; color: #65676b; font-size: 13px; text-transform: uppercase; }
+.shortcuts-section h5 { margin: 0 0 10px 0; color: #65676b; font-size: 12px; font-weight: 600; }
 .shortcut-link { font-size: 14px; color: #ff4b8d; text-decoration: none; font-weight: 600; }
 </style>
-
 <div id="sidebarOverlay" class="sidebar-overlay"></div>
 
 <aside class="main-sidebar" id="mobileSidebar">
@@ -104,7 +104,7 @@
 
   <nav class="sidebar-nav">
     <a href="/profile">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#65676b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#ff4b8d" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
             <circle cx="12" cy="7" r="4"></circle>
         </svg>
@@ -137,6 +137,15 @@
         <span>My Questions</span>
     </a>
 
+    <a href="/advertise">
+
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#1abc9c" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M11 5L6 9H2v6h4l5 4z"></path>
+            <path d="M15 9.33a4 4 0 0 1 0 5.34"></path>
+        </svg>
+            <span>Advertise</span>
+    </a>
+
     <hr style="border: 0; border-top: 1px solid #eee; margin: 10px 0;">
 
     <a href="/settings">
@@ -158,7 +167,13 @@
   </nav>
 
   <div class="shortcuts-section">
-      <h5>Your Shortcuts</h5>
-      <a href="/love-calculator" class="shortcut-link" target="_blank">Love Calculator By Name</a>
-  </div>
+        <h5>&copy; 2026 Lovculator. All rights reserved.</h5>
+        
+        <div class="footer-links">
+            <a href="/privacy">Privacy Policy</a>
+            <a href="/terms">Terms of Service</a>
+            <a href="/about">About Us</a>
+            <a href="/contact">Contact</a>
+        </div>
+    </div>
 </aside>

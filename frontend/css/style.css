@@ -1794,16 +1794,15 @@ body {
 
 .about-hero {
     text-align: center;
-    margin-bottom: 40px;
-    padding-bottom: 30px;
     border-bottom: 1px solid #f0f0f0;
 }
 
 .about-hero h1 {
-    font-size: 2.2rem;
+    font-size: 1.8rem;
     font-weight: 700;
     color: #262626;
     margin-bottom: 12px;
+    margin-top: 20px;
     background: linear-gradient(135deg, #ff4b8d, #ff6b6b);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
@@ -1814,6 +1813,7 @@ body {
     color: #000000;
     font-size: 1.1rem;
     line-height: 1.5;
+    margin-bottom: 20px;
 }
 
 .about-sections {
@@ -4243,7 +4243,6 @@ footer {
     width: 280px;
     background: white;
     border-right: 1px solid #dddfe2;
-    padding: 16px;
     position: fixed;
     left: 0;
     top: 56px;
@@ -5737,6 +5736,9 @@ body.modal-open {
         gap: 20px;
         max-width: 100%;
     }
+    .about-hero {
+        margin-top: 55px;
+    }    
 
     .calculator-post{
     border-radius: 0px;

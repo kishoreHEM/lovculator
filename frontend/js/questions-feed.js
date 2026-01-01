@@ -223,7 +223,7 @@ style.textContent = `
     .question-date { font-size: 13px; color: #8e8e8e; font-weight: 500; }
 
     .question-title { font-size: 1.1rem; font-weight: 700; color: #1c1e21; text-decoration: none; display: block; margin-bottom: 12px; line-height: 1.4; }
-    .question-title:hover { color: #ff4b8d; text-decoration: underline; }
+    .question-title:hover { color: #ff4b8d; }
 
     .question-stats { display: flex; gap: 20px; margin-bottom: 15px; padding-bottom: 15px; border-bottom: 1px solid #f0f2f5; }
     .stat-item { display: flex; align-items: center; gap: 6px; font-size: 13px; color: #65676b; }
