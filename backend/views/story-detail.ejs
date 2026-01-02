@@ -143,17 +143,17 @@
       <%= story.love_story %>
     </section>
 
-    <div class="action-bar">
-      <button class="action-btn <%= story.user_liked ? 'liked' : '' %>" id="likeBtn" onclick="toggleLike()">
+    <div class="post-actions">
+      <button class="post-action <%= story.user_liked ? 'liked' : '' %>" id="likeBtn" onclick="toggleLike()">
         <span id="likeIcon"><%= story.user_liked ? '❤️' : '🤍' %></span>
         <span id="likeCount"><%= story.likes_count || 0 %></span> Likes
       </button>
 
-      <button class="action-btn">
+      <button class="post-action">
         💬 <%= story.comments_count || 0 %> Comments
       </button>
 
-      <button class="action-btn" onclick="shareStory()">
+      <button class="post-action" onclick="shareStory()">
         🚀 Share
       </button>
     </div>
