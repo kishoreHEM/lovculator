@@ -4,7 +4,9 @@ const router = express.Router();
 
 export default function (pool) {
 
-  // 🛡️ Protect routes
+  /* ======================================================
+     🔒 Auth middleware
+  ====================================================== */
   const requireAuth = (req, res, next) => {
     if (!req.session?.user?.id) {
       return res.status(401).json({ error: "Login required" });
@@ -12,26 +14,24 @@ export default function (pool) {
     next();
   };
 
-  // ----------------------------------------------------------
-  // 1️⃣ FOLLOW / UNFOLLOW USER
-  // ----------------------------------------------------------
+  /* ======================================================
+     1️⃣ FOLLOW / UNFOLLOW TOGGLE (SAFE)
+  ====================================================== */
   router.post("/toggle/:id", requireAuth, async (req, res) => {
     try {
       const followerId = req.session.user.id;
-      const targetId = parseInt(req.params.id);
+      const targetId = Number(req.params.id);
 
       if (followerId === targetId) {
         return res.status(400).json({ error: "You cannot follow yourself" });
       }
 
-      // Check if following already
       const check = await pool.query(
         `SELECT 1 FROM follows WHERE follower_id = $1 AND target_id = $2`,
         [followerId, targetId]
       );
 
       if (check.rowCount > 0) {
-        // UNFOLLOW
         await pool.query(
           `DELETE FROM follows WHERE follower_id = $1 AND target_id = $2`,
           [followerId, targetId]
@@ -39,9 +39,12 @@ export default function (pool) {
         return res.json({ following: false });
       }
 
-      // FOLLOW
       await pool.query(
-        `INSERT INTO follows (follower_id, target_id, created_at) VALUES ($1, $2, NOW())`,
+        `
+        INSERT INTO follows (follower_id, target_id, created_at)
+        VALUES ($1, $2, NOW())
+        ON CONFLICT (follower_id, target_id) DO NOTHING
+        `,
         [followerId, targetId]
       );
 
@@ -53,16 +56,26 @@ export default function (pool) {
     }
   });
 
-  // ----------------------------------------------------------
-  // 2️⃣ FOLLOWERS (Who follows ME)
-  // ----------------------------------------------------------
+  /* ======================================================
+     2️⃣ FOLLOWERS (people who follow ME)
+  ====================================================== */
   router.get("/followers", requireAuth, async (req, res) => {
     try {
       const userId = req.session.user.id;
 
       const result = await pool.query(
         `
-        SELECT u.id, u.username, u.display_name, u.avatar_url, u.bio
+        SELECT 
+          u.id,
+          u.username,
+          u.display_name,
+          u.avatar_url,
+          u.bio,
+          EXISTS (
+            SELECT 1 FROM follows f2
+            WHERE f2.follower_id = $1
+            AND f2.target_id = u.id
+          ) AS is_following
         FROM follows f
         JOIN users u ON u.id = f.follower_id
         WHERE f.target_id = $1
@@ -79,16 +92,22 @@ export default function (pool) {
     }
   });
 
-  // ----------------------------------------------------------
-  // 3️⃣ FOLLOWING (Who I follow)
-  // ----------------------------------------------------------
+  /* ======================================================
+     3️⃣ FOLLOWING (people I follow)
+  ====================================================== */
   router.get("/following", requireAuth, async (req, res) => {
     try {
       const userId = req.session.user.id;
 
       const result = await pool.query(
         `
-        SELECT u.id, u.username, u.display_name, u.avatar_url, u.bio
+        SELECT 
+          u.id,
+          u.username,
+          u.display_name,
+          u.avatar_url,
+          u.bio,
+          TRUE AS is_following
         FROM follows f
         JOIN users u ON u.id = f.target_id
         WHERE f.follower_id = $1
@@ -105,19 +124,25 @@ export default function (pool) {
     }
   });
 
-  // ----------------------------------------------------------
-  // 4️⃣ SUGGESTIONS (Users I do NOT follow)
-  // ----------------------------------------------------------
+  /* ======================================================
+     4️⃣ SUGGESTIONS (users I don’t follow)
+  ====================================================== */
   router.get("/suggestions", requireAuth, async (req, res) => {
     try {
       const userId = req.session.user.id;
 
       const result = await pool.query(
         `
-        SELECT id, username, display_name, avatar_url, bio
-        FROM users
-        WHERE id != $1
-        AND id NOT IN (
+        SELECT 
+          u.id,
+          u.username,
+          u.display_name,
+          u.avatar_url,
+          u.bio,
+          FALSE AS is_following
+        FROM users u
+        WHERE u.id != $1
+        AND u.id NOT IN (
           SELECT target_id FROM follows WHERE follower_id = $1
         )
         ORDER BY RANDOM()
