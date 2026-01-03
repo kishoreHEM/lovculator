@@ -2,7 +2,7 @@
   "name": "Lovculator • Love Calculator",
   "short_name": "Lovculator",
   "description": "Calculate love compatibility and share beautiful love stories.",
-  "start_url": "/",
+  "start_url": "/?utm_source=pwa",
   "scope": "/",
   "display": "standalone",
   "background_color": "#ffffff",
@@ -13,14 +13,28 @@
       "src": "/images/android-chrome-192x192.png",
       "sizes": "192x192",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
     },
     {
       "src": "/images/android-chrome-512x512.png",
       "sizes": "512x512",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
+    },
+    {
+      "src": "/images/maskable-icon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
     }
   ],
-  "categories": ["entertainment", "lifestyle", "social"]
+  "categories": ["entertainment", "lifestyle", "social"],
+  "screenshots": [
+    {
+      "src": "/images/screenshot-mobile.png",
+      "sizes": "1080x1920",
+      "type": "image/png",
+      "label": "Home Screen of Lovculator"
+    }
+  ]
 }

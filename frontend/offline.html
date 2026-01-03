@@ -96,5 +96,23 @@
   <footer>
     💖 Lovculator • <a href="/">Return Home</a>
   </footer>
+
+  <script>
+  // Check if internet comes back and auto-reload
+  window.addEventListener('online', () => {
+    window.location.reload();
+  });
+
+  // Optional: Add a simple check to the button
+  function retry() {
+    if (navigator.onLine) {
+        window.location.href = "/";
+    } else {
+        const btn = document.querySelector('.retry-btn');
+        btn.innerText = "Still Offline... 💔";
+        setTimeout(() => { btn.innerText = "🔄 Try Again"; }, 2000);
+    }
+  }
+</script>
 </body>
 </html>

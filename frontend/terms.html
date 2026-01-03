@@ -4,341 +4,175 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Terms of Service - Lovculator</title>
-    <meta name="description" content="Terms of Service for Lovculator - Please read these terms carefully">
+    <meta name="description" content="Terms of Service for Lovculator - Rules and guidelines for our community.">
     <meta name="theme-color" content="#ff4b8d">
     
-    <!-- Favicon Links -->
     <link rel="apple-touch-icon" href="/Images/apple-touch-icon.png">
-
     <link rel="shortcut icon" href="/Images/favicon-32x32.png" type="image/png">
-
     <link rel="icon" href="/Images/favicon.ico" sizes="any">
     
-    <!-- CSS -->
     <link rel="stylesheet" href="/css/style.css">
+    
+    <style>
+        /* --- Policy Page Specific Theme (Matches Privacy/About) --- */
+        .policy-card {
+            background: white;
+            border-radius: 12px;
+            border: 1px solid #eee;
+            overflow: hidden;
+            margin-bottom: 30px;
+            max-width: 900px;
+            margin: 20px auto;
+        }
+
+        .policy-hero {
+            background: linear-gradient(135deg, #ff4b8d, #ff9a9e);
+            color: white;
+            padding: 50px 20px;
+            text-align: center;
+        }
+        .policy-hero h1 { margin: 0 0 10px 0; font-size: 2.5rem; }
+        .hero-subtitle { margin: 0; opacity: 0.9; font-size: 1.1rem; }
+
+        .policy-body { padding: 40px; }
+
+        .policy-section { margin-bottom: 40px; line-height: 1.6; color: #333; }
+        .policy-section h2 { 
+            display: flex; 
+            align-items: center; 
+            gap: 12px; 
+            font-size: 1.5rem; 
+            color: #1c1e21;
+            margin-bottom: 15px;
+        }
+        .section-icon { font-size: 1.6rem; }
+
+        /* Custom Lists */
+        .feature-list, .rules-list {
+            list-style: none;
+            padding: 0;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        .feature-item {
+            background: #fdf2f6;
+            padding: 15px;
+            border-radius: 10px;
+            border-left: 4px solid #ff4b8d;
+            font-size: 0.95rem;
+        }
+
+        /* Disclaimer Box */
+        .disclaimer-box {
+            background: #fff8e1;
+            border-radius: 12px;
+            padding: 25px;
+            border-left: 6px solid #ffc107;
+            margin: 30px 0;
+        }
+
+        .contact-box {
+            background: #f0f2f5;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+        }
+
+        @media (max-width: 768px) {
+            .policy-hero h1 { font-size: 2rem; }
+            .policy-body { padding: 20px; }
+        }
+    </style>
 </head>
 <body>
-    <!-- Instagram Style Header -->
-    <header class="header">
-    <nav class="navbar">
-        <div class="nav-brand">
-            <a href="/" class="logo" aria-label="Lovculator Home">
-                💖 Lovculator
-            </a>
-        </div>
-        
-        <!-- Regular desktop menu -->
-        <ul class="nav-menu">
-            <li class="nav-item"><a href="/" class="nav-link">🏠 Home</a></li>
-            <li class="nav-item"><a href="love-stories" class="nav-link active">📖 Love Stories</a></li>
-            <li class="nav-item"><a href="record" class="nav-link">📊 Records</a></li>
-            <li class="nav-item"><a href="about" class="nav-link">ℹ️ About</a></li>
-            <li class="nav-item"><a href="contact" class="nav-link">📞 Contact</a></li>
-        </ul>
+    <div id="global-header"></div>
 
-        <!-- Search box (if needed) -->
-        <div class="nav-search">
-            <!-- Add search input if you want search functionality -->
-        </div>
-
-        <!-- Mobile elements -->
-        <button class="menu-toggle" aria-label="Toggle menu">
-            <span></span>
-            <span></span>
-            <span></span>
-        </button>
-        <div class="mobile-menu-overlay"></div>
-    </nav>
-</header>
-
-    <div class="container">
-        <main class="main-content">
-            <!-- Terms of Service Post -->
-            <div class="policy-post">
-                <div class="policy-header">
-                    <div class="post-user">
-                        <div class="post-avatar">LC</div>
-                        <div class="post-username">Love Calculator</div>
-                    </div>
+    <div class="main-layout-wrapper">
+        <main class="main-content-area">
+            
+            <div class="policy-card">
+                <div class="policy-hero">
+                    <h1>Terms of Service</h1>
+                    <p class="hero-subtitle">Last updated: January 03, 2026</p>
                 </div>
                 
-                <div class="policy-content">
-                    <div class="policy-hero">
-                        <h1>Terms of Service</h1>
-                        <p class="hero-subtitle">Last updated: October 26, 2024</p>
+                <div class="policy-body">
+                    
+                    <section class="policy-section">
+                        <h2><span class="section-icon">⚖️</span> 1. Agreement to Terms</h2>
+                        <p>By accessing or using Lovculator (the "Service"), you agree to be bound by these Terms. If you do not agree to all of these terms, do not use our Service. These terms apply to all visitors, users, and others who access the Service.</p>
+                    </section>
+
+                    <section class="policy-section">
+                        <h2><span class="section-icon">🎯</span> 2. Service Overview</h2>
+                        <p>Lovculator provides a social platform for relationship entertainment, including:</p>
+                        <div class="feature-list">
+                            <div class="feature-item"><strong>💖 Love Stories:</strong> Community-shared romantic experiences.</div>
+                            <div class="feature-item"><strong>🔮 Compatibility:</strong> Algorithmic "fun" checks for names.</div>
+                            <div class="feature-item"><strong>💬 Advice:</strong> User-generated tips and relationship questions.</div>
+                        </div>
+                    </section>
+
+                    <div class="disclaimer-box">
+                        <h3 style="margin-top:0; color: #856404;"><span class="section-icon" style="font-size: 1.2rem;">⚠️</span> Entertainment Disclaimer</h3>
+                        <p style="margin-bottom:0; font-size: 0.95rem;">
+                            The compatibility results and advice provided are for <strong>entertainment purposes only</strong>. Results are generated by software and should not be used as a basis for serious life, relationship, or legal decisions.
+                        </p>
                     </div>
 
-                    <div class="policy-sections">
-                        <!-- Agreement -->
-                        <section class="policy-section">
-                            <div class="section-icon">📄</div>
-                            <h2>Agreement to Terms</h2>
-                            <p>By accessing and using Lovculator ("the Service"), you accept and agree to be bound by the terms and provision of this agreement.</p>
-                        </section>
+                    <section class="policy-section">
+                        <h2><span class="section-icon">🚫</span> 3. User Conduct & Content</h2>
+                        <p>When posting stories or questions, you agree NOT to:</p>
+                        <ul style="padding-left: 20px;">
+                            <li>Post content that is illegal, hateful, or sexually explicit.</li>
+                            <li>Harass, bully, or impersonate other users.</li>
+                            <li>Share sensitive private information of others without consent.</li>
+                            <li>Use the service for spam or unauthorized commercial purposes.</li>
+                        </ul>
+                    </section>
 
-                        <!-- Service Description -->
-                        <section class="policy-section">
-                            <div class="section-icon">🎯</div>
-                            <h2>Service Description</h2>
-                            <p>Lovculator is an entertainment website that provides:</p>
-                            
-                            <div class="service-features">
-                                <div class="service-feature">
-                                    <span class="feature-emoji">💞</span>
-                                    <div>
-                                        <h4>Love Compatibility</h4>
-                                        <p>Fun calculations for entertainment purposes</p>
-                                    </div>
-                                </div>
-                                <div class="service-feature">
-                                    <span class="feature-emoji">💡</span>
-                                    <div>
-                                        <h4>Relationship Advice</h4>
-                                        <p>Tips and guidance for stronger relationships</p>
-                                    </div>
-                                </div>
-                                <div class="service-feature">
-                                    <span class="feature-emoji">🎮</span>
-                                    <div>
-                                        <h4>Interactive Experiences</h4>
-                                        <p>Engaging and fun user interactions</p>
-                                    </div>
-                                </div>
-                            </div>
-                        </section>
+                    <section class="policy-section">
+                        <h2><span class="section-icon">🗑️</span> 4. Account & Data</h2>
+                        <p>We reserve the right to remove any content or accounts that violate these terms. You are responsible for maintaining the security of your account.</p>
+                        <p><strong>Deletion:</strong> You may request the deletion of your account and all associated data at any time by contacting our support team.</p>
+                    </section>
 
-                        <!-- Entertainment Purpose -->
-                        <section class="policy-section warning">
-                            <div class="section-icon">⚠️</div>
-                            <h2>Entertainment Purpose Only</h2>
-                            <p><strong>Important Disclaimer:</strong> The love compatibility results generated by Lovculator are for <strong>entertainment purposes only</strong> and should not be used for making important life decisions.</p>
-                            
-                            <div class="warning-list">
-                                <div class="warning-item">
-                                    <span class="warning-icon">❌</span>
-                                    Relationship decisions
-                                </div>
-                                <div class="warning-item">
-                                    <span class="warning-icon">❌</span>
-                                    Marriage choices
-                                </div>
-                                <div class="warning-item">
-                                    <span class="warning-icon">❌</span>
-                                    Personal or professional decisions
-                                </div>
-                                <div class="warning-item">
-                                    <span class="warning-icon">❌</span>
-                                    Any serious life choices
-                                </div>
-                            </div>
-                        </section>
+                    <section class="policy-section">
+                        <h2><span class="section-icon">📝</span> 5. Intellectual Property</h2>
+                        <p>All brand assets, logos, and original software are the property of Lovculator. By posting content (stories/comments), you grant us a non-exclusive license to display and distribute that content within our platform.</p>
+                    </section>
 
-                        <!-- User Responsibilities -->
-                        <section class="policy-section">
-                            <div class="section-icon">👤</div>
-                            <h2>User Responsibilities</h2>
-                            <p>As a user of Lovculator, you agree to:</p>
-                            
-                            <div class="responsibility-grid">
-                                <div class="responsibility-item">
-                                    <div class="resp-icon">✅</div>
-                                    <span>Use the service for lawful purposes only</span>
-                                </div>
-                                <div class="responsibility-item">
-                                    <div class="resp-icon">✅</div>
-                                    <span>Not misuse or abuse the service</span>
-                                </div>
-                                <div class="responsibility-item">
-                                    <div class="resp-icon">✅</div>
-                                    <span>Understand that results are generated randomly for entertainment</span>
-                                </div>
-                                <div class="responsibility-item">
-                                    <div class="resp-icon">✅</div>
-                                    <span>Be at least 13 years of age to use the service</span>
-                                </div>
-                                <div class="responsibility-item">
-                                    <div class="resp-icon">✅</div>
-                                    <span>Not use the service to harass, threaten, or harm others</span>
-                                </div>
-                            </div>
-                        </section>
+                    <section class="policy-section">
+                        <div class="contact-box">
+                            <h3 style="margin-top:0; color: #ff4b8d;">Questions?</h3>
+                            <p>If you have any questions regarding these Terms, please contact us:</p>
+                            <p><strong>Email:</strong> <a href="mailto:support@lovculator.com" style="color: #ff4b8d; font-weight:bold; text-decoration:none;">support@lovculator.com</a></p>
+                        </div>
+                    </section>
 
-                        <!-- No Professional Advice -->
-                        <section class="policy-section">
-                            <div class="section-icon">📊</div>
-                            <h2>No Professional Advice</h2>
-                            <p>The content provided on Lovculator, including love tips and compatibility results, is not professional advice. We are not:</p>
-                            
-                            <div class="professional-list">
-                                <div class="professional-item">
-                                    <span class="prof-icon">🧠</span>
-                                    <div>
-                                        <h4>Relationship Counselors</h4>
-                                        <p>We do not provide professional relationship advice</p>
-                                    </div>
-                                </div>
-                                <div class="professional-item">
-                                    <span class="prof-icon">⚕️</span>
-                                    <div>
-                                        <h4>Medical Professionals</h4>
-                                        <p>We are not qualified medical or psychological experts</p>
-                                    </div>
-                                </div>
-                                <div class="professional-item">
-                                    <span class="prof-icon">⚖️</span>
-                                    <div>
-                                        <h4>Legal Advisors</h4>
-                                        <p>We do not provide legal advice or services</p>
-                                    </div>
-                                </div>
-                            </div>
-                            
-                            <p class="notice-text">For serious relationship or personal issues, please consult qualified professionals.</p>
-                        </section>
-
-                        <!-- Prohibited Uses -->
-                        <section class="policy-section">
-                            <div class="section-icon">🚫</div>
-                            <h2>Prohibited Uses</h2>
-                            <p>You may not use our service for any unlawful purpose or to:</p>
-                            
-                            <div class="prohibited-list">
-                                <div class="prohibited-item">
-                                    <span class="prohibited-icon">🔞</span>
-                                    Harass, abuse, or harm others
-                                </div>
-                                <div class="prohibited-item">
-                                    <span class="prohibited-icon">👤</span>
-                                    Impersonate any person or entity
-                                </div>
-                                <div class="prohibited-item">
-                                    <span class="prohibited-icon">🌐</span>
-                                    Interfere with or disrupt the service
-                                </div>
-                                <div class="prohibited-item">
-                                    <span class="prohibited-icon">📊</span>
-                                    Collect or track personal information of others
-                                </div>
-                                <div class="prohibited-item">
-                                    <span class="prohibited-icon">💼</span>
-                                    Commercial purposes without permission
-                                </div>
-                            </div>
-                        </section>
-
-                        <!-- Intellectual Property -->
-                        <section class="policy-section">
-                            <div class="section-icon">📝</div>
-                            <h2>Intellectual Property</h2>
-                            <p>The Service and its original content, features, and functionality are owned by Lovculator and are protected by international copyright, trademark, and other intellectual property laws.</p>
-                        </section>
-
-                        <!-- Third Party Links -->
-                        <section class="policy-section">
-                            <div class="section-icon">🔗</div>
-                            <h2>Links to Other Websites</h2>
-                            <p>Our Service may contain links to third-party websites or services that are not owned or controlled by Lovculator. We have no control over, and assume no responsibility for, the content, privacy policies, or practices of any third-party websites or services.</p>
-                        </section>
-
-                        <!-- Service Availability -->
-                        <section class="policy-section">
-                            <div class="section-icon">⏸️</div>
-                            <h2>Service Availability</h2>
-                            <p>We strive to maintain the Service's availability but do not guarantee uninterrupted access. We may:</p>
-                            
-                            <div class="availability-items">
-                                <div class="availability-item">
-                                    <span class="avail-icon">🔧</span>
-                                    Perform maintenance and updates
-                                </div>
-                                <div class="availability-item">
-                                    <span class="avail-icon">⚡</span>
-                                    Experience technical issues
-                                </div>
-                                <div class="availability-item">
-                                    <span class="avail-icon">🔄</span>
-                                    Modify or discontinue the service at any time
-                                </div>
-                            </div>
-                        </section>
-
-                        <!-- Changes to Terms -->
-                        <section class="policy-section">
-                            <div class="section-icon">📝</div>
-                            <h2>Changes to Terms</h2>
-                            <p>We reserve the right, at our sole discretion, to modify or replace these Terms at any time. If a revision is material, we will provide at least 30 days' notice prior to any new terms taking effect.</p>
-                        </section>
-
-                        <!-- Contact -->
-                        <section class="policy-section">
-                            <div class="section-icon">📧</div>
-                            <h2>Contact Us</h2>
-                            <p>If you have any questions about these Terms, please contact us:</p>
-                            
-                            <div class="contact-methods">
-                                <div class="contact-method">
-                                    <strong>Email:</strong> terms@lovculator.com
-                                </div>
-                                <div class="contact-method">
-                                    <strong>Through our:</strong> <a href="contact">Contact Form</a>
-                                </div>
-                            </div>
-                        </section>
-
-                        <!-- Governing Law -->
-                        <section class="policy-section">
-                            <div class="section-icon">⚖️</div>
-                            <h2>Governing Law</h2>
-                            <p>These Terms shall be governed and construed in accordance with the laws of the United States, without regard to its conflict of law provisions.</p>
-                        </section>
-
-                        <!-- Acceptance -->
-                        <section class="policy-section acceptance">
-                            <div class="section-icon">✅</div>
-                            <h2>Acceptance of Terms</h2>
-                            <p>By using Lovculator, you signify your acceptance of these terms and conditions. If you do not agree to these terms, please do not use our service.</p>
-                        </section>
-                    </div>
                 </div>
             </div>
+
+            <footer class="footer">
+                <div class="footer-content">
+                    <p>💖 Lovculator - Where Stories Meet Soulmates</p>
+                    <div class="footer-links">
+                        <a href="/privacy">Privacy Policy</a>
+                        <a href="/terms">Terms of Service</a>
+                        <a href="/about">About Us</a>
+                        <a href="/contact">Contact</a>
+                    </div>
+                    <div class="footer-copyright" style="margin-top: 15px; opacity: 0.7; font-size: 0.8rem;">
+                        &copy; 2026 Lovculator. All rights reserved.
+                    </div>
+                </div>
+            </footer>
         </main>
-
-        <footer class="footer">
-    <div class="footer-content">
-        <p>💖 Lovculator - Find your perfect match</p>
-        
-        <div class="footer-links">
-            <a href="/privacy">Privacy Policy</a>
-            <a href="/terms">Terms of Service</a>
-            <a href="/about">About Us</a>
-            <a href="/contact">Contact</a>
-        </div>
-        
-        <div class="footer-social">
-    <a href="https://x.com/?lang=en" aria-label="Twitter">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-            <path d="M23.953 4.57a10 10 0 01-2.825.775 4.958 4.958 0 002.163-2.723 10.016 10.016 0 01-3.127 1.184 4.92 4.92 0 00-8.384 4.482C7.69 8.095 4.067 6.13 1.64 3.162a4.822 4.822 0 00-.666 2.475c0 1.71.87 3.213 2.188 4.096a4.904 4.904 0 01-2.228-.616v.06a4.923 4.923 0 003.946 4.827 4.996 4.996 0 01-2.212.085 4.936 4.936 0 004.604 3.417 9.867 9.867 0 01-6.102 2.105c-.39 0-.779-.023-1.17-.067a13.995 13.995 0 007.557 2.209c9.053 0 13.998-7.496 13.998-13.985 0-.21 0-.42-.015-.63A9.935 9.935 0 0024 4.59z"/>
-        </svg>
-    </a>
-    <a href="https://www.facebook.com/" aria-label="Facebook">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-            <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
-        </svg>
-    </a>
-    <a href="https://www.instagram.com/" aria-label="Instagram">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-            <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/>
-        </svg>
-    </a>
-</div>
-        
-        <div class="footer-copyright">
-            &copy; 2025 Lovculator. All rights reserved.
-        </div>
-    </div>
-</footer>
     </div>
 
-    <script src="js/navigation.js"></script>
+    <script src="/js/global-header.js"></script>
 </body>
 </html>
