@@ -1,0 +1,13 @@
+User-agent: *
+Allow: /
+
+Disallow: /login
+Disallow: /signup
+Disallow: /forgot-password
+Disallow: /reset-password
+Disallow: /verify
+Disallow: /settings
+Disallow: /admin
+Disallow: /analytics
+
+Sitemap: https://lovculator.com/sitemap.xml
