@@ -154,6 +154,8 @@ app.use(
           "https://www.lovculator.com",
           "http://localhost:3001",
           "https://lovculator.com/uploads",
+          "https://www.google-analytics.com",
+          "https://www.googletagmanager.com"
         ],
 
         // Allow scripts from same origin + inline (for now) + prod host
@@ -163,6 +165,8 @@ app.use(
           "https://lovculator.com",
           "https://www.lovculator.com",
           "http://localhost:3001",
+          "https://www.googletagmanager.com",
+          "https://www.google-analytics.com",
           "https://cdn.jsdelivr.net",
         ],
 
@@ -189,6 +193,8 @@ app.use(
           "ws://localhost:3001",
           process.env.FRONTEND_URL,
           "https://cdn.jsdelivr.net",
+          "https://www.google-analytics.com",
+          "https://region1.google-analytics.com"
         ].filter(Boolean),
 
         frameSrc: ["'self'"],
