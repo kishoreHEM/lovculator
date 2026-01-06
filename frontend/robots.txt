@@ -9,5 +9,9 @@ Disallow: /verify
 Disallow: /settings
 Disallow: /admin
 Disallow: /analytics
+Disallow: /notifications
+Disallow: /messages
+Disallow: /profile
+
 
 Sitemap: https://lovculator.com/sitemap.xml
