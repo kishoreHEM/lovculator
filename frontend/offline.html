@@ -3,12 +3,28 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>You're Offline 💔 | Lovculator</title>
 
-  <meta name="description" content="You’re offline! But love always finds a way. Reconnect to continue using Lovculator." />
-  <link rel="icon" href="/images/favicon.ico" type="image/x-icon" />
-  <link rel="manifest" href="/manifest.json" />
-  <meta name="theme-color" content="#ff4b8d" />
+  <title>You’re Offline • Lovculator</title>
+
+  <!-- 🔒 Do NOT index offline page -->
+  <meta name="robots" content="noindex, nofollow">
+
+  <meta name="description" content="You’re offline. Reconnect to continue using Lovculator." />
+
+  <meta name="theme-color" content="#ff4b8d">
+
+  <!-- Canonical (safe fallback) -->
+  <link rel="canonical" href="https://lovculator.com/offline">
+
+  <!-- PWA -->
+  <link rel="manifest" href="/manifest.json">
+
+  <!-- Favicons -->
+  <link rel="apple-touch-icon" href="/images/apple-touch-icon.png">
+  <link rel="icon" href="/images/favicon.ico" sizes="any">
+
+  <!-- Privacy -->
+  <meta http-equiv="Referrer-Policy" content="strict-origin-when-cross-origin">
 
   <style>
     body {
@@ -82,7 +98,7 @@
       text-decoration: underline;
     }
   </style>
-</head>
+  </head>
 
 <body>
   <div class="offline-container">

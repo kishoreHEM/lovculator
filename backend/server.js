@@ -45,6 +45,7 @@ import commentsRouter from "./routes/comments.js";
 import followRoutes from "./routes/follow.js";
 import adminRoutes from "./routes/admin.js";
 import storyPage from "./pages/story.page.js";
+import sitemapRoutes from "./routes/sitemap.js";
 
 
 //
@@ -362,6 +363,7 @@ app.use("/api/posts", commentsRouter);
 app.use("/api/follow", followRoutes(pool));
 app.use(trackPageVisit);
 app.use("/admin", adminRoutes);
+app.use("/", sitemapRoutes);
 
 
 //

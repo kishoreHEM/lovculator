@@ -1,9 +1,44 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <title><%= story.story_title %> | Lovculator</title>
+  <!-- Basic -->
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"> 
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <!-- Primary SEO -->
+  <title><%= story.story_title %> | Real Love Story on Lovculator</title>
+
+  <meta name="description" content="<%= (story.love_story || '').replace(/(<([^>]+)>)/gi, '').slice(0, 155) %>">
+
+  <!-- Canonical -->
+  <link rel="canonical" href="https://lovculator.com/stories/<%= story.id %>-<%= story.story_title_slug %>">
+
+  <!-- Open Graph -->
+  <meta property="og:type" content="article">
+  <meta property="og:title" content="<%= story.story_title %>">
+  <meta property="og:description" content="<%= (story.love_story || '').replace(/(<([^>]+)>)/gi, '').slice(0, 155) %>">
+  <meta property="og:url" content="https://lovculator.com/stories/<%= story.id %>-<%= story.story_title_slug %>">
+  <meta property="og:site_name" content="Lovculator">
+
+  <% if (story.image_url) { %>
+    <meta property="og:image" content="<%= story.image_url %>">
+  <% } else { %>
+    <meta property="og:image" content="https://lovculator.com/images/og-love-story.png">
+  <% } %>
+
+  <!-- Twitter -->
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="<%= story.story_title %>">
+  <meta name="twitter:description" content="<%= (story.love_story || '').replace(/(<([^>]+)>)/gi, '').slice(0, 155) %>">
+
+  <% if (story.image_url) { %>
+    <meta name="twitter:image" content="<%= story.image_url %>">
+  <% } %>
+
+  <!-- Theme -->
+  <meta name="theme-color" content="#ff4b8d">
+
+  <!-- Styles -->
   <link rel="stylesheet" href="/css/style.css">
   
   <script>

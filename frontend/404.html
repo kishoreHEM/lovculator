@@ -1,113 +1,145 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>404 - Love Not Found!</title>
-    <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;700&family=Pacifico&display=swap" rel="stylesheet">
-    <style>
-        :root {
-            --primary-pink: #FF69B4; /* Hot Pink */
-            --dark-gray: #333;
-            --light-gray: #f4f4f4;
-            --white: #fff;
-        }
+  <!-- Basic Meta -->
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
-        body {
-            font-family: 'Open Sans', sans-serif;
-            background-color: var(--light-gray);
-            color: var(--dark-gray);
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            min-height: 100vh;
-            margin: 0;
-            text-align: center;
-            padding: 20px;
-            box-sizing: border-box;
-        }
+  <!-- Title & SEO -->
+  <title>404 – Love Not Found 💔 | Lovculator</title>
+  <meta name="description" content="Oops! The page you’re looking for doesn’t exist. Head back to Lovculator and keep spreading love." />
+  <meta name="robots" content="noindex, follow" />
 
-        .container {
-            background-color: var(--white);
-            border-radius: 15px;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
-            padding: 40px;
-            max-width: 600px;
-            width: 100%;
-        }
+  <!-- Theme -->
+  <meta name="theme-color" content="#ff4b8d" />
 
-        h1 {
-            font-family: 'Pacifico', cursive;
-            color: var(--primary-pink);
-            font-size: 4em;
-            margin-bottom: 0.2em;
-        }
+  <!-- Favicons -->
+  <link rel="icon" href="/images/favicon.ico" sizes="any" />
+  <link rel="apple-touch-icon" href="/images/apple-touch-icon.png" />
 
-        h2 {
-            font-size: 1.8em;
-            color: var(--dark-gray);
-            margin-top: 0;
-            margin-bottom: 20px;
-        }
+  <!-- Fonts (Performance optimized) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;700&family=Pacifico&display=swap" rel="stylesheet">
 
-        p {
-            font-size: 1.1em;
-            line-height: 1.6;
-            margin-bottom: 25px;
-        }
+  <style>
+    :root {
+      --primary-pink: #ff4b8d;
+      --dark-gray: #333;
+      --light-gray: #f6f8fa;
+      --white: #ffffff;
+    }
 
-        .btn {
-            display: inline-block;
-            background-color: var(--primary-pink);
-            color: var(--white);
-            padding: 12px 25px;
-            border-radius: 30px;
-            text-decoration: none;
-            font-weight: bold;
-            transition: background-color 0.3s ease, transform 0.2s ease;
-            box-shadow: 0 4px 10px rgba(255, 105, 180, 0.4);
-        }
+    * {
+      box-sizing: border-box;
+    }
 
-        .btn:hover {
-            background-color: #e05c9b; /* Slightly darker pink */
-            transform: translateY(-2px);
-        }
+    body {
+      font-family: 'Open Sans', sans-serif;
+      background-color: var(--light-gray);
+      color: var(--dark-gray);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      margin: 0;
+      text-align: center;
+      padding: 20px;
+    }
 
-        .icon-heart {
-            color: var(--primary-pink);
-            font-size: 2.5em;
-            margin-bottom: 15px;
-            animation: pulse 1.5s infinite;
-        }
+    .container {
+      background-color: var(--white);
+      border-radius: 16px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+      padding: 40px;
+      max-width: 600px;
+      width: 100%;
+    }
 
-        @keyframes pulse {
-            0% { transform: scale(1); }
-            50% { transform: scale(1.1); }
-            100% { transform: scale(1); }
-        }
+    .icon-heart {
+      font-size: 3rem;
+      margin-bottom: 15px;
+      animation: pulse 1.5s infinite;
+    }
 
-        /* Responsive adjustments */
-        @media (max-width: 768px) {
-            h1 {
-                font-size: 3em;
-            }
-            h2 {
-                font-size: 1.5em;
-            }
-            .container {
-                padding: 30px;
-            }
-        }
-    </style>
+    h1 {
+      font-family: 'Pacifico', cursive;
+      color: var(--primary-pink);
+      font-size: 4rem;
+      margin: 0;
+    }
+
+    h2 {
+      font-size: 1.6rem;
+      margin: 15px 0;
+    }
+
+    p {
+      font-size: 1.05rem;
+      line-height: 1.6;
+      margin-bottom: 20px;
+      color: #555;
+    }
+
+    .btn {
+      display: inline-block;
+      background-color: var(--primary-pink);
+      color: var(--white);
+      padding: 12px 28px;
+      border-radius: 30px;
+      text-decoration: none;
+      font-weight: 700;
+      transition: background-color 0.3s ease, transform 0.2s ease;
+      box-shadow: 0 4px 10px rgba(255, 75, 141, 0.4);
+    }
+
+    .btn:hover {
+      background-color: #e63e7f;
+      transform: translateY(-2px);
+    }
+
+    @keyframes pulse {
+      0% { transform: scale(1); }
+      50% { transform: scale(1.1); }
+      100% { transform: scale(1); }
+    }
+
+    /* Mobile */
+    @media (max-width: 768px) {
+      h1 {
+        font-size: 3rem;
+      }
+
+      h2 {
+        font-size: 1.4rem;
+      }
+
+      .container {
+        padding: 30px 20px;
+      }
+    }
+  </style>
 </head>
+
 <body>
-    <div class="container">
-        <div class="icon-heart">💔</div>
-        <h1>404</h1>
-        <h2>Oops! Our Lovculator can't find that connection...</h2>
-        <p>It seems our algorithms are a bit confused, and we couldn't find the page you were looking for. Maybe it's a love triangle, or perhaps a secret admirer is hiding it!</p>
-        <p>Don't worry, we'll get you back on track to finding your perfect match (or story).</p>
-        <a href="/" class="btn">Return to Homepage</a>
-    </div>
+  <div class="container">
+    <div class="icon-heart" aria-hidden="true">💔</div>
+
+    <h1>404</h1>
+    <h2>Love not found… this time 💕</h2>
+
+    <p>
+      The page you’re looking for doesn’t exist or may have moved.
+      Even love takes a wrong turn sometimes.
+    </p>
+
+    <p>
+      Let’s get you back where the stories, connections, and sparks live.
+    </p>
+
+    <a href="/" class="btn" aria-label="Go back to Lovculator homepage">
+      Go Back Home
+    </a>
+  </div>
 </body>
 </html>

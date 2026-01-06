@@ -1,9 +1,55 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+  <!-- Basic -->
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Check Your Email - Lovculator</title>
+
+  <!-- Title & Description -->
+  <title>Check Your Email • Lovculator</title>
+  <meta name="description" content="We’ve sent you a verification email. Check your inbox to activate your Lovculator account." />
+
+  <!-- SEO -->
+  <meta name="robots" content="index, follow">
+  <link rel="canonical" href="https://lovculator.com/verify-pending">
+
+  <!-- Theme -->
+  <meta name="theme-color" content="#ff4b8d">
+
+  <!-- Open Graph -->
+  <meta property="og:site_name" content="Lovculator">
+  <meta property="og:title" content="Check Your Email • Lovculator">
+  <meta property="og:description" content="Confirm your email address to activate your Lovculator account.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://lovculator.com/verify-pending">
+  <meta property="og:image" content="https://lovculator.com/images/og-cover.jpg">
+
+  <!-- Twitter -->
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Check Your Email • Lovculator">
+  <meta name="twitter:description" content="Confirm your email to continue using Lovculator.">
+  <meta name="twitter:image" content="https://lovculator.com/images/og-cover.jpg">
+
+  <!-- Favicons -->
+  <link rel="apple-touch-icon" href="/images/apple-touch-icon.png">
+  <link rel="icon" href="/images/favicon.ico" sizes="any">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32.png">
+
+  <!-- Structured Data -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "WebPage",
+    "name": "Email Verification Pending",
+    "url": "https://lovculator.com/verify-pending",
+    "isPartOf": {
+      "@type": "WebSite",
+      "name": "Lovculator",
+      "url": "https://lovculator.com"
+    }
+  }
+  </script>
+
   <style>
     body {
       font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -71,6 +117,11 @@
       text-align: left;
       border-radius: 5px;
     }
+
+    .hidden {
+    display: none !important;
+    }
+    .info { background: #d1ecf1; color: #0c5460; }
     .info-box h3 {
       margin-top: 0;
       color: #0c5460;
@@ -99,6 +150,7 @@
     .error { background: #f8d7da; color: #721c24; }
   </style>
 </head>
+
 <body>
   <div class="container">
     <div class="email-icon">📧</div>
