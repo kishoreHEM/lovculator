@@ -48,21 +48,55 @@ const upload = multer({
 
 /* ======================================================
    1️⃣ FETCH ALL USERS (Public Info Only)
+   Supports pagination
 ====================================================== */
 router.get("/", async (req, res) => {
   try {
-    const result = await pool.query(`
-      SELECT id, username, display_name, bio, location, relationship_status,
-             follower_count, following_count, avatar_url, created_at
+    const page = Math.max(parseInt(req.query.page) || 1, 1);
+    const limit = Math.min(parseInt(req.query.limit) || 20, 50);
+    const offset = (page - 1) * limit;
+
+    const result = await pool.query(
+      `
+      SELECT
+        id,
+        username,
+        display_name,
+        bio,
+        location,
+        relationship_status,
+        gender,
+        work_education,
+        avatar_url,
+        follower_count,
+        following_count,
+        created_at
       FROM users
-      ORDER BY id ASC
-    `);
-    res.json(result.rows);
+      ORDER BY created_at DESC
+      LIMIT $1 OFFSET $2
+      `,
+      [limit, offset]
+    );
+
+    // Attach profile completion (derived, not stored)
+    const users = result.rows.map(user => ({
+      ...user,
+      profile_completion: calculateProfileCompletion(user)
+    }));
+
+    res.json({
+      page,
+      limit,
+      count: users.length,
+      users
+    });
+
   } catch (err) {
     console.error("❌ Fetch users error:", err);
     res.status(500).json({ error: "Failed to fetch users" });
   }
 });
+
 
 /* ======================================================
    2️⃣ FETCH SINGLE USER PROFILE (with counts)
@@ -71,33 +105,42 @@ router.get("/profile/:username", async (req, res) => {
   try {
     const { username } = req.params;
 
-    const userQuery = `
+    const { rows } = await pool.query(
+      `
       SELECT 
-        u.id, u.username, u.display_name, u.bio, u.location, 
-        u.relationship_status, u.avatar_url, u.created_at,
+        u.id, u.username, u.display_name, u.bio, u.location,
+        u.work_education, u.gender, u.relationship_status,
+        u.avatar_url, u.created_at,
         (SELECT COUNT(*) FROM follows WHERE target_id = u.id) AS follower_count,
         (SELECT COUNT(*) FROM follows WHERE follower_id = u.id) AS following_count,
         (SELECT COUNT(*) FROM stories WHERE user_id = u.id) AS stories_count
       FROM users u
       WHERE LOWER(u.username) = LOWER($1)
-      LIMIT 1;
-    `;
-    const { rows } = await pool.query(userQuery, [username]);
-    if (rows.length === 0) return res.status(404).json({ error: "User not found" });
+      LIMIT 1
+      `,
+      [username]
+    );
+
+    if (!rows.length) {
+      return res.status(404).json({ error: "User not found" });
+    }
 
     const user = rows[0];
     const currentUserId = req.session?.user?.id || req.session?.userId;
-    if (currentUserId && currentUserId !== user.id) {
-      const followCheck = await pool.query(
-        `SELECT 1 FROM follows WHERE follower_id = $1 AND target_id = $2`,
-        [currentUserId, user.id]
-      );
-      user.is_following_author = followCheck.rowCount > 0;
-    } else {
-      user.is_following_author = false;
-    }
+
+    user.is_own_profile = currentUserId === user.id;
+    user.is_following_author =
+      currentUserId && currentUserId !== user.id
+        ? (await pool.query(
+            "SELECT 1 FROM follows WHERE follower_id = $1 AND target_id = $2",
+            [currentUserId, user.id]
+          )).rowCount > 0
+        : false;
+
+    user.profile_completion = calculateProfileCompletion(user);
 
     res.json(user);
+
   } catch (err) {
     console.error("❌ Fetch user profile error:", err);
     res.status(500).json({ error: "Failed to load user profile." });
@@ -110,136 +153,159 @@ router.get("/profile/:username", async (req, res) => {
 ====================================================== */
 router.get("/search", async (req, res) => {
   try {
-    const { q } = req.query;
+    const q = (req.query.q || "").trim();
 
-    if (!q || q.trim().length === 0) {
+    // Guard: minimum 2 characters
+    if (q.length < 2) {
       return res.json([]);
     }
 
-    // ILIKE is case-insensitive in PostgreSQL
-    const query = `
-      SELECT id, username, display_name, avatar_url, bio 
-      FROM users 
-      WHERE username ILIKE $1 OR display_name ILIKE $1
-      LIMIT 5
-    `;
-    
-    const values = [`%${q}%`];
-    const { rows } = await pool.query(query, values);
+    const limit = Math.min(parseInt(req.query.limit) || 5, 10);
 
-    res.json(rows);
+    const { rows } = await pool.query(
+      `
+      SELECT
+        id,
+        username,
+        display_name,
+        avatar_url,
+        bio,
+        work_education,
+        gender
+      FROM users
+      WHERE
+        username ILIKE $1
+        OR display_name ILIKE $1
+      ORDER BY
+        CASE
+          WHEN username ILIKE $2 THEN 0
+          ELSE 1
+        END,
+        follower_count DESC
+      LIMIT $3
+      `,
+      [
+        `%${q}%`,   // contains match
+        `${q}%`,    // starts-with boost
+        limit
+      ]
+    );
+
+    const users = rows.map(user => ({
+      ...user,
+      profile_completion: calculateProfileCompletion(user)
+    }));
+
+    res.json(users);
+
   } catch (err) {
     console.error("❌ Search error:", err);
     res.status(500).json({ error: "Search failed" });
   }
 });
 
+
 /* ======================================================
    3️⃣ UPDATE USER PROFILE (Requires Auth) - EXTENDED & SAFE
 ====================================================== */
+import { calculateProfileCompletion } from "../utils/profileCompletion.js";
+
 router.put("/:id", isAuthenticated, async (req, res) => {
   try {
-    const { id } = req.params;
-    const sessionUserId = req.user.id;
-
-    if (parseInt(id) !== sessionUserId) {
+    const userId = Number(req.params.id);
+    if (userId !== req.user.id) {
       return res.status(403).json({ error: "Unauthorized action" });
     }
 
-    // 🔥 FRONTEND sends: editDisplayName, editBio, editLocation, etc.
-    // So we normalize both frontend and backend field names:
-    const display_name =
-      req.body.editDisplayName || req.body.display_name || null;
+    const {
+      display_name,
+      bio,
+      location,
+      relationship_status,
+      gender,
+      date_of_birth,
+      work_education
+    } = req.body;
 
-    const bio =
-      req.body.editBio || req.body.bio || null;
-
-    const location =
-      req.body.editLocation || req.body.location || null;
-
-    const relationship_status =
-      req.body.editRelationshipStatus || req.body.relationship_status || null;
-
-    const gender =
-      req.body.editGender || req.body.gender || null;
-
-    const date_of_birth =
-      req.body.editDOB || req.body.date_of_birth || null;
-
-    const work =
-      req.body.editWork || req.body.work || null;
-
-    const education =
-      req.body.editEducation || req.body.education || null;
-
-    // Avatar URL (if updated separately)
-    const avatar_url = req.body.avatar_url || null;
-
-    const result = await pool.query(
+    const { rows } = await pool.query(
       `
       UPDATE users
-      SET display_name = COALESCE($1, display_name),
-          bio = COALESCE($2, bio),
-          location = COALESCE($3, location),
-          relationship_status = COALESCE($4, relationship_status),
-          avatar_url = COALESCE($5, avatar_url),
-          gender = COALESCE($6, gender),
-          date_of_birth = COALESCE($7, date_of_birth),
-          work = COALESCE($8, work),
-          education = COALESCE($9, education),
-          updated_at = NOW()
-      WHERE id = $10
-      RETURNING id, username, display_name, bio, location, relationship_status,
-                gender, date_of_birth, work, education,
-                follower_count, following_count, avatar_url, created_at;
+      SET
+        display_name = COALESCE($1, display_name),
+        bio = COALESCE($2, bio),
+        location = COALESCE($3, location),
+        relationship_status = COALESCE($4, relationship_status),
+        gender = COALESCE($5, gender),
+        date_of_birth = COALESCE($6, date_of_birth),
+        work_education = COALESCE($7, work_education),
+        updated_at = NOW()
+      WHERE id = $8
+      RETURNING *
       `,
       [
         display_name,
         bio,
         location,
         relationship_status,
-        avatar_url,
         gender,
         date_of_birth,
-        work,
-        education,
-        id
+        work_education,
+        userId
       ]
     );
 
+    const user = rows[0];
+    const profile_completion = calculateProfileCompletion(user);
+
     res.json({
       success: true,
-      user: result.rows[0],
+      user,
+      profile_completion
     });
-
   } catch (err) {
-    console.error("❌ Error updating profile:", err);
+    console.error("❌ Profile update error:", err);
     res.status(500).json({ error: "Profile update failed" });
   }
 });
 
+
 /* ======================================================
    4️⃣ UPLOAD PROFILE AVATAR (CSP + CDN Safe)
 ====================================================== */
-router.post("/:id/avatar", upload.single("avatar"), async (req, res) => {
-  try {
-    const userId = parseInt(req.params.id);
-    const avatarPath = `/uploads/avatars/${req.file.filename}`; // This is the relative path
+router.post("/:id/avatar", isAuthenticated, upload.single("avatar"), async (req, res) => {
+  if (req.user.id !== Number(req.params.id)) {
+    return res.status(403).json({ error: "Unauthorized" });
+  }
 
-    // Save ONLY relative path in DB
+  if (!req.file) {
+    return res.status(400).json({ error: "No avatar file uploaded" });
+  }
+
+  try {
+    const userId = Number(req.params.id);
+    const avatarPath = `/uploads/avatars/${req.file.filename}`;
+
     const result = await pool.query(
-      `UPDATE users SET avatar_url = $1 WHERE id = $2
-       RETURNING id, username, display_name, bio, location, relationship_status,
-                 follower_count, following_count, avatar_url, created_at`,
+      `
+      UPDATE users
+      SET avatar_url = $1
+      WHERE id = $2
+      RETURNING id, username, display_name, bio, location,
+                relationship_status, work_education, gender,
+                follower_count, following_count, avatar_url, created_at
+      `,
       [avatarPath, userId]
     );
 
-    // 🟢 FIX: Send the relative path (avatarPath) in avatar_url
+    const user = result.rows[0];
+    const profile_completion = calculateProfileCompletion(user);
+
     res.json({
       success: true,
       message: "Avatar updated successfully.",
-      avatar_url: avatarPath, // <-- Changed to relative path
-      user: result.rows[0],
+      avatar_url: avatarPath,
+      user,
+      profile_completion
     });
 
   } catch (err) {
@@ -247,6 +313,7 @@ router.post("/:id/avatar", upload.single("avatar"), async (req, res) => {
     res.status(500).json({ error: "Failed to upload avatar." });
   }
 });
+
 
 /* ======================================================
    5️⃣ FOLLOW / UNFOLLOW TOGGLE (Enhanced)
@@ -379,46 +446,64 @@ router.get("/:targetId/is-following", async (req, res) => {
    9️⃣ USER ACTIVITY FEED
 ====================================================== */
 router.get("/:id/activity", async (req, res) => {
-  const targetId = parseInt(req.params.id);
+  const targetId = Number(req.params.id);
+
+  if (!Number.isInteger(targetId)) {
+    return res.status(400).json({ error: "Invalid user id" });
+  }
 
   try {
-    const followersResult = await pool.query(`
-      SELECT u.username AS actor_username, f.created_at AS date
+    const followersResult = await pool.query(
+      `
+      SELECT
+        u.username AS actor_username,
+        f.created_at AS date
       FROM follows f
       JOIN users u ON f.follower_id = u.id
       WHERE f.target_id = $1
-      ORDER BY f.created_at DESC LIMIT 10;
-    `, [targetId]);
+      ORDER BY f.created_at DESC
+      LIMIT 10
+      `,
+      [targetId]
+    );
 
-    const followerActivity = followersResult.rows.map(r => ({
-      type: "new_follower",
-      follower_username: r.actor_username,
-      message: `@${r.actor_username} started following you.`,
-      date: r.date
-    }));
-
-    const likesResult = await pool.query(`
-      SELECT u.username AS actor_username, s.id AS related_story_id, s.story_title, l.created_at AS date
+    const likesResult = await pool.query(
+      `
+      SELECT
+        u.username AS actor_username,
+        s.id AS related_story_id,
+        s.story_title,
+        l.created_at AS date
       FROM story_likes l
       JOIN users u ON l.user_id = u.id
       JOIN stories s ON l.story_id = s.id
       WHERE s.user_id = $1
-      ORDER BY l.created_at DESC LIMIT 10;
-    `, [targetId]);
-
-    const likeActivity = likesResult.rows.map(r => ({
-      type: "story_like",
-      actor_username: r.actor_username,
-      story_id: r.related_story_id,
-      message: `@${r.actor_username} liked your story "${r.story_title}" 💖`,
-      date: r.date
-    }));
-
-    const combined = [...followerActivity, ...likeActivity].sort(
-      (a, b) => new Date(b.date) - new Date(a.date)
+      ORDER BY l.created_at DESC
+      LIMIT 10
+      `,
+      [targetId]
     );
 
-    res.json(combined.slice(0, 20));
+    const activity = [
+      ...followersResult.rows.map(r => ({
+        type: "new_follower",
+        actor_username: r.actor_username,
+        message: `@${r.actor_username} started following you.`,
+        date: r.date
+      })),
+      ...likesResult.rows.map(r => ({
+        type: "story_like",
+        actor_username: r.actor_username,
+        story_id: r.related_story_id,
+        message: `@${r.actor_username} liked your story "${r.story_title}" 💖`,
+        date: r.date
+      }))
+    ]
+      .sort((a, b) => new Date(b.date) - new Date(a.date))
+      .slice(0, 20);
+
+    res.json(activity);
+
   } catch (err) {
     console.error("❌ Error fetching user activity:", err);
     res.status(500).json({ error: "Failed to load activity feed." });
@@ -474,37 +559,66 @@ router.get("/:identifier/stories", async (req, res) => {
   }
 });
 
+
+
 /* ======================================================
    FETCH USER BY ID (Profile fetch by numeric ID)
 ====================================================== */
 router.get("/:id", async (req, res) => {
   try {
-    const userId = parseInt(req.params.id);
+    const userId = Number(req.params.id);
+    if (!Number.isInteger(userId)) {
+      return res.status(400).json({ error: "Invalid user id" });
+    }
 
-    const query = `
+    const { rows } = await pool.query(
+      `
       SELECT 
-        u.id, u.username, u.display_name, u.bio, u.location, 
-        u.relationship_status, u.avatar_url, u.gender, u.date_of_birth,
-        u.work, u.education, u.created_at,
+        u.id,
+        u.username,
+        u.display_name,
+        u.bio,
+        u.location,
+        u.relationship_status,
+        u.avatar_url,
+        u.gender,
+        u.date_of_birth,
+        u.work_education,
+        u.created_at,
         (SELECT COUNT(*) FROM follows WHERE target_id = u.id) AS follower_count,
         (SELECT COUNT(*) FROM follows WHERE follower_id = u.id) AS following_count
       FROM users u
       WHERE u.id = $1
-      LIMIT 1;
-    `;
-
-    const { rows } = await pool.query(query, [userId]);
+      LIMIT 1
+      `,
+      [userId]
+    );
 
     if (!rows.length) {
       return res.status(404).json({ error: "User not found" });
     }
 
-    res.json(rows[0]);
+    const user = rows[0];
+    const viewerId = req.session?.user?.id || req.session?.userId;
+
+    user.is_own_profile = viewerId === user.id;
+
+    user.is_following_author =
+      viewerId && viewerId !== user.id
+        ? (await pool.query(
+            "SELECT 1 FROM follows WHERE follower_id = $1 AND target_id = $2",
+            [viewerId, user.id]
+          )).rowCount > 0
+        : false;
+
+    user.profile_completion = calculateProfileCompletion(user);
+
+    res.json(user);
+
   } catch (err) {
     console.error("❌ Error fetching user by ID:", err);
     res.status(500).json({ error: "Failed to fetch user" });
   }
 });
-
 
 export default router;

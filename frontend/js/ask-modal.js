@@ -90,7 +90,9 @@ class AskModalController {
                 : "/images/default-avatar.png";
         }
         if (this.askUserName) {
-            this.askUserName.textContent = user.username || user.display_name || "User";
+            this.askUserName.textContent =
+    user.display_name || user.username || "User";
+
         }
     }
 

@@ -804,3 +804,4 @@ if (window.location.pathname.includes('/profile')) {
     }, 2000);
   });
 }
+

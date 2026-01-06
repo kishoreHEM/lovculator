@@ -3,7 +3,7 @@ import crypto from "crypto";
 import pool from "../db.js"; 
 import { generateUniqueUsername } from "../utils/userHelpers.js";
 import { sendPasswordResetEmail, sendVerificationEmail, sendWelcomeEmail } from "../routes/emailService.js";
-
+import { calculateProfileCompletion } from "../utils/profileCompletion.js";
 // =====================================
 //  Signup with First & Last Name
 // =====================================

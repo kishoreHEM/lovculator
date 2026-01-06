@@ -4,113 +4,238 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Settings - Lovculator</title>
-    
+
     <link rel="stylesheet" href="/css/style.css">
 </head>
-<body>
+<body class="app-layout">
 
+    <!-- Global Header -->
     <div id="global-header"></div>
 
     <div class="settings-container">
+
+        <!-- =======================    
+             SIDEBAR
+        ======================== -->
         <aside class="settings-sidebar">
             <div class="sidebar-header">
                 <h2>Settings</h2>
             </div>
+
             <nav class="settings-nav">
                 <button class="nav-btn active" data-target="profile">
-                    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
                     Edit Profile
                 </button>
                 <button class="nav-btn" data-target="account">
-                    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
                     Account & Security
                 </button>
                 <button class="nav-btn" data-target="notifications">
-                    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg>
                     Notifications
                 </button>
                 <button class="nav-btn" data-target="privacy">
-                    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
                     Privacy
                 </button>
             </nav>
         </aside>
 
+        <!-- =======================
+             CONTENT
+        ======================== -->
         <main class="settings-content">
-            
+
+            <!-- ========= EDIT PROFILE ========= -->
             <section id="profile" class="settings-section active">
                 <div class="card">
-                    <h3>Public Profile</h3>
+                    <h3>Edit Profile</h3>
+
+                    <div class="profile-completion-card">
+  <div class="completion-header">
+    <span>Profile completion</span>
+    <strong><span id="completionPercent">0%</span></strong>
+  </div>
+
+  <div class="completion-bar">
+    <div id="completionFill"></div>
+  </div>
+
+  <p id="completionHint" class="completion-hint"></p>
+</div>
+
+
+                    <!-- Avatar -->
                     <div class="avatar-upload-wrapper">
-                        <img src="/images/default-avatar.png" id="settingsAvatarPreview" class="avatar-large">
+                        <img
+                            src="/images/default-avatar.png"
+                            id="settingsAvatarPreview"
+                            class="avatar-large"
+                            alt="Profile Avatar"
+                        >
                         <div class="avatar-actions">
-                            <label for="avatarInput" class="btn btn-secondary">Change Photo</label>
-                            <input type="file" id="avatarInput" hidden accept="image/*">
-                            <span class="text-muted">JPG, GIF or PNG. Max 1MB.</span>
+                            <label for="avatarInput" class="btn btn-secondary">
+                                Change Photo
+                            </label>
+                            <input
+                                type="file"
+                                id="avatarInput"
+                                hidden
+                                accept="image/*"
+                            >
+                            <span class="text-muted">
+                                JPG, PNG or GIF. Max 4MB.
+                            </span>
                         </div>
                     </div>
 
+                    <!-- Profile Form -->
                     <form id="profileForm">
+
                         <div class="form-group">
                             <label>Display Name</label>
-                            <input type="text" name="display_name" placeholder="Enter your name" value="John Doe">
+                            <input
+                                type="text"
+                                name="display_name"
+                                placeholder="Enter your name"
+                            >
                         </div>
+
                         <div class="form-group">
                             <label>Bio</label>
-                            <textarea name="bio" rows="3" placeholder="Tell us a little about yourself..."></textarea>
+                            <textarea
+                                name="bio"
+                                rows="3"
+                                placeholder="Tell us a little about yourself..."
+                            ></textarea>
                         </div>
+
                         <div class="form-group">
                             <label>Location</label>
-                            <input type="text" name="location" placeholder="City, Country">
+                            <input
+                                type="text"
+                                name="location"
+                                placeholder="City, Country"
+                            >
                         </div>
+
+                        <div class="form-group">
+                            <label>Work / Education</label>
+                            <input
+                                type="text"
+                                name="work_education"
+                                placeholder="Job or School"
+                            >
+                        </div>
+
+                        <div class="form-group">
+                            <label>Relationship Status</label>
+                            <select name="relationship_status">
+                                <option value="Single">Single</option>
+                                <option value="In a relationship">In a relationship</option>
+                                <option value="Married">Married</option>
+                                <option value="Complicated">It’s complicated</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label>Gender</label>
+                            <select name="gender">
+                                <option value="">Select…</option>
+                                <option value="Male">Male</option>
+                                <option value="Female">Female</option>
+                                <option value="Other">Other</option>
+                                <option value="Prefer not to say">Prefer not to say</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label>Date of Birth</label>
+                            <input
+                                type="date"
+                                name="date_of_birth"
+                            >
+                        </div>
+
                         <div class="form-actions">
-                            <button type="submit" class="btn btn-primary">Save Changes</button>
+                            <button type="submit" class="btn btn-primary">
+                                Save Changes
+                            </button>
                         </div>
+
                     </form>
                 </div>
             </section>
 
+            <!-- ========= ACCOUNT ========= -->
             <section id="account" class="settings-section">
                 <div class="card">
                     <h3>Email Address</h3>
                     <div class="form-group">
                         <label>Current Email</label>
-                        <input type="email" value="john@example.com" disabled class="input-disabled">
+                        <input
+                            type="email"
+                            disabled
+                            class="input-disabled"
+                            placeholder="your@email.com"
+                        >
                     </div>
                 </div>
 
                 <div class="card">
                     <h3>Change Password</h3>
                     <form id="passwordForm">
+
                         <div class="form-group">
                             <label>Current Password</label>
-                            <input type="password" name="current_password">
+                            <input
+                                type="password"
+                                name="current_password"
+                            >
                         </div>
+
                         <div class="form-group">
                             <label>New Password</label>
-                            <input type="password" name="new_password">
+                            <input
+                                type="password"
+                                name="new_password"
+                            >
                         </div>
+
                         <div class="form-group">
                             <label>Confirm New Password</label>
-                            <input type="password" name="confirm_password">
+                            <input
+                                type="password"
+                                name="confirm_password"
+                            >
                         </div>
+
                         <div class="form-actions">
-                            <button type="submit" class="btn btn-primary">Update Password</button>
-                            <a href="/forgot-password" class="link-secondary">I forgot my password</a>
+                            <button type="submit" class="btn btn-primary">
+                                Update Password
+                            </button>
+                            <a href="/forgot-password" class="link-secondary">
+                                I forgot my password
+                            </a>
                         </div>
+
                     </form>
                 </div>
 
                 <div class="card danger-zone">
                     <h3>Delete Account</h3>
-                    <p>Once you delete your account, there is no going back. Please be certain.</p>
-                    <button class="btn btn-danger">Delete Account</button>
+                    <p>
+                        Once you delete your account, there is no going back.
+                        Please be certain.
+                    </p>
+                    <button class="btn btn-danger">
+                        Delete Account
+                    </button>
                 </div>
             </section>
 
+            <!-- ========= NOTIFICATIONS ========= -->
             <section id="notifications" class="settings-section">
                 <div class="card">
                     <h3>Email Notifications</h3>
+
                     <div class="toggle-group">
                         <div class="toggle-info">
                             <strong>New Messages</strong>
@@ -121,6 +246,7 @@
                             <span class="slider round"></span>
                         </label>
                     </div>
+
                     <div class="toggle-group">
                         <div class="toggle-info">
                             <strong>Love Calculator Results</strong>
@@ -131,27 +257,34 @@
                             <span class="slider round"></span>
                         </label>
                     </div>
+
                 </div>
             </section>
 
+            <!-- ========= PRIVACY ========= -->
             <section id="privacy" class="settings-section">
                 <div class="card">
                     <h3>Privacy Settings</h3>
+
                     <div class="toggle-group">
                         <div class="toggle-info">
                             <strong>Private Profile</strong>
-                            <span>Only people you approve can see your profile and stories.</span>
+                            <span>
+                                Only people you approve can see your profile and stories.
+                            </span>
                         </div>
                         <label class="switch">
                             <input type="checkbox">
                             <span class="slider round"></span>
                         </label>
                     </div>
+
                 </div>
             </section>
 
         </main>
     </div>
     <script src="/js/settings.js"></script>
+        <script src="/js/global-header.js"></script>
 </body>
 </html>

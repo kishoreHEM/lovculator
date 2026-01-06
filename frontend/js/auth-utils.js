@@ -54,7 +54,7 @@ async function checkSession() {
     
     if (!res.ok) {
       // If on protected page and session invalid, redirect
-      const protectedPages = ['/profile', '/messages', '/admin-analytics'];
+      const protectedPages = ['/profile', '/messages', '/admin-analytics', '/settings'];
       const currentPage = window.location.pathname;
       
       if (protectedPages.some(page => currentPage.includes(page))) {

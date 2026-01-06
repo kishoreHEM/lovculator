@@ -91,26 +91,32 @@ document.addEventListener("DOMContentLoaded", () => {
        LOAD USER DETAILS
     ================================================== */
     async function loadUser() {
-        if (!userNameEl || !userAvatarEl || !window.AuthManager) return;
+    if (!userNameEl || !userAvatarEl || !window.AuthManager) return;
 
-        try {
-            const { res, data } = await window.AuthManager.getProfile();
+    try {
+        const { res, data } = await window.AuthManager.getProfile();
 
-            if (res.ok && data.success && data.user) {
-                const user = data.user;
-                userNameEl.textContent = user.display_name || user.username;
-                userAvatarEl.src = user.avatar_url || "/images/default-avatar.png";
-                window.currentUser = user;
-            } else {
-                userNameEl.textContent = "Guest User";
-                userAvatarEl.src = "/images/default-avatar.png";
-            }
-        } catch (err) {
-            console.error("❌ Failed to load user:", err);
-            userNameEl.textContent = "Guest User";
-            userAvatarEl.src = "/images/default-avatar.png";
+        // ✅ FIX: backend returns { user }, not { success }
+        if (res.ok && data?.user) {
+            const user = data.user;
+
+            userNameEl.textContent =
+                user.display_name || user.username || "User";
+
+            userAvatarEl.src =
+                user.avatar_url || "/images/default-avatar.png";
+
+            window.currentUser = user;
+        } else {
+            throw new Error("No user in response");
         }
+    } catch (err) {
+        console.error("❌ Failed to load user:", err);
+        userNameEl.textContent = "Guest User";
+        userAvatarEl.src = "/images/default-avatar.png";
     }
+}
+
 
     /* ==================================================
        MODAL UI HANDLERS

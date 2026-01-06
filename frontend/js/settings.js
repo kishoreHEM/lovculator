@@ -1,56 +1,52 @@
 /**
  * frontend/js/settings.js — Lovculator (FINAL)
- * - Profile settings (real save)
- * - Avatar upload (real)
- * - Password change (real)
- * - Clean API fallback
- * - No stub logic
+ * ✔ Profile completion meter works
+ * ✔ Avatar upload works
+ * ✔ Profile update works
+ * ✔ Password update works
+ * ✔ No forced redirect
  */
 
 (() => {
-  // ===============================
-  // API BASE (safe fallback)
-  // ===============================
+  /* ======================================================
+     API BASE
+  ====================================================== */
   const API_BASE =
     window.API_BASE ||
     (location.hostname.includes("localhost")
       ? "http://localhost:3001/api"
       : "https://lovculator.com/api");
 
-  // ===============================
-  // DOM ELEMENTS
-  // ===============================
-  const sidebarItems = document.querySelectorAll(".settings-sidebar li");
+  /* ======================================================
+     DOM ELEMENTS
+  ====================================================== */
+  const sidebarButtons = document.querySelectorAll(".settings-nav .nav-btn");
   const sections = document.querySelectorAll(".settings-section");
 
   const profileForm = document.getElementById("profileForm");
   const passwordForm = document.getElementById("passwordForm");
 
   const avatarInput = document.getElementById("avatarInput");
-  const avatarPreview = document.getElementById("avatarPreview");
+  const avatarPreview = document.getElementById("settingsAvatarPreview");
+
+  const completionFill = document.getElementById("completionFill");
+  const completionPercent = document.getElementById("completionPercent");
+  const completionHint = document.getElementById("completionHint");
 
   let currentUser = null;
 
-  // ===============================
-  // UTILS
-  // ===============================
-  function showToast(msg, type = "success") {
+  /* ======================================================
+     UTILITIES
+  ====================================================== */
+  function showToast(message, type = "success") {
     const toast = document.createElement("div");
-    toast.className = `toast ${type}`;
-    toast.textContent = msg;
-
-    Object.assign(toast.style, {
-      position: "fixed",
-      top: "20px",
-      right: "20px",
-      background: type === "error" ? "#e74c3c" : "#2ecc71",
-      color: "#fff",
-      padding: "10px 16px",
-      borderRadius: "8px",
-      zIndex: 9999,
-      boxShadow: "0 8px 24px rgba(0,0,0,.15)",
-    });
-
+    toast.textContent = message;
+    toast.style.cssText = `
+      position:fixed;top:20px;right:20px;
+      background:${type === "error" ? "#e74c3c" : "#2ecc71"};
+      color:#fff;padding:10px 16px;border-radius:8px;
+      z-index:9999;box-shadow:0 8px 24px rgba(0,0,0,.15);
+    `;
     document.body.appendChild(toast);
     setTimeout(() => toast.remove(), 3000);
   }
@@ -64,16 +60,35 @@
     }
   }
 
-  // ===============================
-  // LOAD SESSION
-  // ===============================
+  /* ======================================================
+     PROFILE COMPLETION
+  ====================================================== */
+  function updateProfileCompletion(percent = 0) {
+    if (!completionFill || !completionPercent) return;
+
+    completionFill.style.width = `${percent}%`;
+    completionPercent.textContent = `${percent}%`;
+
+    if (percent === 100) {
+      completionHint.textContent = "🎉 Profile complete! You’re all set.";
+    } else if (percent >= 70) {
+      completionHint.textContent = "Almost there! Complete remaining fields.";
+    } else {
+      completionHint.textContent =
+        "Complete your profile to get better matches.";
+    }
+  }
+
+  /* ======================================================
+     LOAD SESSION
+  ====================================================== */
   async function loadSession() {
     try {
       const res = await fetch(`${API_BASE}/auth/me`, {
         credentials: "include",
       });
 
-      if (!res.ok) throw new Error("Not logged in");
+      if (!res.ok) return;
 
       const data = await safeJson(res);
       currentUser = data.user || data;
@@ -81,55 +96,62 @@
       populateProfileForm(currentUser);
       populateAvatar(currentUser);
 
+      updateProfileCompletion(currentUser.profile_completion || 0);
+
     } catch (err) {
-      document.body.innerHTML = `
-    <div style="text-align:center;padding:60px">
-      <h2>🔒 Login Required</h2>
-      <p>Please login to access your settings</p>
-      <a href="/login" class="btn btn-primary">Login</a>
-    </div>
-  `;
-}
+      console.warn("⚠️ Session load failed:", err);
+    }
   }
 
-  // ===============================
-  // SIDEBAR NAV
-  // ===============================
-  sidebarItems.forEach(item => {
-    item.addEventListener("click", () => {
-      sidebarItems.forEach(i => i.classList.remove("active"));
+  /* ======================================================
+     SIDEBAR NAVIGATION
+  ====================================================== */
+  sidebarButtons.forEach(btn => {
+    btn.addEventListener("click", () => {
+      sidebarButtons.forEach(b => b.classList.remove("active"));
       sections.forEach(s => s.classList.remove("active"));
 
-      item.classList.add("active");
-      document.getElementById(item.dataset.section)?.classList.add("active");
+      btn.classList.add("active");
+      document
+        .getElementById(btn.dataset.target)
+        ?.classList.add("active");
 
       window.scrollTo({ top: 0, behavior: "smooth" });
     });
   });
 
-  // ===============================
-  // PROFILE FORM
-  // ===============================
+  /* ======================================================
+     POPULATE PROFILE FORM
+  ====================================================== */
   function populateProfileForm(user) {
-    if (!profileForm) return;
+    if (!profileForm || !user) return;
 
     profileForm.display_name.value = user.display_name || "";
     profileForm.bio.value = user.bio || "";
     profileForm.location.value = user.location || "";
-    profileForm.relationship_status.value = user.relationship_status || "Single";
+    profileForm.work_education.value = user.work_education || "";
+    profileForm.relationship_status.value =
+      user.relationship_status || "Single";
+    profileForm.gender.value = user.gender || "";
+    profileForm.date_of_birth.value =
+      user.date_of_birth ? user.date_of_birth.split("T")[0] : "";
   }
 
+  /* ======================================================
+     PROFILE UPDATE
+  ====================================================== */
   profileForm?.addEventListener("submit", async (e) => {
     e.preventDefault();
+    if (!currentUser) return showToast("Session not ready", "error");
 
     const btn = profileForm.querySelector("button[type='submit']");
-    const originalText = btn.textContent;
-    btn.textContent = "Saving...";
     btn.disabled = true;
+    btn.textContent = "Saving...";
 
     try {
-      const formData = new FormData(profileForm);
-      const payload = Object.fromEntries(formData.entries());
+      const payload = Object.fromEntries(
+        new FormData(profileForm).entries()
+      );
 
       const res = await fetch(`${API_BASE}/users/${currentUser.id}`, {
         method: "PUT",
@@ -138,36 +160,36 @@
         body: JSON.stringify(payload),
       });
 
-      if (!res.ok) {
-        const err = await safeJson(res);
-        throw new Error(err.error || "Update failed");
-      }
+      if (!res.ok) throw new Error("Update failed");
 
-      showToast("Profile updated successfully");
-      btn.textContent = "Saved ✔";
+      const data = await safeJson(res);
+      showToast("Profile updated");
+
+      if (data.profile_completion !== undefined) {
+        updateProfileCompletion(data.profile_completion);
+      }
 
     } catch (err) {
       console.error(err);
       showToast("Failed to update profile", "error");
-      btn.textContent = "Failed ❌";
     } finally {
       btn.disabled = false;
-      setTimeout(() => (btn.textContent = originalText), 2000);
+      btn.textContent = "Save Changes";
     }
   });
 
-  // ===============================
-  // AVATAR UPLOAD
-  // ===============================
+  /* ======================================================
+     AVATAR UPLOAD
+  ====================================================== */
   function populateAvatar(user) {
-    if (!avatarPreview) return;
+    if (!avatarPreview || !user) return;
     avatarPreview.src =
-      user.avatar_url ||
-      user.avatar ||
-      "/images/default-avatar.png";
+      user.avatar_url || "/images/default-avatar.png";
   }
 
   avatarInput?.addEventListener("change", async () => {
+    if (!currentUser) return;
+
     const file = avatarInput.files[0];
     if (!file) return;
 
@@ -182,11 +204,14 @@
       const fd = new FormData();
       fd.append("avatar", file);
 
-      const res = await fetch(`${API_BASE}/users/${currentUser.id}/avatar`, {
-        method: "POST",
-        credentials: "include",
-        body: fd,
-      });
+      const res = await fetch(
+        `${API_BASE}/users/${currentUser.id}/avatar`,
+        {
+          method: "POST",
+          credentials: "include",
+          body: fd,
+        }
+      );
 
       if (!res.ok) throw new Error("Upload failed");
 
@@ -195,10 +220,9 @@
 
       showToast("Avatar updated");
 
-      // Update global avatars
-      document.querySelectorAll(".user-avatar, .nav-user-avatar").forEach(img => {
-        img.src = avatarPreview.src;
-      });
+      document
+        .querySelectorAll(".user-avatar, .nav-user-avatar")
+        .forEach(img => (img.src = avatarPreview.src));
 
     } catch (err) {
       console.error(err);
@@ -206,14 +230,15 @@
     }
   });
 
-  // ===============================
-  // PASSWORD CHANGE
-  // ===============================
+  /* ======================================================
+     PASSWORD CHANGE
+  ====================================================== */
   passwordForm?.addEventListener("submit", async (e) => {
     e.preventDefault();
 
-    const fd = new FormData(passwordForm);
-    const payload = Object.fromEntries(fd.entries());
+    const payload = Object.fromEntries(
+      new FormData(passwordForm).entries()
+    );
 
     if (payload.new_password !== payload.confirm_password) {
       showToast("Passwords do not match", "error");
@@ -228,19 +253,18 @@
         body: JSON.stringify(payload),
       });
 
-      if (!res.ok) throw new Error("Password update failed");
+      if (!res.ok) throw new Error();
 
-      showToast("Password updated successfully");
+      showToast("Password updated");
       passwordForm.reset();
 
-    } catch (err) {
-      console.error(err);
+    } catch {
       showToast("Failed to update password", "error");
     }
   });
 
-  // ===============================
-  // INIT
-  // ===============================
+  /* ======================================================
+     INIT
+  ====================================================== */
   document.addEventListener("DOMContentLoaded", loadSession);
 })();
