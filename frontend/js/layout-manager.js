@@ -124,22 +124,25 @@ class LayoutManager {
        LOAD USER DETAILS
     ====================================================== */
     async loadUserData() {
-        try {
-            const res = await fetch("/api/auth/me", {
-                credentials: "include"
-            });
-            const data = await res.json();
+    try {
+        const res = await fetch("/api/auth/me", {
+            credentials: "include"
+        });
 
-            if (data.success && data.user) {
-                window.currentUser = data.user;
-                window.currentUserId = data.user.id;
-                this.updateUserInterface(data.user);
-            }
+        const data = await res.json();
 
-        } catch (err) {
-            console.error("Auth load failed:", err);
+        // ✅ FIX: backend returns { user }, not { success }
+        if (res.ok && data?.user) {
+            window.currentUser = data.user;
+            window.currentUserId = data.user.id;
+            this.updateUserInterface(data.user);
         }
+
+    } catch (err) {
+        console.error("Auth load failed:", err);
     }
+}
+
 
     updateUserInterface(user) {
         const name = user.display_name || user.username || "Guest";
@@ -154,8 +157,6 @@ class LayoutManager {
         const creatorAvatar = document.getElementById("creatorAvatar");
         if (creatorAvatar) creatorAvatar.src = avatar;
     }
-
-    // ❌ DELETED THE DUPLICATE FUNCTION HERE ❌
 
     /* ======================================================
        🔔 BADGE REFRESH FUNCTIONS
