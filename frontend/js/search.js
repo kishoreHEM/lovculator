@@ -84,7 +84,7 @@
 
             } catch (err) {
                 console.error("Search Error:", err);
-                this.resultsContainer.innerHTML = `<div class="search-status">Error searching.</div>`;
+                this.resultsContainer.innerHTML = `<div class="search-status">Login for searching.</div>`;
             }
         }
 

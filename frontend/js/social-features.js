@@ -9,6 +9,41 @@ if (!window.API_BASE) {
         : "https://lovculator.com/api";
 }
 
+// ==============================================
+// GLOBAL LOGIN CHECK HELPER (FIXED VERSION)
+// ==============================================
+window.requireLogin = function(action = "", callback = null) {
+  // If user is logged in, execute callback if provided and return true
+  if (window.currentUserId) {
+    if (typeof callback === 'function') {
+      callback();
+    }
+    return true;
+  }
+
+  // User is NOT logged in
+  // Store the action for potential resumption after login
+  if (callback) {
+    window.pendingAuthAction = {
+      callback: callback,
+      action: action
+    };
+  }
+
+  // Show login modal
+  if (typeof window.showLoginModal === 'function') {
+    window.showLoginModal(action);
+  } else {
+    console.warn('showLoginModal not available for action:', action);
+  }
+
+  // Return false to indicate login is required
+  return false;
+};
+
+
+
+
 // Global event delegation for ALL social interactions
 document.addEventListener("click", async (e) => {
     // Like button
@@ -69,22 +104,15 @@ document.addEventListener('keypress', (e) => {
 // ==============================================
 async function handleLike(likeBtn) {
     if (!likeBtn) return;
-    
-    // 1. Robust ID Retrieval
-    const id = likeBtn.dataset.id || 
-               likeBtn.dataset.postId || 
-               likeBtn.dataset.answerId || // ✅ Added answerId
-               likeBtn.dataset.questionId || // ✅ Added questionId
-               likeBtn.closest("[data-story-id]")?.dataset.storyId ||
-               likeBtn.closest("[data-post-id]")?.dataset.postId ||
-               likeBtn.closest("[data-answer-id]")?.dataset.answerId || // ✅ Added answerId lookup
-               likeBtn.closest("[data-question-id]")?.dataset.questionId; // ✅ Added questionId lookup
 
-    if (!id) {
-        console.error("❌ Missing ID for like action");
+    // 🔐 LOGIN GATE - SIMPLE CHECK
+    if (!window.currentUserId) {
+        if (window.showLoginModal) {
+            window.showLoginModal("like this");
+        }
         return;
     }
-
+    
     // Store original state for rollback
     const originalLikedState = likeBtn.classList.contains('liked');
     const likeCountSpan = likeBtn.querySelector(".like-count");
@@ -93,12 +121,26 @@ async function handleLike(likeBtn) {
     likeBtn.disabled = true;
 
     try {
+        // 1. Robust ID Retrieval
+        const id = likeBtn.dataset.id || 
+                   likeBtn.dataset.postId || 
+                   likeBtn.dataset.answerId || 
+                   likeBtn.dataset.questionId || 
+                   likeBtn.closest("[data-story-id]")?.dataset.storyId ||
+                   likeBtn.closest("[data-post-id]")?.dataset.postId ||
+                   likeBtn.closest("[data-answer-id]")?.dataset.answerId || 
+                   likeBtn.closest("[data-question-id]")?.dataset.questionId;
+
+        if (!id) {
+            console.error("❌ Missing ID for like action");
+            return;
+        }
+
         // 2. Determine Context (Story vs Post vs Question vs Answer)
         const isStory = likeBtn.closest(".story-card") || 
                         likeBtn.closest("[data-story-id]") ||
                         window.location.pathname.includes("love-stories");
         
-        // Check for specific data-type attribute (common in renderAnswerList) or class
         const isAnswer = likeBtn.dataset.type === 'answer' || 
                          likeBtn.closest(".answer-card") || 
                          likeBtn.closest("[data-answer-id]");
@@ -109,21 +151,18 @@ async function handleLike(likeBtn) {
 
         // 3. Construct Correct URL
         let url;
-        let typeLabel = "Post"; // For notification text
+        let typeLabel = "Post";
 
         if (isStory) {
             url = `${window.API_BASE}/stories/${id}/like`;
             typeLabel = "Story";
         } else if (isAnswer) {
-            // ✅ ROUTES TO QUESTIONS BACKEND (Answer Like)
             url = `${window.API_BASE}/questions/answers/${id}/like`;
             typeLabel = "Answer";
         } else if (isQuestion) {
-            // ✅ ROUTES TO QUESTIONS BACKEND (Question Like)
             url = `${window.API_BASE}/questions/${id}/like`;
             typeLabel = "Question";
         } else {
-            // Default to Post
             url = `${window.API_BASE}/posts/${id}/like`;
         }
 
@@ -209,7 +248,9 @@ async function handleLike(likeBtn) {
             showNotification('Request timeout. Please check your connection.', 'error');
         } else if (err.message?.includes('401') || err.message?.includes('Unauthorized')) {
             showNotification('Please log in to like!', 'error');
-            setTimeout(() => (window.location.href = '/login'), 1200);
+            if (window.showLoginModal) {
+                window.showLoginModal("like this");
+            }
         } else if (err.message?.includes('500')) {
             showNotification('Server error. Please try again later.', 'error');
         } else {
@@ -224,18 +265,17 @@ async function handleLike(likeBtn) {
 // 2. COMMENT TOGGLE HANDLER
 // ==============================================
 function handleCommentToggle(commentToggleBtn) {
+    // Comment toggling should NOT require login - users should be able to read comments
     const id = commentToggleBtn.dataset.id || 
                commentToggleBtn.dataset.postId || 
                commentToggleBtn.closest("[data-story-id]")?.dataset.storyId ||
                commentToggleBtn.closest("[data-post-id]")?.dataset.postId;
-    
+
     if (!id) return;
 
     const section = document.getElementById(`comments-${id}`);
     if (section) {
         section.classList.toggle("hidden");
-        
-        // Load comments if showing for the first time
         if (!section.classList.contains("hidden")) {
             const commentsList = document.getElementById(`comments-list-${id}`);
             if (commentsList && commentsList.children.length === 0) {
@@ -249,7 +289,13 @@ function handleCommentToggle(commentToggleBtn) {
 // 3. COMMENT SUBMIT HANDLER (UPDATED FOR POSTS, STORIES & ANSWERS)
 // ==============================================
 async function handleCommentSubmit(commentSubmitBtn) {
-    // Get the closest parent container that has an ID
+    // 🔐 LOGIN GATE - SIMPLE CHECK
+    if (!window.currentUserId) {
+        if (window.showLoginModal) {
+            window.showLoginModal("comment on this");
+        }
+        return;
+    }
     // ✅ Updated to include .answer-card
     const container = commentSubmitBtn.closest('[data-story-id], [data-post-id], [data-id], [data-answer-id], .story-card, .post-card, .answer-card');
     
@@ -427,11 +473,7 @@ async function handleCommentSubmit(commentSubmitBtn) {
         
         if (err.name === 'AbortError') {
             showNotification('Request timeout. Please try again.', 'error');
-        } else if (err.message.includes('401') || err.message.includes('Unauthorized')) {
-            showNotification('Please log in to comment!', 'error');
-            setTimeout(() => {
-                window.location.href = '/login?redirect=' + encodeURIComponent(window.location.pathname);
-            }, 1500);
+        
         } else if (err.message.includes('400')) {
             showNotification(err.message || 'Invalid comment format.', 'error');
         } else if (err.message.includes('500')) {
@@ -584,8 +626,11 @@ async function loadComments(id) {
 // 6. FOLLOW HANDLER (ROBUST VERSION)
 // ==============================================
 async function handleFollow(followBtn) {
+    // 🔐 LOGIN GATE - SIMPLE CHECK
     if (!window.currentUserId) {
-        showNotification("Please log in to follow users.", "error");
+        if (window.showLoginModal) {
+            window.showLoginModal("follow this user");
+        }
         return;
     }
 
@@ -673,7 +718,7 @@ async function handleFollow(followBtn) {
             showNotification('Request timeout. Please check your connection.', 'error');
         } else if (error.message.includes('401') || error.message.includes('Unauthorized')) {
             showNotification('Please log in to follow users.', 'error');
-            setTimeout(() => (window.location.href = '/login'), 1500);
+            
         } else if (error.message.includes('500')) {
             showNotification('Server error. Please try again later.', 'error');
         } else {
@@ -947,3 +992,4 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // Debug: Check if API is accessible
 console.log('Social Features initialized. API_BASE:', window.API_BASE);
+

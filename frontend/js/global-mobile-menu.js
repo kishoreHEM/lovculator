@@ -33,22 +33,39 @@ async function loadMobileMenu() {
     const container = document.getElementById("global-mobile-menu");
     if (!container) return;
 
+    // ✅ STEP 1: Check login status
+    let isLoggedIn = false;
+    try {
+        const me = await fetch(`${window.API_BASE}/auth/me`, {
+            credentials: 'include',
+            cache: 'no-store'
+        });
+        isLoggedIn = me.ok;
+    } catch (e) {
+        isLoggedIn = false;
+    }
+
+    // ❌ GUEST USERS: DO NOTHING
+    if (!isLoggedIn) {
+        container.innerHTML = ""; // ensure empty
+        return;
+    }
+
+    // ✅ STEP 2: Load menu ONLY for logged-in users
     try {
         const res = await fetch("/components/mobile-menu.html", { cache: "no-store" });
-        const html = await res.text();
-        container.innerHTML = html;
+        if (!res.ok) throw new Error("Failed to load mobile menu");
 
-        // 1. Bind the Toggle Logic (Open/Close)
+        container.innerHTML = await res.text();
+
+        // Bind logic ONLY now
         bindInternalToggle();
-
-        // 2. Bind the User Data (Name/Avatar)
         bindInternalUserData();
 
-        // Keep your existing layoutManager calls for compatibility
-        if (window.layoutManager && typeof window.layoutManager.bindSidebarData === "function") {
+        if (window.layoutManager?.bindSidebarData) {
             window.layoutManager.bindSidebarData();
         }
-        if (window.layoutManager && typeof window.layoutManager.bindMobileMenuToggle === "function") {
+        if (window.layoutManager?.bindMobileMenuToggle) {
             window.layoutManager.bindMobileMenuToggle();
         }
 
@@ -56,6 +73,7 @@ async function loadMobileMenu() {
         console.error("Mobile menu load failed:", err);
     }
 }
+
 
 // Function to handle opening and closing
 function bindInternalToggle() {

@@ -46,7 +46,7 @@ import followRoutes from "./routes/follow.js";
 import adminRoutes from "./routes/admin.js";
 import storyPage from "./pages/story.page.js";
 import sitemapRoutes from "./routes/sitemap.js";
-
+import optionalAuth from "./middleware/auth.js";
 
 //
 // 3️⃣ PATH RESOLUTION & FRONTEND ROOT
@@ -136,9 +136,6 @@ const sessionMiddleware = session({
 });
 app.use(sessionMiddleware);
 
-//
-// 8️⃣ SECURITY (Helmet + HTTPS redirect)
-//
 app.use(
   helmet({
     crossOriginResourcePolicy: { policy: "cross-origin" },
@@ -155,23 +152,20 @@ app.use(
           "http://localhost:3001",
           "https://lovculator.com/uploads",
           "https://www.google-analytics.com",
-          "https://www.googletagmanager.com"
+          "https://www.googletagmanager.com" // ✅ Already here, good!
         ],
 
-        // Allow scripts from same origin + inline (for now) + prod host
         scriptSrc: [
           "'self'",
           "'unsafe-inline'",
           "https://lovculator.com",
           "https://www.lovculator.com",
           "http://localhost:3001",
-          "https://www.googletagmanager.com",
+          "https://www.googletagmanager.com", // ✅ Already here, good!
           "https://www.google-analytics.com",
           "https://cdn.jsdelivr.net",
         ],
 
-        // ❗ Important: allow inline event handlers (onclick, etc.)
-        // Otherwise you get: "script-src-attr 'none'" errors
         scriptSrcAttr: ["'self'", "'unsafe-inline'"],
 
         styleSrc: [
@@ -180,7 +174,6 @@ app.use(
           "https://fonts.googleapis.com",
         ],
 
-        // Allow inline style attributes set by JS
         styleSrcAttr: ["'self'", "'unsafe-inline'"],
 
         fontSrc: ["'self'", "https://fonts.gstatic.com"],
@@ -194,7 +187,8 @@ app.use(
           process.env.FRONTEND_URL,
           "https://cdn.jsdelivr.net",
           "https://www.google-analytics.com",
-          "https://region1.google-analytics.com"
+          "https://region1.google-analytics.com",
+          "https://www.googletagmanager.com" // ✅ ADD THIS - THIS IS WHAT'S MISSING!
         ].filter(Boolean),
 
         frameSrc: ["'self'"],
@@ -370,7 +364,7 @@ app.use("/api/follow", followRoutes(pool));
 app.use(trackPageVisit);
 app.use("/admin", adminRoutes);
 app.use("/", sitemapRoutes);
-
+app.use(optionalAuth);
 
 //
 // 1️⃣2️⃣ FRONTEND PAGES (AUTO-MAPPED CLEAN URLS)

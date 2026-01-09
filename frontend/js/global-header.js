@@ -4,9 +4,11 @@
  * CONFIGURATION
  */
 const HEADER_CONFIG = {
-  htmlPath: '/components/header.html',
+  authHeader: '/components/header.html',
+  guestHeader: '/components/guest-header.html',
   mobileBreakpoint: 768
 };
+
 
 // Ensure API_BASE is available
 if (!window.API_BASE) {
@@ -265,25 +267,55 @@ async function loadGlobalHeader() {
   const container = document.getElementById("global-header");
   if (!container) return;
 
+  let isLoggedIn = false;
+
   try {
-    const res = await fetch(HEADER_CONFIG.htmlPath, { cache: "no-store" });
+    const me = await fetch(`${window.API_BASE}/auth/me`, {
+      credentials: "include",
+      cache: "no-store"
+    });
+    isLoggedIn = me.ok;
+  } catch (e) {
+    isLoggedIn = false;
+  }
+
+  const headerPath = isLoggedIn
+    ? HEADER_CONFIG.authHeader
+    : HEADER_CONFIG.guestHeader;
+
+  try {
+    const res = await fetch(headerPath, { cache: "no-store" });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
 
-    const html = await res.text();
-    container.innerHTML = html;
+    container.innerHTML = await res.text();
 
-    // --- RUN INTERACTIONS ---
-    initHeaderInteractions(container);
-    
-    // ✅ FETCH AND UPDATE AVATAR IMMEDIATELY
-    updateHeaderUserProfile(container); 
+    // ⚠️ IMPORTANT: only run these for logged-in users
+    if (isLoggedIn) {
+      initHeaderInteractions(container);
+      updateHeaderUserProfile(container);
+      initLayoutManagerIntegration();
 
-    initLayoutManagerIntegration(); 
+      // Messages only for logged-in users
+      setTimeout(updateMessageDropdown, 1000);
+    }
 
   } catch (err) {
     console.error("Header load failed:", err);
   }
 }
+
+document.addEventListener("click", (e) => {
+  const loginBtn = e.target.closest("#loginBtn");
+  if (!loginBtn) return;
+
+  e.preventDefault();
+  e.stopPropagation();
+
+  if (typeof window.showLoginModal === "function") {
+    window.showLoginModal("continue");
+  }
+});
+
 
 function initLayoutManagerIntegration() {
     if (window.layoutManager) {

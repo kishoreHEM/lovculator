@@ -36,7 +36,6 @@
 
   <!-- CSS -->
   <link rel="stylesheet" href="/css/style.css">
-  <link rel="stylesheet" href="/css/messages.css">
   <link rel="stylesheet" href="/css/qa.css">
 
   <!-- Schema: QAPage (STATIC SAFE VERSION) -->
@@ -60,77 +59,136 @@
 
 
 <body class="app-layout question-page">
-<div id="global-header"></div>
+  <div id="global-header"></div>
 
-<!-- Main Layout -->
-<div class="app-container">
-    <!-- Main Content Area -->
+  <!-- 🔐 Global Login Modal (MUST BE HERE) -->
+  <div id="loginGateOverlay" class="login-gate-overlay hidden" aria-hidden="true">
+    <div class="login-gate-modal" role="dialog" aria-modal="true">
+
+      <button class="login-gate-close" aria-label="Close login modal">&times;</button>
+
+      <div class="login-gate-header">
+        <h2 id="loginGateTitle">Join Lovculator</h2>
+        <p id="loginGateSubtitle">Create a free account to continue</p>
+      </div>
+
+      <ul class="login-gate-benefits">
+        <li>❤️ Like & save answers</li>
+        <li>💬 Comment & share your thoughts</li>
+        <li>👥 Follow people & stories</li>
+      </ul>
+
+      <div class="login-gate-actions">
+        <a href="/signup" class="btn-primary">Create free account</a>
+        <button id="openLoginPageBtn" class="btn-secondary">
+          Already have an account?
+        </button>
+      </div>
+
+      <div class="login-gate-footer">
+        <span>No spam. No ads. Just real conversations.</span>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Main Layout -->
+  <div class="app-container">
     <main class="main-content-area">
-        <!-- Question Section -->
-        <section class="question-section">
-            <div id="questionContainer">
-                <div class="loading-question">
-                    <div class="loading-spinner"></div>
-                    <p>Loading question...</p>
-                </div>
-            </div>
-        </section>
 
-        <!-- Answers Section -->
-        <section class="answers-section">
-            <h3>Answers</h3>
-            <div id="answersContainer">
-                <div class="loading-answers">
-                    <div class="loading-spinner"></div>
-                    <p>Loading answers...</p>
-                </div>
-            </div>
-        </section>
+      <!-- Question Section -->
+      <section class="question-section">
+        <div id="questionContainer">
+          <div class="loading-question">
+            <div class="loading-spinner"></div>
+            <p>Loading question...</p>
+          </div>
+        </div>
+      </section>
 
-        <!-- Answer Form Section -->
-        <section id="answerFormContainer"></section>
+      <!-- Answers Section -->
+      <section class="answers-section">
+        <h3>Answers</h3>
+        <div id="answersContainer">
+          <div class="loading-answers">
+            <div class="loading-spinner"></div>
+            <p>Loading answers...</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- Answer Form Section -->
+      <section id="answerFormContainer"></section>
+
     </main>
-</div>
+  </div>
 
-<!-- Scripts -->
-<script src="/js/global-header.js"></script>
-<script src="/js/search.js" defer></script>
-<script src="/js/layout-manager.js"></script>
-<script src="/js/social-features.js"></script>
-<script src="/js/question.js"></script>
-<script src="/js/profile.js"></script>
+  <!-- Scripts -->
+  <script src="/js/global-header.js"></script>
+  <script src="/js/search.js" defer></script>
+  <script src="/js/layout-manager.js"></script>
+  <script src="/js/global-login-gate.js" defer></script>
+  <script src="/js/social-features.js"></script>
+  <script src="/js/question.js"></script>
 
-<script>
-// Initialize page
-document.addEventListener('DOMContentLoaded', function() {
-    console.log('Question page loaded');
-    
-    // Set active state for answers nav
-    const navItems = document.querySelectorAll('.nav-icon-item, .sidebar-item');
-    navItems.forEach(item => {
+  <!-- Page Init -->
+  <script>
+    document.addEventListener('DOMContentLoaded', function () {
+      console.log('Question page loaded');
+
+      // ----------------------------
+      // Nav active state
+      // ----------------------------
+      const navItems = document.querySelectorAll('.nav-icon-item, .sidebar-item');
+      navItems.forEach(item => {
         item.classList.remove('active');
-        if (item.getAttribute('href') === '/answer' || item.textContent.includes('Answers')) {
-            item.classList.add('active');
+        if (
+          item.getAttribute('href') === '/answer' ||
+          item.textContent.includes('Answers')
+        ) {
+          item.classList.add('active');
         }
-    });
-    
-    // Load user info
-    if (window.loadUserInfo) {
+      });
+
+      // ----------------------------
+      // Load user info (if exists)
+      // ----------------------------
+      if (typeof window.loadUserInfo === 'function') {
         window.loadUserInfo();
-    }
-    
-    // Check if question.js loaded and has loadQuestion function
-    setTimeout(() => {
-        if (window.loadQuestion) {
-            window.loadQuestion();
+      }
+
+      // ----------------------------
+      // Load question
+      // ----------------------------
+      setTimeout(() => {
+        if (typeof window.loadQuestion === 'function') {
+          window.loadQuestion();
         } else {
-            console.error('loadQuestion function not found in question.js');
-            document.getElementById('questionContainer').innerHTML = 
-                '<p style="color:red; text-align:center;">Failed to load question. Please refresh the page.</p>';
+          console.error('loadQuestion function not found in question.js');
+          const qc = document.getElementById('questionContainer');
+          if (qc) {
+            qc.innerHTML =
+              '<p style="color:red; text-align:center;">Failed to load question. Please refresh the page.</p>';
+          }
         }
-    }, 500);
-});
-</script>
+      }, 500);
+
+      // ==================================================
+      // 🔐 LOGIN GATE → REMEMBER RETURN PAGE
+      // ==================================================
+      const openLoginBtn = document.getElementById('openLoginPageBtn');
+
+      if (openLoginBtn) {
+        openLoginBtn.addEventListener('click', function () {
+          // Remember where user came from
+          sessionStorage.setItem('loginReturnUrl', window.location.href);
+
+          // Go to login page
+          window.location.href = '/login';
+        });
+      }
+    });
+  </script>
 
 </body>
 </html>

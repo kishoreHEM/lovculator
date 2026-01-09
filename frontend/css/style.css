@@ -7005,3 +7005,69 @@ input:checked + .slider:before { transform: translateX(26px); }
 }
 
 
+/* =========================
+   Guest Header
+========================= */
+
+.guest-header {
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+  background: #ffffff;
+  border-bottom: 1px solid #eee;
+}
+
+.guest-header__container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 12px 16px;
+
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.guest-logo {
+  font-size: 1.5rem;
+  font-weight: 800;
+  text-decoration: none;
+  color: #ff4b8d; /* Lovculator vibe */
+}
+
+.guest-actions {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.guest-link {
+  text-decoration: none;
+  color: #444;
+  font-weight: 500;
+}
+
+.guest-link:hover {
+  text-decoration: underline;
+}
+
+.guest-btn {
+  text-decoration: none;
+  padding: 6px 14px;
+  border-radius: 6px;
+  background: #ff4b8d;
+  color: #fff;
+  font-weight: 600;
+}
+
+.guest-btn:hover {
+  background: #d62839;
+}
+
+.guest-disabled {
+  background: #f7f7f7;
+  cursor: pointer;
+  opacity: 0.85;
+}
+
+
+

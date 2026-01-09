@@ -478,81 +478,160 @@ if (signupForm) {
   });
 }
 
-  // --- LOGIN HANDLER (Updated with email verification check) ---
-  if (loginForm) {
-    loginForm.addEventListener("submit", async (e) => {
-      e.preventDefault();
-      const btn = loginForm.querySelector(".btn-submit");
-      const identifier = document.getElementById("username-or-email").value.trim();
-      const password = document.getElementById("password").value.trim();
+  // --- LOGIN HANDLER (FINAL, SAFE, RESUME-AWARE) ---
+if (loginForm) {
+  loginForm.addEventListener("submit", async (e) => {
+    e.preventDefault();
 
-      if (!identifier || !password)
-        return showMessage("⚠️ Please enter both fields.", "error");
+    const btn = loginForm.querySelector(".btn-submit");
+    const identifier = document.getElementById("username-or-email")?.value.trim();
+    const password = document.getElementById("password")?.value.trim();
 
-      toggleLoading(btn, true, "Logging In...");
+    if (!identifier || !password) {
+      return showMessage("⚠️ Please enter both fields.", "error");
+    }
 
-      try {
-        const { res, data } = await AuthManager.login(identifier, password);
-        
-        if (res.ok) {
-          // Check if email needs verification
-          if (data.needs_verification || data.verification_required) {
-            // User exists but email not verified
-            showVerificationModal({
-              email: data.user?.email || identifier,
-              username: data.user?.username || identifier
-            });
-            
-            showMessageHTML(
-              `⚠️ <strong>Email verification required.</strong> Please check your inbox for the verification link.`,
-              "info"
-            );
-            
-          } else if (data.email_verified === false) {
-            // Email not verified but in grace period
-            showMessage(
-              `✅ Login successful! ⚠️ Please verify your email within ${data.days_left || 'a few'} days for full access.`,
-              "success"
-            );
-            
-            setTimeout(() => {
-              window.location.href = "/profile";
-            }, 1500);
-            
-          } else {
-            // Fully verified - proceed normally
-            showMessage("✅ Login successful! Redirecting...", "success");
-            setTimeout(() => {
-              window.location.href = "/profile";
-            }, 1200);
-          }
-        } else {
-          // Handle error responses
-          if (res.status === 403 && data.needs_verification) {
-            // Specific case: verification required
-            showVerificationModal({
-              email: identifier.includes('@') ? identifier : '',
-              username: identifier.includes('@') ? '' : identifier
-            });
-            
-            showMessageHTML(
-              `<strong>Email verification required.</strong> Please verify your email to log in.`,
-              "error"
-            );
-          } else {
-            // General error
-            const errorMessage = data.error || data.message || "❌ Invalid credentials.";
-            showMessage(errorMessage, "error");
-          }
+    toggleLoading(btn, true, "Logging In...");
+
+    try {
+      const { res, data } = await AuthManager.login(identifier, password);
+
+      if (res.ok) {
+        /* =================================================
+           ❗ EMAIL VERIFICATION REQUIRED
+        ================================================= */
+        if (data.needs_verification || data.verification_required) {
+          showVerificationModal({
+            email: data.user?.email || identifier,
+            username: data.user?.username || identifier
+          });
+
+          showMessageHTML(
+            `⚠️ <strong>Email verification required.</strong> Please check your inbox.`,
+            "info"
+          );
+          return;
         }
-      } catch (err) {
-        console.error("Login error:", err);
-        showMessage("🚫 Network error or server unreachable.", "error");
-      } finally {
-        toggleLoading(btn, false);
-      }
-    });
+
+ /* =================================================
+   ⚠️ GRACE PERIOD (LOGGED IN BUT LIMITED)
+================================================= */
+if (data.email_verified === false) {
+  showMessage(
+    `✅ Login successful! ⚠️ Please verify your email within ${data.days_left || "a few"} days.`,
+    "success"
+  );
+
+  // 1️⃣ Save user globally
+  window.currentUserId = data.user.id;
+  window.currentUser = data.user;
+
+  // 2️⃣ Close login gate if it exists
+  if (typeof window.closeLoginModal === "function") {
+    window.closeLoginModal();
   }
+
+  // 3️⃣ Resume pending action (like / follow / answer)
+  if (typeof window.resumePendingAction === "function") {
+    window.resumePendingAction();
+    return; // 🔥 stay on same page
+  }
+
+  // 4️⃣ Fallback: redirect logic (login page case)
+  setTimeout(() => {
+    const returnUrl = sessionStorage.getItem("loginReturnUrl");
+
+    if (returnUrl) {
+      sessionStorage.removeItem("loginReturnUrl");
+      window.location.href = returnUrl;
+    } else {
+      window.location.href = "/profile";
+    }
+  }, 1200);
+
+  return;
+}
+
+const returnUrl = sessionStorage.getItem("resumeUrl");
+
+if (returnUrl) {
+  sessionStorage.removeItem("resumeUrl");
+  window.location.href = returnUrl;
+} else {
+  window.location.href = "/profile";
+}
+
+
+
+        /* =================================================
+           ✅ FULLY VERIFIED LOGIN (CORE FIX)
+        ================================================= */
+        const user =
+          data.user ||
+          data.currentUser ||
+          data; // fallback-safe
+
+        if (!user?.id) {
+          throw new Error("Login succeeded but user data missing");
+        }
+
+        // 1️⃣ Save globally
+        window.currentUserId = user.id;
+        window.currentUser = user;
+
+        // 2️⃣ If login modal exists → modal login flow
+        const isModalLogin = !!document.getElementById("loginGateOverlay");
+
+        if (isModalLogin) {
+          // Close modal
+          if (typeof window.closeLoginModal === "function") {
+            window.closeLoginModal();
+          }
+
+          // Resume action (like / follow / comment / answer)
+          if (typeof window.resumePendingAction === "function") {
+            window.resumePendingAction();
+          }
+
+          showMessage("✅ Login successful!", "success");
+          return;
+        }
+
+        // 3️⃣ Otherwise → normal login page flow
+        showMessage("✅ Login successful! Redirecting...", "success");
+        setTimeout(() => {
+          window.location.href = "/profile";
+        }, 1200);
+
+      } else {
+        /* =================================================
+           ❌ ERROR RESPONSES
+        ================================================= */
+        if (res.status === 403 && data.needs_verification) {
+          showVerificationModal({
+            email: identifier.includes("@") ? identifier : "",
+            username: identifier.includes("@") ? "" : identifier
+          });
+
+          showMessageHTML(
+            `<strong>Email verification required.</strong> Please verify your email.`,
+            "error"
+          );
+        } else {
+          showMessage(
+            data.error || data.message || "❌ Invalid credentials.",
+            "error"
+          );
+        }
+      }
+    } catch (err) {
+      console.error("Login error:", err);
+      showMessage("🚫 Network error or server unreachable.", "error");
+    } finally {
+      toggleLoading(btn, false);
+    }
+  });
+}
 
   // --- FORGOT PASSWORD HANDLER ---
   if (forgotPasswordForm) {
