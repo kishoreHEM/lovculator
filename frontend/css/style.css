@@ -263,9 +263,9 @@ body {
 .calculator-post {
     background: white;
     border: 1px solid #dbdbdb;
-    border-radius: 0px;
+    border-radius: 10px;
     width: 100%;
-    max-width: 600px;
+    max-width: 800px;
     overflow: hidden;
 }
 
@@ -284,7 +284,7 @@ body {
 }
 
 .post-username {
-    font-weight: 600;
+    font-weight: 700;
     font-size: 20px;
     color: #262626;
 }
@@ -1311,7 +1311,7 @@ body {
     border-radius: 12px;
     padding: 30px;   
     margin: 20px 0;
-    width: 600px;
+    width: 760px;
 }
 
 .name-analysis-header {
@@ -1446,7 +1446,7 @@ body {
     border: 1px solid #dbdbdb;
     border-radius: 12px;
     width: 100%;
-    max-width: 600px;
+    max-width: 800px;
     padding: 30px;
     margin-bottom: 10px;
 }
@@ -1559,7 +1559,7 @@ body {
     border: 1px solid #dbdbdb;
     border-radius: 12px;
     width: 100%;
-    max-width: 600px;
+    max-width: 800px;
     padding: 30px;
     margin-bottom: 10px;
 }
@@ -1668,7 +1668,7 @@ body {
     border: 1px solid #e0e0e0;
     border-radius: 16px;
     width: 100%;
-    max-width: 600px;
+    max-width: 800px;
     padding: 30px;
     box-shadow: 0 8px 30px rgba(0, 0, 0, 0.08);
 }
@@ -1775,7 +1775,7 @@ body {
     border: 1px solid #dbdbdb;
     border-radius: 12px;
     width: 100%;
-    max-width: 600px;
+    max-width: 800px;
     overflow: hidden;
     margin: 20px auto;
 }
@@ -1985,7 +1985,7 @@ body {
     border: 1px solid #dbdbdb;
     border-radius: 12px;
     width: 100%;
-    max-width: 500px;
+    max-width: 800px;
     overflow: hidden;
     margin: 0 auto;
 }
@@ -3564,7 +3564,7 @@ footer {
     padding: 40px 30px;
     margin: 30px 0;
     width: 100%;
-    max-width: 600px;
+    max-width: 800px;
 }
 
 .platform-header {
@@ -4212,7 +4212,7 @@ footer {
 }
 
 .follow-author-btn:hover:not(.following) {
-    background: #e6f1ff;
+    background: #FFE6FC;
 }
 
 /* 🟢 Ensure the post-action buttons are compact and look like tabs */
@@ -4341,7 +4341,7 @@ footer {
     /* margin-left: 280px; <--- REMOVE THIS if you want it centered */
     padding: 20px;
     width: 100%;
-    max-width: 680px;
+    max-width: 800px;
     margin: 0 auto; /* Keeps it perfectly centered */
     
     flex-direction: column;
@@ -4412,7 +4412,7 @@ footer {
     padding: 12px 16px;
     margin: 20px auto; /* Adds space above/below */
     box-shadow: 0 1px 2px rgba(0,0,0,0.08);
-    max-width: 680px;
+    max-width: 800px;
     width: 100%;
     display: flex;
     flex-direction: column;
@@ -5627,7 +5627,7 @@ body.modal-open {
     margin: 15px auto;
     box-shadow: 0 2px 10px rgba(0,0,0,0.06);
     width: 100%;
-    max-width: 680px;
+    max-width: 800px;
 }
 
 /* Upload Section */
@@ -6742,7 +6742,7 @@ body {
 .form-group input,
 .form-group textarea {
     width: 100%;
-    padding: 10px 12px;
+    /*padding: 0px 0px;*/
     border: 1px solid var(--border);
     border-radius: 6px;
     font-size: 14px;

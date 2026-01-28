@@ -481,6 +481,22 @@ window.postAnswer = async function(questionId) {
         } else {
             alert('Answer posted successfully!');
         }
+
+// ==============================================
+// 11. DYNAMIC BREADCRUMB UPDATE
+// ==============================================
+function updateBreadcrumbUI(category) {
+    const breadcrumbList = document.querySelector('.breadcrumb-list');
+    if (!breadcrumbList) return;
+
+    breadcrumbList.innerHTML = `
+        <li><a href="/">Home</a></li>
+        <li><span class="separator">/</span></li>
+        <li><a href="/answer">Questions</a></li>
+        <li><span class="separator">/</span></li>
+        <li class="active">${category}</li>
+    `;
+}
         
         // Reload the page to show new answer
         setTimeout(() => {

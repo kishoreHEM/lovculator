@@ -25,7 +25,7 @@ const createSlug = (text) => {
 // ======================================================
 router.post("/", auth, async (req, res) => {
   try {
-    const { question, description, tags } = req.body;
+    const { question, description, tags, category } = req.body;
     
     if (!req.user || !req.user.id) {
         return res.status(401).json({ error: "Unauthorized" });
@@ -49,13 +49,13 @@ router.post("/", auth, async (req, res) => {
     }
 
     const insertRes = await pool.query(
-      `
-      INSERT INTO questions (user_id, question, description, slug, tags, created_at)
-      VALUES ($1, $2, $3, $4, $5, NOW())
-      RETURNING id, question, description, slug, tags, created_at;
-      `,
-      [userId, question.trim(), description || null, slug, tags || []]
-    );
+  `
+  INSERT INTO questions (user_id, question, description, slug, category, created_at)
+  VALUES ($1, $2, $3, $4, $5, NOW())
+  RETURNING id, question, description, slug, category, created_at;
+  `,
+  [userId, question.trim(), description || null, slug, category || 'love'.toLowerCase() ]
+);
 
     const newQuestion = insertRes.rows[0];
     console.log(`✅ Question Added: ${newQuestion.slug}`);
@@ -78,17 +78,30 @@ router.post("/", auth, async (req, res) => {
 router.get("/latest", async (req, res) => {
   try {
     const userId = req.user ? req.user.id : null;
-    
-    const page = parseInt(req.query.page) || 1;
+
     const limit = parseInt(req.query.limit) || 20;
-    const offset = (page - 1) * limit;
+    const offset = parseInt(req.query.offset) || 0;
+    const category = req.query.category?.toLowerCase();
+
+    let whereClause = "";
+    const params = [userId];
+    let paramIndex = 2;
+
+    if (category && category !== "all") {
+      whereClause = `WHERE LOWER(q.category) = $${paramIndex}`;
+      params.push(category);
+      paramIndex++;
+    }
+
+    params.push(limit, offset);
 
     const questionsRes = await pool.query(
       `
       SELECT 
         q.id, 
         q.question, 
-        q.slug, 
+        q.slug,
+        q.category, 
         q.description, 
         q.tags,
         q.created_at,
@@ -98,17 +111,21 @@ router.get("/latest", async (req, res) => {
         COUNT(DISTINCT a.id) as answers_count,
         COUNT(DISTINCT l.id) as likes_count,
         COUNT(DISTINCT v.id) as views_count,
-        EXISTS(SELECT 1 FROM question_likes WHERE question_id = q.id AND user_id = $1) as user_liked
+        EXISTS(
+          SELECT 1 FROM question_likes 
+          WHERE question_id = q.id AND user_id = $1
+        ) as user_liked
       FROM questions q
       LEFT JOIN users u ON q.user_id = u.id
       LEFT JOIN answers a ON q.id = a.question_id
       LEFT JOIN question_likes l ON q.id = l.question_id
       LEFT JOIN question_views v ON q.id = v.question_id
+      ${whereClause}
       GROUP BY q.id, u.id
       ORDER BY q.created_at DESC
-      LIMIT $2 OFFSET $3;
+      LIMIT $${paramIndex} OFFSET $${paramIndex + 1};
       `,
-      [userId, limit, offset]
+      params
     );
 
     res.json(questionsRes.rows);
@@ -118,12 +135,11 @@ router.get("/latest", async (req, res) => {
   }
 });
 
+
 // ======================================================
 // 3️⃣ GET /api/questions/:slug — Fetch single question
 // ======================================================
 router.get("/:slug", auth, async (req, res) => {
-
-
   try {
     const { slug } = req.params;
     const userId = req.user ? req.user.id : null;
@@ -133,7 +149,12 @@ router.get("/:slug", auth, async (req, res) => {
     const questionRes = await pool.query(
       `
       SELECT 
-        q.*,
+        q.id, 
+        q.question, 
+        q.slug, 
+        q.category, -- Explicitly added for SEO and UI
+        q.description, 
+        q.created_at,
         u.username,
         u.display_name,
         u.avatar_url,
@@ -329,7 +350,8 @@ router.get("/my/questions", auth, async (req, res) => {
       SELECT 
         q.id, 
         q.question, 
-        q.slug, 
+        q.slug,
+        q.category,
         q.description, 
         q.tags, 
         q.created_at,

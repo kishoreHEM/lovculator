@@ -1,96 +1,114 @@
-<!DOCTYPE html>
-<html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
-  <!-- Title -->
-  <title>Relationship Questions & Answers • Lovculator</title>
+  <title>Relationship Questions & Answers | Lovculator Community</title>
 
-  <!-- Meta Description -->
-  <meta name="description" content="Explore relationship questions and answers on Lovculator. Read real questions about love, friendship, dating, and relationships asked by people worldwide.">
+  <meta name="description"
+        content="Browse real relationship questions and answers on Lovculator. Explore love, dating, marriage, friendship, and breakups shared by the community." />
 
-  <!-- Theme Color -->
-  <meta name="theme-color" content="#ff4b8d">
-
-  <!-- Canonical -->
-  <link rel="canonical" href="https://lovculator.com/answer">
+  <link rel="canonical" href="https://lovculator.com/answer" />
+  <meta name="theme-color" content="#ff4b8d" />
 
   <!-- Open Graph -->
-  <meta property="og:title" content="Relationship Questions & Answers • Lovculator">
-  <meta property="og:description" content="Discover real relationship questions and answers from the Lovculator community. Love, dating, friendship & emotional advice.">
-  <meta property="og:type" content="website">
-  <meta property="og:url" content="https://lovculator.com/answer">
-  <meta property="og:image" content="https://lovculator.com/images/og-cover.jpg">
+  <meta property="og:type" content="website" />
+  <meta property="og:title" content="Relationship Questions & Answers | Lovculator" />
+  <meta property="og:description"
+        content="Discover real relationship questions and answers from the Lovculator community." />
+  <meta property="og:url" content="https://lovculator.com/answer" />
+  <meta property="og:image" content="https://lovculator.com/images/og-cover.jpg" />
 
-  <!-- Twitter -->
-  <meta name="twitter:card" content="summary_large_image">
-  <meta name="twitter:title" content="Relationship Questions & Answers • Lovculator">
-  <meta name="twitter:description" content="Real questions about love, dating and relationships answered by the community.">
-  <meta name="twitter:image" content="https://lovculator.com/images/og-cover.jpg">
+  <!-- Twitter Card -->
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="Relationship Questions & Answers | Lovculator" />
+  <meta name="twitter:description"
+        content="Read relationship questions about love, dating, marriage, and friendships on Lovculator." />
+  <meta name="twitter:image" content="https://lovculator.com/images/og-cover.jpg" />
 
-  <!-- Favicons -->
-  <link rel="apple-touch-icon" href="/images/apple-touch-icon.png">
-  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32.png">
-  <link rel="icon" href="/images/favicon.ico" sizes="any">
-
-  <!-- Styles -->
-  <link rel="stylesheet" href="/css/style.css">
-  <link rel="stylesheet" href="/css/messages.css">
-  <link rel="stylesheet" href="/css/qa.css">
-
-  <!-- Schema -->
+  <!-- Collection Page Schema -->
   <script type="application/ld+json">
   {
     "@context": "https://schema.org",
-    "@type": "QAPage",
+    "@type": "CollectionPage",
     "name": "Relationship Questions & Answers",
-    "description": "A community-driven questions and answers page focused on love, dating, relationships and friendship.",
+    "description": "A collection of community-driven relationship questions and answers.",
     "url": "https://lovculator.com/answer"
   }
   </script>
+
+  <!-- Breadcrumb Schema -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    "itemListElement": [
+      { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://lovculator.com" },
+      { "@type": "ListItem", "position": 2, "name": "Answers", "item": "https://lovculator.com/answer" }
+    ]
+  }
+  </script>
+
+  <link rel="stylesheet" href="/css/style.css" />
+  <link rel="stylesheet" href="/css/qa.css" />
 </head>
 
+
+
 <body class="app-layout answers-page">
-<div id="global-header"></div>
+    <div id="global-header"></div>
 
-<!-- 📱 Main Layout -->
-<div class="app-container">
-        
-            <main class="main-content-area">
-                <div id="global-mobile-menu"></div>
-    
-    <h2 class="page-title">Questions for you</h2> 
-
-    <section class="questions-section">
-        <div id="storiesContainer">
-            <div class="loading-stories">
-                <div class="loading-spinner"></div>
-                <p>Loading questions...</p>
-            </div>
-        </div>
-    </section>
-  
-    </main>
-</div>
-            <!-- Empty state (hidden by default) -->
-            <div id="emptyAnswers" class="empty-state hidden">
-                <p>You haven't answered any questions yet. Start sharing your wisdom! 💖</p>
-            </div>
+    <div class="app-container">
+        <main class="main-content-area">
+            <div id="global-mobile-menu"></div>
             
-            <div id="emptyQuestions" class="empty-state hidden">
-                <p>You haven't asked any questions yet. Ask something to get started! 💭</p>
-            </div>
-        </section>
-    </main>
-</div>
-<script src="/js/notifications.js"></script>
-<script src="/js/global-header.js"></script>
-<script src="/js/global-mobile-menu.js"></script>
-<script src="/js/search.js" defer></script>
-<script src="/js/layout-manager.js"></script>
-<script src="/js/social-features.js"></script>
-<script src="/js/questions-feed.js"></script>
+            
 
+            <h2 class="page-title">Questions for you</h2> 
+
+            <div class="filter-container" style="display: flex; gap: 10px; flex-wrap: wrap; align-items: center; background: #fff; padding: 15px; border-radius: 0px; margin-bottom: 25px; box-shadow: 0 2px 8px rgba(0,0,0,0.05);">
+                
+                <div class="search-box" style="flex: 1.5; min-width: 200px;">
+                    <input type="text" id="questionSearchInput" class="comment-input" 
+                           placeholder="Search questions..." style="width: 100%; margin: 0; padding: 10px 15px; border-radius: 8px;">
+                </div>
+                
+                <select id="categorySelect" class="filter-btn" style="appearance: auto; padding: 10px 12px; cursor: pointer; min-width: 150px; border-radius: 8px;">
+                        <option value="all">All Categories</option>
+                        <option value="love">Love</option>
+                        <option value="dating">Dating</option>
+                        <option value="marriage">Marriage</option>
+                        <option value="friendship">Friendship</option>
+                        <option value="communication">Communication</option>
+                        <option value="breakups">Breakups</option>
+                </select>
+
+
+                <select id="sortSelect" class="filter-btn" style="appearance: auto; padding: 10px 12px; cursor: pointer; min-width: 140px; border-radius: 8px;">
+                    <option value="newest">Newest First</option>
+                    <option value="popular">Most Popular</option>
+                    <option value="unanswered">Unanswered</option>
+                </select>
+
+                <button id="applyFilterBtn" class="answer-btn" style="width: auto; padding: 10px 25px; cursor: pointer; border-radius: 8px;">
+                    Filter
+                </button>
+            </div>
+
+            <section class="questions-section">
+                <div id="storiesContainer">
+                    <div class="loading-stories">
+                        <div class="loading-spinner"></div>
+                        <p>Loading questions...</p>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <script src="/js/notifications.js"></script>
+    <script src="/js/global-header.js"></script>
+    <script src="/js/global-mobile-menu.js"></script>
+    <script src="/js/social-features.js"></script>
+    <script src="/js/questions-feed.js"></script>
 </body>
 </html>
