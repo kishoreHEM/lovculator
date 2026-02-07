@@ -263,7 +263,7 @@ function renderAnswerList(question, answers) {
                         </div>
                     </div>
 
-                    <div class="answer-body">${answerHtml || answerText}</div>
+                    <div class="answer-body">${answerHtml ? normalizeAnswerHtml(answerHtml) : answerText}</div>
                     ${answerHtml ? "" : (answerImage ? `
                         <div class="answer-image" style="margin-top:12px;">
                             <img src="${answerImage}" alt="Answer image" style="max-width:100%;border-radius:10px;display:block;">
@@ -316,6 +316,61 @@ function renderAnswerList(question, answers) {
             `;
         })
         .join('');
+}
+
+function normalizeAnswerHtml(html) {
+    const container = document.createElement("div");
+    container.innerHTML = html;
+    const nodes = Array.from(container.childNodes);
+    const output = document.createElement("div");
+
+    let i = 0;
+    const isBullet = (text) => {
+        const t = (text || "").trim();
+        return t.startsWith("•") || t.startsWith("-") || t.startsWith("–");
+    };
+    const stripBullet = (text) => {
+        return (text || "").trim().replace(/^([•\-\–])\s*/, "");
+    };
+
+    while (i < nodes.length) {
+        const node = nodes[i];
+        const text = node.textContent || "";
+
+        if (isBullet(text)) {
+            const ul = document.createElement("ul");
+
+            while (i < nodes.length) {
+                const n = nodes[i];
+                const t = n.textContent || "";
+                if (!isBullet(t)) break;
+
+                let itemText = stripBullet(t);
+
+                if (!itemText && i + 1 < nodes.length) {
+                    const next = nodes[i + 1];
+                    const nextText = (next.textContent || "").trim();
+                    if (nextText && !isBullet(nextText)) {
+                        itemText = nextText;
+                        i++;
+                    }
+                }
+
+                const li = document.createElement("li");
+                li.textContent = itemText;
+                ul.appendChild(li);
+                i++;
+            }
+
+            output.appendChild(ul);
+            continue;
+        }
+
+        output.appendChild(node.cloneNode(true));
+        i++;
+    }
+
+    return output.innerHTML;
 }
 
 /* ---------------------------------------------------------
