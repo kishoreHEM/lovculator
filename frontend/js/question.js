@@ -264,11 +264,11 @@ function renderAnswerList(question, answers) {
                     </div>
 
                     <div class="answer-body">${answerHtml || answerText}</div>
-                    ${answerImage ? `
+                    ${answerHtml ? "" : (answerImage ? `
                         <div class="answer-image" style="margin-top:12px;">
                             <img src="${answerImage}" alt="Answer image" style="max-width:100%;border-radius:10px;display:block;">
                         </div>
-                    ` : ''}
+                    ` : "")}
 
                     <div class="answer-actions">
                         <button class="like-button ${answer.user_liked ? 'liked' : ''}" data-id="${answerId}" data-type="answer">
