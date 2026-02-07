@@ -197,10 +197,10 @@ document.addEventListener("DOMContentLoaded", () => {
 
     const isBulletLine = (line) => {
       const t = line.trim();
-      return t.startsWith("• ") || t.startsWith("- ") || t.startsWith("– ");
+      return t.startsWith("•") || t.startsWith("-") || t.startsWith("–");
     };
 
-    const stripBullet = (line) => line.trim().replace(/^([•\-\–])\s+/, "");
+    const stripBullet = (line) => line.trim().replace(/^([•\-\–])\s*/, "");
 
     lines.forEach((line) => {
       if (isBulletLine(line)) {
@@ -246,13 +246,24 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   editor?.addEventListener("paste", (e) => {
-    const text = e.clipboardData?.getData("text/plain");
-    if (!text) return;
-    if (text.includes("• ") || text.includes("\n- ") || text.includes("\n– ")) {
+    const htmlData = e.clipboardData?.getData("text/html") || "";
+    const text = e.clipboardData?.getData("text/plain") || "";
+
+    if (htmlData.includes("<ul") || htmlData.includes("<ol")) {
       e.preventDefault();
-      const html = buildHtmlFromText(text);
-      insertHtmlAtCursor(html);
+      insertHtmlAtCursor(htmlData);
       validate();
+      return;
+    }
+
+    if (text) {
+      const hasBullets = /(^|\n)\s*[•\-\–]/.test(text);
+      if (hasBullets) {
+        e.preventDefault();
+        const html = buildHtmlFromText(text);
+        insertHtmlAtCursor(html);
+        validate();
+      }
     }
   });
 
