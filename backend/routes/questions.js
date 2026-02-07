@@ -166,12 +166,11 @@ SELECT
 
 	  top_answer.answer_text AS top_answer_text,
 	  ${includeAnswerImage ? "top_answer.image_url AS top_answer_image_url," : ""}
-  first_answer.user_id AS first_answer_user_id,
-  first_answer.username AS first_answer_username,
-  first_answer.display_name AS first_answer_display_name,
-  first_answer.avatar_url AS first_answer_avatar_url,
-  first_answer.bio AS first_answer_bio,
-  first_answer.user_following AS first_answer_user_following,
+	  top_answer.user_id AS top_answer_user_id,
+	  top_answer.username AS top_answer_username,
+	  top_answer.display_name AS top_answer_display_name,
+	  top_answer.avatar_url AS top_answer_avatar_url,
+	  top_answer.user_following AS top_answer_user_following,
 
   CASE 
     WHEN $1::int IS NULL THEN false
@@ -198,39 +197,29 @@ LEFT JOIN question_views v
   ON q.id = v.question_id
 
 	  LEFT JOIN LATERAL (
-	    SELECT a2.answer_text ${includeAnswerImage ? ", a2.image_url" : ""}
+	    SELECT 
+        a2.answer_text
+        ${includeAnswerImage ? ", a2.image_url" : ""},
+        u2.id AS user_id,
+        u2.username,
+        u2.display_name,
+        u2.avatar_url,
+        CASE 
+          WHEN $1::int IS NULL THEN false
+          ELSE EXISTS (
+            SELECT 1 FROM follows 
+            WHERE follower_id = $1::int AND target_id = u2.id
+          )
+        END AS user_following
 	    FROM answers a2
+        JOIN users u2 ON a2.user_id = u2.id
 	    LEFT JOIN answer_likes al2 
 	      ON a2.id = al2.answer_id
 	    WHERE a2.question_id = q.id
-	    GROUP BY a2.id, a2.answer_text, a2.created_at ${includeAnswerImage ? ", a2.image_url" : ""}
+	    GROUP BY a2.id, a2.answer_text, a2.created_at, u2.id, u2.username, u2.display_name, u2.avatar_url ${includeAnswerImage ? ", a2.image_url" : ""}
 	    ORDER BY COUNT(al2.id) DESC, a2.created_at DESC
 	    LIMIT 1
 	  ) top_answer ON true
-
-  LEFT JOIN LATERAL (
-    SELECT 
-      a3.id AS answer_id,
-      a3.answer_text,
-      a3.created_at,
-      u3.id AS user_id,
-      u3.username,
-      u3.display_name,
-      u3.avatar_url,
-      u3.bio,
-      CASE 
-        WHEN $1::int IS NULL THEN false
-        ELSE EXISTS (
-          SELECT 1 FROM follows 
-          WHERE follower_id = $1::int AND target_id = u3.id
-        )
-      END AS user_following
-    FROM answers a3
-    JOIN users u3 ON a3.user_id = u3.id
-    WHERE a3.question_id = q.id
-    ORDER BY a3.created_at ASC
-    LIMIT 1
-  ) first_answer ON true
 
 ${whereClause}
 
@@ -239,15 +228,11 @@ ${whereClause}
     u.id, 
     top_answer.answer_text,
     ${includeAnswerImage ? "top_answer.image_url," : ""}
-    first_answer.answer_id,
-    first_answer.answer_text,
-    first_answer.created_at,
-    first_answer.user_id,
-    first_answer.username,
-    first_answer.display_name,
-    first_answer.avatar_url,
-    first_answer.bio,
-    first_answer.user_following
+    top_answer.user_id,
+    top_answer.username,
+    top_answer.display_name,
+    top_answer.avatar_url,
+    top_answer.user_following
 
 ORDER BY q.created_at DESC
 LIMIT $${paramIndex} OFFSET $${paramIndex + 1};

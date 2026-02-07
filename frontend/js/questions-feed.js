@@ -148,14 +148,14 @@ window.loadQuestions = async function (loadMore = false) {
         day: "numeric"
       });
 
-      const firstAnswerUserId = q.first_answer_user_id || "";
+      const firstAnswerUserId = q.top_answer_user_id || "";
       const firstAnswerName = escapeHtml(
-        q.first_answer_display_name || q.first_answer_username || "User"
+        q.top_answer_display_name || q.top_answer_username || "User"
       );
       const firstAnswerAvatar = escapeHtml(
-        q.first_answer_avatar_url || "/images/default-avatar.png"
+        q.top_answer_avatar_url || "/images/default-avatar.png"
       );
-      const isFollowing = Boolean(q.first_answer_user_following);
+      const isFollowing = Boolean(q.top_answer_user_following);
 
       const firstAnswerRow =
         isHomepage() && (q.answers_count || 0) > 0 && firstAnswerUserId
