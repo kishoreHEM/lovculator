@@ -1,20 +1,23 @@
 /**
  * questions-feed.js
- * Updated: 2026-01-11
- * Features:
- * - Offset-based pagination (100 limit)
- * - Category filtering (UI-only, no card badge)
- * - Dynamic SEO schema update
- * - Load more pagination
+ * PRODUCTION READY
+ * Updated: 2026-02-06
+ *
+ * Responsibilities:
+ * - Fetch questions
+ * - Homepage: show ONLY answered Q&A
+ * - Quora-style answer preview
+ * - Safe pagination
+ * - No SEO schema pollution
  */
 
 // ======================================================
 // 1️⃣ API BASE
 // ======================================================
 if (!window.API_BASE) {
-    window.API_BASE = window.location.hostname.includes("localhost")
-        ? "http://localhost:3001/api"
-        : "https://lovculator.com/api";
+  window.API_BASE = window.location.hostname.includes("localhost")
+    ? "http://localhost:3001/api"
+    : "https://lovculator.com/api";
 }
 
 // ======================================================
@@ -22,248 +25,303 @@ if (!window.API_BASE) {
 // ======================================================
 let currentOffset = 0;
 let currentCategory = "all";
-const PAGE_LIMIT = 100;
+let currentSort = "newest"; // newest | popular | unanswered
+const PAGE_LIMIT = 30;
 
 // ======================================================
-// 3️⃣ XSS SAFE ESCAPE
+// 3️⃣ HELPERS
 // ======================================================
 function escapeHtml(text) {
-    if (typeof text !== "string") return "";
-    return text
-        .replace(/&/g, "&amp;")
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;")
-        .replace(/"/g, "&quot;")
-        .replace(/'/g, "&#039;");
+  if (typeof text !== "string") return "";
+  return text
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+
+function isHomepage() {
+  return document.body.classList.contains("homepage");
 }
 
 // ======================================================
-// 4️⃣ MAIN LOAD FUNCTION
+// 4️⃣ SORT + FILTER (STABLE)
 // ======================================================
-window.loadQuestions = async function (isLoadMore = false, category = currentCategory) {
-    const container =
-        document.getElementById("questionsFeedContainer") ||
-        document.getElementById("storiesContainer");
+function processQuestions(list, sortType) {
+  if (!Array.isArray(list)) return [];
 
-    if (!container) return;
+  let result = list.slice();
 
-    // Reset on fresh load
-    if (!isLoadMore) {
-        currentOffset = 0;
-        currentCategory = category;
-        container.innerHTML = `
-            <div class="loading-stories">
-                <div class="loading-spinner"></div>
-                <p>Loading ${currentCategory === "all" ? "" : currentCategory} questions...</p>
+  // ✅ Homepage rule: ONLY answered questions
+  if (isHomepage()) {
+    result = result.filter(q => (q.answers_count || 0) > 0);
+  }
+
+  switch (sortType) {
+    case "popular":
+      return result.sort((a, b) => {
+        const likeDiff = (b.likes_count || 0) - (a.likes_count || 0);
+        if (likeDiff !== 0) return likeDiff;
+
+        const viewDiff = (b.views_count || 0) - (a.views_count || 0);
+        if (viewDiff !== 0) return viewDiff;
+
+        return new Date(b.created_at) - new Date(a.created_at);
+      });
+
+    case "unanswered":
+      return result.filter(q => (q.answers_count || 0) === 0);
+
+    case "newest":
+    default:
+      return result.sort(
+        (a, b) => new Date(b.created_at) - new Date(a.created_at)
+      );
+  }
+}
+
+// ======================================================
+// 5️⃣ MAIN LOAD FUNCTION
+// ======================================================
+window.loadQuestions = async function (loadMore = false) {
+  const container =
+    document.getElementById("questionsFeedContainer") ||
+    document.getElementById("storiesContainer");
+
+  if (!container) return;
+
+  if (!loadMore) {
+    currentOffset = 0;
+    container.innerHTML = `
+      <div class="loading-stories">
+        <div class="loading-spinner"></div>
+        <p>Loading questions...</p>
+      </div>
+    `;
+  }
+
+  document.getElementById("loadMoreContainer")?.remove();
+
+  try {
+    const categoryParam =
+      currentCategory !== "all"
+        ? `&category=${encodeURIComponent(currentCategory)}`
+        : "";
+
+    const url =
+      `${window.API_BASE}/questions/latest` +
+      `?limit=${PAGE_LIMIT}&offset=${currentOffset}${categoryParam}`;
+
+    const response = await fetch(url, {
+      credentials: "include",
+      headers: { Accept: "application/json" }
+    });
+
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+    const apiQuestions = await response.json();
+    const apiCount = apiQuestions.length;
+
+    const questions = processQuestions(apiQuestions, currentSort);
+
+    // Empty state
+    if (!questions.length && !loadMore) {
+      container.innerHTML = `
+        <div class="empty-state">
+          <p>No questions found.</p>
+          <a href="/ask" class="answer-btn">Ask a Question</a>
+        </div>
+      `;
+      return;
+    }
+
+    // ======================================================
+    // 6️⃣ RENDER
+    // ======================================================
+    const html = questions.map(q => {
+      const title = escapeHtml(q.question);
+      const slug = escapeHtml(q.slug || q.id);
+      const date = new Date(q.created_at).toLocaleDateString("en-US", {
+        year: "numeric",
+        month: "short",
+        day: "numeric"
+      });
+
+      const firstAnswerUserId = q.first_answer_user_id || "";
+      const firstAnswerName = escapeHtml(
+        q.first_answer_display_name || q.first_answer_username || "User"
+      );
+      const firstAnswerAvatar = escapeHtml(
+        q.first_answer_avatar_url || "/images/default-avatar.png"
+      );
+      const isFollowing = Boolean(q.first_answer_user_following);
+
+      const firstAnswerRow =
+        isHomepage() && (q.answers_count || 0) > 0 && firstAnswerUserId
+          ? `
+            <div class="question-first-answer" style="display:flex;align-items:center;gap:12px;margin:8px 0 12px 0;">
+              <img src="${firstAnswerAvatar}"
+                   alt="${firstAnswerName}"
+                   style="width:40px;height:40px;border-radius:50%;object-fit:cover;"
+                   onerror="this.src='/images/default-avatar.png'">
+              <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+                <span style="font-weight:600;color:#1c1e21;">${firstAnswerName}</span>
+                <button class="follow-author-btn ${isFollowing ? "following" : ""}"
+                        data-user-id="${firstAnswerUserId}">
+                  ${isFollowing ? "Following" : "+ Follow"}
+                </button>
+              </div>
             </div>
+          `
+          : "";
+
+      let answerPreview = "";
+      if (isHomepage() && q.answers_count > 0 && q.top_answer_text) {
+        answerPreview = `
+          <div class="answer-preview">
+            ${escapeHtml(q.top_answer_text)}
+            <a href="/question/${slug}" class="read-more">Read more</a>
+          </div>
         `;
-    }
+      }
 
-    
-    document.getElementById("loadMoreContainer")?.remove();
-
-
-    try {
-        const categoryParam =
-            currentCategory !== "all"
-                ? `&category=${encodeURIComponent(currentCategory)}`
-                : "";
-
-        const fetchUrl = `${window.API_BASE}/questions/latest?limit=${PAGE_LIMIT}&offset=${currentOffset}${categoryParam}`;
-
-        console.log("Fetching:", fetchUrl);
-
-        const response = await fetch(fetchUrl, {
-            credentials: "include",
-            headers: { Accept: "application/json" }
-        });
-
-        if (!response.ok) {
-            throw new Error(`HTTP ${response.status}`);
-        }
-
-        const questions = await response.json();
-
-        // Empty state
-        if (!questions.length && !isLoadMore) {
-            container.innerHTML = `
-                <div class="empty-state">
-                    <p>No ${currentCategory === "all" ? "" : currentCategory} questions found.</p>
-                    <a href="/ask" class="answer-btn" style="margin-top:12px;">Ask a Question</a>
-                </div>
-            `;
-            return;
-        }
-
-        // ======================================================
-        // 5️⃣ SEO SCHEMA UPDATE (LATEST QUESTION ONLY)
-        // ======================================================
-        if (questions.length && !isLoadMore) {
-            const q = questions[0];
-            const schemaTag = document.getElementById("qa-schema");
-
-            if (schemaTag) {
-                schemaTag.innerHTML = JSON.stringify({
-                    "@context": "https://schema.org",
-                    "@type": "QAPage",
-                    "mainEntity": {
-                        "@type": "Question",
-                        "name": escapeHtml(q.question),
-                        "text": escapeHtml(q.description || q.question),
-                        "answerCount": q.answers_count || 0,
-                        "datePublished": q.created_at,
-                        "author": {
-                            "@type": "Person",
-                            "name": q.display_name || "Community Member",
-                            "url": q.username
-                                ? `https://lovculator.com/profile/${q.username}`
-                                : "https://lovculator.com"
-                        }
-                    }
-                });
+      return `
+        <div class="question-card" data-question-id="${q.id}">
+          <div class="question-header">
+            <span class="question-date">Asked on ${date}</span>
+            ${
+              isHomepage()
+                ? ""
+                : (q.answers_count || 0) > 0
+                  ? `<span class="answered-badge">Answered</span>`
+                  : `<span class="needs-answer-badge">Needs Advice</span>`
             }
-        }
+          </div>
 
-        // ======================================================
-        // 6️⃣ RENDER QUESTIONS (NO CATEGORY BADGE)
-        // ======================================================
-        const html = questions
-            .map(q => {
-                const title = escapeHtml(q.question);
-                const slug = escapeHtml(q.slug || q.id);
-                const date = new Date(q.created_at).toLocaleDateString("en-US", {
-                    year: "numeric",
-                    month: "short",
-                    day: "numeric"
-                });
+          <a href="/question/${slug}" class="question-title">${title}</a>
 
-                return `
-                <div class="question-card" data-question-id="${q.id}">
-                    <div class="question-header">
-                        <span class="question-date">Asked on ${date}</span>
-                    </div>
+          ${firstAnswerRow}
 
-                    <a href="/question/${slug}" class="question-title">${title}</a>
+          ${answerPreview}
 
-                    <div class="question-stats">
-                        <span class="stat-item">${q.answers_count || 0} answers</span>
-                        <span class="stat-item">${q.likes_count || 0} likes</span>
-                        <span class="stat-item">${q.views_count || 0} views</span>
-                    </div>
+          <div class="question-stats">
+            <span>${q.answers_count || 0} answers</span>
+            <span>${q.likes_count || 0} likes</span>
+            <span>${q.views_count || 0} views</span>
+          </div>
 
-                    <div class="question-actions">
-                        <a class="answer-btn" href="/question/${slug}">Answer</a>
+          <div class="question-actions">
+            <a class="answer-btn" href="/question/${slug}">
+              View Answers
+            </a>
 
-                        <button class="share-btn"
-                            data-share-url="https://lovculator.com/question/${slug}"
-                            data-share-title="${title}">
-                            Share
-                        </button>
+            <button class="share-btn"
+              data-share-url="https://lovculator.com/question/${slug}"
+              data-share-title="${title}">
+              Share
+            </button>
+          </div>
+        </div>
+      `;
+    }).join("");
 
-                        <button class="save-btn save-question-btn" data-question-id="${q.id}">
-                            Save
-                        </button>
-                    </div>
-                </div>`;
-            })
-            .join("");
-
-        if (isLoadMore) {
-            container.insertAdjacentHTML("beforeend", html);
-        } else {
-            container.innerHTML = html;
-        }
-
-        currentOffset += questions.length;
-
-        // ======================================================
-        // 7️⃣ LOAD MORE
-        // ======================================================
-        if (questions.length === PAGE_LIMIT) {
-            container.insertAdjacentHTML(
-                "afterend",
-                `
-                <div id="loadMoreContainer" style="text-align:center;margin:30px 0;">
-                    <button class="answer-btn"
-                        onclick="window.loadQuestions(true, currentCategory)">
-                        Load More Questions
-                    </button>
-                </div>`
-            );
-        }
-
-        attachShareButtonListeners();
-        attachSaveButtonListeners();
-
-    } catch (err) {
-        console.error("Load questions error:", err);
-        if (!isLoadMore) {
-            container.innerHTML = `
-                <div class="error-state">
-                    <p>Failed to load questions.</p>
-                    <button class="retry-btn" onclick="window.loadQuestions()">Retry</button>
-                </div>
-            `;
-        }
+    if (loadMore) {
+      container.insertAdjacentHTML("beforeend", html);
+    } else {
+      container.innerHTML = html;
     }
+
+    currentOffset += apiCount;
+
+    // ======================================================
+    // 7️⃣ LOAD MORE (API-BASED)
+    // ======================================================
+    if (apiCount === PAGE_LIMIT) {
+      container.insertAdjacentHTML(
+        "afterend",
+        `
+        <div id="loadMoreContainer" style="text-align:center;margin:30px 0;">
+          <button class="answer-btn" id="loadMoreBtn">
+            Load More
+          </button>
+        </div>
+        `
+      );
+
+      document.getElementById("loadMoreBtn").onclick = () =>
+        window.loadQuestions(true);
+    }
+
+    bindShareButtons();
+
+  } catch (err) {
+    console.error("❌ Load questions error:", err);
+    if (!loadMore) {
+      container.innerHTML = `
+        <div class="error-state">
+          <p>Failed to load questions.</p>
+          <button class="retry-btn" onclick="window.loadQuestions()">Retry</button>
+        </div>
+      `;
+    }
+  }
 };
 
 // ======================================================
-// 8️⃣ SHARE HANDLER
+// 8️⃣ SHARE
 // ======================================================
-function attachShareButtonListeners() {
-    document.querySelectorAll(".share-btn").forEach(btn => {
-        btn.onclick = async () => {
-            const url = btn.dataset.shareUrl;
-            const title = btn.dataset.shareTitle;
+function bindShareButtons() {
+  document.querySelectorAll(".share-btn").forEach(btn => {
+    btn.onclick = async () => {
+      const url = btn.dataset.shareUrl;
+      const title = btn.dataset.shareTitle;
 
-            if (navigator.share) {
-                try {
-                    await navigator.share({ title, url });
-                } catch (_) {}
-            } else {
-                await navigator.clipboard.writeText(url);
-                window.showNotification?.("Link copied 📋", "success");
-            }
-        };
-    });
+      if (navigator.share) {
+        try {
+          await navigator.share({ title, url });
+        } catch {}
+      } else {
+        await navigator.clipboard.writeText(url);
+        window.showNotification?.("Link copied 📋", "success");
+      }
+    };
+  });
 }
 
 // ======================================================
-// 9️⃣ SAVE (UI ONLY)
-// ======================================================
-function attachSaveButtonListeners() {
-    document.querySelectorAll(".save-question-btn").forEach(btn => {
-        btn.onclick = () => {
-            btn.classList.toggle("saved");
-            window.showNotification?.(
-                btn.classList.contains("saved")
-                    ? "Question saved 💖"
-                    : "Removed from saved",
-                "success"
-            );
-        };
-    });
-}
-
-// ======================================================
-// 🔟 FILTER BAR SUPPORT (BUTTONS + SELECT)
+// 9️⃣ FILTER BAR
 // ======================================================
 document.getElementById("applyFilterBtn")?.addEventListener("click", () => {
-    const select = document.getElementById("categorySelect");
-    currentCategory = select?.value || "all";
-    window.loadQuestions(false, currentCategory);
+  const categorySelect = document.getElementById("categorySelect");
+  const sortSelect = document.getElementById("sortSelect");
+
+  if (categorySelect) {
+    currentCategory = categorySelect.value || "all";
+  } else {
+    currentCategory = "all";
+  }
+
+  currentSort = sortSelect?.value || "newest";
+
+  window.loadQuestions(false);
 });
 
-
 // ======================================================
-// 1️⃣1️⃣ INIT
+// 🔟 INIT
 // ======================================================
 document.addEventListener("DOMContentLoaded", () => {
-    if (
-        document.getElementById("questionsFeedContainer") ||
-        document.getElementById("storiesContainer")
-    ) {
-        window.loadQuestions();
-    }
+  // Homepage should never show unanswered sort
+  if (isHomepage()) {
+    document
+      .querySelector('#sortSelect option[value="unanswered"]')
+      ?.remove();
+  }
+
+  if (
+    document.getElementById("questionsFeedContainer") ||
+    document.getElementById("storiesContainer")
+  ) {
+    window.loadQuestions();
+  }
 });

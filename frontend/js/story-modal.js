@@ -1,6 +1,6 @@
 class StoryModal {
     constructor(loveStoriesInstance) {
-        this.loveStories = loveStoriesInstance;
+        this.loveStories = loveStoriesInstance || null;
         
         // ============================================================
         // 1. Find ALL trigger buttons (Updated with your new IDs)
@@ -223,7 +223,11 @@ class StoryModal {
         }
 
         try {
-            await this.loveStories.addStory(formData);
+            if (this.loveStories?.addStory) {
+                await this.loveStories.addStory(formData);
+            } else {
+                await this.submitStoryDirect(formData);
+            }
             this.closeModalFunc();
             this.showToast("Story shared successfully! ❤️", "success");
 
@@ -231,11 +235,12 @@ class StoryModal {
             // ✅ THE FIX: Redirect if we are on the Home Page
             // ============================================================
             const storiesList = document.getElementById('storiesContainer');
+            const isHomePage = document.body.classList.contains("homepage");
             
             // If there is no 'storiesContainer' on this page, it means we are 
             // on the Home Page (or elsewhere). We must redirect the user 
             // so they can see their new story.
-            if (!storiesList) {
+            if (!storiesList || isHomePage) {
                 setTimeout(() => {
                     // Change this URL if your page is named differently (e.g., /stories)
                     window.location.href = '/love-stories'; 
@@ -250,6 +255,31 @@ class StoryModal {
             submitBtn.disabled = false;
             submitBtn.innerText = originalText;
         }
+    }
+
+    async submitStoryDirect(formData) {
+        const apiBase =
+            window.API_BASE ||
+            (window.location.hostname.includes("localhost")
+                ? "http://localhost:3001/api"
+                : "https://lovculator.com/api");
+
+        const response = await fetch(`${apiBase}/stories`, {
+            method: "POST",
+            body: formData,
+            credentials: "include"
+        });
+
+        if (!response.ok) {
+            let message = "Failed to share story";
+            try {
+                const data = await response.json();
+                message = data?.error || data?.message || message;
+            } catch (_) {}
+            throw new Error(message);
+        }
+
+        return response.json().catch(() => ({}));
     }
 
     /* -----------------------------------------
@@ -333,11 +363,7 @@ class StoryModal {
 document.addEventListener('DOMContentLoaded', () => {
     // We wait slightly to ensure window.loveStories is created by the other file
     setTimeout(() => {
-        if (window.loveStories) {
-            window.storyModal = new StoryModal(window.loveStories);
-            console.log("✅ Story Modal Initialized");
-        } else {
-            console.error("❌ Error: window.loveStories not found. Check script loading order.");
-        }
+        window.storyModal = new StoryModal(window.loveStories || null);
+        console.log("✅ Story Modal Initialized");
     }, 100);
 });

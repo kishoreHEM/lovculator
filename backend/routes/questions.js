@@ -4,8 +4,44 @@ import express from "express";
 import pool from "../db.js"; 
 import auth from "../middleware/auth.js"; 
 import { notifyLike, notifyComment } from "./notifications.js"; 
+import multer from "multer";
+import path from "path";
+import fs from "fs";
 
 const router = express.Router();
+// Ensure req.user is populated for all question routes (guests allowed)
+router.use(auth);
+
+// ======================================================
+// 📂 ANSWER IMAGE UPLOAD SETUP (Optional)
+// ======================================================
+const answersUploadDir = "uploads/answers";
+if (!fs.existsSync(answersUploadDir)) {
+  fs.mkdirSync(answersUploadDir, { recursive: true });
+}
+
+const answerStorage = multer.diskStorage({
+  destination: (req, file, cb) => cb(null, answersUploadDir),
+  filename: (req, file, cb) => {
+    const ext = path.extname(file.originalname);
+    const filename = `${Date.now()}-${Math.round(Math.random() * 1e9)}${ext}`;
+    cb(null, filename);
+  }
+});
+
+const answerUpload = multer({ storage: answerStorage });
+
+let hasAnswerImageColumnCache = null;
+async function hasAnswerImageColumn() {
+  if (hasAnswerImageColumnCache !== null) return hasAnswerImageColumnCache;
+  const { rows } = await pool.query(
+    `SELECT 1 FROM information_schema.columns 
+     WHERE table_name = 'answers' AND column_name = 'image_url' 
+     LIMIT 1`
+  );
+  hasAnswerImageColumnCache = rows.length > 0;
+  return hasAnswerImageColumnCache;
+}
 
 // ======================================================
 // 🧩 Helper — Create SEO-friendly Slug
@@ -96,37 +132,113 @@ router.get("/latest", async (req, res) => {
     params.push(limit, offset);
 
     const questionsRes = await pool.query(
-      `
-      SELECT 
-        q.id, 
-        q.question, 
-        q.slug,
-        q.category, 
-        q.description, 
-        q.tags,
-        q.created_at,
-        u.username,
-        u.display_name,
-        u.avatar_url,
-        COUNT(DISTINCT a.id) as answers_count,
-        COUNT(DISTINCT l.id) as likes_count,
-        COUNT(DISTINCT v.id) as views_count,
-        EXISTS(
-          SELECT 1 FROM question_likes 
-          WHERE question_id = q.id AND user_id = $1
-        ) as user_liked
-      FROM questions q
-      LEFT JOIN users u ON q.user_id = u.id
-      LEFT JOIN answers a ON q.id = a.question_id
-      LEFT JOIN question_likes l ON q.id = l.question_id
-      LEFT JOIN question_views v ON q.id = v.question_id
-      ${whereClause}
-      GROUP BY q.id, u.id
-      ORDER BY q.created_at DESC
-      LIMIT $${paramIndex} OFFSET $${paramIndex + 1};
-      `,
-      params
-    );
+`
+SELECT 
+  q.id, 
+  q.question, 
+  q.slug,
+  q.category, 
+  q.description, 
+  q.tags,
+  q.created_at,
+
+  u.username,
+  u.display_name,
+  u.avatar_url,
+
+  COUNT(DISTINCT a.id) AS answers_count,
+  COUNT(DISTINCT l.id) AS likes_count,
+  COUNT(DISTINCT v.id) AS views_count,
+
+  top_answer.answer_text AS top_answer_text,
+  first_answer.user_id AS first_answer_user_id,
+  first_answer.username AS first_answer_username,
+  first_answer.display_name AS first_answer_display_name,
+  first_answer.avatar_url AS first_answer_avatar_url,
+  first_answer.bio AS first_answer_bio,
+  first_answer.user_following AS first_answer_user_following,
+
+  CASE 
+    WHEN $1::int IS NULL THEN false
+    ELSE EXISTS (
+      SELECT 1 
+      FROM question_likes 
+      WHERE question_id = q.id 
+        AND user_id = $1::int
+    )
+  END AS user_liked
+
+	FROM questions q
+
+LEFT JOIN users u 
+  ON q.user_id = u.id
+
+LEFT JOIN answers a 
+  ON q.id = a.question_id
+
+LEFT JOIN question_likes l 
+  ON q.id = l.question_id
+
+LEFT JOIN question_views v 
+  ON q.id = v.question_id
+
+  LEFT JOIN LATERAL (
+    SELECT a2.answer_text
+    FROM answers a2
+    LEFT JOIN answer_likes al2 
+      ON a2.id = al2.answer_id
+    WHERE a2.question_id = q.id
+    GROUP BY a2.id, a2.answer_text, a2.created_at
+    ORDER BY COUNT(al2.id) DESC, a2.created_at DESC
+    LIMIT 1
+  ) top_answer ON true
+
+  LEFT JOIN LATERAL (
+    SELECT 
+      a3.id AS answer_id,
+      a3.answer_text,
+      a3.created_at,
+      u3.id AS user_id,
+      u3.username,
+      u3.display_name,
+      u3.avatar_url,
+      u3.bio,
+      CASE 
+        WHEN $1::int IS NULL THEN false
+        ELSE EXISTS (
+          SELECT 1 FROM follows 
+          WHERE follower_id = $1::int AND target_id = u3.id
+        )
+      END AS user_following
+    FROM answers a3
+    JOIN users u3 ON a3.user_id = u3.id
+    WHERE a3.question_id = q.id
+    ORDER BY a3.created_at ASC
+    LIMIT 1
+  ) first_answer ON true
+
+${whereClause}
+
+  GROUP BY 
+    q.id, 
+    u.id, 
+    top_answer.answer_text,
+    first_answer.answer_id,
+    first_answer.answer_text,
+    first_answer.created_at,
+    first_answer.user_id,
+    first_answer.username,
+    first_answer.display_name,
+    first_answer.avatar_url,
+    first_answer.bio,
+    first_answer.user_following
+
+ORDER BY q.created_at DESC
+LIMIT $${paramIndex} OFFSET $${paramIndex + 1};
+`,
+params
+);
+
 
     res.json(questionsRes.rows);
   } catch (err) {
@@ -192,11 +304,13 @@ router.get("/:slug", auth, async (req, res) => {
       );
     }
 
+    const includeAnswerImage = await hasAnswerImageColumn();
     const answersRes = await pool.query(
       `
       SELECT 
         a.id,
         a.answer_text as answer,
+        ${includeAnswerImage ? "a.image_url," : ""}
         a.created_at,
         u.id as user_id,
         u.username,
@@ -212,7 +326,7 @@ router.get("/:slug", auth, async (req, res) => {
       LEFT JOIN answer_likes al ON a.id = al.answer_id
       LEFT JOIN answer_comments ac ON a.id = ac.answer_id
       WHERE a.question_id = $2
-      GROUP BY a.id, u.id
+      GROUP BY a.id, u.id ${includeAnswerImage ? ", a.image_url" : ""}
       ORDER BY a.created_at ASC;
       `,
       [userId, question.id]
@@ -231,10 +345,15 @@ router.get("/:slug", auth, async (req, res) => {
 // ======================================================
 // 4️⃣ POST /api/questions/:id/answer — Add Answer
 // ======================================================
-router.post("/:id/answer", auth, async (req, res) => {
+router.post("/:id/answer", auth, answerUpload.single("image"), async (req, res) => {
   try {
     const { id } = req.params;
-    const { answer } = req.body;
+    const answer =
+      req.body.answer ||
+      req.body.answer_text ||
+      req.body.content ||
+      req.body.text;
+    const imageUrl = req.file ? `/uploads/answers/${req.file.filename}` : null;
     
     if (!req.user || !req.user.id) {
         return res.status(401).json({ error: "Unauthorized" });
@@ -262,14 +381,24 @@ router.post("/:id/answer", auth, async (req, res) => {
       });
     }
 
-    const result = await pool.query(
-      `
-      INSERT INTO answers (question_id, user_id, answer_text, created_at)
-      VALUES ($1, $2, $3, NOW())
-      RETURNING id, answer_text, created_at;
-      `,
-      [id, userId, answer.trim()]
-    );
+    const includeImage = imageUrl && await hasAnswerImageColumn();
+    const result = includeImage
+      ? await pool.query(
+          `
+          INSERT INTO answers (question_id, user_id, answer_text, image_url, created_at)
+          VALUES ($1, $2, $3, $4, NOW())
+          RETURNING id, answer_text, image_url, created_at;
+          `,
+          [id, userId, answer.trim(), imageUrl]
+        )
+      : await pool.query(
+          `
+          INSERT INTO answers (question_id, user_id, answer_text, created_at)
+          VALUES ($1, $2, $3, NOW())
+          RETURNING id, answer_text, created_at;
+          `,
+          [id, userId, answer.trim()]
+        );
 
     const qOwner = await pool.query("SELECT user_id FROM questions WHERE id = $1", [id]);
     if (qOwner.rows.length > 0) {

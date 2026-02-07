@@ -892,7 +892,7 @@ body {
     .empty-state, .error-state { text-align: center; padding: 60px 20px; background: white; border-radius: 12px; border: 1px solid #dddfe2; margin: 20px 0; }
     .retry-btn { background: #ff4b8d; color: white; border: none; padding: 10px 20px; border-radius: 20px; cursor: pointer; font-weight: 600; }
     
-    .question-card { background: white; border-radius: 0px; padding: 20px; margin-bottom: 0px; box-shadow: 0 1px 2px rgba(0,0,0,0.05); border: 1px solid #f0f2f5; transition: box-shadow 0.2s; }
+    .question-card { background: white; border-radius: 10px; padding: 20px; margin-bottom: 10px; box-shadow: 0 1px 2px rgba(0,0,0,0.05); border: 1px solid #f0f2f5; transition: box-shadow 0.2s; }
     .question-card:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
 
     /* Cleaned Header */
@@ -1232,3 +1232,338 @@ body {
 }
 
 
+
+/* ======================================================
+   ANSWER PREVIEW (Quora-style)
+====================================================== */
+.answer-preview {
+  font-size: 15px;
+  line-height: 1.6;
+  color: #444;
+  margin: 10px 0 14px;
+  position: relative;
+
+  display: -webkit-box;
+  -webkit-line-clamp: 6;        /* 👈 number of lines */
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.answer-preview::after {
+  content: "";
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  width: 100%;
+  height: 40px;
+  background: linear-gradient(to bottom, rgba(255,255,255,0), #fff);
+}
+
+.read-more {
+  display: inline-block;
+  margin-left: 6px;
+  color: #2e69ff;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.read-more:hover {
+  text-decoration: underline;
+}
+
+
+
+/* Quora-Style Modal Container */
+.quora-modal-container {
+    background: #ffffff;
+    width: 100%;
+    max-width: 750px;
+    height: 90vh; /* High distraction-free height */
+    margin: 2vh auto;
+    border-radius: 8px;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 12px 40px rgba(0,0,0,0.15);
+    overflow: hidden;
+    position: relative;
+}
+
+/* Header & User Info */
+.quora-modal-header {
+    padding: 16px 20px;
+    position: relative;
+}
+
+.modal-close-x {
+    position: absolute;
+    top: 10px;
+    left: 15px;
+    background: none;
+    border: none;
+    font-size: 28px;
+    color: #636466;
+    cursor: pointer;
+}
+
+.quora-user-meta {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-top: 20px;
+}
+
+.modal-avatar {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    object-fit: cover;
+}
+
+.user-name {
+    font-size: 15px;
+    font-weight: 700;
+    color: #282829;
+}
+
+.credential-selector {
+    margin-top: 2px;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    border: 1px solid #dee0e1;
+    border-radius: 18px;
+    padding: 2px 10px;
+    font-size: 13px;
+    color: #636466;
+    cursor: pointer;
+}
+
+/* Body & Text Area */
+.quora-modal-body {
+    padding: 0 20px 20px 20px;
+    flex: 1;
+    overflow-y: auto;
+}
+
+.quora-question-title {
+    font-size: 18px;
+    font-weight: 700;
+    color: #282829;
+    margin: 15px 0;
+    line-height: 1.3;
+}
+
+#modalPostContent {
+    width: 100%;
+    min-height: 250px;
+    border: none;
+    outline: none;
+    font-size: 18px;
+    line-height: 1.5;
+    color: #333;
+    resize: none;
+}
+
+/* Image Preview */
+#modalImagePreviewContainer {
+    margin-top: 15px;
+    position: relative;
+    max-width: 100%;
+}
+
+#modalPreviewImage {
+    width: 100%;
+    border-radius: 8px;
+    display: block;
+}
+
+.remove-img-btn {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    background: rgba(255, 255, 255, 0.9);
+    border: 1px solid #ddd;
+    border-radius: 50%;
+    width: 32px;
+    height: 32px;
+    font-size: 20px;
+    cursor: pointer;
+}
+
+/* Footer & Toolbar */
+.quora-modal-footer {
+    padding: 12px 16px;
+    border-top: 1px solid #f0f0f0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: #fff;
+}
+
+.toolbar-left {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+.tool-btn {
+    background: none;
+    border: none;
+    color: #636466;
+    font-size: 18px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 6px;
+    border-radius: 4px;
+    transition: background 0.2s;
+}
+
+.tool-btn:hover {
+    background: #f7f7f8;
+}
+
+.char-counter {
+    font-size: 13px;
+    color: #939598;
+}
+
+/* Action Button */
+.quora-post-btn {
+    background: #3e78ff; /* Quora action blue */
+    color: #ffffff;
+    border: none;
+    border-radius: 20px;
+    padding: 8px 24px;
+    font-weight: 600;
+    font-size: 15px;
+    cursor: pointer;
+    transition: opacity 0.2s;
+}
+
+.quora-post-btn:disabled {
+    background: #e2e2e2;
+    color: #939598;
+    cursor: default;
+}
+
+.quora-post-btn:not(:disabled):hover {
+    opacity: 0.9;
+}
+
+#modalPostContent {
+    width: 100%;
+    min-height: 250px;
+    border: none;
+    outline: none;
+    font-size: 18px;
+    line-height: 1.6;
+    color: #333;
+    overflow-y: auto;
+}
+
+/* Placeholder support for contenteditable */
+#modalPostContent:empty:before {
+    content: attr(data-placeholder);
+    color: #939598;
+    cursor: text;
+}
+
+/* Style images inserted into the editor */
+#modalPostContent img {
+    max-width: 100%;
+    border-radius: 8px;
+    display: block;
+    margin: 15px 0;
+}
+
+.credential-selector {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    border: 1px solid #dee0e1;
+    border-radius: 18px;
+    padding: 2px 10px;
+    font-size: 13px;
+    color: #636466;
+    max-width: 250px; /* Prevents long bios from pushing the 'X' button */
+}
+
+#modalUserBio {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: block;
+}
+
+
+/* 1. Base Modal Container (Desktop) */
+.quora-modal-container {
+    background: #ffffff;
+    width: 100%;
+    max-width: 750px;
+    height: 90vh; 
+    margin: 2vh auto;
+    border-radius: 8px;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 12px 40px rgba(0,0,0,0.15);
+    overflow: hidden;
+    position: relative;
+    transition: all 0.3s ease;
+}
+
+/* 2. Mobile Full-Screen Optimization (Fix for fitting) */
+@media (max-width: 768px) {
+    .quora-modal-container {
+        width: 100%;
+        height: 100%; /* Force full height on mobile */
+        max-width: 100%;
+        margin: 0;
+        border-radius: 0; /* Remove rounded corners for full-screen look */
+        height: 100vh;
+        height: -webkit-fill-available; /* Fix for mobile browser toolbars */
+    }
+
+    .quora-modal-header {
+        padding: 12px 15px;
+    }
+
+    .quora-modal-body {
+        padding: 10px 15px;
+    }
+
+    .quora-question-title {
+        font-size: 1.1rem; /* Slightly smaller for mobile */
+        margin: 10px 0;
+    }
+
+    #modalPostContent {
+        font-size: 16px; /* Prevents iOS auto-zoom on focus */
+        min-height: 60vh;
+    }
+
+    .quora-modal-footer {
+        padding: 10px 15px;
+        position: sticky; /* Keeps toolbar visible above keyboard */
+        bottom: 0;
+        background: #fff;
+    }
+
+    .quora-post-btn {
+        padding: 6px 20px;
+        font-size: 14px;
+    }
+
+    .toolbar-left {
+        gap: 10px;
+    }
+}
+
+/* 3. Editor-specific Image Handling for Mobile */
+.editor-image-wrapper img {
+    width: 100%;
+    height: auto;
+    object-fit: contain;
+}
