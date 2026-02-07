@@ -189,7 +189,7 @@ body {
 .answer-body img {
   max-width: 100%;
   height: auto;
-  max-height: 400px; /* Increased slightly for desktop */
+  /*max-height: 400px; /* Increased slightly for desktop */
   display: block;
   margin: 15px 0;
   border-radius: 8px;
