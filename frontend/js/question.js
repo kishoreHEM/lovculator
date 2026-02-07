@@ -263,7 +263,7 @@ function renderAnswerList(question, answers) {
                         </div>
                     </div>
 
-                    <div class="answer-body">${answerHtml ? normalizeAnswerHtml(answerHtml) : normalizeAnswerText(answerText)}</div>
+                    <div class="answer-body">${answerHtml ? answerHtml : normalizeAnswerText(answerText)}</div>
                     ${answerHtml ? "" : (answerImage ? `
                         <div class="answer-image" style="margin-top:12px;">
                             <img src="${answerImage}" alt="Answer image" style="max-width:100%;border-radius:10px;display:block;">

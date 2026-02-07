@@ -1561,9 +1561,3 @@ body {
     }
 }
 
-/* 3. Editor-specific Image Handling for Mobile */
-.editor-image-wrapper img {
-    width: 100%;
-    height: auto;
-    object-fit: contain;
-}

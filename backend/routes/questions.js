@@ -410,7 +410,26 @@ router.post("/:id/answer", auth, answerUpload.array("images", 6), async (req, re
       });
     }
 
-    let finalHtml = answerHtml;
+    const cleanAnswerHtml = (html) => {
+      if (!html) return html;
+      let out = html;
+
+      // Remove empty paragraphs/divs
+      out = out.replace(/<(p|div)>(\s|&nbsp;|<br\s*\/?>)*<\/\1>/gi, "");
+
+      // Strip <p> wrappers inside list items
+      out = out.replace(/<li>\s*<p>/gi, "<li>");
+      out = out.replace(/<\/p>\s*<\/li>/gi, "</li>");
+
+      // Remove stray <br> between list items
+      out = out.replace(/<\/li>\s*(<br\s*\/?>\s*)+<li>/gi, "</li><li>");
+      out = out.replace(/<ul>\s*(<br\s*\/?>\s*)+/gi, "<ul>");
+      out = out.replace(/(<br\s*\/?>\s*)+<\/ul>/gi, "</ul>");
+
+      return out;
+    };
+
+    let finalHtml = cleanAnswerHtml(answerHtml);
     if (finalHtml) {
       imageMap.forEach((url, idx) => {
         finalHtml = finalHtml.replaceAll(`__IMAGE_${idx}__`, url);
