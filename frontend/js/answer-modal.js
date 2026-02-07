@@ -188,6 +188,75 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   // ==================================================
+  // BULLET NORMALIZATION (PASTE)
+  // ==================================================
+  function buildHtmlFromText(text) {
+    const lines = text.replace(/\r\n/g, "\n").split("\n");
+    let html = "";
+    let inList = false;
+
+    const isBulletLine = (line) => {
+      const t = line.trim();
+      return t.startsWith("• ") || t.startsWith("- ") || t.startsWith("– ");
+    };
+
+    const stripBullet = (line) => line.trim().replace(/^([•\-\–])\s+/, "");
+
+    lines.forEach((line) => {
+      if (isBulletLine(line)) {
+        if (!inList) {
+          html += "<ul>";
+          inList = true;
+        }
+        html += `<li>${escapeHtml(stripBullet(line))}</li>`;
+      } else {
+        if (inList) {
+          html += "</ul>";
+          inList = false;
+        }
+        if (line.trim().length) {
+          html += `<p>${escapeHtml(line)}</p>`;
+        }
+      }
+    });
+
+    if (inList) html += "</ul>";
+    return html;
+  }
+
+  function insertHtmlAtCursor(html) {
+    const sel = window.getSelection();
+    if (!sel || !sel.rangeCount) {
+      editor.insertAdjacentHTML("beforeend", html);
+      return;
+    }
+    const range = sel.getRangeAt(0);
+    range.deleteContents();
+    const temp = document.createElement("div");
+    temp.innerHTML = html;
+    const frag = document.createDocumentFragment();
+    let node;
+    while ((node = temp.firstChild)) {
+      frag.appendChild(node);
+    }
+    range.insertNode(frag);
+    range.collapse(false);
+    sel.removeAllRanges();
+    sel.addRange(range);
+  }
+
+  editor?.addEventListener("paste", (e) => {
+    const text = e.clipboardData?.getData("text/plain");
+    if (!text) return;
+    if (text.includes("• ") || text.includes("\n- ") || text.includes("\n– ")) {
+      e.preventDefault();
+      const html = buildHtmlFromText(text);
+      insertHtmlAtCursor(html);
+      validate();
+    }
+  });
+
+  // ==================================================
   // SUBMIT (Rich Content)
   // ==================================================
   submitBtn?.addEventListener("click", async () => {
@@ -199,6 +268,9 @@ document.addEventListener("DOMContentLoaded", () => {
     try {
       const clone = editor.cloneNode(true);
       clone.querySelectorAll(".editor-image-remove").forEach(btn => btn.remove());
+      if (!clone.querySelector("img") && !clone.querySelector("ul") && /(^|\n)[•\-\–]\s/.test(editor.innerText)) {
+        clone.innerHTML = buildHtmlFromText(editor.innerText);
+      }
       const imgs = clone.querySelectorAll("img[data-upload-index]");
       const imageIndices = [];
       imgs.forEach(img => {
