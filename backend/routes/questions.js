@@ -32,6 +32,7 @@ const answerStorage = multer.diskStorage({
 const answerUpload = multer({ storage: answerStorage });
 
 let hasAnswerImageColumnCache = null;
+let hasAnswerHtmlColumnCache = null;
 async function hasAnswerImageColumn() {
   if (hasAnswerImageColumnCache !== null) return hasAnswerImageColumnCache;
   const { rows } = await pool.query(
@@ -41,6 +42,17 @@ async function hasAnswerImageColumn() {
   );
   hasAnswerImageColumnCache = rows.length > 0;
   return hasAnswerImageColumnCache;
+}
+
+async function hasAnswerHtmlColumn() {
+  if (hasAnswerHtmlColumnCache !== null) return hasAnswerHtmlColumnCache;
+  const { rows } = await pool.query(
+    `SELECT 1 FROM information_schema.columns 
+     WHERE table_name = 'answers' AND column_name = 'answer_html' 
+     LIMIT 1`
+  );
+  hasAnswerHtmlColumnCache = rows.length > 0;
+  return hasAnswerHtmlColumnCache;
 }
 
 // ======================================================
@@ -131,6 +143,8 @@ router.get("/latest", async (req, res) => {
 
     params.push(limit, offset);
 
+    const includeAnswerImage = await hasAnswerImageColumn();
+
     const questionsRes = await pool.query(
 `
 SELECT 
@@ -150,7 +164,8 @@ SELECT
   COUNT(DISTINCT l.id) AS likes_count,
   COUNT(DISTINCT v.id) AS views_count,
 
-  top_answer.answer_text AS top_answer_text,
+	  top_answer.answer_text AS top_answer_text,
+	  ${includeAnswerImage ? "top_answer.image_url AS top_answer_image_url," : ""}
   first_answer.user_id AS first_answer_user_id,
   first_answer.username AS first_answer_username,
   first_answer.display_name AS first_answer_display_name,
@@ -182,16 +197,16 @@ LEFT JOIN question_likes l
 LEFT JOIN question_views v 
   ON q.id = v.question_id
 
-  LEFT JOIN LATERAL (
-    SELECT a2.answer_text
-    FROM answers a2
-    LEFT JOIN answer_likes al2 
-      ON a2.id = al2.answer_id
-    WHERE a2.question_id = q.id
-    GROUP BY a2.id, a2.answer_text, a2.created_at
-    ORDER BY COUNT(al2.id) DESC, a2.created_at DESC
-    LIMIT 1
-  ) top_answer ON true
+	  LEFT JOIN LATERAL (
+	    SELECT a2.answer_text ${includeAnswerImage ? ", a2.image_url" : ""}
+	    FROM answers a2
+	    LEFT JOIN answer_likes al2 
+	      ON a2.id = al2.answer_id
+	    WHERE a2.question_id = q.id
+	    GROUP BY a2.id, a2.answer_text, a2.created_at ${includeAnswerImage ? ", a2.image_url" : ""}
+	    ORDER BY COUNT(al2.id) DESC, a2.created_at DESC
+	    LIMIT 1
+	  ) top_answer ON true
 
   LEFT JOIN LATERAL (
     SELECT 
@@ -223,6 +238,7 @@ ${whereClause}
     q.id, 
     u.id, 
     top_answer.answer_text,
+    ${includeAnswerImage ? "top_answer.image_url," : ""}
     first_answer.answer_id,
     first_answer.answer_text,
     first_answer.created_at,
@@ -305,11 +321,13 @@ router.get("/:slug", auth, async (req, res) => {
     }
 
     const includeAnswerImage = await hasAnswerImageColumn();
+    const includeAnswerHtml = await hasAnswerHtmlColumn();
     const answersRes = await pool.query(
       `
       SELECT 
         a.id,
         a.answer_text as answer,
+        ${includeAnswerHtml ? "a.answer_html," : ""}
         ${includeAnswerImage ? "a.image_url," : ""}
         a.created_at,
         u.id as user_id,
@@ -326,7 +344,7 @@ router.get("/:slug", auth, async (req, res) => {
       LEFT JOIN answer_likes al ON a.id = al.answer_id
       LEFT JOIN answer_comments ac ON a.id = ac.answer_id
       WHERE a.question_id = $2
-      GROUP BY a.id, u.id ${includeAnswerImage ? ", a.image_url" : ""}
+      GROUP BY a.id, u.id ${includeAnswerHtml ? ", a.answer_html" : ""} ${includeAnswerImage ? ", a.image_url" : ""}
       ORDER BY a.created_at ASC;
       `,
       [userId, question.id]
@@ -345,7 +363,7 @@ router.get("/:slug", auth, async (req, res) => {
 // ======================================================
 // 4️⃣ POST /api/questions/:id/answer — Add Answer
 // ======================================================
-router.post("/:id/answer", auth, answerUpload.single("image"), async (req, res) => {
+router.post("/:id/answer", auth, answerUpload.array("images", 6), async (req, res) => {
   try {
     const { id } = req.params;
     const answer =
@@ -353,7 +371,18 @@ router.post("/:id/answer", auth, answerUpload.single("image"), async (req, res) 
       req.body.answer_text ||
       req.body.content ||
       req.body.text;
-    const imageUrl = req.file ? `/uploads/answers/${req.file.filename}` : null;
+    const answerHtml = req.body.answer_html || null;
+    const imageIndicesRaw = req.body.image_indices || "[]";
+    const imageIndices = (() => {
+      try { return JSON.parse(imageIndicesRaw); } catch { return []; }
+    })();
+    const files = Array.isArray(req.files) ? req.files : [];
+    const imageUrls = files.map(f => `/uploads/answers/${f.filename}`);
+    const imageMap = new Map();
+    imageIndices.forEach((idx, i) => {
+      if (imageUrls[i]) imageMap.set(Number(idx), imageUrls[i]);
+    });
+    const firstImageUrl = imageUrls[0] || null;
     
     if (!req.user || !req.user.id) {
         return res.status(401).json({ error: "Unauthorized" });
@@ -381,24 +410,55 @@ router.post("/:id/answer", auth, answerUpload.single("image"), async (req, res) 
       });
     }
 
-    const includeImage = imageUrl && await hasAnswerImageColumn();
-    const result = includeImage
-      ? await pool.query(
-          `
-          INSERT INTO answers (question_id, user_id, answer_text, image_url, created_at)
-          VALUES ($1, $2, $3, $4, NOW())
-          RETURNING id, answer_text, image_url, created_at;
-          `,
-          [id, userId, answer.trim(), imageUrl]
-        )
-      : await pool.query(
-          `
-          INSERT INTO answers (question_id, user_id, answer_text, created_at)
-          VALUES ($1, $2, $3, NOW())
-          RETURNING id, answer_text, created_at;
-          `,
-          [id, userId, answer.trim()]
-        );
+    let finalHtml = answerHtml;
+    if (finalHtml) {
+      imageMap.forEach((url, idx) => {
+        finalHtml = finalHtml.replaceAll(`__IMAGE_${idx}__`, url);
+      });
+      finalHtml = finalHtml.replace(/data-upload-index="\\d+"/g, "");
+    }
+
+    const includeImage = firstImageUrl && await hasAnswerImageColumn();
+    const includeHtml = finalHtml && await hasAnswerHtmlColumn();
+
+    let result;
+    if (includeHtml && includeImage) {
+      result = await pool.query(
+        `
+        INSERT INTO answers (question_id, user_id, answer_text, answer_html, image_url, created_at)
+        VALUES ($1, $2, $3, $4, $5, NOW())
+        RETURNING id, answer_text, answer_html, image_url, created_at;
+        `,
+        [id, userId, answer.trim(), finalHtml, firstImageUrl]
+      );
+    } else if (includeHtml) {
+      result = await pool.query(
+        `
+        INSERT INTO answers (question_id, user_id, answer_text, answer_html, created_at)
+        VALUES ($1, $2, $3, $4, NOW())
+        RETURNING id, answer_text, answer_html, created_at;
+        `,
+        [id, userId, answer.trim(), finalHtml]
+      );
+    } else if (includeImage) {
+      result = await pool.query(
+        `
+        INSERT INTO answers (question_id, user_id, answer_text, image_url, created_at)
+        VALUES ($1, $2, $3, $4, NOW())
+        RETURNING id, answer_text, image_url, created_at;
+        `,
+        [id, userId, answer.trim(), firstImageUrl]
+      );
+    } else {
+      result = await pool.query(
+        `
+        INSERT INTO answers (question_id, user_id, answer_text, created_at)
+        VALUES ($1, $2, $3, NOW())
+        RETURNING id, answer_text, created_at;
+        `,
+        [id, userId, answer.trim()]
+      );
+    }
 
     const qOwner = await pool.query("SELECT user_id FROM questions WHERE id = $1", [id]);
     if (qOwner.rows.length > 0) {

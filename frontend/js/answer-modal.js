@@ -10,6 +10,8 @@ document.addEventListener("DOMContentLoaded", () => {
   // ==================================================
   const MAX_CHARS = 10000;
   let currentQuestionId = null;
+  let selectedImages = [];
+  let imageIndexCounter = 0;
 
   // ==================================================
   // ELEMENTS
@@ -102,7 +104,8 @@ document.addEventListener("DOMContentLoaded", () => {
       return;
     }
 
-    selectedImage = file;
+    const imageIndex = imageIndexCounter++;
+    selectedImages[imageIndex] = file;
 
     const reader = new FileReader();
     reader.onload = () => {
@@ -114,14 +117,20 @@ document.addEventListener("DOMContentLoaded", () => {
 
       const img = document.createElement("img");
       img.src = reader.result;
+      img.setAttribute("data-upload-index", String(imageIndex));
       img.style.maxWidth = "100%";
       img.style.borderRadius = "8px";
       img.style.display = "block";
 
       const removeBtn = document.createElement("button");
       removeBtn.innerHTML = "&times;";
+      removeBtn.className = "editor-image-remove";
       removeBtn.style.cssText = "position:absolute;top:10px;right:10px;background:#fff;border-radius:50%;width:28px;height:28px;border:1px solid #ddd;cursor:pointer;font-size:20px;";
-      removeBtn.onclick = () => { wrapper.remove(); validate(); };
+      removeBtn.onclick = () => {
+        selectedImages[imageIndex] = null;
+        wrapper.remove();
+        validate();
+      };
 
       wrapper.appendChild(img);
       wrapper.appendChild(removeBtn);
@@ -188,9 +197,28 @@ document.addEventListener("DOMContentLoaded", () => {
     submitBtn.innerHTML = "Posting…";
 
     try {
+      const clone = editor.cloneNode(true);
+      clone.querySelectorAll(".editor-image-remove").forEach(btn => btn.remove());
+      const imgs = clone.querySelectorAll("img[data-upload-index]");
+      const imageIndices = [];
+      imgs.forEach(img => {
+        const idx = img.getAttribute("data-upload-index");
+        if (idx) {
+          imageIndices.push(Number(idx));
+          img.setAttribute("src", `__IMAGE_${idx}__`);
+          img.removeAttribute("data-upload-index");
+        }
+      });
+
       const fd = new FormData();
-      fd.append("answer", editor.innerText.trim());
-      if (selectedImage) fd.append("image", selectedImage);
+      fd.append("answer_html", clone.innerHTML);
+      fd.append("answer_text", editor.innerText);
+      fd.append("image_indices", JSON.stringify(imageIndices));
+
+      imageIndices.forEach(idx => {
+        const file = selectedImages[idx];
+        if (file) fd.append("images", file);
+      });
 
       const res = await fetch(`/api/questions/${currentQuestionId}/answer`, {
         method: "POST",
@@ -222,7 +250,8 @@ document.addEventListener("DOMContentLoaded", () => {
     charCount.textContent = `0 / ${MAX_CHARS}`;
     submitBtn.disabled = true;
     currentQuestionId = null;
-    selectedImage = null;
+    selectedImages = [];
+    imageIndexCounter = 0;
   }
 
   function toast(msg, type = "info") {

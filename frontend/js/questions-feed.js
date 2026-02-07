@@ -176,9 +176,20 @@ window.loadQuestions = async function (loadMore = false) {
           `
           : "";
 
+      const topAnswerImage = q.top_answer_image_url
+        ? (q.top_answer_image_url.startsWith("http")
+            ? q.top_answer_image_url
+            : (window.ASSET_BASE || "") + q.top_answer_image_url)
+        : "";
+
       let answerPreview = "";
       if (isHomepage() && q.answers_count > 0 && q.top_answer_text) {
         answerPreview = `
+          ${topAnswerImage ? `
+            <div class="answer-preview-image" style="margin:10px 0;">
+              <img src="${topAnswerImage}" alt="Answer image" style="max-width:100%;border-radius:10px;display:block;">
+            </div>
+          ` : ""}
           <div class="answer-preview">
             ${escapeHtml(q.top_answer_text)}
             <a href="/question/${slug}" class="read-more">Read more</a>

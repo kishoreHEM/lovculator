@@ -223,6 +223,7 @@ function renderAnswerList(question, answers) {
             const userName = answer.display_name || answer.username || answer.author_name || 'User';
             const userBio = answer.bio || answer.author_bio || '';
             const answerText = answer.answer || answer.content || answer.text || '';
+            const answerHtml = answer.answer_html || '';
             const answerDate = answer.created_at || answer.date || '';
             const likeCount = answer.likes_count || answer.like_count || 0;
             const commentCount = answer.comments_count || answer.comment_count || 0;
@@ -262,7 +263,7 @@ function renderAnswerList(question, answers) {
                         </div>
                     </div>
 
-                    <div class="answer-body">${answerText}</div>
+                    <div class="answer-body">${answerHtml || answerText}</div>
                     ${answerImage ? `
                         <div class="answer-image" style="margin-top:12px;">
                             <img src="${answerImage}" alt="Answer image" style="max-width:100%;border-radius:10px;display:block;">
