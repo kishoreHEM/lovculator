@@ -54,7 +54,16 @@ class StoryModal {
 
         // ✅ This loop now adds click listeners to your new buttons too
         this.triggers.forEach(btn => {
-            btn.addEventListener('click', (e) => this.openModal(e));
+            btn.addEventListener('click', (e) => {
+                if (!window.currentUserId) {
+                    e.preventDefault();
+                    e.stopImmediatePropagation();
+                    this.storyModal?.classList.add('hidden');
+                    window.showLoginModal?.("share a love story");
+                    return;
+                }
+                this.openModal(e);
+            });
         });
 
         // Close Logic
@@ -163,7 +172,10 @@ class StoryModal {
     }
 
     openModal(e) {
-        if (e) e.preventDefault();
+        if (e) {
+            e.preventDefault();
+            e.stopPropagation();
+        }
         if (!window.currentUserId) {
             window.showLoginModal?.("share a love story");
             return;

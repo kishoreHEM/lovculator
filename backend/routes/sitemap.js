@@ -33,11 +33,13 @@ router.get("/sitemap.xml", async (req, res) => {
     // ---------- STATIC PAGES ----------
     const staticPages = [
       { loc: "/", priority: "1.0", freq: "daily" },
-      { loc: "/love-calculator", priority: "0.9", freq: "weekly" },
+      { loc: "/questions", priority: "0.9", freq: "daily" },
       { loc: "/love-stories", priority: "0.9", freq: "daily" },
-      { loc: "/answer", priority: "0.9", freq: "daily" },
+      { loc: "/love-calculator", priority: "0.8", freq: "weekly" },
       { loc: "/about", priority: "0.6", freq: "monthly" },
-      { loc: "/contact", priority: "0.6", freq: "monthly" }
+      { loc: "/contact", priority: "0.6", freq: "monthly" },
+      { loc: "/privacy", priority: "0.3", freq: "yearly" },
+      { loc: "/terms", priority: "0.3", freq: "yearly" }
     ];
 
     staticPages.forEach(p => {

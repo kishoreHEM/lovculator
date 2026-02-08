@@ -137,6 +137,9 @@ router.delete("/clear-all", auth, async (req, res) => {
 ====================================================== */
 router.get("/unread-count", auth, async (req, res) => {
     try {
+        if (!req.user?.id) {
+            return res.json({ success: true, count: 0 });
+        }
         const result = await pool.query(
             "SELECT COUNT(*) AS count FROM notifications WHERE user_id = $1 AND is_read = false",
             [req.user.id]

@@ -710,6 +710,9 @@ router.delete("/messages/:messageId", auth, async (req, res) => {
 ====================================================== */
 router.get("/unread-count", auth, async (req, res) => {
   try {
+    if (!req.user?.id) {
+      return res.json({ count: 0, success: true });
+    }
     const userId = req.user.id;
 
     const { rows } = await pool.query(

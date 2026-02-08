@@ -145,7 +145,27 @@ function initHeaderInteractions(container) {
   bindActionButtons('#deskNotifBtn', '#mobNotifBtn', '#notificationPanel');
   bindActionButtons('#deskMsgBtn', '#mobMsgBtn', '#messagePanel');
 
-
+  // --- F. Logout (Mobile Sidebar) ---
+  const mobileLogout = document.getElementById("mobileLogoutBtn");
+  if (mobileLogout && !mobileLogout.dataset.bound) {
+    mobileLogout.dataset.bound = "true";
+    mobileLogout.addEventListener("click", async (e) => {
+      e.preventDefault();
+      try {
+        const res = await fetch(`${window.API_BASE}/auth/logout`, {
+          method: "POST",
+          credentials: "include"
+        });
+        if (res.ok) {
+          window.location.href = "/login";
+        } else {
+          console.warn("Logout failed");
+        }
+      } catch (err) {
+        console.error("Logout error:", err);
+      }
+    });
+  }
 
   // --- E. Fix Body Padding ---
   const headerEl = container.querySelector('.main-header');
