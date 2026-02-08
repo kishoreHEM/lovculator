@@ -9,31 +9,43 @@
 
   <title>Relationship Questions & Answers – Real Love Advice | Lovculator</title>
 
-  <meta name="description"
-        content="Explore real relationship questions and answers on Lovculator. Get honest advice on love, dating, marriage, breakups, and emotional challenges." />
+  <meta name="description" content="Explore real relationship questions and answers on Lovculator. Get honest advice on love, dating, marriage, breakups, and emotional challenges." />
+
+  <meta name="robots" content="index,follow" />
 
   <link rel="canonical" href="https://lovculator.com/" />
   <meta name="theme-color" content="#ff4b8d" />
 
   <!-- =====================================================
+       FAVICONS
+  ====================================================== -->
+  <link rel="icon" type="image/x-icon" href="/images/favicon.ico" />
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32.png" />
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16.png" />
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon.png" />
+  <link rel="icon" type="image/png" sizes="192x192" href="/images/android-chrome-192x192.png" />
+  <link rel="icon" type="image/png" sizes="512x512" href="/images/android-chrome-512x512.png" />
+
+  <!-- =====================================================
        OPEN GRAPH
   ====================================================== -->
   <meta property="og:type" content="website" />
-  <meta property="og:title" content="Relationship Questions & Answers | Lovculator" />
-  <meta property="og:description"
-        content="Discover real relationship questions and answers shared by people who understand love." />
+  <meta property="og:title" content="Relationship Questions & Answers – Real Love Advice | Lovculator" />
+  <meta property="og:description" content="Explore real relationship questions and answers on Lovculator. Get honest advice on love, dating, marriage, breakups, and emotional challenges." />
   <meta property="og:url" content="https://lovculator.com/" />
   <meta property="og:image" content="https://lovculator.com/images/og-cover.jpg" />
+  <meta property="og:image:alt" content="Lovculator community relationship questions and answers" />
   <meta property="og:site_name" content="Lovculator" />
+  <meta property="og:locale" content="en_US" />
 
   <!-- =====================================================
        TWITTER
   ====================================================== -->
   <meta name="twitter:card" content="summary_large_image" />
-  <meta name="twitter:title" content="Relationship Questions & Answers | Lovculator" />
-  <meta name="twitter:description"
-        content="Real relationship advice from the Lovculator community." />
+  <meta name="twitter:title" content="Relationship Questions & Answers – Real Love Advice | Lovculator" />
+  <meta name="twitter:description" content="Explore real relationship questions and answers on Lovculator. Get honest advice on love, dating, marriage, breakups, and emotional challenges." />
   <meta name="twitter:image" content="https://lovculator.com/images/og-cover.jpg" />
+  <meta name="twitter:image:alt" content="Lovculator community relationship questions and answers" />
 
   <!-- =====================================================
        SCHEMA: HOMEPAGE COLLECTION (CORRECT)
@@ -41,10 +53,35 @@
   <script type="application/ld+json">
   {
     "@context": "https://schema.org",
-    "@type": "CollectionPage",
-    "name": "Relationship Questions & Answers",
-    "description": "A collection of community-driven relationship questions and answers covering love, dating, marriage, and emotional wellbeing.",
-    "url": "https://lovculator.com/"
+    "@graph": [
+      {
+        "@type": "Organization",
+        "@id": "https://lovculator.com/#organization",
+        "name": "Lovculator",
+        "url": "https://lovculator.com/",
+        "logo": "https://lovculator.com/images/android-chrome-512x512.png"
+      },
+      {
+        "@type": "WebSite",
+        "@id": "https://lovculator.com/#website",
+        "name": "Lovculator",
+        "url": "https://lovculator.com/",
+        "inLanguage": "en-US",
+        "publisher": {
+          "@id": "https://lovculator.com/#organization"
+        }
+      },
+      {
+        "@type": "CollectionPage",
+        "@id": "https://lovculator.com/#homepage",
+        "name": "Relationship Questions & Answers",
+        "description": "A collection of community-driven relationship questions and answers covering love, dating, marriage, and emotional wellbeing.",
+        "url": "https://lovculator.com/",
+        "isPartOf": {
+          "@id": "https://lovculator.com/#website"
+        }
+      }
+    ]
   }
   </script>
 
