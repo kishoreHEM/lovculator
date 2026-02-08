@@ -1,7 +1,8 @@
 {
-  "name": "Lovculator • Love Calculator",
+  "name": "Lovculator",
   "short_name": "Lovculator",
-  "description": "Calculate love compatibility and share beautiful love stories.",
+  "description": "Relationship questions, answers, love stories, and the Lovculator love calculator.",
+  "id": "/",
   "start_url": "/?utm_source=pwa",
   "scope": "/",
   "display": "standalone",
@@ -25,16 +26,8 @@
       "src": "/images/maskable-icon-512x512.png",
       "sizes": "512x512",
       "type": "image/png",
-      "purpose": "maskable"
+      "purpose": "any maskable"
     }
   ],
-  "categories": ["entertainment", "lifestyle", "social"],
-  "screenshots": [
-    {
-      "src": "/images/screenshot-mobile.png",
-      "sizes": "1080x1920",
-      "type": "image/png",
-      "label": "Home Screen of Lovculator"
-    }
-  ]
+  "categories": ["entertainment", "lifestyle", "social"]
 }

@@ -13,12 +13,10 @@ const CRITICAL_FILES = [
   '/',
   '/index.html',
   '/css/style.css',
-  '/css/layout.css',
-  '/js/app.js',
-  '/js/layout-manager.js',
+  '/css/qa.css',
   '/manifest.json',
-  '/images/icon-192.png',
-  '/images/icon-512.png',
+  '/images/android-chrome-192x192.png',
+  '/images/android-chrome-512x512.png',
   '/images/favicon.ico',
   '/offline.html'
 ];
@@ -272,7 +270,7 @@ self.addEventListener('fetch', event => {
         } catch (error) {
           // Asset not found - return appropriate fallback
           if (request.destination === 'image') {
-            return caches.match('/images/icon-192.png');
+            return caches.match('/images/image-error.png');
           }
           
           return new Response('', { status: 404 });
@@ -311,14 +309,14 @@ self.addEventListener('push', event => {
     notificationData = {
       title: 'Lovculator',
       body: event.data.text() || 'New update!',
-      icon: '/images/icon-192.png'
+      icon: '/images/android-chrome-192x192.png'
     };
   }
 
   const options = {
     body: notificationData.body || 'New message!',
-    icon: notificationData.icon || '/images/icon-192.png',
-    badge: '/images/icon-72.png',
+    icon: notificationData.icon || '/images/android-chrome-192x192.png',
+    badge: '/images/android-chrome-192x192.png',
     tag: notificationData.tag || 'lovculator-notification',
     data: {
       url: notificationData.url || '/',

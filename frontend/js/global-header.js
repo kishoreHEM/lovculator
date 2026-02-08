@@ -17,6 +17,19 @@ if (!window.API_BASE) {
         : "https://lovculator.com/api";
 }
 
+function registerServiceWorkerOnce() {
+  if (!('serviceWorker' in navigator)) return;
+  if (window.__lovculatorSwRegistered) return;
+  window.__lovculatorSwRegistered = true;
+  navigator.serviceWorker.register('/sw.js')
+    .then(reg => {
+      console.log('✅ Service Worker registered:', reg.scope);
+    })
+    .catch(err => {
+      console.log('ℹ️ Service Worker registration failed:', err);
+    });
+}
+
 /**
  * 1. Initialize Header Interactions
  */
@@ -351,4 +364,7 @@ function initLayoutManagerIntegration() {
     }
 }
 
-document.addEventListener("DOMContentLoaded", loadGlobalHeader);
+document.addEventListener("DOMContentLoaded", () => {
+  registerServiceWorkerOnce();
+  loadGlobalHeader();
+});
