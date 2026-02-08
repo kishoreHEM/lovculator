@@ -285,6 +285,31 @@
   </div>
 
   <!-- =====================================================
+       LOGIN GATE MODAL
+  ====================================================== -->
+  <div id="loginGateOverlay" class="login-gate-overlay hidden" aria-hidden="true">
+    <div class="login-gate-modal" role="dialog" aria-modal="true">
+      <button class="login-gate-close" aria-label="Close login modal">&times;</button>
+      <div class="login-gate-header">
+        <h2 id="loginGateTitle">Join Lovculator</h2>
+        <p id="loginGateSubtitle">Create a free account to continue</p>
+      </div>
+      <ul class="login-gate-benefits">
+        <li>❤️ Like & save answers</li>
+        <li>💬 Comment & share your thoughts</li>
+        <li>👥 Follow people & stories</li>
+      </ul>
+      <div class="login-gate-actions">
+        <a href="/signup" class="btn-primary">Create free account</a>
+        <a href="/login" class="btn-secondary">Already have an account?</a>
+      </div>
+      <div class="login-gate-footer">
+        <span>No spam. No ads. Just real conversations.</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- =====================================================
        SCRIPTS
   ====================================================== -->
 <script src="/js/notifications.js"></script>
@@ -292,6 +317,7 @@
 
 <script src="/js/global-header.js"></script>
 <script src="/js/global-mobile-menu.js"></script>
+<script src="/js/global-login-gate.js"></script>
 <script src="/js/auth.js"></script>
 <script src="/js/profile.js"></script>
 <script src="/js/search.js" defer></script>

@@ -1214,6 +1214,12 @@ attachActivityProfileLinks() {
   // -------------------------
   document.addEventListener("DOMContentLoaded", () => {
     try {
+      const onProfilePage =
+        document.getElementById("profileInfoContainer") ||
+        window.location.pathname.startsWith("/profile");
+
+      if (!onProfilePage) return;
+
       window.profileManager = new ProfileManager();
       console.log("✅ profileManager initialized");
     } catch (err) {

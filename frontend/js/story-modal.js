@@ -164,6 +164,10 @@ class StoryModal {
 
     openModal(e) {
         if (e) e.preventDefault();
+        if (!window.currentUserId) {
+            window.showLoginModal?.("share a love story");
+            return;
+        }
         this.storyModal.classList.remove('hidden');
         document.body.classList.add("modal-open");
         

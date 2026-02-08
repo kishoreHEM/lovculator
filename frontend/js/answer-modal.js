@@ -69,6 +69,10 @@ document.addEventListener("DOMContentLoaded", () => {
   // OPEN / CLOSE
   // ==================================================
   window.openAnswerModal = function (questionId, questionTitle) {
+    if (!window.currentUserId) {
+      window.showLoginModal?.("answer questions");
+      return;
+    }
     currentQuestionId = questionId;
     questionTitleEl.textContent = questionTitle || "";
     loadUser(); // Triggers dynamic data pull

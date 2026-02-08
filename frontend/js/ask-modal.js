@@ -97,6 +97,10 @@ class AskModalController {
     }
 
     openAskModal() {
+        if (!window.currentUserId) {
+            window.showLoginModal?.("ask a question");
+            return;
+        }
         this.updateUserInfo();
         this.open(this.askModal);
         
@@ -133,6 +137,10 @@ class AskModalController {
        ✅ SUBMIT QUESTION LOGIC
     ----------------------------------------- */
     async submitQuestion() {
+        if (!window.currentUserId) {
+            window.showLoginModal?.("ask a question");
+            return;
+        }
         const text = this.questionInput?.value.trim();
 
         if (!text) {
