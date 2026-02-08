@@ -197,7 +197,7 @@ LEFT JOIN question_views v
   ON q.id = v.question_id
 
 	  LEFT JOIN LATERAL (
-	    SELECT 
+    SELECT 
         a2.answer_text
         ${includeAnswerImage ? ", a2.image_url" : ""},
         u2.id AS user_id,
@@ -215,11 +215,11 @@ LEFT JOIN question_views v
         JOIN users u2 ON a2.user_id = u2.id
 	    LEFT JOIN answer_likes al2 
 	      ON a2.id = al2.answer_id
-	    WHERE a2.question_id = q.id
+    WHERE a2.question_id = q.id
 	    GROUP BY a2.id, a2.answer_text, a2.created_at, u2.id, u2.username, u2.display_name, u2.avatar_url ${includeAnswerImage ? ", a2.image_url" : ""}
-	    ORDER BY COUNT(al2.id) DESC, a2.created_at DESC
-	    LIMIT 1
-	  ) top_answer ON true
+    ORDER BY COUNT(al2.id) DESC, a2.created_at DESC
+    LIMIT 1
+  ) top_answer ON true
 
 ${whereClause}
 

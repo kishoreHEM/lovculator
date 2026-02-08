@@ -295,7 +295,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
       const fd = new FormData();
       fd.append("answer_html", clone.innerHTML);
-      fd.append("answer_text", editor.innerText);
+      fd.append("answer_text", clone.textContent || "");
       fd.append("image_indices", JSON.stringify(imageIndices));
 
       imageIndices.forEach(idx => {

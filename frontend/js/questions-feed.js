@@ -184,6 +184,7 @@ window.loadQuestions = async function (loadMore = false) {
 
       let answerPreview = "";
       if (isHomepage() && q.answers_count > 0 && q.top_answer_text) {
+        const cleanPreviewText = escapeHtml(String(q.top_answer_text || "").replace(/^\s*×\s*/g, ""));
         answerPreview = `
           ${topAnswerImage ? `
             <div class="answer-preview-image" style="margin:10px 0;">
@@ -191,7 +192,7 @@ window.loadQuestions = async function (loadMore = false) {
             </div>
           ` : ""}
           <div class="answer-preview">
-            ${escapeHtml(q.top_answer_text)}
+            ${cleanPreviewText}
             <a href="/question/${slug}" class="read-more">Read more</a>
           </div>
         `;
