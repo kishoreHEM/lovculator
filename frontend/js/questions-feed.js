@@ -56,6 +56,13 @@ function processQuestions(list, sortType) {
   // ✅ Homepage rule: ONLY answered questions
   if (isHomepage()) {
     result = result.filter(q => (q.answers_count || 0) > 0);
+
+    // ✅ Homepage: newest answers first
+    return result.sort((a, b) => {
+      const aDate = new Date(a.latest_answer_at || a.top_answer_created_at || a.created_at).getTime();
+      const bDate = new Date(b.latest_answer_at || b.top_answer_created_at || b.created_at).getTime();
+      return bDate - aDate;
+    });
   }
 
   switch (sortType) {

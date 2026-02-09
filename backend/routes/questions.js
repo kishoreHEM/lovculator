@@ -163,8 +163,10 @@ SELECT
   COUNT(DISTINCT a.id) AS answers_count,
   COUNT(DISTINCT l.id) AS likes_count,
   COUNT(DISTINCT v.id) AS views_count,
+  MAX(a.created_at) AS latest_answer_at,
 
 	  top_answer.answer_text AS top_answer_text,
+	  top_answer.created_at AS top_answer_created_at,
 	  ${includeAnswerImage ? "top_answer.image_url AS top_answer_image_url," : ""}
 	  top_answer.user_id AS top_answer_user_id,
 	  top_answer.username AS top_answer_username,
@@ -199,7 +201,8 @@ LEFT JOIN question_views v
 
 	  LEFT JOIN LATERAL (
     SELECT 
-        a2.answer_text
+        a2.answer_text,
+        a2.created_at
         ${includeAnswerImage ? ", a2.image_url" : ""},
         u2.id AS user_id,
         u2.username,
@@ -229,6 +232,7 @@ ${whereClause}
     q.id, 
     u.id, 
     top_answer.answer_text,
+    top_answer.created_at,
     ${includeAnswerImage ? "top_answer.image_url," : ""}
     top_answer.user_id,
     top_answer.username,

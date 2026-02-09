@@ -391,6 +391,9 @@ async function updateHeaderUserProfile(container) {
                 img.src = avatarUrl;
             });
 
+            const creatorAvatar = document.getElementById("creatorAvatar");
+            if (creatorAvatar) creatorAvatar.src = avatarUrl;
+
             // Optional: Update sidebar avatar if it exists on the page
             const sidebarAvatar = document.getElementById("sidebarAvatar");
             if (sidebarAvatar) sidebarAvatar.src = avatarUrl;
@@ -508,6 +511,7 @@ async function loadGlobalHeader() {
       initHeaderInteractions(container);
       updateHeaderUserProfile(container);
       initLayoutManagerIntegration();
+      initUserHoverCards();
 
       // Messages only for logged-in users
       setTimeout(updateMessageDropdown, 1000);
@@ -564,6 +568,5 @@ function initLayoutManagerIntegration() {
 
 document.addEventListener("DOMContentLoaded", () => {
   registerServiceWorkerOnce();
-  initUserHoverCards();
   loadGlobalHeader();
 });
