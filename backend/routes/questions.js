@@ -3,7 +3,7 @@
 import express from "express";
 import pool from "../db.js"; 
 import auth from "../middleware/auth.js"; 
-import { notifyLike, notifyComment } from "./notifications.js"; 
+import { notifyLike, notifyComment, notifyAllUsers } from "./notifications.js"; 
 import multer from "multer";
 import path from "path";
 import fs from "fs";
@@ -107,6 +107,24 @@ router.post("/", auth, async (req, res) => {
 
     const newQuestion = insertRes.rows[0];
     console.log(`✅ Question Added: ${newQuestion.slug}`);
+
+    // 🔔 Notify all users about new question
+    try {
+      const actorRes = await pool.query(
+        "SELECT display_name, username FROM users WHERE id = $1",
+        [userId]
+      );
+      const actor = actorRes.rows[0] || {};
+      const actorName = actor.display_name || actor.username || "Someone";
+      await notifyAllUsers(req, {
+        actorId: userId,
+        type: "question",
+        message: `${actorName} asked: ${newQuestion.question}`,
+        link: `/question/${newQuestion.slug}`
+      });
+    } catch (notifyErr) {
+      console.error("❌ Notify all (question) failed:", notifyErr);
+    }
 
     res.json({
       success: true,
@@ -477,6 +495,30 @@ router.post("/:id/answer", auth, answerUpload.array("images", 6), async (req, re
         if (ownerId !== userId) {
             await notifyComment(req, ownerId, userId, "question", id); 
         }
+    }
+
+    // 🔔 Notify all users about new answer
+    try {
+      const qInfo = await pool.query(
+        "SELECT question, slug FROM questions WHERE id = $1",
+        [id]
+      );
+      const actorRes = await pool.query(
+        "SELECT display_name, username FROM users WHERE id = $1",
+        [userId]
+      );
+      const actor = actorRes.rows[0] || {};
+      const actorName = actor.display_name || actor.username || "Someone";
+      if (qInfo.rows[0]) {
+        await notifyAllUsers(req, {
+          actorId: userId,
+          type: "answer",
+          message: `${actorName} answered: ${qInfo.rows[0].question}`,
+          link: `/question/${qInfo.rows[0].slug}`
+        });
+      }
+    } catch (notifyErr) {
+      console.error("❌ Notify all (answer) failed:", notifyErr);
     }
 
     res.json({ 

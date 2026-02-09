@@ -256,6 +256,60 @@ export const notifyFollow = async (req, targetUserId, actorId) => {
         console.error("notifyFollow failed:", err);
     }
 };
+
+/* ======================================================
+   📣 Notify ALL users (broadcast)
+====================================================== */
+export const notifyAllUsers = async (req, {
+    actorId,
+    type,
+    message,
+    link = null
+}) => {
+    try {
+        // Insert notifications for everyone except the actor
+        const insertRes = await pool.query(
+            `
+            INSERT INTO notifications (user_id, actor_id, type, message, link, is_read, created_at)
+            SELECT id, $1, $2, $3, $4, false, NOW()
+            FROM users
+            WHERE id <> $1
+            RETURNING user_id
+            `,
+            [actorId, type, message, link]
+        );
+
+        const recipients = insertRes.rows.map(r => r.user_id);
+
+        const actorRes = await pool.query(
+            "SELECT username, display_name, avatar_url FROM users WHERE id = $1",
+            [actorId]
+        );
+        const actor = actorRes.rows[0] || {};
+
+        const notification = {
+            type,
+            message,
+            link,
+            actor_username: actor.username,
+            actor_display_name: actor.display_name,
+            actor_avatar_url: actor.avatar_url
+        };
+
+        const broadcast = req?.app?.get("broadcastNotification");
+        if (broadcast && recipients.length) {
+            broadcast(recipients, {
+                type: "NEW_NOTIFICATION",
+                notification
+            });
+        }
+
+        return recipients.length;
+    } catch (err) {
+        console.error("❌ notifyAllUsers failed:", err);
+        return 0;
+    }
+};
 /* ======================================================
    📌 Helper to get display_name or username
 ====================================================== */

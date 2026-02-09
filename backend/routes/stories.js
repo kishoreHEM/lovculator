@@ -1,6 +1,6 @@
 import express from "express";
 import pool from "../db.js";
-import { notifyLike, notifyComment } from './notifications.js';
+import { notifyLike, notifyComment, notifyAllUsers } from './notifications.js';
 import multer from 'multer'; // ✅ 1. Import Multer
 import path from 'path';
 import fs from 'fs';
@@ -199,6 +199,26 @@ router.post("/", isAuthenticated, upload.single('image'), async (req, res) => {
     ]);
 
     console.log(`✅ New story added by user ${userId}`);
+
+    // 🔔 Notify all users about new love story
+    try {
+      const actorRes = await pool.query(
+        "SELECT display_name, username FROM users WHERE id = $1",
+        [userId]
+      );
+      const actor = actorRes.rows[0] || {};
+      const actorName = actor.display_name || actor.username || "Someone";
+      const story = rows[0];
+      await notifyAllUsers(req, {
+        actorId: userId,
+        type: "story",
+        message: `${actorName} shared a love story: ${story.story_title || "Love Story"}`,
+        link: `/stories/${story.id}`
+      });
+    } catch (notifyErr) {
+      console.error("❌ Notify all (story) failed:", notifyErr);
+    }
+
     res.status(201).json(rows[0]);
   } catch (err) {
     console.error("❌ Error creating story:", err);
