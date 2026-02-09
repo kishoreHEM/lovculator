@@ -170,6 +170,7 @@ SELECT
 	  top_answer.username AS top_answer_username,
 	  top_answer.display_name AS top_answer_display_name,
 	  top_answer.avatar_url AS top_answer_avatar_url,
+	  top_answer.bio AS top_answer_bio,
 	  top_answer.user_following AS top_answer_user_following,
 
   CASE 
@@ -204,6 +205,7 @@ LEFT JOIN question_views v
         u2.username,
         u2.display_name,
         u2.avatar_url,
+        u2.bio,
         CASE 
           WHEN $1::int IS NULL THEN false
           ELSE EXISTS (
@@ -216,7 +218,7 @@ LEFT JOIN question_views v
 	    LEFT JOIN answer_likes al2 
 	      ON a2.id = al2.answer_id
     WHERE a2.question_id = q.id
-	    GROUP BY a2.id, a2.answer_text, a2.created_at, u2.id, u2.username, u2.display_name, u2.avatar_url ${includeAnswerImage ? ", a2.image_url" : ""}
+	    GROUP BY a2.id, a2.answer_text, a2.created_at, u2.id, u2.username, u2.display_name, u2.avatar_url, u2.bio ${includeAnswerImage ? ", a2.image_url" : ""}
     ORDER BY COUNT(al2.id) DESC, a2.created_at DESC
     LIMIT 1
   ) top_answer ON true
@@ -232,6 +234,7 @@ ${whereClause}
     top_answer.username,
     top_answer.display_name,
     top_answer.avatar_url,
+    top_answer.bio,
     top_answer.user_following
 
 ORDER BY q.created_at DESC

@@ -148,6 +148,64 @@ router.get("/profile/:username", async (req, res) => {
 });
 
 /* ======================================================
+   2️⃣b FETCH USER HOVER CARD (Public)
+   Endpoint: GET /api/users/hover/:username
+====================================================== */
+router.get("/hover/:username", async (req, res) => {
+  try {
+    const { username } = req.params;
+    const currentUserId = req.session?.user?.id || req.session?.userId;
+
+    const { rows } = await pool.query(
+      `
+      SELECT 
+        u.id,
+        u.username,
+        u.display_name,
+        u.bio,
+        u.location,
+        u.work_education,
+        u.avatar_url,
+        u.created_at,
+        (SELECT COUNT(*) FROM follows WHERE target_id = u.id) AS follower_count,
+        (SELECT COUNT(*) FROM follows WHERE follower_id = u.id) AS following_count,
+        (SELECT COUNT(*) FROM answers WHERE user_id = u.id) AS answers_count,
+        (SELECT COUNT(*) FROM questions WHERE user_id = u.id) AS questions_count,
+        (SELECT COUNT(*) FROM stories WHERE user_id = u.id) AS stories_count,
+        (
+          SELECT COUNT(*)
+          FROM question_views v
+          JOIN answers a ON a.question_id = v.question_id
+          WHERE a.user_id = u.id
+        ) AS views_count
+      FROM users u
+      WHERE LOWER(u.username) = LOWER($1)
+      LIMIT 1
+      `,
+      [username]
+    );
+
+    if (!rows.length) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    const user = rows[0];
+    user.is_following_author =
+      currentUserId && currentUserId !== user.id
+        ? (await pool.query(
+            "SELECT 1 FROM follows WHERE follower_id = $1 AND target_id = $2",
+            [currentUserId, user.id]
+          )).rowCount > 0
+        : false;
+
+    res.json(user);
+  } catch (err) {
+    console.error("❌ Hover card error:", err);
+    res.status(500).json({ error: "Failed to load hover card." });
+  }
+});
+
+/* ======================================================
    🔎 SEARCH USERS (Public)
    Endpoint: GET /api/users/search?q=john
 ====================================================== */

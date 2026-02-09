@@ -7069,5 +7069,106 @@ input:checked + .slider:before { transform: translateX(26px); }
   opacity: 0.85;
 }
 
+/* =====================================================
+   USER HOVER CARD
+===================================================== */
+.user-hover-card {
+  position: absolute;
+  z-index: 2000;
+  width: 320px;
+  max-width: calc(100vw - 24px);
+  background: #fff;
+  border: 1px solid #ececec;
+  border-radius: 14px;
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.12);
+  padding: 14px;
+  pointer-events: auto;
+}
+
+.user-hover-card.hidden {
+  display: none;
+}
+
+.user-hover-card .hover-card-loading {
+  font-size: 0.95rem;
+  color: #6f6f6f;
+}
+
+.hover-card-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.hover-card-avatar {
+  flex: 0 0 auto;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  overflow: hidden;
+  display: inline-flex;
+}
+
+.hover-card-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.hover-card-title {
+  flex: 1;
+  min-width: 0;
+}
+
+.hover-card-name {
+  display: inline-block;
+  font-weight: 700;
+  color: #1c1e21;
+  text-decoration: none;
+  margin-bottom: 2px;
+}
+
+.hover-card-bio {
+  color: #65676b;
+  font-size: 0.92rem;
+  line-height: 1.3;
+  max-height: 2.6em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.hover-card-meta {
+  margin: 10px 0 8px;
+  display: grid;
+  gap: 6px;
+  color: #4e4e4e;
+  font-size: 0.9rem;
+}
+
+.hover-card-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.hover-card-stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  padding-top: 10px;
+  border-top: 1px solid #f0f0f0;
+  text-align: center;
+}
+
+.hover-card-stats strong {
+  display: block;
+  font-size: 1rem;
+  color: #1c1e21;
+}
+
+.hover-card-stats span {
+  font-size: 0.8rem;
+  color: #8b8b8b;
+}
 
 

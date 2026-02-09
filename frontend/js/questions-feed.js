@@ -149,28 +149,49 @@ window.loadQuestions = async function (loadMore = false) {
       });
 
       const firstAnswerUserId = q.top_answer_user_id || "";
+      const firstAnswerUsername = escapeHtml(q.top_answer_username || "");
       const firstAnswerName = escapeHtml(
         q.top_answer_display_name || q.top_answer_username || "User"
       );
       const firstAnswerAvatar = escapeHtml(
         q.top_answer_avatar_url || "/images/default-avatar.png"
       );
+      const firstAnswerBio = escapeHtml(q.top_answer_bio || "");
       const isFollowing = Boolean(q.top_answer_user_following);
+      const answererProfileLink = firstAnswerUsername
+        ? `/profile/${encodeURIComponent(firstAnswerUsername)}`
+        : "";
 
       const firstAnswerRow =
         isHomepage() && (q.answers_count || 0) > 0 && firstAnswerUserId
           ? `
             <div class="question-first-answer" style="display:flex;align-items:center;gap:12px;margin:8px 0 12px 0;">
-              <img src="${firstAnswerAvatar}"
-                   alt="${firstAnswerName}"
-                   style="width:40px;height:40px;border-radius:50%;object-fit:cover;"
-                   onerror="this.src='/images/default-avatar.png'">
-              <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
-                <span style="font-weight:600;color:#1c1e21;">${firstAnswerName}</span>
-                <button class="follow-author-btn ${isFollowing ? "following" : ""}"
-                        data-user-id="${firstAnswerUserId}">
-                  ${isFollowing ? "Following" : "+ Follow"}
-                </button>
+              ${answererProfileLink ? `
+                <a href="${answererProfileLink}" style="display:inline-flex;">
+                  <img src="${firstAnswerAvatar}"
+                       alt="${firstAnswerName}"
+                       style="width:40px;height:40px;border-radius:50%;object-fit:cover;"
+                       onerror="this.src='/images/default-avatar.png'">
+                </a>
+              ` : `
+                <img src="${firstAnswerAvatar}"
+                     alt="${firstAnswerName}"
+                     style="width:40px;height:40px;border-radius:50%;object-fit:cover;"
+                     onerror="this.src='/images/default-avatar.png'">
+              `}
+              <div style="display:flex;flex-direction:column;gap:2px;min-width:0;">
+                <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+                  ${
+                    answererProfileLink
+                      ? `<a href="${answererProfileLink}" style="font-weight:600;color:#1c1e21;text-decoration:none;">${firstAnswerName}</a>`
+                      : `<span style="font-weight:600;color:#1c1e21;">${firstAnswerName}</span>`
+                  }
+                  <button class="follow-author-btn ${isFollowing ? "following" : ""}"
+                          data-user-id="${firstAnswerUserId}">
+                    ${isFollowing ? "Following" : "+ Follow"}
+                  </button>
+                </div>
+                ${firstAnswerBio ? `<div style="color:#65676b;font-size:0.92rem;line-height:1.3;max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${firstAnswerBio}</div>` : ""}
               </div>
             </div>
           `
@@ -200,20 +221,24 @@ window.loadQuestions = async function (loadMore = false) {
 
       return `
         <div class="question-card" data-question-id="${q.id}">
-          <div class="question-header">
-            <span class="question-date">Asked on ${date}</span>
-            ${
-              isHomepage()
-                ? ""
-                : (q.answers_count || 0) > 0
-                  ? `<span class="answered-badge">Answered</span>`
-                  : `<span class="needs-answer-badge">Needs Advice</span>`
-            }
-          </div>
+          ${
+            isHomepage()
+              ? ""
+              : `
+                <div class="question-header">
+                  <span class="question-date">Asked on ${date}</span>
+                  ${
+                    (q.answers_count || 0) > 0
+                      ? `<span class="answered-badge">Answered</span>`
+                      : `<span class="needs-answer-badge">Needs Advice</span>`
+                  }
+                </div>
+              `
+          }
+
+          ${isHomepage() ? firstAnswerRow : ""}
 
           <a href="/question/${slug}" class="question-title">${title}</a>
-
-          ${firstAnswerRow}
 
           ${answerPreview}
 

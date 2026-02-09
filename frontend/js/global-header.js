@@ -30,6 +30,185 @@ function registerServiceWorkerOnce() {
     });
 }
 
+function initUserHoverCards() {
+  if (!window.__lovculatorIsLoggedIn) return;
+  if (!window.matchMedia || !window.matchMedia('(hover: hover)').matches) return;
+
+  const cache = new Map();
+  let activeTarget = null;
+  let hideTimer = null;
+  let showTimer = null;
+
+  let card = document.getElementById('userHoverCard');
+  if (!card) {
+    card = document.createElement('div');
+    card.id = 'userHoverCard';
+    card.className = 'user-hover-card hidden';
+    document.body.appendChild(card);
+  }
+
+  const formatNumber = (n) => {
+    if (n === null || n === undefined) return '0';
+    return new Intl.NumberFormat('en-US', { notation: 'compact' }).format(Number(n));
+  };
+
+  const formatDate = (iso) => {
+    if (!iso) return '';
+    const d = new Date(iso);
+    if (Number.isNaN(d.getTime())) return '';
+    return d.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+  };
+
+  const escapeHtml = (text) => {
+    if (typeof text !== 'string') return '';
+    return text
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#039;');
+  };
+
+  const extractUsername = (el) => {
+    if (!el) return '';
+    const datasetUsername = el.getAttribute('data-user-username');
+    if (datasetUsername) return datasetUsername;
+    const link = el.closest('a[href^="/profile/"]') || (el.tagName === 'A' && el.getAttribute('href')?.startsWith('/profile/') ? el : null);
+    if (!link) return '';
+    const href = link.getAttribute('href') || '';
+    return decodeURIComponent(href.replace('/profile/', '').split('/')[0] || '');
+  };
+
+  const positionCard = (target) => {
+    const rect = target.getBoundingClientRect();
+    const cardRect = card.getBoundingClientRect();
+    const margin = 10;
+    const topSpace = rect.top;
+    const bottomSpace = window.innerHeight - rect.bottom;
+    let top = rect.bottom + margin + window.scrollY;
+    if (bottomSpace < cardRect.height && topSpace > cardRect.height + margin) {
+      top = rect.top - cardRect.height - margin + window.scrollY;
+    }
+    let left = rect.left + window.scrollX;
+    const maxLeft = window.scrollX + window.innerWidth - cardRect.width - margin;
+    if (left > maxLeft) left = maxLeft;
+    if (left < margin) left = margin;
+    card.style.top = `${top}px`;
+    card.style.left = `${left}px`;
+  };
+
+  const renderCard = (user) => {
+    const profileLink = `/profile/${encodeURIComponent(user.username)}`;
+    const name = escapeHtml(user.display_name || user.username || 'User');
+    const bio = escapeHtml(user.bio || '');
+    const location = escapeHtml(user.location || '');
+    const work = escapeHtml(user.work_education || '');
+    const joined = formatDate(user.created_at);
+    const questionsCount = Number(user.questions_count || 0);
+    const storiesCount = Number(user.stories_count || 0);
+
+    card.innerHTML = `
+      <div class="hover-card-header">
+        <a href="${profileLink}" class="hover-card-avatar">
+          <img src="${user.avatar_url || '/images/default-avatar.png'}" alt="${name}" onerror="this.src='/images/default-avatar.png'">
+        </a>
+        <div class="hover-card-title">
+          <a href="${profileLink}" class="hover-card-name">${name}</a>
+          ${bio ? `<div class="hover-card-bio">${bio}</div>` : ''}
+        </div>
+        ${
+          user.id
+            ? `<button class="follow-author-btn ${user.is_following_author ? 'following' : ''}" data-user-id="${user.id}">
+                ${user.is_following_author ? 'Following' : '+ Follow'}
+               </button>`
+            : ''
+        }
+      </div>
+      <div class="hover-card-meta">
+        ${work ? `<div class="hover-card-row">🎓 <span>${work}</span></div>` : ''}
+        ${location ? `<div class="hover-card-row">📍 <span>${location}</span></div>` : ''}
+        ${joined ? `<div class="hover-card-row">🗓️ <span>Joined ${joined}</span></div>` : ''}
+        ${questionsCount ? `<div class="hover-card-row">❓ <span>${formatNumber(questionsCount)} Questions</span></div>` : ''}
+        ${storiesCount ? `<div class="hover-card-row">💖 <span>${formatNumber(storiesCount)} Stories</span></div>` : ''}
+      </div>
+      <div class="hover-card-stats">
+        <div><strong>${formatNumber(user.follower_count)}</strong><span>Followers</span></div>
+        <div><strong>${formatNumber(user.answers_count)}</strong><span>Answers</span></div>
+        <div><strong>${formatNumber(user.views_count)}</strong><span>Views</span></div>
+      </div>
+    `;
+  };
+
+  const showCard = async (target, username) => {
+    if (!username) return;
+    card.classList.remove('hidden');
+    card.classList.add('loading');
+    card.innerHTML = `<div class="hover-card-loading">Loading...</div>`;
+    positionCard(target);
+
+    if (cache.has(username)) {
+      renderCard(cache.get(username));
+      card.classList.remove('loading');
+      positionCard(target);
+      return;
+    }
+
+    try {
+      const res = await fetch(`${window.API_BASE}/users/hover/${encodeURIComponent(username)}`, {
+        credentials: 'include'
+      });
+      if (!res.ok) throw new Error('Failed');
+      const data = await res.json();
+      cache.set(username, data);
+      renderCard(data);
+      card.classList.remove('loading');
+      positionCard(target);
+    } catch (e) {
+      card.innerHTML = `<div class="hover-card-loading">Unable to load user</div>`;
+      card.classList.remove('loading');
+    }
+  };
+
+  const hideCard = () => {
+    card.classList.add('hidden');
+    card.classList.remove('loading');
+    activeTarget = null;
+  };
+
+  document.addEventListener('mouseover', (e) => {
+    const target = e.target.closest('a[href^="/profile/"], [data-user-username]');
+    if (!target) return;
+    const username = extractUsername(target);
+    if (!username) return;
+    if (activeTarget === target) return;
+
+    clearTimeout(hideTimer);
+    clearTimeout(showTimer);
+    activeTarget = target;
+    showTimer = setTimeout(() => showCard(target, username), 150);
+  });
+
+  document.addEventListener('mouseout', (e) => {
+    const related = e.relatedTarget;
+    if (card.contains(related)) return;
+    if (activeTarget && activeTarget.contains(related)) return;
+    clearTimeout(showTimer);
+    hideTimer = setTimeout(hideCard, 150);
+  });
+
+  card.addEventListener('mouseenter', () => {
+    clearTimeout(hideTimer);
+  });
+  card.addEventListener('mouseleave', () => {
+    hideTimer = setTimeout(hideCard, 150);
+  });
+
+  window.addEventListener('scroll', () => {
+    if (!activeTarget || card.classList.contains('hidden')) return;
+    positionCard(activeTarget);
+  }, { passive: true });
+}
+
 /**
  * 1. Initialize Header Interactions
  */
@@ -316,6 +495,8 @@ async function loadGlobalHeader() {
     ? HEADER_CONFIG.authHeader
     : HEADER_CONFIG.guestHeader;
 
+  window.__lovculatorIsLoggedIn = isLoggedIn;
+
   try {
     const res = await fetch(headerPath, { cache: "no-store" });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -338,6 +519,16 @@ async function loadGlobalHeader() {
 }
 
 document.addEventListener("click", (e) => {
+  const profileLink = e.target.closest('a[href^="/profile/"]');
+  if (profileLink && !window.__lovculatorIsLoggedIn) {
+    e.preventDefault();
+    e.stopPropagation();
+    if (typeof window.showLoginModal === "function") {
+      window.showLoginModal("continue");
+    }
+    return;
+  }
+
   const loginBtn = e.target.closest("#loginBtn");
   if (!loginBtn) return;
 
@@ -347,6 +538,13 @@ document.addEventListener("click", (e) => {
   if (typeof window.showLoginModal === "function") {
     window.showLoginModal("continue");
   }
+});
+
+document.addEventListener("mouseover", (e) => {
+  if (window.__lovculatorIsLoggedIn) return;
+  const target = e.target.closest('a[href^="/profile/"]');
+  if (!target) return;
+  target.setAttribute('title', 'Login to view profile');
 });
 
 
@@ -366,5 +564,6 @@ function initLayoutManagerIntegration() {
 
 document.addEventListener("DOMContentLoaded", () => {
   registerServiceWorkerOnce();
+  initUserHoverCards();
   loadGlobalHeader();
 });
