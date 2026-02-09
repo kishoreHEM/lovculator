@@ -396,9 +396,8 @@ app.get("/question/:slug", (req, res) => {
 app.get("/profile/:username", (req, res) => {
   res.sendFile(path.join(frontendPath, "profile.html"));
 });
-// ✅ NEW: Route for Shared Love Stories
-// Updated to handle ID-Slug pattern for the HTML fallback
-app.get("/stories/:id(\\d+)*", (req, res) => {
+// ✅ NEW: Route for Shared Love Stories (slug only)
+app.get("/stories/:slug", (req, res) => {
   res.sendFile(path.join(frontendPath, "love-stories.html"));
 });
 

@@ -11,13 +11,13 @@
   <meta name="description" content="<%= (story.love_story || '').replace(/(<([^>]+)>)/gi, '').slice(0, 155) %>">
 
   <!-- Canonical -->
-  <link rel="canonical" href="https://lovculator.com/stories/<%= story.id %>-<%= story.story_title_slug %>">
+  <link rel="canonical" href="https://lovculator.com/stories/<%= story.story_title_slug %>">
 
   <!-- Open Graph -->
   <meta property="og:type" content="article">
   <meta property="og:title" content="<%= story.story_title %>">
   <meta property="og:description" content="<%= (story.love_story || '').replace(/(<([^>]+)>)/gi, '').slice(0, 155) %>">
-  <meta property="og:url" content="https://lovculator.com/stories/<%= story.id %>-<%= story.story_title_slug %>">
+  <meta property="og:url" content="https://lovculator.com/stories/<%= story.story_title_slug %>">
   <meta property="og:site_name" content="Lovculator">
 
   <% if (story.image_url) { %>

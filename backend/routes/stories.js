@@ -7,6 +7,17 @@ import fs from 'fs';
 
 const router = express.Router();
 
+const slugify = (text = "") => {
+  return text
+    .toLowerCase()
+    .replace(/[^\w\s-]/g, "")
+    .trim()
+    .replace(/\s+/g, "-")
+    .replace(/-+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .substring(0, 180);
+};
+
 /* -------------------------------------------
    ✅ 2. CONFIGURE MULTER FOR IMAGE UPLOADS
 ------------------------------------------- */
@@ -209,11 +220,12 @@ router.post("/", isAuthenticated, upload.single('image'), async (req, res) => {
       const actor = actorRes.rows[0] || {};
       const actorName = actor.display_name || actor.username || "Someone";
       const story = rows[0];
+      const storySlug = slugify(story.story_title || "story");
       await notifyAllUsers(req, {
         actorId: userId,
         type: "story",
         message: `${actorName} shared a love story: ${story.story_title || "Love Story"}`,
-        link: `/stories/${story.id}`
+        link: `/stories/${storySlug}`
       });
     } catch (notifyErr) {
       console.error("❌ Notify all (story) failed:", notifyErr);

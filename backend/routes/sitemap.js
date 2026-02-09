@@ -18,7 +18,7 @@ router.get("/sitemap.xml", async (req, res) => {
     const baseUrl = "https://lovculator.com";
 
     const storiesRes = await pool.query(`
-      SELECT id, created_at, updated_at
+      SELECT id, story_title, created_at, updated_at
       FROM stories
     `);
 
@@ -52,11 +52,23 @@ router.get("/sitemap.xml", async (req, res) => {
     });
 
     // ---------- STORIES ----------
+    const slugify = (text = "") => {
+      return text
+        .toLowerCase()
+        .replace(/[^\w\s-]/g, "")
+        .trim()
+        .replace(/\s+/g, "-")
+        .replace(/-+/g, "-")
+        .replace(/^-+|-+$/g, "")
+        .substring(0, 180);
+    };
+
     storiesRes.rows.forEach(s => {
       const lastmod = (s.updated_at || s.created_at).toISOString();
+      const slug = slugify(s.story_title || "story");
       xml += `
   <url>
-    <loc>${baseUrl}/stories/${s.id}</loc>
+    <loc>${baseUrl}/stories/${slug}</loc>
     <lastmod>${lastmod}</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.6</priority>

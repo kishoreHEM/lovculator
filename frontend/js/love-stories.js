@@ -309,7 +309,7 @@ class LoveStories {
 
         // Generate URL Slug
         const slug = slugify(story.story_title || 'story');
-        const storyUrl = `/stories/${story.id}-${slug}`;
+        const storyUrl = `/stories/${slug}`;
 
         let displayText = safeStory;
         if (isLong) {

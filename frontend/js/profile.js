@@ -710,6 +710,7 @@ refreshFollowLists() {
       const avatar = getAvatarUrl(story.author_avatar_url || "/images/default-avatar.png");
       const preview = content.length > 300 ? content.substring(0, 300) + "..." : content;
       
+      const slug = this.slugify(title);
       return `
         <div class="story-card" data-story-id="${id}">
           <div class="story-card-header">
@@ -724,9 +725,20 @@ refreshFollowLists() {
           <h3 class="story-title">${title}</h3>
           <div class="story-content">${preview}</div>
           <div class="story-footer">
-            <a href="/stories/${id}" class="read-more">Read Full Story</a>
+            <a href="/stories/${slug}" class="read-more">Read Full Story</a>
           </div>
         </div>`;
+    }
+
+    slugify(text = "") {
+      return text
+        .toLowerCase()
+        .replace(/[^\w\s-]/g, "")
+        .trim()
+        .replace(/\s+/g, "-")
+        .replace(/-+/g, "-")
+        .replace(/^-+|-+$/g, "")
+        .substring(0, 180);
     }
 
     async loadUserActivity(userId) {
@@ -773,7 +785,8 @@ refreshFollowLists() {
         case "story_created":
         case "story_comment":
           if (item.story_id) {
-            link = `/love-stories?story=${item.story_id}`;
+            const storySlug = item.story_title ? this.slugify(item.story_title) : item.story_id;
+            link = `/stories/${storySlug}`;
             linkText = item.type === "story_comment" ? "View Comment" : "View Story";
           }
           break;
@@ -808,7 +821,8 @@ refreshFollowLists() {
         case "comment_like":
         case "reply":
           if (item.story_id) {
-            link = `/stories/${item.story_id}#comment-${item.comment_id || ''}`;
+            const storySlug = item.story_title ? this.slugify(item.story_title) : item.story_id;
+            link = `/stories/${storySlug}#comment-${item.comment_id || ''}`;
             linkText = "View Comment";
           }
           break;
