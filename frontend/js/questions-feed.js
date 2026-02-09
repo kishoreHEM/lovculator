@@ -68,6 +68,10 @@ function processQuestions(list, sortType) {
   switch (sortType) {
     case "popular":
       return result.sort((a, b) => {
+        const aAnswered = (a.answers_count || 0) > 0;
+        const bAnswered = (b.answers_count || 0) > 0;
+        if (aAnswered !== bAnswered) return aAnswered ? 1 : -1;
+
         const likeDiff = (b.likes_count || 0) - (a.likes_count || 0);
         if (likeDiff !== 0) return likeDiff;
 
@@ -82,9 +86,12 @@ function processQuestions(list, sortType) {
 
     case "newest":
     default:
-      return result.sort(
-        (a, b) => new Date(b.created_at) - new Date(a.created_at)
-      );
+      return result.sort((a, b) => {
+        const aAnswered = (a.answers_count || 0) > 0;
+        const bAnswered = (b.answers_count || 0) > 0;
+        if (aAnswered !== bAnswered) return aAnswered ? 1 : -1;
+        return new Date(b.created_at) - new Date(a.created_at);
+      });
   }
 }
 

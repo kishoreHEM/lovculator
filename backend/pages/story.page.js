@@ -16,7 +16,9 @@ const slugify = (text = "") => {
 
 router.get("/stories/:slug", async (req, res, next) => {
   const slugParam = req.params.slug;
-  const storyId = /^\d+$/.test(slugParam) ? Number(slugParam) : null;
+  const idSlugMatch = slugParam.match(/^(\d+)-(.*)$/);
+  const storyId = idSlugMatch ? Number(idSlugMatch[1]) : (/^\d+$/.test(slugParam) ? Number(slugParam) : null);
+  const slugOnly = idSlugMatch ? idSlugMatch[2] : null;
   
   // ✅ FIX: server.js uses express-session, so we look in req.session.user
   const sessionUser = req.session?.user || null;
@@ -62,6 +64,13 @@ router.get("/stories/:slug", async (req, res, next) => {
 
     const story = rows[0];
     story.story_title_slug = slugify(story.story_title || "");
+
+    if (storyId && story.story_title_slug) {
+      const desiredUrl = `/stories/${story.story_title_slug}`;
+      if (slugParam !== story.story_title_slug) {
+        return res.redirect(301, desiredUrl);
+      }
+    }
 
     res.render("story-detail", { 
         story,
