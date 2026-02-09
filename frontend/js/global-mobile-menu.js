@@ -61,6 +61,7 @@ async function loadMobileMenu() {
         // Bind logic ONLY now
         bindInternalToggle();
         bindInternalUserData();
+        bindInternalLogout();
 
         if (window.layoutManager?.bindSidebarData) {
             window.layoutManager.bindSidebarData();
@@ -129,6 +130,28 @@ async function bindInternalUserData() {
     } catch (err) {
         console.log("Not logged in or API error", err);
     }
+}
+
+function bindInternalLogout() {
+    const logoutBtn = document.getElementById("mobileLogoutBtn");
+    if (!logoutBtn || logoutBtn.dataset.bound) return;
+    logoutBtn.dataset.bound = "true";
+    logoutBtn.addEventListener("click", async (e) => {
+        e.preventDefault();
+        try {
+            const res = await fetch(`${window.API_BASE}/auth/logout`, {
+                method: "POST",
+                credentials: "include"
+            });
+            if (res.ok) {
+                window.location.href = "/login";
+            } else {
+                console.warn("Logout failed");
+            }
+        } catch (err) {
+            console.error("Logout error:", err);
+        }
+    });
 }
 
 document.addEventListener("DOMContentLoaded", loadMobileMenu);
