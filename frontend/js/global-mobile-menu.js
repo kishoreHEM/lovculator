@@ -62,6 +62,8 @@ async function loadMobileMenu() {
         bindInternalToggle();
         bindInternalUserData();
         bindInternalLogout();
+        bindInternalMessageBadge();
+        subscribeMobileMessagesRealtime();
 
         if (window.layoutManager?.bindSidebarData) {
             window.layoutManager.bindSidebarData();
@@ -151,6 +153,44 @@ function bindInternalLogout() {
         } catch (err) {
             console.error("Logout error:", err);
         }
+    });
+}
+
+async function bindInternalMessageBadge() {
+    const badge = document.querySelector(".mobile-messages-badge");
+    if (!badge) return;
+    try {
+        const res = await fetch(`${window.API_BASE}/messages/unread-count`, {
+            credentials: "include",
+            cache: "no-store"
+        });
+        const data = res.ok ? await res.json() : { count: 0 };
+        const count = Number(data.count || 0);
+        updateMobileMessagesBadge(count);
+    } catch (err) {
+        badge.style.display = "none";
+    }
+}
+
+function updateMobileMessagesBadge(count) {
+    const badge = document.querySelector(".mobile-messages-badge");
+    if (!badge) return;
+    if (count > 0) {
+        badge.textContent = count > 99 ? "99+" : String(count);
+        badge.style.display = "inline-flex";
+    } else {
+        badge.style.display = "none";
+    }
+}
+
+function subscribeMobileMessagesRealtime() {
+    if (!window.wsManager) return;
+    window.wsManager.subscribe("NEW_MESSAGE", () => {
+        const badge = document.querySelector(".mobile-messages-badge");
+        if (!badge) return;
+        const current = parseInt(badge.textContent, 10);
+        const next = Number.isFinite(current) ? current + 1 : 1;
+        updateMobileMessagesBadge(next);
     });
 }
 
