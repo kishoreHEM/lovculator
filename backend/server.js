@@ -263,9 +263,16 @@ app.use(storyPage);
 
 app.use(
   express.static(frontendPath, {
-    maxAge: process.env.NODE_ENV === "production" ? "1d" : 0,
+    maxAge: process.env.NODE_ENV === "production" ? "30d" : 0,
     etag: true,
     lastModified: true,
+    setHeaders: (res, filePath) => {
+      if (filePath.endsWith(".html")) {
+        res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, private");
+        res.setHeader("Pragma", "no-cache");
+        res.setHeader("Expires", "0");
+      }
+    },
   })
 );
 
@@ -273,7 +280,7 @@ app.use(
 app.use(
   "/uploads",
   express.static(path.join(process.cwd(), "uploads"), {
-    maxAge: "7d",
+    maxAge: process.env.NODE_ENV === "production" ? "30d" : 0,
     setHeaders: (res, filePath) => {
       if (filePath.endsWith(".pdf")) {
         res.set("Content-Type", "application/pdf");
