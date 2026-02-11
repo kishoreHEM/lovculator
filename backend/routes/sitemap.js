@@ -8,6 +8,25 @@ let cachedXml = null;
 let cacheTime = 0;
 const CACHE_TTL = 1000 * 60 * 15; // 15 minutes
 
+async function hasColumn(tableName, columnName) {
+  const { rows } = await pool.query(
+    `
+    SELECT 1
+    FROM information_schema.columns
+    WHERE table_name = $1 AND column_name = $2
+    LIMIT 1
+    `,
+    [tableName, columnName]
+  );
+  return rows.length > 0;
+}
+
+function toIsoSafe(value) {
+  if (!value) return null;
+  const date = value instanceof Date ? value : new Date(value);
+  return Number.isNaN(date.getTime()) ? null : date.toISOString();
+}
+
 router.get("/sitemap.xml", async (req, res) => {
   try {
     if (cachedXml && Date.now() - cacheTime < CACHE_TTL) {
@@ -17,14 +36,32 @@ router.get("/sitemap.xml", async (req, res) => {
 
     const baseUrl = "https://lovculator.com";
 
+    const [
+      storiesHasTitle,
+      storiesHasUpdatedAt,
+      questionsHasUpdatedAt
+    ] = await Promise.all([
+      hasColumn("stories", "story_title"),
+      hasColumn("stories", "updated_at"),
+      hasColumn("questions", "updated_at")
+    ]);
+
     const storiesRes = await pool.query(`
-      SELECT id, story_title, created_at, updated_at
+      SELECT
+        id,
+        ${storiesHasTitle ? "story_title" : "NULL::text AS story_title"},
+        created_at
+        ${storiesHasUpdatedAt ? ", updated_at" : ""}
       FROM stories
     `);
 
     const questionsRes = await pool.query(`
-      SELECT slug, created_at, updated_at
+      SELECT
+        slug,
+        created_at
+        ${questionsHasUpdatedAt ? ", updated_at" : ""}
       FROM questions
+      WHERE slug IS NOT NULL AND slug <> ''
     `);
 
     let xml = `<?xml version="1.0" encoding="UTF-8"?>\n`;
@@ -64,12 +101,12 @@ router.get("/sitemap.xml", async (req, res) => {
     };
 
     storiesRes.rows.forEach(s => {
-      const lastmod = (s.updated_at || s.created_at).toISOString();
+      const lastmod = toIsoSafe(s.updated_at || s.created_at);
       const slug = slugify(s.story_title || "story");
       xml += `
   <url>
     <loc>${baseUrl}/stories/${slug}</loc>
-    <lastmod>${lastmod}</lastmod>
+    ${lastmod ? `<lastmod>${lastmod}</lastmod>` : ""}
     <changefreq>weekly</changefreq>
     <priority>0.6</priority>
   </url>`;
@@ -77,11 +114,11 @@ router.get("/sitemap.xml", async (req, res) => {
 
     // ---------- QUESTIONS ----------
     questionsRes.rows.forEach(q => {
-      const lastmod = (q.updated_at || q.created_at).toISOString();
+      const lastmod = toIsoSafe(q.updated_at || q.created_at);
       xml += `
   <url>
     <loc>${baseUrl}/question/${q.slug}</loc>
-    <lastmod>${lastmod}</lastmod>
+    ${lastmod ? `<lastmod>${lastmod}</lastmod>` : ""}
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
   </url>`;
