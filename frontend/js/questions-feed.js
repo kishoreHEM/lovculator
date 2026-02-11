@@ -172,6 +172,10 @@ window.loadQuestions = async function (loadMore = false) {
       );
       const firstAnswerBio = escapeHtml(q.top_answer_bio || "");
       const isFollowing = Boolean(q.top_answer_user_following);
+      const isSelfAnswerer =
+        Number(firstAnswerUserId) > 0 &&
+        Number(window.currentUserId || 0) > 0 &&
+        Number(firstAnswerUserId) === Number(window.currentUserId);
       const answererProfileLink = firstAnswerUsername
         ? `/profile/${encodeURIComponent(firstAnswerUsername)}`
         : "";
@@ -200,10 +204,14 @@ window.loadQuestions = async function (loadMore = false) {
                       ? `<a href="${answererProfileLink}" style="font-weight:600;color:#1c1e21;text-decoration:none;">${firstAnswerName}</a>`
                       : `<span style="font-weight:600;color:#1c1e21;">${firstAnswerName}</span>`
                   }
-                  <button class="follow-author-btn ${isFollowing ? "following" : ""}"
+                  ${
+                    isSelfAnswerer
+                      ? ""
+                      : `<button class="follow-author-btn ${isFollowing ? "following" : ""}"
                           data-user-id="${firstAnswerUserId}">
-                    ${isFollowing ? "Following" : "+ Follow"}
-                  </button>
+                        ${isFollowing ? "Following" : "+ Follow"}
+                      </button>`
+                  }
                 </div>
                 ${firstAnswerBio ? `<div style="color:#65676b;font-size:0.92rem;line-height:1.3;max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${firstAnswerBio}</div>` : ""}
               </div>
