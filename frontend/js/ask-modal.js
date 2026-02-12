@@ -46,12 +46,24 @@ class AskModalController {
     /* -----------------------------------------
        LOAD USER INFO (Enhanced with AuthManager)
     ----------------------------------------- */
+    normalizeAvatarUrl(rawUrl) {
+        if (!rawUrl || rawUrl === "null" || rawUrl === "undefined") {
+            return "/images/default-avatar.png";
+        }
+        if (/^https?:\/\//i.test(rawUrl) || rawUrl.startsWith("/")) {
+            return rawUrl;
+        }
+        return `/uploads/avatars/${rawUrl}`;
+    }
+
     async updateUserInfo() {
         // 1. Try AuthManager (Most reliable)
         if (window.AuthManager) {
             try {
                 const { res, data } = await window.AuthManager.getProfile();
-                if (res.ok && data.success && data.user) {
+                if (res.ok && data?.user) {
+                    window.currentUser = data.user;
+                    window.currentUserId = data.user.id;
                     this.renderUser(data.user);
                     return;
                 }
@@ -79,15 +91,16 @@ class AskModalController {
 
     renderUser(user) {
         if (!user) {
-            if (this.askUserName) this.askUserName.textContent = "Guest User";
+            if (this.askUserName) this.askUserName.textContent = "User";
             if (this.askUserAvatar) this.askUserAvatar.src = "/images/default-avatar.png";
             return;
         }
 
         if (this.askUserAvatar) {
-            this.askUserAvatar.src = user.avatar_url && user.avatar_url !== "null" 
-                ? user.avatar_url 
-                : "/images/default-avatar.png";
+            this.askUserAvatar.src = this.normalizeAvatarUrl(user.avatar_url || user.avatar);
+            this.askUserAvatar.onerror = () => {
+                this.askUserAvatar.src = "/images/default-avatar.png";
+            };
         }
         if (this.askUserName) {
             this.askUserName.textContent =
