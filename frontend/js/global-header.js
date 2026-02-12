@@ -9,6 +9,30 @@ const HEADER_CONFIG = {
   mobileBreakpoint: 768
 };
 
+const GA_MEASUREMENT_ID = window.GA_MEASUREMENT_ID || "G-SVKQ1ELD9W";
+
+function initGoogleAnalyticsOnce() {
+  if (!GA_MEASUREMENT_ID) return;
+  if (window.__lovculatorGtagLoaded) return;
+  window.__lovculatorGtagLoaded = true;
+
+  window.dataLayer = window.dataLayer || [];
+  window.gtag = window.gtag || function gtag() { window.dataLayer.push(arguments); };
+
+  const existing = document.querySelector(`script[src*="googletagmanager.com/gtag/js?id=${GA_MEASUREMENT_ID}"]`);
+  if (!existing) {
+    const script = document.createElement("script");
+    script.async = true;
+    script.src = `https://www.googletagmanager.com/gtag/js?id=${encodeURIComponent(GA_MEASUREMENT_ID)}`;
+    document.head.appendChild(script);
+  }
+
+  window.gtag("js", new Date());
+  window.gtag("config", GA_MEASUREMENT_ID, {
+    page_path: window.location.pathname + window.location.search
+  });
+}
+
 
 // Ensure API_BASE is available
 if (!window.API_BASE) {
@@ -567,6 +591,7 @@ function initLayoutManagerIntegration() {
 }
 
 document.addEventListener("DOMContentLoaded", () => {
+  initGoogleAnalyticsOnce();
   registerServiceWorkerOnce();
   loadGlobalHeader();
 });
