@@ -283,7 +283,7 @@ body {
 .answer-body img {
   max-width: 100%;
   height: auto;
-  max-height: 400px;
+  max-height: 0px;
   display: block;
   margin: 15px 0;
   border-radius: 8px;
