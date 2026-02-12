@@ -33,25 +33,54 @@ const answerUpload = multer({ storage: answerStorage });
 
 let hasAnswerImageColumnCache = null;
 let hasAnswerHtmlColumnCache = null;
+const retryableNetworkErrors = new Set(["ECONNRESET", "ETIMEDOUT", "EPIPE"]);
+
+async function dbQuery(text, params = [], retries = 1) {
+  try {
+    return await pool.query(text, params);
+  } catch (err) {
+    if (retries > 0 && retryableNetworkErrors.has(err?.code)) {
+      await new Promise((resolve) => setTimeout(resolve, 150));
+      return dbQuery(text, params, retries - 1);
+    }
+    throw err;
+  }
+}
+
 async function hasAnswerImageColumn() {
   if (hasAnswerImageColumnCache !== null) return hasAnswerImageColumnCache;
-  const { rows } = await pool.query(
-    `SELECT 1 FROM information_schema.columns 
-     WHERE table_name = 'answers' AND column_name = 'image_url' 
-     LIMIT 1`
-  );
-  hasAnswerImageColumnCache = rows.length > 0;
+  try {
+    const { rows } = await dbQuery(
+      `SELECT 1 FROM information_schema.columns
+       WHERE table_name = 'answers' AND column_name = 'image_url'
+       LIMIT 1`,
+      [],
+      1
+    );
+    hasAnswerImageColumnCache = rows.length > 0;
+  } catch (err) {
+    // Schema check should never take feed down; default to true for current schema.
+    console.warn("⚠️ image_url schema check failed, assuming present:", err.code || err.message);
+    hasAnswerImageColumnCache = true;
+  }
   return hasAnswerImageColumnCache;
 }
 
 async function hasAnswerHtmlColumn() {
   if (hasAnswerHtmlColumnCache !== null) return hasAnswerHtmlColumnCache;
-  const { rows } = await pool.query(
-    `SELECT 1 FROM information_schema.columns 
-     WHERE table_name = 'answers' AND column_name = 'answer_html' 
-     LIMIT 1`
-  );
-  hasAnswerHtmlColumnCache = rows.length > 0;
+  try {
+    const { rows } = await dbQuery(
+      `SELECT 1 FROM information_schema.columns
+       WHERE table_name = 'answers' AND column_name = 'answer_html'
+       LIMIT 1`,
+      [],
+      1
+    );
+    hasAnswerHtmlColumnCache = rows.length > 0;
+  } catch (err) {
+    console.warn("⚠️ answer_html schema check failed, assuming present:", err.code || err.message);
+    hasAnswerHtmlColumnCache = true;
+  }
   return hasAnswerHtmlColumnCache;
 }
 
@@ -163,7 +192,7 @@ router.get("/latest", async (req, res) => {
 
     const includeAnswerImage = await hasAnswerImageColumn();
 
-    const questionsRes = await pool.query(
+    const questionsRes = await dbQuery(
 `
 SELECT 
   q.id, 
@@ -262,7 +291,8 @@ ${whereClause}
 ORDER BY q.created_at DESC
 LIMIT $${paramIndex} OFFSET $${paramIndex + 1};
 `,
-params
+params,
+1
 );
 
 

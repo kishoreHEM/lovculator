@@ -114,12 +114,38 @@ app.use(
 // 7️⃣ SESSION STORE (Postgres)
 //
 const PgSession = connectPgSimple(session);
+const usePgSessionStore =
+  process.env.SESSION_STORE === "postgres" ||
+  (process.env.NODE_ENV === "production" &&
+    process.env.SESSION_STORE !== "memory");
+
+const sessionStore = usePgSessionStore
+  ? new PgSession({
+      pool,
+      tableName: "session_store",
+      // Avoid startup DDL on every boot; this query is the source of repeated
+      // ECONNRESET noise on flaky remote DB links.
+      createTableIfMissing:
+        process.env.SESSION_CREATE_TABLE_IF_MISSING === "true",
+      // Disable automatic prune timer in app process; run cleanup via DB job/cron.
+      pruneSessionInterval: false,
+    })
+  : undefined;
+
+if (sessionStore && typeof sessionStore.on === "function") {
+  sessionStore.on("error", (err) => {
+    console.error("❌ Session store error:", err.code || err.message);
+  });
+}
+
+if (usePgSessionStore) {
+  console.log("🗄️ Session store: postgres");
+} else {
+  console.log("🗄️ Session store: memory (development mode)");
+}
+
 const sessionMiddleware = session({
-  store: new PgSession({
-    pool,
-    tableName: "session_store",
-    createTableIfMissing: true,
-  }),
+  ...(sessionStore ? { store: sessionStore } : {}),
   secret:
     process.env.SESSION_SECRET || "lovculator_secret_key_change_in_production",
   resave: false,
