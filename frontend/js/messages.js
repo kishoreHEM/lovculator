@@ -1817,6 +1817,14 @@ attachEventListeners() {
       });
     }
 
+    // Sidebar back arrow -> Home
+    const homeBtn = document.getElementById("messagesHomeBtn");
+    if (homeBtn) {
+      homeBtn.addEventListener("click", () => {
+        window.location.href = "/";
+      });
+    }
+
     // Infinite scroll for older messages
     const messagesList = document.getElementById("messagesList");
     if (messagesList) {

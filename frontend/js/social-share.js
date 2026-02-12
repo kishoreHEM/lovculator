@@ -7,6 +7,9 @@ class SocialShare {
   }
 
   bindEvents() {
+    if (window.__lovculatorShareClickBound) return;
+    window.__lovculatorShareClickBound = true;
+
     document.addEventListener('click', (e) => {
       const btn = e.target.closest('.share-btn');
       if (!btn) return;

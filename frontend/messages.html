@@ -72,7 +72,10 @@
       <aside class="conversations-sidebar">
         <div class="conversations-header">
           <div class="conversations-header-top">
-            <h1><span>←</span> Messages</h1>
+            <h1>
+              <button id="messagesHomeBtn" class="sidebar-home-btn" type="button" aria-label="Go to home">←</button>
+              <span>Messages</span>
+            </h1>
             <button id="newChatBtn" class="new-chat-btn" type="button" aria-label="Start new conversation">+ New</button>
           </div>
 
@@ -151,7 +154,19 @@
 
   <div id="connectionStatus" class="connection-status" role="status" aria-live="polite" style="display: none;"></div>
 
-  <script src="/js/global-header.js"></script>
+  <script>
+    (function loadDesktopHeaderOnly() {
+      const isDesktop = window.matchMedia("(min-width: 901px)").matches;
+      const headerMount = document.getElementById("global-header");
+      if (!isDesktop) {
+        if (headerMount) headerMount.remove();
+        return;
+      }
+      const s = document.createElement("script");
+      s.src = "/js/global-header.js";
+      document.body.appendChild(s);
+    })();
+  </script>
   <script src="/js/layout-manager.js"></script>
   <script src="/js/auth.js"></script>
   

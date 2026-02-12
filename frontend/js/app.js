@@ -177,6 +177,11 @@ class LoveCalculator {
     // ================= Social Sharing =================
 
     initSocialShare() {
+        // Prefer dedicated social-share.js handler.
+        // Prevent duplicate share windows when multiple initializers run.
+        if (window.socialShare || window.__lovculatorShareClickBound) return;
+        window.__lovculatorShareClickBound = true;
+
         document.addEventListener('click', (e) => {
             const btn = e.target.closest('.share-btn');
             if (!btn) return;

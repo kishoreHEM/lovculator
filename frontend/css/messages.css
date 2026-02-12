@@ -182,8 +182,19 @@ body.messages-page {
   gap: 6px;
 }
 
-.conversations-header h1 span {
-  font-size: 1.4rem;
+.sidebar-home-btn {
+  border: none;
+  background: transparent;
+  font-size: 1.35rem;
+  line-height: 1;
+  border-radius: 8px;
+  padding: 2px 6px;
+  cursor: pointer;
+  color: #374151;
+}
+
+.sidebar-home-btn:hover {
+  background: #f3f4f6;
 }
 
 .input-actions-left{ display: flex;}
@@ -999,6 +1010,14 @@ body.messages-page {
 
 /* ---- 📱 MOBILE RESPONSIVE FIX (FULL SCREEN APP MODE) ---- */
 @media screen and (max-width: 900px) {
+  #global-header {
+    display: none !important;
+  }
+
+  body.messages-page {
+    padding-top: 0 !important;
+    padding-bottom: 0 !important;
+  }
   
   /* 1. Lock Body Scroll */
   body.messages-page {

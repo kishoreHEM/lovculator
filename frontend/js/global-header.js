@@ -54,6 +54,34 @@ function registerServiceWorkerOnce() {
     });
 }
 
+function ensureLoginGateLoaded() {
+  if (typeof window.showLoginModal === "function") {
+    return Promise.resolve();
+  }
+  if (window.__lovculatorLoginGateLoading) {
+    return window.__lovculatorLoginGateLoading;
+  }
+
+  window.__lovculatorLoginGateLoading = new Promise((resolve, reject) => {
+    const existing = document.querySelector('script[src="/js/global-login-gate.js"]');
+    if (existing) {
+      existing.addEventListener("load", () => resolve(), { once: true });
+      existing.addEventListener("error", () => reject(new Error("Failed to load login gate")), { once: true });
+      return;
+    }
+
+    const script = document.createElement("script");
+    script.src = "/js/global-login-gate.js";
+    script.onload = () => resolve();
+    script.onerror = () => reject(new Error("Failed to load login gate"));
+    document.body.appendChild(script);
+  }).finally(() => {
+    window.__lovculatorLoginGateLoading = null;
+  });
+
+  return window.__lovculatorLoginGateLoading;
+}
+
 function initUserHoverCards() {
   if (!window.__lovculatorIsLoggedIn) return;
   if (!window.matchMedia || !window.matchMedia('(hover: hover)').matches) return;
@@ -539,6 +567,11 @@ async function loadGlobalHeader() {
 
       // Messages only for logged-in users
       setTimeout(updateMessageDropdown, 1000);
+    } else {
+      // Ensure login modal is available on all guest pages with global header.
+      ensureLoginGateLoaded().catch((err) => {
+        console.warn("Login gate preload failed:", err);
+      });
     }
 
   } catch (err) {
@@ -551,9 +584,9 @@ document.addEventListener("click", (e) => {
   if (profileLink && !window.__lovculatorIsLoggedIn) {
     e.preventDefault();
     e.stopPropagation();
-    if (typeof window.showLoginModal === "function") {
-      window.showLoginModal("continue");
-    }
+    ensureLoginGateLoaded()
+      .then(() => window.showLoginModal?.("continue"))
+      .catch((err) => console.warn("Login modal unavailable:", err));
     return;
   }
 
@@ -563,9 +596,9 @@ document.addEventListener("click", (e) => {
   e.preventDefault();
   e.stopPropagation();
 
-  if (typeof window.showLoginModal === "function") {
-    window.showLoginModal("continue");
-  }
+  ensureLoginGateLoaded()
+    .then(() => window.showLoginModal?.("continue"))
+    .catch((err) => console.warn("Login modal unavailable:", err));
 });
 
 document.addEventListener("mouseover", (e) => {
