@@ -224,6 +224,7 @@ function renderAnswerList(question, answers) {
             const userBio = answer.bio || answer.author_bio || '';
             const answerText = answer.answer || answer.content || answer.text || '';
             const answerHtml = answer.answer_html || '';
+            const cleanAnswerHtml = answerHtml ? sanitizeAnswerMarkup(answerHtml) : "";
             const answerDate = answer.created_at || answer.date || '';
             const likeCount = answer.likes_count || answer.like_count || 0;
             const commentCount = answer.comments_count || answer.comment_count || 0;
@@ -263,8 +264,8 @@ function renderAnswerList(question, answers) {
                         </div>
                     </div>
 
-                    <div class="answer-body">${answerHtml ? answerHtml : normalizeAnswerText(answerText)}</div>
-                    ${answerHtml ? "" : (answerImage ? `
+                    <div class="answer-body ${cleanAnswerHtml ? "rich-text" : "plain-text"}">${cleanAnswerHtml ? cleanAnswerHtml : normalizeAnswerText(answerText)}</div>
+                    ${cleanAnswerHtml ? "" : (answerImage ? `
                         <div class="answer-image" style="margin-top:12px;">
                             <img src="${answerImage}" alt="Answer image" style="max-width:100%;border-radius:10px;display:block;">
                         </div>
@@ -381,6 +382,27 @@ function normalizeAnswerText(text) {
             ? t
             : t;
     }).join("\n"));
+}
+
+function sanitizeAnswerMarkup(html) {
+    const container = document.createElement("div");
+    container.innerHTML = html || "";
+
+    // Remove empty blocks that create artificial vertical gaps.
+    container.querySelectorAll("p,div").forEach((el) => {
+        const onlyWhitespace = !el.textContent || !el.textContent.trim();
+        const hasMedia = el.querySelector("img,video,iframe");
+        if (onlyWhitespace && !hasMedia) el.remove();
+    });
+
+    // Normalize copied-editor list markup: <li><p>Text</p></li> -> <li>Text</li>
+    container.querySelectorAll("li > p:only-child").forEach((p) => {
+        const li = p.parentElement;
+        if (!li) return;
+        li.textContent = p.textContent || "";
+    });
+
+    return container.innerHTML;
 }
 
 /* ---------------------------------------------------------
