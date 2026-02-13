@@ -2,10 +2,16 @@
   "name": "Lovculator",
   "short_name": "Lovculator",
   "description": "Relationship questions, answers, love stories, and the Lovculator love calculator.",
+  "lang": "en-US",
+  "dir": "ltr",
   "id": "/",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
+  "display_override": [
+    "window-controls-overlay",
+    "standalone"
+  ],
   "background_color": "#ffffff",
   "theme_color": "#ff4b8d",
   "orientation": "portrait",
