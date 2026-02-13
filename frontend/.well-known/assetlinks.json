@@ -1,10 +1,8 @@
 [{
-  "relation": ["delegate_permission/common.handle_all_urls"],
-  "target": {
-    "namespace": "android_app",
-    "package_name": "YOUR_PACKAGE_NAME",
-    "sha256_cert_fingerprints": [
-      "YOUR_SHA256_FINGERPRINT"
-    ]
-  }
-}]
+      "relation": ["delegate_permission/common.handle_all_urls"],
+      "target": {
+        "namespace": "android_app",
+        "package_name": "com.lovculator.twa",
+        "sha256_cert_fingerprints": ["78:D3:A6:3A:0E:11:BC:9B:91:2E:E9:B3:F8:D0:E7:C6:9F:C6:61:FC:62:D2:40:BF:3C:35:88:D9:47:2C:E9:27"]
+      }
+    }]
