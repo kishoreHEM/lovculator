@@ -77,25 +77,53 @@
       "name": "Home",
       "short_name": "Home",
       "description": "Open the home feed",
-      "url": "/"
+      "url": "/",
+      "icons": [
+        {
+          "src": "/images/android-chrome-192x192.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
     },
     {
       "name": "Questions",
       "short_name": "Questions",
       "description": "Browse relationship questions",
-      "url": "/questions"
+      "url": "/questions",
+      "icons": [
+        {
+          "src": "/images/android-chrome-192x192.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
     },
     {
       "name": "Love Stories",
       "short_name": "Stories",
       "description": "Read and share love stories",
-      "url": "/love-stories"
+      "url": "/love-stories",
+      "icons": [
+        {
+          "src": "/images/android-chrome-192x192.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
     },
     {
       "name": "Love Calculator",
       "short_name": "Calculator",
       "description": "Calculate love compatibility",
-      "url": "/love-calculator"
+      "url": "/love-calculator",
+      "icons": [
+        {
+          "src": "/images/android-chrome-192x192.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
     }
   ],
   "categories": ["entertainment", "lifestyle", "social"]
