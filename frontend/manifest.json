@@ -3,7 +3,7 @@
   "short_name": "Lovculator",
   "description": "Relationship questions, answers, love stories, and the Lovculator love calculator.",
   "id": "/",
-  "start_url": "/?utm_source=pwa",
+  "start_url": "/",
   "scope": "/",
   "display": "standalone",
   "background_color": "#ffffff",
@@ -27,6 +27,69 @@
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any maskable"
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "/images/screenshots/Lovculator%20Screenshots.png",
+      "sizes": "1024x1536",
+      "type": "image/png",
+      "label": "Lovculator home feed",
+      "form_factor": "narrow"
+    },
+    {
+      "src": "/images/screenshots/lovculator%20Screenshots%201.png",
+      "sizes": "1024x1536",
+      "type": "image/png",
+      "label": "Questions and answers feed",
+      "form_factor": "narrow"
+    },
+    {
+      "src": "/images/screenshots/lovculator%20Screenshots%202.png",
+      "sizes": "1024x1536",
+      "type": "image/png",
+      "label": "Ask and answer flow",
+      "form_factor": "narrow"
+    },
+    {
+      "src": "/images/screenshots/Lovculator%20Screenshots%203.png",
+      "sizes": "1024x1536",
+      "type": "image/png",
+      "label": "Love stories experience",
+      "form_factor": "narrow"
+    },
+    {
+      "src": "/images/screenshots/Lovculator%20Screenshots%204.png",
+      "sizes": "2816x1536",
+      "type": "image/png",
+      "label": "Love calculator result (landscape)",
+      "form_factor": "wide"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Home",
+      "short_name": "Home",
+      "description": "Open the home feed",
+      "url": "/"
+    },
+    {
+      "name": "Questions",
+      "short_name": "Questions",
+      "description": "Browse relationship questions",
+      "url": "/questions"
+    },
+    {
+      "name": "Love Stories",
+      "short_name": "Stories",
+      "description": "Read and share love stories",
+      "url": "/love-stories"
+    },
+    {
+      "name": "Love Calculator",
+      "short_name": "Calculator",
+      "description": "Calculate love compatibility",
+      "url": "/love-calculator"
     }
   ],
   "categories": ["entertainment", "lifestyle", "social"]
