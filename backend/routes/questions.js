@@ -191,6 +191,7 @@ router.get("/latest", async (req, res) => {
     params.push(limit, offset);
 
     const includeAnswerImage = await hasAnswerImageColumn();
+    const includeAnswerHtml = await hasAnswerHtmlColumn();
 
     const questionsRes = await dbQuery(
 `
@@ -213,13 +214,18 @@ SELECT
   MAX(a.created_at) AS latest_answer_at,
 
 	  top_answer.answer_text AS top_answer_text,
+	  ${includeAnswerHtml ? "top_answer.answer_html AS top_answer_html," : ""}
 	  top_answer.created_at AS top_answer_created_at,
 	  ${includeAnswerImage ? "top_answer.image_url AS top_answer_image_url," : ""}
+	  top_answer.id AS top_answer_id,
 	  top_answer.user_id AS top_answer_user_id,
 	  top_answer.username AS top_answer_username,
 	  top_answer.display_name AS top_answer_display_name,
 	  top_answer.avatar_url AS top_answer_avatar_url,
 	  top_answer.bio AS top_answer_bio,
+	  top_answer.likes_count AS top_answer_likes_count,
+	  top_answer.comments_count AS top_answer_comments_count,
+	  top_answer.user_liked AS top_answer_user_liked,
 	  top_answer.user_following AS top_answer_user_following,
 
   CASE 
@@ -248,7 +254,9 @@ LEFT JOIN question_views v
 
 	  LEFT JOIN LATERAL (
     SELECT 
+        a2.id,
         a2.answer_text,
+        ${includeAnswerHtml ? "a2.answer_html," : ""}
         a2.created_at
         ${includeAnswerImage ? ", a2.image_url" : ""},
         u2.id AS user_id,
@@ -256,6 +264,15 @@ LEFT JOIN question_views v
         u2.display_name,
         u2.avatar_url,
         u2.bio,
+        COUNT(DISTINCT al2.id) AS likes_count,
+        COUNT(DISTINCT ac2.id) AS comments_count,
+        CASE
+          WHEN $1::int IS NULL THEN false
+          ELSE EXISTS (
+            SELECT 1 FROM answer_likes
+            WHERE answer_id = a2.id AND user_id = $1::int
+          )
+        END AS user_liked,
         CASE 
           WHEN $1::int IS NULL THEN false
           ELSE EXISTS (
@@ -267,8 +284,10 @@ LEFT JOIN question_views v
         JOIN users u2 ON a2.user_id = u2.id
 	    LEFT JOIN answer_likes al2 
 	      ON a2.id = al2.answer_id
+        LEFT JOIN answer_comments ac2
+          ON a2.id = ac2.answer_id
     WHERE a2.question_id = q.id
-	    GROUP BY a2.id, a2.answer_text, a2.created_at, u2.id, u2.username, u2.display_name, u2.avatar_url, u2.bio ${includeAnswerImage ? ", a2.image_url" : ""}
+	    GROUP BY a2.id, a2.answer_text, ${includeAnswerHtml ? "a2.answer_html," : ""} a2.created_at, u2.id, u2.username, u2.display_name, u2.avatar_url, u2.bio ${includeAnswerImage ? ", a2.image_url" : ""}
     ORDER BY COUNT(al2.id) DESC, a2.created_at DESC
     LIMIT 1
   ) top_answer ON true
@@ -279,13 +298,18 @@ ${whereClause}
     q.id, 
     u.id, 
     top_answer.answer_text,
+    ${includeAnswerHtml ? "top_answer.answer_html," : ""}
     top_answer.created_at,
     ${includeAnswerImage ? "top_answer.image_url," : ""}
+    top_answer.id,
     top_answer.user_id,
     top_answer.username,
     top_answer.display_name,
     top_answer.avatar_url,
     top_answer.bio,
+    top_answer.likes_count,
+    top_answer.comments_count,
+    top_answer.user_liked,
     top_answer.user_following
 
 ORDER BY q.created_at DESC

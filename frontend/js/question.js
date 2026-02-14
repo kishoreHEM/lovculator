@@ -97,22 +97,9 @@ window.loadQuestion = async function() {
                 <div class="question-stats">
                     <span class="stat-item">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+                            <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path>
                         </svg>
                         ${question.answers_count || question.answer_count || 0} answers
-                    </span>
-                    <span class="stat-item">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
-                        </svg>
-                        ${question.likes_count || question.like_count || 0} likes
-                    </span>
-                    <span class="stat-item">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
-                            <circle cx="12" cy="12" r="3"></circle>
-                        </svg>
-                        ${question.views_count || question.view_count || 0} views
                     </span>
                 </div>
                 
@@ -228,6 +215,7 @@ function renderAnswerList(question, answers) {
             const answerDate = answer.created_at || answer.date || '';
             const likeCount = answer.likes_count || answer.like_count || 0;
             const commentCount = answer.comments_count || answer.comment_count || 0;
+            const viewCount = question.views_count || question.view_count || 0;
             const userAvatar = answer.profile_image_url || answer.avatar_url || answer.author_avatar || '/images/default-avatar.png';
             const answerImage =
                 answer.image_url ||
@@ -271,29 +259,39 @@ function renderAnswerList(question, answers) {
                         </div>
                     ` : "")}
 
-                    <div class="answer-actions">
-                        <button class="like-button ${answer.user_liked ? 'liked' : ''}" data-id="${answerId}" data-type="answer">
+                    <div class="post-actions answer-actions">
+                        <button class="post-action view-action" type="button" aria-label="Views" title="Views">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                                <circle cx="12" cy="12" r="3"></circle>
+                            </svg>
+                            <span class="view-count">${viewCount}</span>
+                        </button>
+
+                        <button class="post-action like-btn like-button ${answer.user_liked ? 'liked' : ''}" data-id="${answerId}" data-answer-id="${answerId}" data-type="answer">
                             <svg width="20" height="20" viewBox="0 0 24 24" fill="${answer.user_liked ? '#e91e63' : 'none'}" stroke="${answer.user_liked ? '#e91e63' : 'currentColor'}" stroke-width="2">
                                 <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
                             </svg>
                             <span class="like-count">${likeCount}</span>
                         </button>
 
-                        <button class="comment-toggle" data-id="${answerId}">
+                        <button class="post-action comment-toggle" data-id="${answerId}" data-answer-id="${answerId}">
                             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+                                <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path>
                             </svg>
                             <span class="comment-count">${commentCount}</span>
                         </button>
 
-                        <button class="share-btn" 
+                        <button class="post-action share-action-toggle share-btn" 
                                 data-share-url="https://lovculator.com/question/${question.slug || slug}#answer-${answerId}"
                                 data-share-title="${userName}'s answer"
                                 data-share-text="${answerText.substring(0, 100)}...">
                             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"></path>
-                                <polyline points="16 6 12 2 8 6"></polyline>
-                                <line x1="12" y1="2" x2="12" y2="15"></line>
+                                <circle cx="18" cy="5" r="3"></circle>
+                                <circle cx="6" cy="12" r="3"></circle>
+                                <circle cx="18" cy="19" r="3"></circle>
+                                <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line>
+                                <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line>
                             </svg>
                             <span>Share</span>
                         </button>
@@ -639,6 +637,24 @@ function attachSocialEventListeners() {
     console.log('Social features will be handled by social-features.js');
 }
 
+function syncAnswerActivityCounts(payload) {
+    const answerId = String(payload?.answerId || "");
+    if (!answerId) return;
+
+    const card = document.querySelector(`.answer-card[data-answer-id="${answerId}"]`);
+    if (!card) return;
+
+    if (typeof payload.likeCount === "number") {
+        const likeCountEl = card.querySelector(".like-count");
+        if (likeCountEl) likeCountEl.textContent = String(payload.likeCount);
+    }
+
+    if (typeof payload.commentCount === "number") {
+        const commentCountEl = card.querySelector(".comment-count");
+        if (commentCountEl) commentCountEl.textContent = String(payload.commentCount);
+    }
+}
+
 // Load question on page load
 document.addEventListener('DOMContentLoaded', function() {
     console.log('Question page loaded, slug:', slug);
@@ -651,4 +667,13 @@ document.addEventListener('DOMContentLoaded', function() {
     } else {
         showNotFound('No question specified');
     }
+
+    window.addEventListener("storage", (e) => {
+        if (e.key !== "lovculator_answer_activity" || !e.newValue) return;
+        try { syncAnswerActivityCounts(JSON.parse(e.newValue)); } catch {}
+    });
+
+    window.addEventListener("lovculator:answer-activity", (e) => {
+        if (e?.detail) syncAnswerActivityCounts(e.detail);
+    });
 });

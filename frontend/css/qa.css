@@ -330,6 +330,28 @@ body {
   line-height: 1.6;
   color: #444;
   margin: 10px 0 14px;
+  word-break: break-word;
+}
+
+.answer-preview p {
+  margin: 0 0 10px;
+}
+
+.answer-preview p:last-child {
+  margin-bottom: 0;
+}
+
+.answer-preview ul,
+.answer-preview ol {
+  margin: 0 0 12px 22px;
+  padding: 0;
+}
+
+.answer-preview li {
+  margin: 0 0 6px;
+}
+
+.answer-preview-collapsed {
   position: relative;
   display: -webkit-box;
   -webkit-line-clamp: 6;
@@ -337,7 +359,7 @@ body {
   overflow: hidden;
 }
 
-.answer-preview::after {
+.answer-preview-collapsed::after {
   content: "";
   position: absolute;
   bottom: 0;
@@ -355,8 +377,23 @@ body {
   text-decoration: none;
 }
 
+.read-more-toggle {
+  border: none;
+  background: transparent;
+  padding: 0;
+  cursor: pointer;
+}
+
 .read-more:hover {
   text-decoration: underline;
+}
+
+.home-answer-footer {
+  margin-top: 6px;
+}
+
+.home-answer-footer .post-action {
+  min-height: 42px;
 }
 
 /* INLINE ANSWER FORM (Feed) */

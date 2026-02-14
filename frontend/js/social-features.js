@@ -41,6 +41,13 @@ window.requireLogin = function(action = "", callback = null) {
   return false;
 };
 
+function emitAnswerActivity(payload) {
+    try {
+        localStorage.setItem("lovculator_answer_activity", JSON.stringify(payload));
+    } catch {}
+    window.dispatchEvent(new CustomEvent("lovculator:answer-activity", { detail: payload }));
+}
+
 
 
 
@@ -210,6 +217,13 @@ async function handleLike(likeBtn) {
         // Update the count number if returned from server
         if (likeCountSpan && json.like_count !== undefined) {
             likeCountSpan.textContent = json.like_count;
+        }
+
+        if (isAnswer && json.like_count !== undefined) {
+            emitAnswerActivity({
+                answerId: Number(id),
+                likeCount: Number(json.like_count)
+            });
         }
 
         // 5. Show Notification
@@ -448,7 +462,14 @@ async function handleCommentSubmit(commentSubmitBtn) {
             
             if (countElement) {
                 const currentCount = parseInt(countElement.textContent) || 0;
-                countElement.textContent = currentCount + 1;
+                const nextCount = currentCount + 1;
+                countElement.textContent = nextCount;
+                if (isAnswer) {
+                    emitAnswerActivity({
+                        answerId: Number(id),
+                        commentCount: nextCount
+                    });
+                }
                 break;
             }
         }
@@ -748,7 +769,11 @@ async function handleShare(shareBtn) {
                 url: url,
             });
         } catch (error) {
-            if (error.name !== 'AbortError') {
+            if (error.name === 'AbortError') return;
+            try {
+                await navigator.clipboard.writeText(url);
+                showNotification('Link copied to clipboard! 📋', 'success');
+            } catch {
                 console.error('Error sharing:', error);
                 showNotification('Failed to share.', 'error');
                 return;
@@ -992,4 +1017,3 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // Debug: Check if API is accessible
 console.log('Social Features initialized. API_BASE:', window.API_BASE);
-
