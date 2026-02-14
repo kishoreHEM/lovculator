@@ -6300,6 +6300,47 @@ input:checked + .slider:before { transform: translateX(26px); }
     text-decoration: underline;
 }
 
+.love-calc-faq {
+    background: #fff;
+    border: 1px solid #dbdbdb;
+    border-radius: 12px;
+    margin: 0 0 40px;
+    padding: 24px;
+    max-width: 800px;
+    width: 100%;
+}
+
+.love-calc-faq h2 {
+    font-size: 1.7rem;
+    margin: 0 0 14px;
+    color: #262626;
+}
+
+.love-calc-faq-item {
+    border: 1px solid #ececec;
+    border-radius: 10px;
+    padding: 12px 14px;
+    margin-bottom: 10px;
+    background: #fafafa;
+}
+
+.love-calc-faq-item:last-child {
+    margin-bottom: 0;
+}
+
+.love-calc-faq-item summary {
+    cursor: pointer;
+    font-weight: 600;
+    color: #262626;
+    line-height: 1.5;
+}
+
+.love-calc-faq-item p {
+    margin: 10px 0 0;
+    color: #444;
+    line-height: 1.7;
+}
+
 @media (max-width: 768px) {
     .love-calc-article {
         padding: 18px;
@@ -6317,6 +6358,14 @@ input:checked + .slider:before { transform: translateX(26px); }
     .love-calc-article p,
     .love-calc-article li {
         font-size: 0.98rem;
+    }
+
+    .love-calc-faq {
+        padding: 18px;
+    }
+
+    .love-calc-faq h2 {
+        font-size: 1.4rem;
     }
 }
 
