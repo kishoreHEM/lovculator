@@ -4924,7 +4924,7 @@ body.modal-open {
     }
 
     .app-container {
-    margin-top: 56px;
+    margin-top: 0;
     }
 
     .input-group input {
@@ -5142,6 +5142,7 @@ body.modal-open {
         box-shadow: none;
         padding: 10px;
         border-bottom: 2px solid #dddfe2;
+        margin-top: 56px;
     }
     
     .modal-container {

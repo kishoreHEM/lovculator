@@ -301,9 +301,10 @@ window.loadQuestions = async function (loadMore = false) {
         const cleanPreviewMarkup = rawHtml
           ? sanitizeAnswerMarkup(rawHtml)
           : sanitizeAnswerMarkup(normalizePlainAnswerToHtml(rawText));
+        const answerMarkupHasImage = /<img[\s>]/i.test(cleanPreviewMarkup);
 
         answerPreview = `
-          ${topAnswerImage ? `
+          ${topAnswerImage && !answerMarkupHasImage ? `
             <div class="answer-preview-image" style="margin:10px 0;">
               <img src="${topAnswerImage}" alt="Answer image" style="max-width:100%;border-radius:10px;display:block;">
             </div>

@@ -557,6 +557,7 @@ async function loadGlobalHeader() {
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
 
     container.innerHTML = await res.text();
+    adjustBodyForCurrentHeader(container);
 
     // ⚠️ IMPORTANT: only run these for logged-in users
     if (isLoggedIn) {
@@ -576,6 +577,49 @@ async function loadGlobalHeader() {
 
   } catch (err) {
     console.error("Header load failed:", err);
+  }
+}
+
+function adjustBodyForCurrentHeader(container) {
+  const topHeader = container.querySelector(".main-header, .guest-header");
+  const appContainer = document.querySelector(".app-container");
+  if (!topHeader) {
+    document.body.style.paddingTop = "0px";
+    document.body.style.paddingBottom = "0px";
+    if (appContainer) appContainer.style.marginTop = "0px";
+    return;
+  }
+
+  const isGuestHeader = topHeader.classList.contains("guest-header");
+
+  const apply = () => {
+    const headerHeight = `${topHeader.offsetHeight}px`;
+    // Use container offset only for logged-in fixed header. Guest header stays in normal flow.
+    document.body.style.paddingTop = "0px";
+    if (appContainer) appContainer.style.marginTop = isGuestHeader ? "0px" : headerHeight;
+    const hasMobileBottomNav = !!container.querySelector(".header-center");
+    document.body.style.paddingBottom =
+      window.innerWidth <= 768 && hasMobileBottomNav ? "70px" : "0px";
+  };
+
+  apply();
+  if (!window.__lovculatorHeaderPaddingResizeBound) {
+    window.__lovculatorHeaderPaddingResizeBound = true;
+    window.addEventListener("resize", () => {
+      const globalHeader = document.getElementById("global-header");
+      if (!globalHeader) return;
+      const activeHeader = globalHeader.querySelector(".main-header, .guest-header");
+      if (!activeHeader) return;
+      const activeIsGuest = activeHeader.classList.contains("guest-header");
+      const liveAppContainer = document.querySelector(".app-container");
+      const hasMobileBottomNav = !!globalHeader.querySelector(".header-center");
+      document.body.style.paddingTop = "0px";
+      if (liveAppContainer) {
+        liveAppContainer.style.marginTop = activeIsGuest ? "0px" : `${activeHeader.offsetHeight}px`;
+      }
+      document.body.style.paddingBottom =
+        window.innerWidth <= 768 && hasMobileBottomNav ? "70px" : "0px";
+    });
   }
 }
 

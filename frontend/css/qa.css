@@ -1360,13 +1360,21 @@ body {
   }
   
   .answer-actions {
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
+    gap: 8px;
   }
   
   .answer-actions button {
     flex: 1;
-    min-width: 100px;
+    min-width: 0;
     justify-content: center;
+    padding: 8px 6px;
+    font-size: 13px;
+  }
+
+  .answer-actions button svg {
+    width: 18px;
+    height: 18px;
   }
   
   .unanswered-actions,
