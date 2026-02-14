@@ -341,6 +341,33 @@ body {
   margin-bottom: 0;
 }
 
+.answer-preview img {
+  display: block;
+  width: 100% !important;
+  height: auto !important;
+  max-height: 420px !important;
+  object-fit: cover !important;
+  border-radius: 10px;
+  margin: 10px 0;
+}
+
+.answer-preview-image {
+  margin: 10px 0;
+  width: 100%;
+  max-height: 420px;
+  overflow: hidden;
+  border-radius: 10px;
+}
+
+.answer-preview-image img {
+  width: 100% !important;
+  height: auto !important;
+  max-height: none !important;
+  object-fit: cover !important;
+  border-radius: 0;
+  display: block;
+}
+
 .answer-preview ul,
 .answer-preview ol {
   margin: 0 0 12px 22px;
@@ -1375,6 +1402,18 @@ body {
   .answer-actions button svg {
     width: 18px;
     height: 18px;
+  }
+
+  .answer-preview-image img {
+    max-height: none !important;
+  }
+
+  .answer-preview img {
+    max-height: 260px !important;
+  }
+
+  .answer-preview-image {
+    max-height: 260px;
   }
   
   .unanswered-actions,

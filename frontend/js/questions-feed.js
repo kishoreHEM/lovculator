@@ -305,8 +305,8 @@ window.loadQuestions = async function (loadMore = false) {
 
         answerPreview = `
           ${topAnswerImage && !answerMarkupHasImage ? `
-            <div class="answer-preview-image" style="margin:10px 0;">
-              <img src="${topAnswerImage}" alt="Answer image" style="max-width:100%;border-radius:10px;display:block;">
+            <div class="answer-preview-image">
+              <img src="${topAnswerImage}" alt="Answer image">
             </div>
           ` : ""}
           <div class="answer-preview-wrap">
