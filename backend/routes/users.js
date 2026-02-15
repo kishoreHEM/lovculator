@@ -420,7 +420,8 @@ router.post("/:targetId/follow", isAuthenticated, async (req, res) => {
 
     // call notify only AFTER COMMIT
     if (isFollowing) {
-      await notifyFollow(targetId, followerId, req); // <-- correct usage
+      // notifyFollow signature: (req, targetUserId, actorId)
+      await notifyFollow(req, targetId, followerId);
     }
 
     return res.json({

@@ -346,7 +346,8 @@ router.post("/:storyId/comments", isAuthenticated, async (req, res) => {
 
     if (storyAuthorId !== userId) {
         try {
-            await notifyComment(storyAuthorId, userId, 'story', storyId);
+            // notifyComment signature: (req, targetUserId, actorId, postType, postId)
+            await notifyComment(req, storyAuthorId, userId, 'story', storyId);
         } catch (notifyError) {
             console.error("Failed to send notification, but continuing:", notifyError);
         }

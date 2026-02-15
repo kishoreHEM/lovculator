@@ -453,6 +453,9 @@ app.use((req, res) => {
 
 app.use((error, req, res, next) => {
   console.error("🆘 Global error handler:", error);
+  if (res.headersSent) {
+    return next(error);
+  }
   res.status(500).json({
     error:
       process.env.NODE_ENV === "production"

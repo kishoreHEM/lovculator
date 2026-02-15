@@ -9,6 +9,7 @@ class NotificationManager {
         this.messageCount = 0;
         this.autoRefreshInterval = null;
         this.pushSetupDone = false;
+        this.realtimeSubscribed = false;
 
         this.init();
     }
@@ -54,9 +55,11 @@ class NotificationManager {
             return;
         }
 
+        const fallbackVapidKey = "BPhvrTAciFdUoThpX3NNJuBUQJCAch3w7ZUwHlSPnZHNYJ9p6mQkAnCZR8BDi6YfM6hjXZdG_T4Y10rxmActWm0";
+        const vapidKey = window.VAPID_PUBLIC_KEY || fallbackVapidKey;
         if (!window.VAPID_PUBLIC_KEY) {
-            console.warn("VAPID public key missing on window");
-            return;
+            window.VAPID_PUBLIC_KEY = vapidKey;
+            console.warn("VAPID public key was missing on window. Applied fallback key.");
         }
 
         const permission = await Notification.requestPermission();
@@ -70,7 +73,7 @@ class NotificationManager {
         let subscription = await registration.pushManager.getSubscription();
 
         if (!subscription) {
-            const convertedKey = this.urlBase64ToUint8Array(window.VAPID_PUBLIC_KEY);
+            const convertedKey = this.urlBase64ToUint8Array(vapidKey);
 
             subscription = await registration.pushManager.subscribe({
                 userVisibleOnly: true,
@@ -131,6 +134,7 @@ urlBase64ToUint8Array(base64String) {
     // 🔌 REALTIME (WebSocket)
     // ================================
     async subscribeToRealTimeEvents() {
+        if (this.realtimeSubscribed) return;
         // Wait until wsManager exists (it might load slightly after this script)
         if (!window.wsManager) {
             console.log("⏳ Waiting for WebSocketManager...");
@@ -151,6 +155,7 @@ urlBase64ToUint8Array(base64String) {
                 this.handleNewMessage(data);
             });
 
+            this.realtimeSubscribed = true;
             console.log("✅ Live Notifications Connected");
         } catch (err) {
             console.error("❌ WS Subscribe Error:", err);
