@@ -8,6 +8,7 @@ class NotificationManager {
         this.notificationCount = 0;
         this.messageCount = 0;
         this.autoRefreshInterval = null;
+        this.pushSetupDone = false;
 
         this.init();
     }
@@ -25,18 +26,36 @@ class NotificationManager {
         // 3. Fallback Polling (Every 60s)
         this.startAutoRefresh();
 
-        if (window.__lovculatorIsLoggedIn) {
-        this.setupPushNotifications();
-        }
+        this.maybeSetupPushNotifications();
 
         // 4. Bind to Header Buttons (Wait for header.html to load)
         setTimeout(() => this.bindHeaderEvents(), 500);
     }
 
+    async maybeSetupPushNotifications() {
+    if (this.pushSetupDone) return;
+    try {
+        const me = await fetch(`${window.API_BASE}/auth/me`, {
+            credentials: "include",
+            cache: "no-store"
+        });
+        if (!me.ok) return;
+        this.pushSetupDone = true;
+        await this.setupPushNotifications();
+    } catch (err) {
+        console.warn("Push auth check failed:", err);
+    }
+}
+
     async setupPushNotifications() {
     try {
         if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
             console.log("Push not supported");
+            return;
+        }
+
+        if (!window.VAPID_PUBLIC_KEY) {
+            console.warn("VAPID public key missing on window");
             return;
         }
 
@@ -59,12 +78,17 @@ class NotificationManager {
             });
         }
 
-        await fetch("/api/notifications/subscribe", {
+        const res = await fetch("/api/notifications/subscribe", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             credentials: "include",
             body: JSON.stringify(subscription)
         });
+
+        if (!res.ok) {
+            const body = await res.text().catch(() => "");
+            throw new Error(`Subscribe failed: HTTP ${res.status} ${body}`);
+        }
 
         console.log("✅ Push subscribed successfully");
 
