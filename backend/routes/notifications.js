@@ -1,6 +1,8 @@
 import express from "express";
 import pool from "../db.js";
 import auth from "../middleware/auth.js";
+import webpush from "../config/push.js";
+
 
 const router = express.Router();
 
@@ -179,23 +181,68 @@ export const createNotification = async (req, {
 
         const notification = result.rows[0];
 
-        // WebSocket Broadcast
+        // 🔵 1️⃣ WebSocket Broadcast
         const broadcast = req?.app?.get("broadcastNotification");
         if (broadcast) {
             broadcast(userId, {
                 type: "NEW_NOTIFICATION",
                 notification
             });
-        } else {
-            console.log("⚠️ Notification broadcast handler missing");
+        }
+
+        // 🔔 2️⃣ PUSH NOTIFICATION
+        try {
+            const subs = await pool.query(
+                "SELECT endpoint, p256dh, auth FROM push_subscriptions WHERE user_id = $1",
+                [userId]
+            );
+
+            const payload = JSON.stringify({
+                title: "Lovculator ❤️",
+                body: message,
+                icon: "/images/android-chrome-192x192.png",
+                badge: "/images/android-chrome-192x192.png",
+                url: link || "/notifications"
+            });
+
+
+
+            for (const sub of subs.rows) {
+                const subscription = {
+                    endpoint: sub.endpoint,
+                    keys: {
+                        p256dh: sub.p256dh,
+                        auth: sub.auth
+                    }
+                };
+
+                await webpush.sendNotification(subscription, payload)
+    .catch(async err => {
+        console.error("Push send error:", err.statusCode);
+
+        // Remove invalid subscription
+        if (err.statusCode === 410 || err.statusCode === 404) {
+            await pool.query(
+                "DELETE FROM push_subscriptions WHERE endpoint = $1",
+                [sub.endpoint]
+            );
+        }
+    });
+
+            }
+
+        } catch (pushErr) {
+            console.error("Push system error:", pushErr);
         }
 
         return notification;
+
     } catch (error) {
         console.error("❌ createNotification error:", error);
         return null;
     }
 };
+
 
 /* ======================================================
    🔔 EXPORT NOTIFY SHORTCUTS (Fixed Links)
@@ -310,6 +357,7 @@ export const notifyAllUsers = async (req, {
         return 0;
     }
 };
+
 /* ======================================================
    📌 Helper to get display_name or username
 ====================================================== */
@@ -321,5 +369,38 @@ async function fetchActorName(actorId) {
     const user = result.rows[0];
     return user?.display_name || user?.username || "Someone";
 }
+
+
+/**
+ * Subscribe user to push notifications
+ */
+router.post("/subscribe", auth, async (req, res) => {
+  try {
+    const userId = req.user.id;
+
+    const { endpoint, keys } = req.body;
+
+    if (!endpoint || !keys?.p256dh || !keys?.auth) {
+      return res.status(400).json({ error: "Invalid subscription object" });
+    }
+
+    await pool.query(
+      `
+      INSERT INTO push_subscriptions (user_id, endpoint, p256dh, auth)
+      VALUES ($1, $2, $3, $4)
+      ON CONFLICT (user_id, endpoint)
+      DO NOTHING
+      `,
+      [userId, endpoint, keys.p256dh, keys.auth]
+    );
+
+    res.status(201).json({ success: true });
+
+  } catch (err) {
+    console.error("Push subscribe error:", err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
 
 export default router;

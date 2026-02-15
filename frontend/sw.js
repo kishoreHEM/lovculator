@@ -3,7 +3,7 @@
 // Production-ready with Play Store compliance
 // ===========================================================
 
-const APP_VERSION = '3.0.1';
+const APP_VERSION = '3.0.2';
 const CACHE_NAME = `lovculator-static-v${APP_VERSION}`;
 const API_CACHE_NAME = `lovculator-api-v${APP_VERSION}`;
 const IMAGE_CACHE_NAME = `lovculator-images-v${APP_VERSION}`;
