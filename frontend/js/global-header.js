@@ -652,7 +652,6 @@ document.addEventListener("mouseover", (e) => {
   target.setAttribute('title', 'Login to view profile');
 });
 
-
 function initLayoutManagerIntegration() {
     if (window.layoutManager) {
         if (typeof window.layoutManager.rebindHeaderEvents === "function") {

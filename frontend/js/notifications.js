@@ -25,9 +25,65 @@ class NotificationManager {
         // 3. Fallback Polling (Every 60s)
         this.startAutoRefresh();
 
+        if (window.__lovculatorIsLoggedIn) {
+        this.setupPushNotifications();
+        }
+
         // 4. Bind to Header Buttons (Wait for header.html to load)
         setTimeout(() => this.bindHeaderEvents(), 500);
     }
+
+    async setupPushNotifications() {
+    try {
+        if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+            console.log("Push not supported");
+            return;
+        }
+
+        const permission = await Notification.requestPermission();
+        if (permission !== "granted") {
+            console.log("Notification permission denied");
+            return;
+        }
+
+        const registration = await navigator.serviceWorker.ready;
+
+        let subscription = await registration.pushManager.getSubscription();
+
+        if (!subscription) {
+            const convertedKey = this.urlBase64ToUint8Array(window.VAPID_PUBLIC_KEY);
+
+            subscription = await registration.pushManager.subscribe({
+                userVisibleOnly: true,
+                applicationServerKey: convertedKey
+            });
+        }
+
+        await fetch("/api/notifications/subscribe", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            credentials: "include",
+            body: JSON.stringify(subscription)
+        });
+
+        console.log("✅ Push subscribed successfully");
+
+    } catch (err) {
+        console.error("Push setup failed:", err);
+    }
+}
+
+urlBase64ToUint8Array(base64String) {
+    const padding = '='.repeat((4 - base64String.length % 4) % 4);
+    const base64 = (base64String + padding)
+        .replace(/-/g, '+')
+        .replace(/_/g, '/');
+
+    const rawData = window.atob(base64);
+    return Uint8Array.from([...rawData].map(char => char.charCodeAt(0)));
+}
+
+
 
     // ================================
     // 🔗 HEADER BINDING (Connects Clicks)
