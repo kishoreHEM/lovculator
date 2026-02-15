@@ -31,8 +31,9 @@ body {
     display: flex;
     flex-direction: column;
     width: 100%;
-    padding-top: 60px;
-    padding-bottom: 60px;
+    padding-top: 0px;
+    padding-bottom: 0px;
+    margin-top: 56px;
 }
 
 /* 🌸 Centered Content Wrapper */
@@ -267,6 +268,7 @@ body {
     width: 100%;
     max-width: 800px;
     overflow: hidden;
+    margin-top: 56px;
 }
 
 .calculator-header {
@@ -3512,7 +3514,6 @@ footer {
     width: 100%;
     max-width: 800px;
     margin: 0 auto; /* Keeps it perfectly centered */
-    
     flex-direction: column;
 }
 
@@ -3586,6 +3587,7 @@ footer {
     display: flex;
     flex-direction: column;
     gap: 12px; /* Adds space between the input and the buttons below */
+    margin-top: 56px;
 }
 
 /* Fix the Top Row (Avatar + Input) */
@@ -4909,6 +4911,7 @@ body.modal-open {
 
     .calculator-post{
     border-radius: 0px;
+    margin-top: 56px;
     }
 
     .calculator-header {
@@ -5107,7 +5110,7 @@ body.modal-open {
     }
 
     .container {
-        padding-top: 60px;
+        padding-top: 0px;
         padding-bottom: 0;
         max-width: 100%;
     }
@@ -5142,7 +5145,7 @@ body.modal-open {
         box-shadow: none;
         padding: 10px;
         border-bottom: 2px solid #dddfe2;
-        margin-top: 0;
+        margin-top: 56px;
     }
     
     .modal-container {
@@ -6082,17 +6085,18 @@ input:checked + .slider:before { transform: translateX(26px); }
 ========================= */
 
 .guest-header {
-  position: sticky;
+  position: fixed;
   top: 0;
   z-index: 1000;
   background: #ffffff;
   border-bottom: 1px solid #eee;
+  width: 100%;
 }
 
 .guest-header__container {
   max-width: 1200px;
   margin: 0 auto;
-  padding: 12px 16px;
+  padding: 8px 16px;
 
   display: flex;
   align-items: center;

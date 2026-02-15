@@ -3,6 +3,8 @@
 // =======================================================
 
 (() => {
+  let gateInitialized = false;
+
   function ensureLoginGateStyles() {
     if (document.getElementById("global-login-gate-styles")) return;
     const style = document.createElement("style");
@@ -58,7 +60,10 @@
     return overlay;
   }
 
-  document.addEventListener("DOMContentLoaded", () => {
+  function initLoginGate() {
+    if (gateInitialized) return;
+    gateInitialized = true;
+
     ensureLoginGateStyles();
     const overlay = ensureLoginGateOverlay();
 
@@ -110,16 +115,23 @@
         window.location.href = "/login";
       });
     }
-  });
+  }
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", initLoginGate, { once: true });
+  } else {
+    initLoginGate();
+  }
 })();
 
 // =======================================================
 // 🔐 GUEST HEADER LOGIN BUTTON
 // =======================================================
-document.addEventListener("DOMContentLoaded", () => {
+function bindGuestLoginButton() {
   const loginBtn = document.getElementById("loginBtn");
 
-  if (!loginBtn) return;
+  if (!loginBtn || loginBtn.dataset.loginGateBound === "true") return;
+  loginBtn.dataset.loginGateBound = "true";
 
   loginBtn.addEventListener("click", (e) => {
     e.preventDefault(); // 🚫 stop page jump
@@ -127,7 +139,13 @@ document.addEventListener("DOMContentLoaded", () => {
       window.showLoginModal("continue");
     }
   });
-});
+}
+
+if (document.readyState === "loading") {
+  document.addEventListener("DOMContentLoaded", bindGuestLoginButton, { once: true });
+} else {
+  bindGuestLoginButton();
+}
 
 // =======================================================
 // 🔁 RESUME PENDING ACTION AFTER LOGIN
