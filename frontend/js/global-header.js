@@ -415,7 +415,8 @@ function initHeaderInteractions(container) {
   const headerEl = container.querySelector('.main-header');
   if (headerEl) {
     const adjustPadding = () => {
-      document.body.style.paddingTop = headerEl.offsetHeight + 'px';
+      // Keep body top padding at 0; layout offset is handled by .app-container margin-top.
+      document.body.style.paddingTop = '0px';
       document.body.style.paddingBottom = (window.innerWidth <= 768) ? '70px' : '0px';
     };
     adjustPadding();

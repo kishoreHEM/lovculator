@@ -329,6 +329,52 @@ params,
 
 
 // ======================================================
+// 2.1️⃣ GET /api/questions/:slug/related — Related Questions
+// ======================================================
+router.get("/:slug/related", async (req, res) => {
+  try {
+    const { slug } = req.params;
+    const limit = Math.min(parseInt(req.query.limit, 10) || 10, 20);
+    const lookupCondition = /^\d+$/.test(slug) ? "id = $1::int" : "slug = $1";
+
+    const currentRes = await pool.query(
+      `SELECT id FROM questions WHERE ${lookupCondition} LIMIT 1`,
+      [slug]
+    );
+
+    if (currentRes.rows.length === 0) {
+      return res.json([]);
+    }
+
+    const currentId = currentRes.rows[0].id;
+    const relatedRes = await pool.query(
+      `
+      SELECT
+        q.id,
+        q.slug,
+        q.question,
+        q.category,
+        q.created_at,
+        COUNT(DISTINCT a.id)::int AS answers_count
+      FROM questions q
+      LEFT JOIN answers a ON a.question_id = q.id
+      WHERE q.id <> $1
+      GROUP BY q.id
+      ORDER BY q.created_at DESC
+      LIMIT $2
+      `,
+      [currentId, limit]
+    );
+
+    res.json(relatedRes.rows);
+  } catch (err) {
+    console.error("❌ Error fetching related questions:", err);
+    res.status(500).json({ error: "Failed to load related questions." });
+  }
+});
+
+
+// ======================================================
 // 3️⃣ GET /api/questions/:slug — Fetch single question
 // ======================================================
 router.get("/:slug", auth, async (req, res) => {

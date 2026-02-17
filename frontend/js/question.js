@@ -143,6 +143,8 @@ window.loadQuestion = async function() {
             renderAnswerList(question, answers);
         }
 
+        loadRelatedQuestions(question);
+
         // Attach event listeners
         attachSocialEventListeners();
 
@@ -185,6 +187,53 @@ function showNotFound(message = "Question not found") {
             </div>
         `;
     }
+}
+
+async function loadRelatedQuestions(currentQuestion) {
+    const listEl = document.getElementById("relatedQuestionsList");
+    if (!listEl) return;
+
+    listEl.innerHTML = `<div class="related-loading">Loading related questions...</div>`;
+
+    try {
+        const res = await fetch(`${window.API_BASE}/questions/${encodeURIComponent(currentQuestion.slug || slug)}/related?limit=10`, {
+            credentials: "include",
+            headers: { "Accept": "application/json" }
+        });
+
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+
+        const items = await res.json();
+        if (!Array.isArray(items) || items.length === 0) {
+            listEl.innerHTML = `<div class="related-empty">No related questions found.</div>`;
+            return;
+        }
+
+        listEl.innerHTML = items.map((q) => {
+            const title = q.question || "Untitled question";
+            const safeTitle = escapeHtml(title);
+            const safeCategory = escapeHtml(q.category || "General");
+            const answersCount = Number(q.answers_count || 0);
+            return `
+                <a class="related-question-item" href="/question/${encodeURIComponent(q.slug)}">
+                    <div class="related-question-title">${safeTitle}</div>
+                    <div class="related-question-meta">${safeCategory} · ${answersCount} answers</div>
+                </a>
+            `;
+        }).join("");
+    } catch (err) {
+        console.error("Failed to load related questions:", err);
+        listEl.innerHTML = `<div class="related-empty">Unable to load related questions.</div>`;
+    }
+}
+
+function escapeHtml(text) {
+    return String(text || "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#39;");
 }
 
 /* ---------------------------------------------------------

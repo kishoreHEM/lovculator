@@ -462,6 +462,19 @@ body {
    SINGLE QUESTION PAGE
    --------------------------------------------------------- */
 
+.question-page .main-content-area {
+  max-width: 1180px;
+  margin-top: 56px;
+}
+
+/* Keep single-question content clear of fixed left sidebar when logged in */
+@media (min-width: 992px) {
+  .question-page .main-content-area:has(.main-sidebar) {
+    padding-left: 300px;
+    max-width: 1480px;
+  }
+}
+
 .question-container {
   background: #fff;
   padding: 30px;
@@ -469,7 +482,7 @@ body {
   margin-bottom: 30px;
   box-shadow: 0 1px 4px rgba(0,0,0,0.06);
   border: 1px solid #eee;
-  margin-top: 56px;
+  margin-top: 0;
 }
 
 .question-text {
@@ -498,6 +511,68 @@ body {
   margin-bottom: 15px;
   border-left: 4px solid #e91e63;
   padding-left: 10px;
+}
+
+.question-page-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 320px;
+  gap: 20px;
+  align-items: start;
+}
+
+.question-main-column {
+  min-width: 0;
+}
+
+.related-questions-sidebar {
+  position: sticky;
+  top: 76px;
+}
+
+.related-questions-card {
+  background: #fff;
+  border: 1px solid #eee;
+  border-radius: 12px;
+  padding: 16px;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+  margin-top: 0;
+}
+
+.related-questions-card h3 {
+  margin: 0 0 12px;
+  font-size: 1.05rem;
+  font-weight: 700;
+}
+
+.related-question-item {
+  display: block;
+  padding: 10px 0;
+  border-bottom: 1px solid #f0f2f5;
+  text-decoration: none;
+  color: #1c1e21;
+}
+
+.related-question-item:last-child {
+  border-bottom: 0;
+  padding-bottom: 0;
+}
+
+.related-question-title {
+  font-size: 0.95rem;
+  font-weight: 600;
+  line-height: 1.35;
+  margin-bottom: 6px;
+}
+
+.related-question-meta {
+  font-size: 0.82rem;
+  color: #65676b;
+}
+
+.related-loading,
+.related-empty {
+  font-size: 0.9rem;
+  color: #65676b;
 }
 
 /* ANSWER FORM (Merged duplicate definitions) */
@@ -1297,9 +1372,26 @@ body {
   border: 0;
 }
 
-/* ---------------------------------------------------------
-   MOBILE RESPONSIVE
-   --------------------------------------------------------- */
+/* =========================================================
+   MOBILE VERSION - ALL ORIGINAL VALUES PRESERVED
+   ========================================================= */
+
+@media (max-width: 1200px) {
+  .question-page-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .related-questions-sidebar {
+    display: block;
+    position: static;
+    top: auto;
+  }
+
+  .related-questions-card {
+    margin-top: 16px;
+  }
+}
+
 @media (max-width: 768px) {
   .quora-modal-container {
     width: 100%;
@@ -1345,6 +1437,20 @@ body {
 }
 
 @media (max-width: 600px) {
+  .question-page-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .related-questions-sidebar {
+    display: block;
+    position: static;
+    top: auto;
+  }
+
+  .related-questions-card {
+    margin-top: 12px;
+  }
+
   .page-wrapper {
     padding: 0 10px;
   }

@@ -96,21 +96,33 @@
     
     <main class="main-content-area">
       <div id="global-mobile-menu"></div>
-      
-      
-      <section class="question-section">
-        <div id="questionContainer">
-          <div class="loading-question">
-            <div class="loading-spinner"></div>
-            <p>Loading question...</p>
-          </div>
-        </div>
-      </section>
 
-      <section class="answers-section">
-        <h3>Answers</h3>
-        <div id="answersContainer"></div>
-      </section>
+      <div class="question-page-grid">
+        <div class="question-main-column">
+          <section class="question-section">
+            <div id="questionContainer">
+              <div class="loading-question">
+                <div class="loading-spinner"></div>
+                <p>Loading question...</p>
+              </div>
+            </div>
+          </section>
+
+          <section class="answers-section">
+            <h3>Answers</h3>
+            <div id="answersContainer"></div>
+          </section>
+        </div>
+
+        <aside class="related-questions-sidebar" aria-label="Related questions">
+          <div class="related-questions-card">
+            <h3>Related Questions</h3>
+            <div id="relatedQuestionsList">
+              <div class="related-loading">Loading related questions...</div>
+            </div>
+          </div>
+        </aside>
+      </div>
     </main>
 
     
