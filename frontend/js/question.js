@@ -270,7 +270,7 @@ function showNotFound(message = "Question not found") {
             <div class="not-found">
                 <h2>${message}</h2>
                 <p>The question you're looking for doesn't exist or has been removed.</p>
-                <a href="/answer" class="back-btn">Back to Questions</a>
+                <a href="/questions" class="back-btn">Back to Questions</a>
             </div>
         `;
     }
@@ -720,7 +720,7 @@ function updateBreadcrumbUI(category) {
     breadcrumbList.innerHTML = `
         <li><a href="/">Home</a></li>
         <li><span class="separator">/</span></li>
-        <li><a href="/answer">Questions</a></li>
+        <li><a href="/questions">Questions</a></li>
         <li><span class="separator">/</span></li>
         <li class="active">${category}</li>
     `;

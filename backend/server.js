@@ -448,6 +448,36 @@ app.get("/question", (req, res) => {
   res.redirect(301, "/questions");
 });
 
+// Legacy /answer route should resolve to the real questions index.
+app.get("/answer", (req, res) => {
+  res.redirect(301, "/questions");
+});
+
+// Redirect accidental language-prefixed clones like /es/, /it/, /ja/... to the canonical path.
+const localePrefixes = new Set([
+  "ar", "de", "en", "es", "fr", "hi", "id", "it", "ja", "ko",
+  "nl", "pt", "ru", "sv", "tr", "uk", "vi", "zh"
+]);
+
+app.use((req, res, next) => {
+  const parts = req.path.split("/").filter(Boolean);
+  if (parts.length === 0) return next();
+
+  const [first, ...rest] = parts;
+  const normalized = first.toLowerCase();
+  const isLocalePrefix =
+    localePrefixes.has(normalized) || /^[a-z]{2}-[a-z]{2}$/i.test(first);
+
+  if (!isLocalePrefix) return next();
+
+  const targetPath = `/${rest.join("/")}` || "/";
+  const queryString = req.url.includes("?")
+    ? req.url.substring(req.url.indexOf("?"))
+    : "";
+
+  return res.redirect(301, `${targetPath}${queryString}`);
+});
+
 // SEO-friendly question page
 app.get("/question/:slug", async (req, res) => {
   try {
