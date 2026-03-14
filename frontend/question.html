@@ -4,8 +4,8 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-  <title>Relationship Question & Answers | Lovculator</title>
-  <meta name="description" content="Read a relationship question and community answers on Lovculator." />
+  <title>{{QUESTION_PAGE_TITLE}}</title>
+  <meta name="description" content="{{QUESTION_PAGE_DESCRIPTION}}" />
   <meta name="robots" content="index,follow" />
   <meta name="theme-color" content="#ff4b8d">
   <link rel="manifest" href="/manifest.json">
@@ -21,12 +21,12 @@
   <link rel="icon" type="image/png" sizes="512x512" href="/images/android-chrome-512x512.png" />
 
 
-  <link rel="canonical" href="https://lovculator.com/question" />
+  <link rel="canonical" href="{{QUESTION_PAGE_CANONICAL}}" />
 
-  <meta property="og:title" content="Relationship Question & Answers | Lovculator" />
-  <meta property="og:description" content="Read a relationship question and community answers on Lovculator." />
+  <meta property="og:title" content="{{QUESTION_PAGE_OG_TITLE}}" />
+  <meta property="og:description" content="{{QUESTION_PAGE_DESCRIPTION}}" />
   <meta property="og:type" content="article" />
-  <meta property="og:url" content="https://lovculator.com/question" />
+  <meta property="og:url" content="{{QUESTION_PAGE_CANONICAL}}" />
   <meta property="og:image" content="https://lovculator.com/images/og-cover.jpg" />
   <meta property="og:image:alt" content="Lovculator cover image" />
   <meta property="og:locale" content="en_US" />
@@ -42,33 +42,13 @@
 
   <script type="application/ld+json" id="single-question-schema">
   {
-    "@context": "https://schema.org",
-    "@type": "QAPage",
-    "mainEntity": {
-      "@type": "Question",
-      "name": "Relationship Question",
-      "text": "User-submitted relationship question on Lovculator.",
-      "answerCount": 0,
-      "author": { "@type": "Person", "name": "Lovculator User" }
-    }
+{{QUESTION_PAGE_SCHEMA}}
   }
   </script>
 
   <script type="application/ld+json" id="breadcrumb-schema">
   {
-    "@context": "https://schema.org",
-    "@type": "BreadcrumbList",
-    "itemListElement": [{
-      "@type": "ListItem",
-      "position": 1,
-      "name": "Home",
-      "item": "https://lovculator.com"
-    },{
-      "@type": "ListItem",
-      "position": 2,
-      "name": "Answers",
-      "item": "https://lovculator.com/answer"
-    }]
+{{QUESTION_BREADCRUMB_SCHEMA}}
   }
   </script>
   <script src="/js/analytics.js"></script>

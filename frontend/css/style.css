@@ -144,7 +144,7 @@ body {
     display: none;
     flex-direction: column;
     justify-content: space-between;
-    width: 26px;
+    width: 26px; 
     height: 20px;
     background: none;
     border: none;

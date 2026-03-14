@@ -73,6 +73,22 @@ let frontendPath =
 
 console.log(`🌍 Serving frontend from: ${frontendPath}`);
 
+function escapeHtml(value = "") {
+  return String(value)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+function escapeJsonForHtml(value) {
+  return JSON.stringify(value)
+    .replace(/</g, "\\u003c")
+    .replace(/>/g, "\\u003e")
+    .replace(/&/g, "\\u0026");
+}
+
 //
 // 4️⃣ EXPRESS APP & HTTP SERVER
 //
@@ -262,20 +278,23 @@ app.get("/health", (req, res) => {
   });
 });
 
-// 🔥 Redirect *.html → clean URL (EXCEPT components)
-app.get("/*.html", (req, res, next) => {
-  // 🛑 STOP: Do not redirect component files!
-  if (req.path.includes("/components/")) {
-    return next(); // Pass to static middleware to serve the file
+// Redirect direct .html page requests to the clean canonical URL.
+app.use((req, res, next) => {
+  if (!req.path.endsWith(".html")) {
+    return next();
   }
 
-  // Remove .html extension
-  const cleanPath = req.path.replace(".html", "");
-  
-  // ✅ FIX: Preserve Query String (e.g. ?token=xyz or ?email=abc)
-  const queryString = req.url.indexOf('?') !== -1 ? req.url.substring(req.url.indexOf('?')) : "";
-  
-  return res.redirect(301, (cleanPath || "/") + queryString);
+  // Component partials still need to be fetched as raw HTML files.
+  if (req.path.includes("/components/")) {
+    return next();
+  }
+
+  const cleanPath = req.path.replace(/\.html$/, "") || "/";
+  const queryString = req.url.includes("?")
+    ? req.url.substring(req.url.indexOf("?"))
+    : "";
+
+  return res.redirect(301, `${cleanPath}${queryString}`);
 });
 
 
@@ -408,7 +427,8 @@ app.use(optionalAuth);
 // Get all .html files inside /frontend directory
 const htmlFiles = fs
   .readdirSync(frontendPath)
-  .filter((file) => file.endsWith(".html"));
+  .filter((file) => file.endsWith(".html"))
+  .filter((file) => file !== "question.html");
 
 // Example: "profile.html" → "profile"
 htmlFiles.forEach((file) => {
@@ -422,9 +442,149 @@ htmlFiles.forEach((file) => {
   });
 });
 
+// The base /question URL is not a real content page; send users and crawlers
+// to the index of questions instead of rendering the empty question shell.
+app.get("/question", (req, res) => {
+  res.redirect(301, "/questions");
+});
+
 // SEO-friendly question page
-app.get("/question/:slug", (req, res) => {
-  res.sendFile(path.join(frontendPath, "question.html"));
+app.get("/question/:slug", async (req, res) => {
+  try {
+    const { slug } = req.params;
+    const userId = req.user?.id || null;
+
+    const questionRes = await pool.query(
+      `
+      SELECT
+        q.id,
+        q.question,
+        q.slug,
+        q.description,
+        q.created_at,
+        q.category,
+        u.username,
+        u.display_name,
+        COUNT(DISTINCT a.id)::int AS answers_count
+      FROM questions q
+      LEFT JOIN users u ON q.user_id = u.id
+      LEFT JOIN answers a ON a.question_id = q.id
+      WHERE q.slug = $1
+      GROUP BY q.id, u.id
+      LIMIT 1
+      `,
+      [slug]
+    );
+
+    if (questionRes.rows.length === 0) {
+      return res.status(404).sendFile(path.join(frontendPath, "404.html"));
+    }
+
+    const question = questionRes.rows[0];
+
+    const answersRes = await pool.query(
+      `
+      SELECT
+        a.answer_text,
+        a.created_at,
+        u.display_name,
+        u.username
+      FROM answers a
+      LEFT JOIN users u ON a.user_id = u.id
+      WHERE a.question_id = $1
+      ORDER BY a.created_at ASC
+      LIMIT 10
+      `,
+      [question.id]
+    );
+
+    if (userId) {
+      await pool.query(
+        `
+        INSERT INTO question_views (question_id, user_id, viewed_at)
+        VALUES ($1, $2, NOW())
+        ON CONFLICT (question_id, user_id) DO UPDATE SET viewed_at = NOW()
+        `,
+        [question.id, userId]
+      ).catch(() => {});
+    }
+
+    const questionTitle = question.question || "Relationship Question";
+    const descriptionSource = question.description || question.question || "Read a relationship question and community answers on Lovculator.";
+    const description =
+      descriptionSource.length > 155
+        ? `${descriptionSource.slice(0, 152).trim()}...`
+        : descriptionSource;
+    const canonicalUrl = `https://lovculator.com/question/${encodeURIComponent(question.slug)}`;
+
+    const qaSchema = {
+      "@context": "https://schema.org",
+      "@type": "QAPage",
+      "mainEntity": {
+        "@type": "Question",
+        "name": questionTitle,
+        "text": question.description || question.question || questionTitle,
+        "url": canonicalUrl,
+        "answerCount": Number(question.answers_count || 0),
+        "dateCreated": question.created_at,
+        "author": {
+          "@type": "Person",
+          "name": question.display_name || question.username || "Lovculator User"
+        }
+      }
+    };
+
+    if (answersRes.rows.length > 0) {
+      qaSchema.mainEntity.acceptedAnswer = answersRes.rows.map((answer) => ({
+        "@type": "Answer",
+        "text": answer.answer_text || "",
+        "dateCreated": answer.created_at,
+        "author": {
+          "@type": "Person",
+          "name": answer.display_name || answer.username || "Lovculator User"
+        }
+      }));
+    }
+
+    const breadcrumbSchema = {
+      "@context": "https://schema.org",
+      "@type": "BreadcrumbList",
+      "itemListElement": [
+        {
+          "@type": "ListItem",
+          "position": 1,
+          "name": "Home",
+          "item": "https://lovculator.com"
+        },
+        {
+          "@type": "ListItem",
+          "position": 2,
+          "name": "Questions",
+          "item": "https://lovculator.com/questions"
+        },
+        {
+          "@type": "ListItem",
+          "position": 3,
+          "name": questionTitle,
+          "item": canonicalUrl
+        }
+      ]
+    };
+
+    const template = fs.readFileSync(path.join(frontendPath, "question.html"), "utf8");
+    const html = template
+      .replaceAll("{{QUESTION_PAGE_TITLE}}", escapeHtml(`${questionTitle} | Lovculator`))
+      .replaceAll("{{QUESTION_PAGE_OG_TITLE}}", escapeHtml(`${questionTitle} | Lovculator`))
+      .replaceAll("{{QUESTION_PAGE_DESCRIPTION}}", escapeHtml(description))
+      .replaceAll("{{QUESTION_PAGE_CANONICAL}}", canonicalUrl)
+      .replace("{{QUESTION_PAGE_SCHEMA}}", escapeJsonForHtml(qaSchema))
+      .replace("{{QUESTION_BREADCRUMB_SCHEMA}}", escapeJsonForHtml(breadcrumbSchema));
+
+    res.send(html);
+  } catch (error) {
+    console.error("❌ Question page SSR failed:", error);
+    res.sendFile(path.join(frontendPath, "question.html"));
+  }
 });
 
 // 🆕 Clean profile slug route

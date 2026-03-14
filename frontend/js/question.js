@@ -66,6 +66,7 @@ window.loadQuestion = async function() {
         
         // Update page title
         document.title = `${question.question || question.title || 'Question'} • Lovculator`;
+        updateQuestionSeo(question);
 
         // 2. Get Current User Info for the Prompt Card (Personalized for the viewer)
         let currentUser = window.currentUser;
@@ -153,6 +154,92 @@ window.loadQuestion = async function() {
         showNotFound("Failed to load question. Please try again.");
     }
 };
+
+function updateQuestionSeo(question) {
+    const questionTitle = question.question || question.title || "Relationship Question";
+    const questionText = question.description || question.question || question.title || "User-submitted relationship question on Lovculator.";
+    const canonicalUrl = `https://lovculator.com/question/${encodeURIComponent(question.slug || slug || "")}`;
+    const answerCount = Number(question.answers_count || question.answer_count || 0);
+
+    const canonicalEl = document.querySelector('link[rel="canonical"]');
+    if (canonicalEl) canonicalEl.setAttribute("href", canonicalUrl);
+
+    const ogUrl = document.querySelector('meta[property="og:url"]');
+    if (ogUrl) ogUrl.setAttribute("content", canonicalUrl);
+
+    const ogTitle = document.querySelector('meta[property="og:title"]');
+    if (ogTitle) ogTitle.setAttribute("content", `${questionTitle} | Lovculator`);
+
+    const ogDescription = document.querySelector('meta[property="og:description"]');
+    if (ogDescription) ogDescription.setAttribute("content", questionText);
+
+    const metaDescription = document.querySelector('meta[name="description"]');
+    if (metaDescription) metaDescription.setAttribute("content", questionText);
+
+    const schemaEl = document.getElementById("single-question-schema");
+    if (schemaEl) {
+        const schema = {
+            "@context": "https://schema.org",
+            "@type": "QAPage",
+            "mainEntity": {
+                "@type": "Question",
+                "name": questionTitle,
+                "text": questionText,
+                "url": canonicalUrl,
+                "answerCount": answerCount,
+                "dateCreated": question.created_at || undefined,
+                "author": {
+                    "@type": "Person",
+                    "name": question.author_name || question.display_name || question.username || "Lovculator User"
+                }
+            }
+        };
+
+        if (Array.isArray(question.answers) && question.answers.length) {
+            schema.mainEntity.acceptedAnswer = question.answers.slice(0, 10).map((answer) => ({
+                "@type": "Answer",
+                "text": answer.answer || answer.content || answer.text || "",
+                "dateCreated": answer.created_at || undefined,
+                "author": {
+                    "@type": "Person",
+                    "name": answer.display_name || answer.username || answer.author_name || "Lovculator User"
+                }
+            }));
+        }
+
+        schemaEl.textContent = JSON.stringify(schema);
+    }
+
+    const breadcrumbEl = document.getElementById("breadcrumb-schema");
+    if (breadcrumbEl) {
+        const breadcrumb = {
+            "@context": "https://schema.org",
+            "@type": "BreadcrumbList",
+            "itemListElement": [
+                {
+                    "@type": "ListItem",
+                    "position": 1,
+                    "name": "Home",
+                    "item": "https://lovculator.com"
+                },
+                {
+                    "@type": "ListItem",
+                    "position": 2,
+                    "name": "Questions",
+                    "item": "https://lovculator.com/questions"
+                },
+                {
+                    "@type": "ListItem",
+                    "position": 3,
+                    "name": questionTitle,
+                    "item": canonicalUrl
+                }
+            ]
+        };
+
+        breadcrumbEl.textContent = JSON.stringify(breadcrumb);
+    }
+}
 
 // Helper function to format date
 function formatDate(dateString) {
