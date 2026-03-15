@@ -77,37 +77,79 @@ function sanitizeAnswerMarkup(html) {
   return container.innerHTML;
 }
 
+function isBulletLine(line) {
+  return /^(?:[•\-–*])\s+/.test((line || "").trim());
+}
+
+function isOrderedLine(line) {
+  return /^\d+[\.)]\s+/.test((line || "").trim());
+}
+
+function stripListMarker(line) {
+  return (line || "")
+    .trim()
+    .replace(/^(?:[•\-–*]|\d+[\.)])\s+/, "")
+    .trim();
+}
+
+function buildListHtml(tagName, items) {
+  const safeItems = items
+    .map((item) => stripListMarker(item))
+    .filter(Boolean)
+    .map((item) => `<li>${escapeHtml(item)}</li>`)
+    .join("");
+
+  return safeItems ? `<${tagName}>${safeItems}</${tagName}>` : "";
+}
+
 function normalizePlainAnswerToHtml(text) {
   if (typeof text !== "string") return "";
-  const lines = text.replace(/\r\n/g, "\n").split("\n");
-  let html = "";
-  let i = 0;
 
-  while (i < lines.length) {
-    const line = lines[i].trim();
+  const blocks = text
+    .replace(/\r\n?/g, "\n")
+    .trim()
+    .split(/\n\s*\n+/)
+    .map((block) => block.trim())
+    .filter(Boolean);
 
-    if (!line) {
-      i++;
-      continue;
+  return blocks.map((block) => {
+    const lines = block
+      .split("\n")
+      .map((line) => line.trim())
+      .filter(Boolean);
+
+    if (!lines.length) return "";
+
+    if (lines.every(isBulletLine)) {
+      return buildListHtml("ul", lines);
     }
 
-    if (/^(?:[•\-–*])\s+/.test(line)) {
-      html += "<ul>";
-      while (i < lines.length) {
-        const liLine = lines[i].trim();
-        if (!/^(?:[•\-–*])\s+/.test(liLine)) break;
-        html += `<li>${escapeHtml(liLine.replace(/^(?:[•\-–*])\s+/, ""))}</li>`;
-        i++;
+    if (lines.every(isOrderedLine)) {
+      return buildListHtml("ol", lines);
+    }
+
+    if (lines.length > 1 && /[:：]$/.test(lines[0])) {
+      const heading = `<p>${escapeHtml(lines[0])}</p>`;
+      const rest = lines.slice(1);
+
+      if (rest.every((line) => isBulletLine(line) || isOrderedLine(line) || line.length <= 120)) {
+        const listTag = rest.every(isOrderedLine) ? "ol" : "ul";
+        return heading + buildListHtml(listTag, rest);
       }
-      html += "</ul>";
-      continue;
+
+      return heading + `<p>${escapeHtml(rest.join(" "))}</p>`;
     }
 
-    html += `<p>${escapeHtml(line)}</p>`;
-    i++;
-  }
+    return `<p>${escapeHtml(lines.join(" "))}</p>`;
+  }).join("");
+}
 
-  return html;
+function normalizeStoredAnswerMarkup(input) {
+  if (typeof input !== "string" || !input.trim()) return "";
+  if (!/<[a-z][\s\S]*>/i.test(input)) {
+    return normalizePlainAnswerToHtml(input);
+  }
+  return sanitizeAnswerMarkup(input);
 }
 
 function isHomepage() {
@@ -299,8 +341,8 @@ window.loadQuestions = async function (loadMore = false) {
         const rawHtml = typeof q.top_answer_html === "string" ? q.top_answer_html.trim() : "";
         const rawText = String(q.top_answer_text || "").replace(/^\s*×\s*/g, "");
         const cleanPreviewMarkup = rawHtml
-          ? sanitizeAnswerMarkup(rawHtml)
-          : sanitizeAnswerMarkup(normalizePlainAnswerToHtml(rawText));
+          ? normalizeStoredAnswerMarkup(rawHtml)
+          : normalizeStoredAnswerMarkup(rawText);
         const answerMarkupHasImage = /<img[\s>]/i.test(cleanPreviewMarkup);
 
         answerPreview = `

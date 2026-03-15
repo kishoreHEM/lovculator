@@ -16,6 +16,64 @@ function escapeHtml(text) {
     .replace(/'/g, "&#039;");
 }
 
+function normalizeAnswerText(text) {
+  if (!text || typeof text !== "string") return "";
+
+  const isBulletLine = (line) => /^(?:[•\-–*])\s+/.test((line || "").trim());
+  const isOrderedLine = (line) => /^\d+[\.)]\s+/.test((line || "").trim());
+  const stripListMarker = (line) => (line || "")
+    .trim()
+    .replace(/^(?:[•\-–*]|\d+[\.)])\s+/, "")
+    .trim();
+  const buildListHtml = (tagName, items) => {
+    const htmlItems = items
+      .map(stripListMarker)
+      .filter(Boolean)
+      .map((item) => `<li>${escapeHtml(item)}</li>`)
+      .join("");
+
+    return htmlItems ? `<${tagName}>${htmlItems}</${tagName}>` : "";
+  };
+
+  const blocks = text
+    .replace(/\r\n?/g, "\n")
+    .trim()
+    .split(/\n\s*\n+/)
+    .map((block) => block.trim())
+    .filter(Boolean);
+
+  return blocks.map((block) => {
+    const lines = block
+      .split("\n")
+      .map((line) => line.trim())
+      .filter(Boolean);
+
+    if (!lines.length) return "";
+
+    if (lines.every(isBulletLine)) {
+      return buildListHtml("ul", lines);
+    }
+
+    if (lines.every(isOrderedLine)) {
+      return buildListHtml("ol", lines);
+    }
+
+    if (lines.length > 1 && /[:：]$/.test(lines[0])) {
+      const heading = `<p>${escapeHtml(lines[0])}</p>`;
+      const rest = lines.slice(1);
+
+      if (rest.every((line) => isBulletLine(line) || isOrderedLine(line) || line.length <= 120)) {
+        const listTag = rest.every(isOrderedLine) ? "ol" : "ul";
+        return heading + buildListHtml(listTag, rest);
+      }
+
+      return heading + `<p>${escapeHtml(rest.join(" "))}</p>`;
+    }
+
+    return `<p>${escapeHtml(lines.join(" "))}</p>`;
+  }).join("");
+}
+
 async function loadMyAnswers() {
   const container = document.getElementById("myAnswersContainer");
   if (!container) return;
@@ -42,7 +100,7 @@ async function loadMyAnswers() {
     const html = answers.map(a => {
       const questionTitle = escapeHtml(a.question || "");
       const slug = escapeHtml(a.slug || a.question_id);
-      const answerText = escapeHtml(a.answer || "");
+      const answerText = normalizeAnswerText(a.answer || "");
       const date = new Date(a.created_at).toLocaleDateString("en-US", {
         year: "numeric",
         month: "short",

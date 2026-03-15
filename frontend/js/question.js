@@ -347,7 +347,7 @@ function renderAnswerList(question, answers) {
             const userBio = answer.bio || answer.author_bio || '';
             const answerText = answer.answer || answer.content || answer.text || '';
             const answerHtml = answer.answer_html || '';
-            const cleanAnswerHtml = answerHtml ? sanitizeAnswerMarkup(answerHtml) : "";
+            const cleanAnswerHtml = answerHtml ? normalizeAnswerHtml(answerHtml) : "";
             const answerDate = answer.created_at || answer.date || '';
             const likeCount = answer.likes_count || answer.like_count || 0;
             const commentCount = answer.comments_count || answer.comment_count || 0;
@@ -388,7 +388,7 @@ function renderAnswerList(question, answers) {
                         </div>
                     </div>
 
-                    <div class="answer-body ${cleanAnswerHtml ? "rich-text" : "plain-text"}">${cleanAnswerHtml ? cleanAnswerHtml : normalizeAnswerText(answerText)}</div>
+                    <div class="answer-body rich-text">${cleanAnswerHtml ? cleanAnswerHtml : normalizeAnswerText(answerText)}</div>
                     ${cleanAnswerHtml ? "" : (answerImage ? `
                         <div class="answer-image" style="margin-top:12px;">
                             <img src="${answerImage}" alt="Answer image" style="max-width:100%;border-radius:10px;display:block;">
@@ -454,68 +454,70 @@ function renderAnswerList(question, answers) {
 }
 
 function normalizeAnswerHtml(html) {
-    const container = document.createElement("div");
-    container.innerHTML = html;
-    const nodes = Array.from(container.childNodes);
-    const output = document.createElement("div");
-
-    let i = 0;
-    const isBullet = (text) => {
-        const t = (text || "").trim();
-        return t.startsWith("•") || t.startsWith("-") || t.startsWith("–");
-    };
-    const stripBullet = (text) => {
-        return (text || "").trim().replace(/^([•\-\–])\s*/, "");
-    };
-
-    while (i < nodes.length) {
-        const node = nodes[i];
-        const text = node.textContent || "";
-
-        if (isBullet(text)) {
-            const ul = document.createElement("ul");
-
-            while (i < nodes.length) {
-                const n = nodes[i];
-                const t = n.textContent || "";
-                if (!isBullet(t)) break;
-
-                let itemText = stripBullet(t);
-
-                if (!itemText && i + 1 < nodes.length) {
-                    const next = nodes[i + 1];
-                    const nextText = (next.textContent || "").trim();
-                    if (nextText && !isBullet(nextText)) {
-                        itemText = nextText;
-                        i++;
-                    }
-                }
-
-                const li = document.createElement("li");
-                li.textContent = itemText;
-                ul.appendChild(li);
-                i++;
-            }
-
-            output.appendChild(ul);
-            continue;
-        }
-
-        output.appendChild(node.cloneNode(true));
-        i++;
+    if (!html || typeof html !== "string") return "";
+    if (!/<[a-z][\s\S]*>/i.test(html)) {
+        return normalizeAnswerText(html);
     }
 
-    return output.innerHTML;
+    return sanitizeAnswerMarkup(html);
 }
 
 function normalizeAnswerText(text) {
-    if (!text) return "";
-    return normalizeAnswerHtml(text.replace(/\r\n/g, "\n").split("\n").map(line => {
-        const t = line.trim();
-        return t.startsWith("•") || t.startsWith("-") || t.startsWith("–")
-            ? t
-            : t;
-    }).join("\n"));
+    if (!text || typeof text !== "string") return "";
+
+    const isBulletLine = (line) => /^(?:[•\-–*])\s+/.test((line || "").trim());
+    const isOrderedLine = (line) => /^\d+[\.)]\s+/.test((line || "").trim());
+    const stripListMarker = (line) => (line || "")
+        .trim()
+        .replace(/^(?:[•\-–*]|\d+[\.)])\s+/, "")
+        .trim();
+    const buildListHtml = (tagName, items) => {
+        const htmlItems = items
+            .map(stripListMarker)
+            .filter(Boolean)
+            .map((item) => `<li>${escapeHtml(item)}</li>`)
+            .join("");
+
+        return htmlItems ? `<${tagName}>${htmlItems}</${tagName}>` : "";
+    };
+
+    const blocks = text
+        .replace(/\r\n?/g, "\n")
+        .trim()
+        .split(/\n\s*\n+/)
+        .map((block) => block.trim())
+        .filter(Boolean);
+
+    return blocks.map((block) => {
+        const lines = block
+            .split("\n")
+            .map((line) => line.trim())
+            .filter(Boolean);
+
+        if (!lines.length) return "";
+
+        if (lines.every(isBulletLine)) {
+            return buildListHtml("ul", lines);
+        }
+
+        if (lines.every(isOrderedLine)) {
+            return buildListHtml("ol", lines);
+        }
+
+        if (lines.length > 1 && /[:：]$/.test(lines[0])) {
+            const heading = `<p>${escapeHtml(lines[0])}</p>`;
+            const rest = lines.slice(1);
+
+            if (rest.every((line) => isBulletLine(line) || isOrderedLine(line) || line.length <= 120)) {
+                const listTag = rest.every(isOrderedLine) ? "ol" : "ul";
+                return heading + buildListHtml(listTag, rest);
+            }
+
+            return heading + `<p>${escapeHtml(rest.join(" "))}</p>`;
+        }
+
+        return `<p>${escapeHtml(lines.join(" "))}</p>`;
+    }).join("");
 }
 
 function sanitizeAnswerMarkup(html) {

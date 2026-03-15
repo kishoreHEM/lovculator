@@ -268,8 +268,8 @@ body {
 }
 
 .answer-body {
-  font-size: 1rem;
-  line-height: 1.6;
+  font-size: 16px;
+  line-height: 1.7;
   color: #1c1e21;
   margin-bottom: 25px;
   white-space: normal;
@@ -278,6 +278,28 @@ body {
 /* Keep manual line breaks for plain-text fallback answers only */
 .answer-body.plain-text {
   white-space: pre-wrap;
+}
+
+.answer-body p {
+  margin: 0 0 16px;
+}
+
+.answer-body p:last-child {
+  margin-bottom: 0;
+}
+
+.answer-body ul,
+.answer-body ol {
+  margin: 0 0 16px 24px;
+  padding: 0;
+}
+
+.answer-body li {
+  margin: 0 0 8px;
+}
+
+.answer-body li:last-child {
+  margin-bottom: 0;
 }
 
 /* Prevent huge images inside answers */
@@ -327,8 +349,8 @@ body {
 
 /* ANSWER PREVIEW (Quora-style) */
 .answer-preview {
-  font-size: 15px;
-  line-height: 1.6;
+  font-size: 16px;
+  line-height: 1.7;
   color: #444;
   margin: 10px 0 14px;
   word-break: break-word;
@@ -340,7 +362,7 @@ body {
 }
 
 .answer-preview p {
-  margin: 0 0 10px;
+  margin: 0 0 16px;
 }
 
 .answer-preview p:last-child {
@@ -376,12 +398,12 @@ body {
 
 .answer-preview ul,
 .answer-preview ol {
-  margin: 0 0 12px 22px;
+  margin: 0 0 16px 24px;
   padding: 0;
 }
 
 .answer-preview li {
-  margin: 0 0 6px;
+  margin: 0 0 8px;
 }
 
 .answer-preview-collapsed {
@@ -1549,19 +1571,19 @@ body {
   }
 
   .answer-preview {
-    font-size: 14px;
-    line-height: 1.75;
+    font-size: 16px;
+    line-height: 1.7;
     margin: 8px 0 12px;
   }
 
   .answer-preview p {
-    margin-bottom: 12px;
+    margin-bottom: 16px;
   }
 
   .answer-preview ul,
   .answer-preview ol {
-    margin-left: 18px;
-    margin-bottom: 12px;
+    margin-left: 24px;
+    margin-bottom: 16px;
   }
 
   .answer-preview.answer-preview-expanded {
