@@ -1,0 +1,10 @@
+.git
+.gitignore
+.DS_Store
+node_modules
+npm-debug.log
+yarn-debug.log
+*.log
+.env
+.vscode
+.idea

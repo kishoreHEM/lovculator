@@ -6,7 +6,7 @@
     "verify": "node verify_railway_files.mjs"
   },
   "engines": {
-    "node": "18.x"
+    "node": "20.x"
   },
   "dependencies": {
     "@emailjs/browser": "^4.4.1",
