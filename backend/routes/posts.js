@@ -4,9 +4,9 @@ import express from "express";
 import pool from "../db.js";
 import auth from "../middleware/auth.js";
 import multer from "multer";
-import path from "path";
 import fs from "fs";
 import { notifyLike, notifyComment } from "./notifications.js";
+import { imageFileFilter, optimizeImageUpload } from "../utils/imageUpload.js";
 
 const router = express.Router();
 
@@ -18,16 +18,11 @@ if (!fs.existsSync(uploadDir)) {
     fs.mkdirSync(uploadDir, { recursive: true });
 }
 
-const storage = multer.diskStorage({
-    destination: (req, file, cb) => cb(null, uploadDir),
-    filename: (req, file, cb) => {
-        const ext = path.extname(file.originalname);
-        const filename = `${Date.now()}-${Math.round(Math.random() * 1e9)}${ext}`;
-        cb(null, filename);
-    }
+const upload = multer({
+    storage: multer.memoryStorage(),
+    limits: { fileSize: 5 * 1024 * 1024 },
+    fileFilter: imageFileFilter
 });
-
-const upload = multer({ storage });
 
 /* ======================================================
    📝 CREATE POST
@@ -37,7 +32,13 @@ router.post("/", auth, upload.single("image"), async (req, res) => {
         const userId = req.user.id;
         const { content, privacy, feeling } = req.body;
 
-        const imageUrl = req.file ? `/uploads/posts/${req.file.filename}` : null;
+        const imageUrl = req.file
+            ? (await optimizeImageUpload(req.file, {
+                outputDir: uploadDir,
+                urlBasePath: "/uploads/posts",
+                prefix: "post"
+              })).url
+            : null;
 
         if (!content && !imageUrl) {
             return res.status(400).json({ error: "Post cannot be empty" });

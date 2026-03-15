@@ -334,6 +334,11 @@ body {
   word-break: break-word;
 }
 
+.answer-preview-wrap {
+  position: relative;
+  overflow: hidden;
+}
+
 .answer-preview p {
   margin: 0 0 10px;
 }
@@ -395,6 +400,7 @@ body {
   width: 100%;
   height: 40px;
   background: linear-gradient(to bottom, rgba(255,255,255,0), #fff);
+  pointer-events: none;
 }
 
 .read-more {
@@ -418,10 +424,28 @@ body {
 
 .home-answer-footer {
   margin-top: 6px;
+  position: relative;
+  z-index: 1;
+  clear: both;
 }
 
 .home-answer-footer .post-action {
   min-height: 42px;
+  position: static !important;
+}
+
+.home-answer-footer .share-action-toggle {
+  position: static !important;
+  inset: auto !important;
+  top: auto !important;
+  right: auto !important;
+  bottom: auto !important;
+  left: auto !important;
+  transform: none !important;
+  width: auto !important;
+  height: auto !important;
+  border-radius: 8px !important;
+  box-shadow: none !important;
 }
 
 /* INLINE ANSWER FORM (Feed) */
@@ -1522,6 +1546,62 @@ body {
 
   .answer-preview-image {
     max-height: 260px;
+  }
+
+  .answer-preview {
+    font-size: 14px;
+    line-height: 1.75;
+    margin: 8px 0 12px;
+  }
+
+  .answer-preview p {
+    margin-bottom: 12px;
+  }
+
+  .answer-preview ul,
+  .answer-preview ol {
+    margin-left: 18px;
+    margin-bottom: 12px;
+  }
+
+  .answer-preview.answer-preview-expanded {
+    max-height: 58vh;
+    overflow-y: auto;
+    padding-right: 4px;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .answer-preview.answer-preview-expanded::after {
+    display: none;
+  }
+
+  .answer-preview-wrap .read-more-toggle {
+    margin-top: 4px;
+    margin-left: 0;
+  }
+
+  .home-answer-footer {
+    gap: 6px;
+    flex-wrap: nowrap;
+  }
+
+  .home-answer-footer .post-action {
+    gap: 6px;
+    min-height: 40px;
+    padding: 8px 6px;
+    font-size: 13px;
+  }
+
+  .home-answer-footer .post-action svg {
+    width: 18px;
+    height: 18px;
+    flex-shrink: 0;
+  }
+
+  .home-answer-footer .share-label,
+  .home-answer-footer .like-count,
+  .home-answer-footer .comment-count {
+    font-size: 13px;
   }
   
   .unanswered-actions,

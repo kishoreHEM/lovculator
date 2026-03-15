@@ -2,8 +2,8 @@ import express from "express";
 import pool from "../db.js";
 import { notifyLike, notifyComment, notifyAllUsers } from './notifications.js';
 import multer from 'multer'; // ✅ 1. Import Multer
-import path from 'path';
 import fs from 'fs';
+import { imageFileFilter, optimizeImageUpload } from "../utils/imageUpload.js";
 
 const router = express.Router();
 
@@ -21,34 +21,15 @@ const slugify = (text = "") => {
 /* -------------------------------------------
    ✅ 2. CONFIGURE MULTER FOR IMAGE UPLOADS
 ------------------------------------------- */
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    // Save images to 'uploads/stories/'
-    const dir = 'uploads/stories/';
-    if (!fs.existsSync(dir)){
-        fs.mkdirSync(dir, { recursive: true });
-    }
-    cb(null, dir);
-  },
-  filename: (req, file, cb) => {
-    // Unique filename: story-TIMESTAMP-RANDOM.jpg
-    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-    cb(null, 'story-' + uniqueSuffix + path.extname(file.originalname));
-  }
-});
+const storiesUploadDir = "uploads/stories";
+if (!fs.existsSync(storiesUploadDir)){
+  fs.mkdirSync(storiesUploadDir, { recursive: true });
+}
 
 const upload = multer({ 
-  storage: storage,
+  storage: multer.memoryStorage(),
   limits: { fileSize: 5 * 1024 * 1024 }, // 5MB Limit
-  fileFilter: (req, file, cb) => {
-    const filetypes = /jpeg|jpg|png|gif|webp/;
-    const mimetype = filetypes.test(file.mimetype);
-    const extname = filetypes.test(path.extname(file.originalname).toLowerCase());
-    if (mimetype && extname) {
-      return cb(null, true);
-    }
-    cb(new Error("Only images (jpeg, jpg, png, gif, webp) are allowed!"));
-  }
+  fileFilter: imageFileFilter
 });
 
 /* -------------------------------------------
@@ -185,7 +166,12 @@ router.post("/", isAuthenticated, upload.single('image'), async (req, res) => {
     // ✅ 5. HANDLE IMAGE PATH
     let imageUrl = null;
     if (req.file) {
-        imageUrl = `/uploads/stories/${req.file.filename}`;
+        const optimizedImage = await optimizeImageUpload(req.file, {
+          outputDir: storiesUploadDir,
+          urlBasePath: "/uploads/stories",
+          prefix: "story"
+        });
+        imageUrl = optimizedImage.url;
     }
 
     const insertSql = `

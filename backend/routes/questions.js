@@ -5,8 +5,8 @@ import pool from "../db.js";
 import auth from "../middleware/auth.js"; 
 import { notifyLike, notifyComment, notifyAllUsers } from "./notifications.js"; 
 import multer from "multer";
-import path from "path";
 import fs from "fs";
+import { imageFileFilter, optimizeManyImageUploads } from "../utils/imageUpload.js";
 
 const router = express.Router();
 // Ensure req.user is populated for all question routes (guests allowed)
@@ -20,16 +20,11 @@ if (!fs.existsSync(answersUploadDir)) {
   fs.mkdirSync(answersUploadDir, { recursive: true });
 }
 
-const answerStorage = multer.diskStorage({
-  destination: (req, file, cb) => cb(null, answersUploadDir),
-  filename: (req, file, cb) => {
-    const ext = path.extname(file.originalname);
-    const filename = `${Date.now()}-${Math.round(Math.random() * 1e9)}${ext}`;
-    cb(null, filename);
-  }
+const answerUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 5 * 1024 * 1024 },
+  fileFilter: imageFileFilter
 });
-
-const answerUpload = multer({ storage: answerStorage });
 
 let hasAnswerImageColumnCache = null;
 let hasAnswerHtmlColumnCache = null;
@@ -487,7 +482,12 @@ router.post("/:id/answer", auth, answerUpload.array("images", 6), async (req, re
       try { return JSON.parse(imageIndicesRaw); } catch { return []; }
     })();
     const files = Array.isArray(req.files) ? req.files : [];
-    const imageUrls = files.map(f => `/uploads/answers/${f.filename}`);
+    const optimizedImages = await optimizeManyImageUploads(files, (_, index) => ({
+      outputDir: answersUploadDir,
+      urlBasePath: "/uploads/answers",
+      prefix: `answer-${index + 1}`
+    }));
+    const imageUrls = optimizedImages.map((f) => f.url);
     const imageMap = new Map();
     imageIndices.forEach((idx, i) => {
       if (imageUrls[i]) imageMap.set(Number(idx), imageUrls[i]);

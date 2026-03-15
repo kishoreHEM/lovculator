@@ -5,6 +5,7 @@ import multer from "multer";
 import path from "path";
 import fs from "fs";
 import { notifyFollow } from './notifications.js';
+import { imageFileFilter, optimizeImageUpload } from "../utils/imageUpload.js";
 
 const router = express.Router();
 
@@ -26,24 +27,10 @@ const isAuthenticated = (req, res, next) => {
 const avatarDir = path.join(process.cwd(), "uploads", "avatars");
 if (!fs.existsSync(avatarDir)) fs.mkdirSync(avatarDir, { recursive: true });
 
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => cb(null, avatarDir),
-  filename: (req, file, cb) => {
-    const ext = path.extname(file.originalname);
-    cb(null, `avatar-${Date.now()}${ext}`);
-  },
-});
-
 const upload = multer({
-  storage,
+  storage: multer.memoryStorage(),
   limits: { fileSize: 2 * 1024 * 1024 }, // 2MB
-  fileFilter: (req, file, cb) => {
-    const allowed = ["image/jpeg", "image/png", "image/webp"];
-    if (!allowed.includes(file.mimetype)) {
-      return cb(new Error("Only JPG, PNG, or WebP allowed"));
-    }
-    cb(null, true);
-  },
+  fileFilter: imageFileFilter,
 });
 
 /* ======================================================
@@ -341,7 +328,12 @@ router.post("/:id/avatar", isAuthenticated, upload.single("avatar"), async (req,
 
   try {
     const userId = Number(req.params.id);
-    const avatarPath = `/uploads/avatars/${req.file.filename}`;
+    const optimizedAvatar = await optimizeImageUpload(req.file, {
+      outputDir: avatarDir,
+      urlBasePath: "/uploads/avatars",
+      prefix: "avatar"
+    });
+    const avatarPath = optimizedAvatar.url;
 
     const result = await pool.query(
       `
