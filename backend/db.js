@@ -12,16 +12,23 @@ dotenv.config({ path: path.resolve(__dirname, ".env") });
 
 const { Pool } = pkg;
 
-if (!process.env.DATABASE_URL) {
-  console.error("❌ DATABASE_URL missing in environment variables");
+const connectionString =
+  process.env.DATABASE_URL ||
+  process.env.DATABASE_PUBLIC_URL ||
+  process.env.POSTGRES_URL ||
+  process.env.PG_URL ||
+  "";
+
+if (!connectionString) {
+  console.error("❌ No Postgres connection string found. Checked DATABASE_URL, DATABASE_PUBLIC_URL, POSTGRES_URL, PG_URL");
 }
 
 const isLocalDb =
-  /localhost|127\.0\.0\.1/.test(process.env.DATABASE_URL || "") ||
+  /localhost|127\.0\.0\.1/.test(connectionString) ||
   process.env.DB_SSL === "false";
 
 const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
+  connectionString,
   ssl: isLocalDb ? false : { rejectUnauthorized: false },
   keepAlive: true,
   keepAliveInitialDelayMillis: 10000,
