@@ -172,16 +172,37 @@ router.get("/latest", async (req, res) => {
     const limit = parseInt(req.query.limit) || 20;
     const offset = parseInt(req.query.offset) || 0;
     const category = req.query.category?.toLowerCase();
+    const sort = String(req.query.sort || "newest").toLowerCase();
+    const status = String(req.query.status || "").toLowerCase();
 
-    let whereClause = "";
+    const whereParts = [];
     const params = [userId];
     let paramIndex = 2;
 
     if (category && category !== "all") {
-      whereClause = `WHERE LOWER(q.category) = $${paramIndex}`;
+      whereParts.push(`LOWER(q.category) = $${paramIndex}`);
       params.push(category);
       paramIndex++;
     }
+
+    if (status === "unanswered" || sort === "unanswered") {
+      whereParts.push("NOT EXISTS (SELECT 1 FROM answers ax WHERE ax.question_id = q.id)");
+    } else if (status === "answered") {
+      whereParts.push("EXISTS (SELECT 1 FROM answers ax WHERE ax.question_id = q.id)");
+    }
+
+    const whereClause = whereParts.length
+      ? `WHERE ${whereParts.join(" AND ")}`
+      : "";
+
+    const orderClause =
+      status === "unanswered" || sort === "unanswered"
+        ? "ORDER BY q.created_at DESC"
+        : status === "answered"
+          ? "ORDER BY MAX(a.created_at) DESC NULLS LAST, q.created_at DESC"
+          : sort === "popular"
+            ? "ORDER BY CASE WHEN COUNT(DISTINCT a.id) = 0 THEN 0 ELSE 1 END, COUNT(DISTINCT l.id) DESC, COUNT(DISTINCT v.id) DESC, q.created_at DESC"
+            : "ORDER BY CASE WHEN COUNT(DISTINCT a.id) = 0 THEN 0 ELSE 1 END, q.created_at DESC";
 
     params.push(limit, offset);
 
@@ -307,7 +328,7 @@ ${whereClause}
     top_answer.user_liked,
     top_answer.user_following
 
-ORDER BY q.created_at DESC
+${orderClause}
 LIMIT $${paramIndex} OFFSET $${paramIndex + 1};
 `,
 params,

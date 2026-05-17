@@ -3,6 +3,9 @@
  * ✅ Final Version: Full Realtime Support + Mobile/Desktop Fixes + Toast Popups Restored
  */
 
+const DEFAULT_VAPID_PUBLIC_KEY = "BPhvrTAciFdUoThpX3NNJuBUQJCAch3w7ZUwHlSPnZHNYJ9p6mQkAnCZR8BDi6YfM6hjXZdG_T4Y10rxmActWm0";
+window.VAPID_PUBLIC_KEY = window.VAPID_PUBLIC_KEY || DEFAULT_VAPID_PUBLIC_KEY;
+
 class NotificationManager {
     constructor() {
         this.notificationCount = 0;
@@ -55,12 +58,7 @@ class NotificationManager {
             return;
         }
 
-        const fallbackVapidKey = "BPhvrTAciFdUoThpX3NNJuBUQJCAch3w7ZUwHlSPnZHNYJ9p6mQkAnCZR8BDi6YfM6hjXZdG_T4Y10rxmActWm0";
-        const vapidKey = window.VAPID_PUBLIC_KEY || fallbackVapidKey;
-        if (!window.VAPID_PUBLIC_KEY) {
-            window.VAPID_PUBLIC_KEY = vapidKey;
-            console.warn("VAPID public key was missing on window. Applied fallback key.");
-        }
+        const vapidKey = window.VAPID_PUBLIC_KEY;
 
         const permission = await Notification.requestPermission();
         if (permission !== "granted") {

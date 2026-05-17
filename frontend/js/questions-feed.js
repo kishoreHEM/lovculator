@@ -233,10 +233,15 @@ window.loadQuestions = async function (loadMore = false) {
       currentCategory !== "all"
         ? `&category=${encodeURIComponent(currentCategory)}`
         : "";
+    const statusParam = isHomepage()
+      ? "&status=answered&sort=answered"
+      : currentSort === "unanswered"
+        ? "&status=unanswered&sort=unanswered"
+        : `&sort=${encodeURIComponent(currentSort)}`;
 
     const url =
       `${window.API_BASE}/questions/latest` +
-      `?limit=${PAGE_LIMIT}&offset=${currentOffset}${categoryParam}`;
+      `?limit=${PAGE_LIMIT}&offset=${currentOffset}${categoryParam}${statusParam}`;
 
     const response = await fetch(url, {
       credentials: "include",
@@ -245,10 +250,27 @@ window.loadQuestions = async function (loadMore = false) {
 
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
 
-    const apiQuestions = await response.json();
-    const apiCount = apiQuestions.length;
+    let apiQuestions = await response.json();
+    let apiCount = apiQuestions.length;
 
-    const questions = processQuestions(apiQuestions, currentSort);
+    let questions = processQuestions(apiQuestions, currentSort);
+
+    // Safety net while older/cached backends roll over: homepage must not go blank.
+    if (isHomepage() && !questions.length && !loadMore) {
+      const fallbackUrl =
+        `${window.API_BASE}/questions/latest` +
+        `?limit=100&offset=0${categoryParam}&sort=answered`;
+      const fallbackResponse = await fetch(fallbackUrl, {
+        credentials: "include",
+        headers: { Accept: "application/json" }
+      });
+
+      if (fallbackResponse.ok) {
+        apiQuestions = await fallbackResponse.json();
+        apiCount = apiQuestions.length;
+        questions = processQuestions(apiQuestions, currentSort);
+      }
+    }
 
     // Empty state
     if (!questions.length && !loadMore) {

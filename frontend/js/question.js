@@ -114,7 +114,7 @@ window.loadQuestion = async function() {
                     <img src="${myAvatar}" alt="${myName}" class="prompt-avatar" onerror="this.src='/images/default-avatar.png'">
                     <h3 class="prompt-title">${myName}, can you answer this question?</h3>
                     <p class="prompt-subtitle">Help the community with a better answer.</p>
-                    <button class="prompt-answer-btn" onclick="window.openAnswerModal && window.openAnswerModal('${question.id}', '${(question.question || question.title || '').replace(/'/g, "\\'")}')">
+                    <button class="prompt-answer-btn" onclick='window.openAnswerModal && window.openAnswerModal(${JSON.stringify(String(question.id || ""))}, ${JSON.stringify(String(question.question || question.title || ""))})'>
                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
                             <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
@@ -553,7 +553,7 @@ function renderUnanswered(question) {
             <h3>This question hasn't been answered yet</h3>
             <p>Be the first to share your wisdom and help others!</p>
             <div class="unanswered-actions">
-                <button class="answer-now-btn" onclick="window.openAnswerModal && window.openAnswerModal('${question.id}', '${(question.question || question.title || '').replace(/'/g, "\\'")}')">Answer Now</button>
+                <button class="answer-now-btn" onclick='window.openAnswerModal && window.openAnswerModal(${JSON.stringify(String(question.id || ""))}, ${JSON.stringify(String(question.question || question.title || ""))})'>Answer Now</button>
                 <button class="share-question-btn" 
                         data-share-url="https://lovculator.com/question/${question.slug || question.id}"
                         data-share-title="${question.question || question.title}"
