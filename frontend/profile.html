@@ -63,7 +63,7 @@
     }
 
     .main-content {
-      padding: 0 0 40px 0;
+      padding: 24px 0 40px 0;
       max-width: 1100px;
       margin: 0 auto;
       width: 100%;
@@ -71,14 +71,27 @@
 
     /* --- 1. COVER PHOTO --- */
     .profile-cover {
-        height: 250px;
-        background: linear-gradient(135deg, #ff9a9e 0%, #ff4b8d 100%);
+        height: 220px;
+        background:
+          radial-gradient(circle at top right, rgba(255,255,255,0.22), transparent 28%),
+          linear-gradient(135deg, #ff8fb7 0%, #ff4b8d 55%, #ff6f91 100%);
         background-size: cover;
         background-position: center;
-        border-radius: 0px;
+        border-radius: 28px;
         position: relative;
-        margin-bottom: 20px; 
-        box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+        margin-bottom: 24px; 
+        overflow: hidden;
+        box-shadow: 0 14px 40px rgba(255, 75, 141, 0.16);
+        isolation: isolate;
+    }
+
+    .profile-cover::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(to top, rgba(14, 18, 28, 0.18), rgba(14, 18, 28, 0.02) 45%, transparent);
+      z-index: 0;
+      pointer-events: none;
     }
 
     /* --- 2. HEADER USER INFO --- */
@@ -86,10 +99,10 @@
         position: relative;
         display: flex;
         align-items: flex-end; /* Aligns Avatar bottom with Text bottom */
-        padding: 0 30px 20px 30px;
-        margin-top: -50px; /* Pulls the entire row up into the cover */
-        gap: 20px;
-        z-index: 5;
+        padding: 20px 28px 26px 28px;
+        gap: 22px;
+        z-index: 2;
+        height: 100%;
     }
 
     /* Avatar Circle */
@@ -99,44 +112,46 @@
     }
 
     .profile-avatar-large {
-        width: 150px;
-        height: 150px;
+        width: 136px;
+        height: 136px;
         border-radius: 50%;
         border: 5px solid #fff;
         background: #fff;
         object-fit: cover;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        box-shadow: 0 14px 30px rgba(0,0,0,0.14);
         display: block;
-        margin-top: 20px;
     }
 
     /* Text Info (Name/Username) */
     .profile-header-text {
         flex: 1;
-        padding-bottom: 60px;
-        padding-top: 40px; /* IMPORTANT: This pushes text down on desktop so it doesn't hit the cover */
+        align-self: flex-end;
+        padding-bottom: 6px;
         min-width: 0; 
     }
 
     .profile-header-text h1 {
         margin: 0;
-        font-size: 2rem;
-        color: var(--text-dark);
+        font-size: 2.2rem;
+        color: #fff;
         font-weight: 800;
         line-height: 1.1;
         word-wrap: break-word;
+        letter-spacing: -0.03em;
+        text-shadow: 0 10px 30px rgba(0,0,0,0.14);
     }
 
     .profile-header-text .username {
-        color: var(--bg-gray); 
-        font-size: 1.1rem;
-        font-weight: 500;
-        margin-top: 4px;
+        color: rgba(255,255,255,0.86);
+        font-size: 1rem;
+        font-weight: 600;
+        margin-top: 8px;
         display: block;
     }
 
     .profile-header-actions {
-        padding-bottom: 15px;
+        align-self: flex-end;
+        padding-bottom: 6px;
         display: flex;
         gap: 10px;
         flex-shrink: 0;
@@ -145,7 +160,7 @@
     /* --- 3. GRID LAYOUT --- */
     .profile-grid-container {
         display: grid;
-        grid-template-columns: 340px 1fr; /* Sidebar | Content */
+        grid-template-columns: 320px 1fr; /* Sidebar | Content */
         gap: 24px;
         align-items: start;
     }
@@ -157,16 +172,16 @@
 
     .profile-intro-card {
         background: var(--card-bg);
-        border-radius: 0px;
+        border-radius: 24px;
         padding: 24px;
-        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+        box-shadow: 0 12px 30px rgba(15, 23, 42, 0.06);
         border: 1px solid var(--border-color);
         position: sticky;
         top: 80px; 
     }
 
     .intro-header {
-        font-size: 1.2rem;
+        font-size: 1.15rem;
         font-weight: 700;
         margin-bottom: 16px;
         color: var(--text-dark);
@@ -175,11 +190,16 @@
 
     .intro-bio {
         font-size: 0.95rem;
-        color: #333;
+        color: #374151;
         margin-bottom: 20px;
-        line-height: 1.5;
+        line-height: 1.7;
         white-space: pre-wrap;
         word-break: break-word;
+    }
+
+    .intro-bio.empty {
+      color: #9ca3af;
+      font-style: italic;
     }
 
     .intro-item {
@@ -194,12 +214,56 @@
 
     .intro-icon { width: 20px; text-align: center; margin-top: 2px; color: var(--text-muted); }
 
-    
+    .intro-stats {
+      margin-top: 18px;
+      padding-top: 18px;
+      border-top: 1px solid var(--border-color);
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 12px;
+    }
+
+    .intro-stat {
+      background: linear-gradient(180deg, #fff8fb 0%, #fff 100%);
+      border: 1px solid #f3d4e1;
+      border-radius: 18px;
+      padding: 14px 12px;
+      text-align: center;
+    }
+
+    .intro-stat-value {
+      display: block;
+      font-size: 1.15rem;
+      font-weight: 800;
+      color: var(--text-dark);
+      line-height: 1.1;
+    }
+
+    .intro-stat-label {
+      display: block;
+      margin-top: 6px;
+      font-size: 0.78rem;
+      letter-spacing: 0.02em;
+      color: #6b7280;
+      text-transform: uppercase;
+    }
+
+
 
     .profile-tabs {
         display: flex;
         border-bottom: 1px solid var(--border-color);
         background: var(--card-bg);
+        border-radius: 24px 24px 0 0;
+        overflow: hidden;
+    }
+
+    .profile-tabs-wrapper {
+      background: var(--card-bg);
+      border: 1px solid var(--border-color);
+      border-radius: 24px;
+      box-shadow: 0 12px 30px rgba(15, 23, 42, 0.06);
+      overflow: hidden;
     }
 
     .tab-btn {
@@ -219,7 +283,7 @@
     .tab-btn.active {
         color: var(--primary-color);
         border-bottom-color: var(--primary-color);
-        background: rgba(255, 75, 141, 0.02);
+        background: linear-gradient(180deg, rgba(255, 75, 141, 0.08), rgba(255, 75, 141, 0.02));
     }
 
     .tab-content { padding: 0px; }
@@ -228,7 +292,7 @@
 
     /* Buttons */
     .btn-secondary, .btn-primary {
-        padding: 8px 20px;
+        padding: 10px 18px;
         border-radius: 50px; /* Pill shape */
         font-weight: 600;
         font-size: 0.9rem;
@@ -238,13 +302,13 @@
         text-decoration: none;
     }
 
-    .btn-secondary { background: #e4e6eb; color: #050505; border: 1px solid #dcdcdc; }
-    .btn-secondary:hover { background: #d8dadf; }
+    .btn-secondary { background: rgba(255,255,255,0.92); color: #111827; border: 1px solid rgba(255,255,255,0.45); backdrop-filter: blur(8px); }
+    .btn-secondary:hover { background: #ffffff; }
 
     .btn-primary { background: var(--primary-color); color: white; border: 1px solid transparent; box-shadow: 0 2px 5px rgba(255, 75, 141, 0.3); }
     .btn-primary:hover { background: #e33675; }
 
-    .btn-small { padding: 8px 16px; border-radius: 6px; } /* Override for modal buttons */
+    .btn-small { padding: 10px 16px; border-radius: 999px; } /* Override for modal buttons */
 
     .avatar-upload-label {
     position: absolute;
@@ -368,8 +432,9 @@
         .main-content { padding-bottom: 60px; }
 
         .profile-cover { 
-            height: 350px; 
-            border-radius: 0;
+            height: auto; 
+            min-height: 0;
+            border-radius: 0 0 24px 24px;
             margin-bottom: 0px;
         }
         
@@ -386,23 +451,22 @@
             text-align: center;
             margin-top: 0px; 
             margin-bottom: 10px;
-            padding: 0 15px 15px 15px;
+            padding: 22px 18px 20px 18px;
         }
 
         .profile-avatar-large {
             width: 100px;
             height: 100px;
-            margin-top: 10px;
         }
 
         /* Fix Text Padding on Mobile */
         .profile-header-text {
-            padding-top: 10px; /* Reset the 60px desktop padding */
+            padding-top: 10px;
             padding-bottom: 15px;
             width: 100%;
         }
         
-        .profile-header-text h1 { font-size: 1.5rem; }
+        .profile-header-text h1 { font-size: 1.65rem; }
 
         /* Center Actions */
         .profile-header-actions {
@@ -423,10 +487,18 @@
             flex: 0 0 auto;
             padding: 14px 20px;
             font-size: 0.70rem;
-            font-weight: 600px;
+            font-weight: 600;
         }
 
-        
+        .profile-intro-card,
+        .profile-tabs-wrapper {
+          border-radius: 20px;
+        }
+
+        .intro-stats {
+          grid-template-columns: 1fr 1fr;
+        }
+
         
         .tab-content { padding: 0px; }
 

@@ -224,7 +224,7 @@
       if (!this.profileInfoContainer) return;
 
       const displayName = user.display_name || user.username || "User";
-      const usernameHandle = user.username ? `${user.username}` : "";
+      const usernameHandle = user.username ? `@${user.username}` : "@lovculator";
       const avatarUrl = getAvatarUrl(user.avatar_url || user.avatar || user.profile_image);
       const followerCount = user.follower_count ?? user.followers_count ?? 0;
       const followingCount = user.following_count ?? user.following ?? 0;
@@ -262,7 +262,7 @@ const headerHTML = `
       </div>
       <div class="profile-header-text">
         <h1>${displayName}</h1>
-        <div class="username">@${usernameHandle}</div>
+        <div class="username">${usernameHandle}</div>
       </div>
       <div class="profile-header-actions">
         ${this.renderActionButtons(user, isOwnProfile)}
@@ -286,9 +286,15 @@ const headerHTML = `
                     ${dobDisplay ? `<div class="intro-item"><span class="intro-icon">🎂</span><span>Born ${dobDisplay}</span></div>` : ""}
                     <div class="intro-item"><span class="intro-icon">📅</span><span>Joined ${joinedDate}</span></div>
 
-                    <div class="intro-item" style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #eee; justify-content: space-around;">
-                        <div style="text-align:center"><strong style="font-size:1.1rem; color:#222;" id="profileFollowers">${followerCount}</strong><br><span style="font-size:0.8rem; color:#777">Followers</span></div>
-                        <div style="text-align:center"><strong style="font-size:1.1rem; color:#222;">${followingCount}</strong><br><span style="font-size:0.8rem; color:#777">Following</span></div>
+                    <div class="intro-stats">
+                        <div class="intro-stat">
+                          <strong class="intro-stat-value" id="profileFollowers">${followerCount}</strong>
+                          <span class="intro-stat-label">Followers</span>
+                        </div>
+                        <div class="intro-stat">
+                          <strong class="intro-stat-value">${followingCount}</strong>
+                          <span class="intro-stat-label">Following</span>
+                        </div>
                     </div>
                 </div>
             </div>
