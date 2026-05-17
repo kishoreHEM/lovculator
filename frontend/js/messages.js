@@ -638,6 +638,9 @@ class MessagesPage {
     this.presenceMap = new Map();
     this.typingUsers = new Map();
     this.unsubscribeFunctions = [];
+    this.messageSyncInterval = null;
+    this.conversationRefreshInterval = null;
+    this.typingCleanupInterval = null;
 
     console.log("🔧 MessagesPage constructor called");
   }
@@ -661,6 +664,7 @@ class MessagesPage {
       
       // 3. Connect WebSocket
       await this.connectWebSocket();
+      this.startRealtimeFallbacks();
 
       this.debugUnsubscribe = window.wsManager.subscribe('*', (data) => {
       console.log("🌐 [ALL WS] Received:", data.type, data);
@@ -820,7 +824,7 @@ class MessagesPage {
         const unreadCount = conv.unread_count || 0;
         const isActive = this.currentConversation?.id === conv.id;
         const userPresence = this.presenceMap.get(otherParticipant?.id);
-        const isTyping = this.typingUsers.get(conv.id.toString());
+        const isTyping = this.typingUsers.get(String(conv.id));
 
         // Format preview text
         let previewText = 'No messages yet';
@@ -1371,25 +1375,91 @@ class MessagesPage {
     }
   }
 
+  startRealtimeFallbacks() {
+    if (this.messageSyncInterval) clearInterval(this.messageSyncInterval);
+    if (this.conversationRefreshInterval) clearInterval(this.conversationRefreshInterval);
+    if (this.typingCleanupInterval) clearInterval(this.typingCleanupInterval);
+
+    this.messageSyncInterval = setInterval(() => {
+      this.syncCurrentConversation().catch((err) => {
+        console.warn('⚠️ Conversation sync failed:', err.message);
+      });
+    }, 5000);
+
+    this.conversationRefreshInterval = setInterval(() => {
+      if (!document.hidden) {
+        this.loadConversations().catch((err) => {
+          console.warn('⚠️ Conversation refresh failed:', err.message);
+        });
+      }
+    }, 15000);
+
+    this.typingCleanupInterval = setInterval(() => {
+      const now = Date.now();
+      for (const [conversationId, info] of this.typingUsers.entries()) {
+        if (!info?.timestamp) continue;
+        if (now - info.timestamp.getTime() > 5000) {
+          this.typingUsers.delete(String(conversationId));
+          this.updateTypingUI(conversationId, info.userId, false);
+        }
+      }
+    }, 1000);
+  }
+
+  async syncCurrentConversation() {
+    if (!this.currentConversation?.id || this.isLoadingMessages || document.hidden) return;
+
+    const response = await fetch(
+      `${this.API_BASE}/messages/conversations/${this.currentConversation.id}/messages?limit=30`,
+      {
+        credentials: 'include',
+        headers: {
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Pragma': 'no-cache'
+        }
+      }
+    );
+
+    if (!response.ok) return;
+
+    const latestMessages = await response.json();
+    const existingIds = new Set((this.currentConversation.messages || []).map((msg) => String(msg.id)));
+    const newMessages = latestMessages.filter((msg) => !existingIds.has(String(msg.id)));
+
+    if (newMessages.length) {
+      latestMessages.forEach((msg) => {
+        if (!document.querySelector(`[data-message-id="${msg.id}"]`)) {
+          this.appendMessage(msg);
+        }
+      });
+      this.currentConversation.messages = latestMessages;
+      this.scrollToBottom();
+      await this.markConversationSeen(this.currentConversation.id);
+      this.loadConversations();
+    }
+  }
+
   /* 📡 Enhanced real-time event handling */
   handleNewMessageEvent({ conversationId, message }) {
     console.log(`📨 NEW_MESSAGE event for conversation ${conversationId}:`, message);
+    const convId = parseInt(conversationId, 10);
     
     // If this is the current conversation
-    if (this.currentConversation?.id === parseInt(conversationId)) {
+    if (this.currentConversation?.id === convId) {
       console.log("✅ Message is for current conversation, appending...");
       this.appendMessage(message);
+      this.currentConversation.messages = [...(this.currentConversation.messages || []), message];
       this.scrollToBottom();
       
       // Mark as read immediately
-      this.markConversationSeen(conversationId);
+      this.markConversationSeen(convId);
     } else {
       console.log("📢 Message is for other conversation, showing notification");
-      this.showMessageNotification(message, conversationId);
+      this.showMessageNotification(message, convId);
     }
     
     // Update conversation list
-    this.updateConversationPreview(conversationId, message);
+    this.updateConversationPreview(convId, message);
   }
 
   updateConversationPreview(conversationId, message) {
@@ -1428,12 +1498,12 @@ class MessagesPage {
     
     // Update typing state
     if (isTyping) {
-      this.typingUsers.set(conversationId, {
+      this.typingUsers.set(String(conversationId), {
         userId: fromUserId,
         timestamp: new Date(timestamp)
       });
     } else {
-      this.typingUsers.delete(conversationId);
+      this.typingUsers.delete(String(conversationId));
     }
     
     // Update UI
@@ -2345,6 +2415,9 @@ if (attachBtn && attachInput) {
   // Cleanup method
   destroy() {
     this.stopTypingIndicator();
+    if (this.messageSyncInterval) clearInterval(this.messageSyncInterval);
+    if (this.conversationRefreshInterval) clearInterval(this.conversationRefreshInterval);
+    if (this.typingCleanupInterval) clearInterval(this.typingCleanupInterval);
     
     this.unsubscribeFunctions.forEach(unsubscribe => unsubscribe());
     this.unsubscribeFunctions = [];
