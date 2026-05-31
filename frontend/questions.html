@@ -77,36 +77,56 @@
             
             
 
-            <h2 class="page-title">Questions for you</h2> 
+            <section class="questions-shell" aria-labelledby="questionsPageTitle">
+                <header class="questions-hero">
+                    <div class="questions-hero-copy">
+                        <span class="questions-hero-kicker">Community Q&amp;A</span>
+                        <h1 id="questionsPageTitle" class="page-title">Questions for you</h1>
+                        <p class="questions-hero-subtitle">Browse trending relationship questions, discover unanswered conversations, and share thoughtful advice.</p>
+                    </div>
+                </header>
 
-            <div class="filter-container" style="display: flex; gap: 10px; flex-wrap: wrap; align-items: center; background: #fff; padding: 15px; border-radius: 0px; margin-bottom: 25px; box-shadow: 0 2px 8px rgba(0,0,0,0.05);">
-                
-                <div class="search-box" style="flex: 1.5; min-width: 200px;">
-                    <input type="text" id="questionSearchInput" class="comment-input" 
-                           placeholder="Search questions..." style="width: 100%; margin: 0; padding: 10px 15px; border-radius: 8px;">
+                <div class="filter-container questions-toolbar" role="region" aria-label="Question filters">
+                    <div class="search-box toolbar-search">
+                        <span class="toolbar-search-icon" aria-hidden="true">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <circle cx="11" cy="11" r="8"></circle>
+                                <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                            </svg>
+                        </span>
+                        <input type="text" id="questionSearchInput" class="comment-input toolbar-search-input"
+                               placeholder="Search questions, topics, and advice..." aria-label="Search questions">
+                    </div>
+
+                    <div class="toolbar-selects">
+                        <label class="toolbar-select-group">
+                            <span class="toolbar-label">Category</span>
+                            <select id="categorySelect" class="filter-btn toolbar-select">
+                                <option value="all">All Categories</option>
+                                <option value="love">Love</option>
+                                <option value="dating">Dating</option>
+                                <option value="marriage">Marriage</option>
+                                <option value="friendship">Friendship</option>
+                                <option value="communication">Communication</option>
+                                <option value="breakups">Breakups</option>
+                            </select>
+                        </label>
+
+                        <label class="toolbar-select-group">
+                            <span class="toolbar-label">Sort</span>
+                            <select id="sortSelect" class="filter-btn toolbar-select">
+                                <option value="newest">Newest First</option>
+                                <option value="popular">Most Popular</option>
+                                <option value="unanswered">Unanswered</option>
+                            </select>
+                        </label>
+                    </div>
+
+                    <button id="applyFilterBtn" class="answer-btn toolbar-filter-btn">
+                        Apply Filters
+                    </button>
                 </div>
-                
-                <select id="categorySelect" class="filter-btn" style="appearance: auto; padding: 10px 12px; cursor: pointer; min-width: 150px; border-radius: 8px;">
-                        <option value="all">All Categories</option>
-                        <option value="love">Love</option>
-                        <option value="dating">Dating</option>
-                        <option value="marriage">Marriage</option>
-                        <option value="friendship">Friendship</option>
-                        <option value="communication">Communication</option>
-                        <option value="breakups">Breakups</option>
-                </select>
-
-
-                <select id="sortSelect" class="filter-btn" style="appearance: auto; padding: 10px 12px; cursor: pointer; min-width: 140px; border-radius: 8px;">
-                    <option value="newest">Newest First</option>
-                    <option value="popular">Most Popular</option>
-                    <option value="unanswered">Unanswered</option>
-                </select>
-
-                <button id="applyFilterBtn" class="answer-btn" style="width: auto; padding: 10px 25px; cursor: pointer; border-radius: 8px;">
-                    Filter
-                </button>
-            </div>
+            </section>
 
             <section class="questions-section">
                 <div id="storiesContainer">
