@@ -44,72 +44,160 @@
   <script type="application/ld+json">
   {
     "@context": "https://schema.org",
-    "@graph": [
+    "@type": "WebPage",
+    "@id": "https://lovculator.com/love-calculator#webpage",
+    "url": "https://lovculator.com/love-calculator",
+    "name": "Love Calculator by Name - Check Love Compatibility Online | Lovculator",
+    "description": "Calculate your love compatibility by name instantly. Enter two names and get your love percentage score. Free, fun and mobile-friendly love calculator.",
+    "isPartOf": {
+      "@id": "https://lovculator.com/#website"
+    },
+    "breadcrumb": {
+      "@id": "https://lovculator.com/love-calculator#breadcrumb"
+    },
+    "about": {
+      "@id": "https://lovculator.com/love-calculator#app"
+    }
+  }
+  </script>
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "Organization",
+    "@id": "https://lovculator.com/#organization",
+    "name": "Lovculator",
+    "url": "https://lovculator.com/",
+    "logo": {
+      "@type": "ImageObject",
+      "url": "https://lovculator.com/images/android-chrome-512x512.png"
+    }
+  }
+  </script>
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "WebSite",
+    "@id": "https://lovculator.com/#website",
+    "url": "https://lovculator.com/",
+    "name": "Lovculator",
+    "publisher": {
+      "@id": "https://lovculator.com/#organization"
+    }
+  }
+  </script>
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    "@id": "https://lovculator.com/love-calculator#app",
+    "name": "Lovculator Love Calculator",
+    "url": "https://lovculator.com/love-calculator",
+    "applicationCategory": "UtilitiesApplication",
+    "operatingSystem": "Any",
+    "offers": {
+      "@type": "Offer",
+      "price": "0",
+      "priceCurrency": "USD"
+    },
+    "publisher": {
+      "@id": "https://lovculator.com/#organization"
+    }
+  }
+  </script>
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    "@id": "https://lovculator.com/love-calculator#breadcrumb",
+    "itemListElement": [
       {
-        "@type": "WebPage",
-        "@id": "https://lovculator.com/love-calculator#webpage",
-        "url": "https://lovculator.com/love-calculator",
-        "name": "Love Calculator by Name - Check Love Compatibility Online | Lovculator",
-        "description": "Calculate your love compatibility by name instantly. Enter two names and get your love percentage score. Free, fun and mobile-friendly love calculator."
+        "@type": "ListItem",
+        "position": 1,
+        "name": "Home",
+        "item": "https://lovculator.com/"
       },
       {
-        "@type": "SoftwareApplication",
-        "@id": "https://lovculator.com/love-calculator#app",
-        "name": "Lovculator Love Calculator",
-        "url": "https://lovculator.com/love-calculator",
-        "applicationCategory": "UtilitiesApplication",
-        "operatingSystem": "Any",
-        "offers": {
-          "@type": "Offer",
-          "price": "0",
-          "priceCurrency": "USD"
-        },
-        "publisher": {
-          "@type": "Organization",
-          "name": "Lovculator",
-          "logo": {
-            "@type": "ImageObject",
-            "url": "https://lovculator.com/images/android-chrome-512x512.png"
-          }
+        "@type": "ListItem",
+        "position": 2,
+        "name": "Love Calculator",
+        "item": "https://lovculator.com/love-calculator"
+      }
+    ]
+  }
+  </script>
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "HowTo",
+    "@id": "https://lovculator.com/love-calculator#howto",
+    "name": "How to use the Love Calculator by Name",
+    "description": "Enter two names, choose genders, calculate your love percentage, and share the result for fun.",
+    "step": [
+      {
+        "@type": "HowToStep",
+        "position": 1,
+        "name": "Enter your first name"
+      },
+      {
+        "@type": "HowToStep",
+        "position": 2,
+        "name": "Enter your partner's first name"
+      },
+      {
+        "@type": "HowToStep",
+        "position": 3,
+        "name": "Select both genders"
+      },
+      {
+        "@type": "HowToStep",
+        "position": 4,
+        "name": "Click Calculate Love Compatibility"
+      },
+      {
+        "@type": "HowToStep",
+        "position": 5,
+        "name": "Review and share your result"
+      }
+    ]
+  }
+  </script>
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    "@id": "https://lovculator.com/love-calculator#faq",
+    "mainEntity": [
+      {
+        "@type": "Question",
+        "name": "How does the Love Calculator work?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "It compares two names using a letter-based formula and returns a compatibility percentage for entertainment purposes."
         }
       },
       {
-        "@type": "FAQPage",
-        "@id": "https://lovculator.com/love-calculator#faq",
-        "mainEntity": [
-          {
-            "@type": "Question",
-            "name": "How does the Love Calculator work?",
-            "acceptedAnswer": {
-              "@type": "Answer",
-              "text": "It compares two names using a letter-based formula and returns a compatibility percentage for entertainment purposes."
-            }
-          },
-          {
-            "@type": "Question",
-            "name": "Is the Love Calculator scientifically accurate?",
-            "acceptedAnswer": {
-              "@type": "Answer",
-              "text": "No. It is not a scientific compatibility test. Real compatibility depends on communication, trust, emotional maturity, and shared values."
-            }
-          },
-          {
-            "@type": "Question",
-            "name": "Can I use nicknames?",
-            "acceptedAnswer": {
-              "@type": "Answer",
-              "text": "Yes. You can try full names, first names, or nicknames and compare results for fun."
-            }
-          },
-          {
-            "@type": "Question",
-            "name": "Can this predict relationship success?",
-            "acceptedAnswer": {
-              "@type": "Answer",
-              "text": "No. No online name-based tool can predict long-term relationship success. Use it as a playful conversation starter only."
-            }
-          }
-        ]
+        "@type": "Question",
+        "name": "Is the Love Calculator scientifically accurate?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "No. It is not a scientific compatibility test. Real compatibility depends on communication, trust, emotional maturity, and shared values."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "Can I use nicknames?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Yes. You can try full names, first names, or nicknames and compare results for fun."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "Can this predict relationship success?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "No. No online name-based tool can predict long-term relationship success. Use it as a playful conversation starter only."
+        }
       }
     ]
   }
