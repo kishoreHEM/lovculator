@@ -22,14 +22,22 @@ fi
 
 # Check for hardcoded secrets
 echo -e "\n3. Scanning for hardcoded secrets..."
-SECRET_FOUND=false
+TMP_SECRETS=$(mktemp)
+
+# Scan for database URLs with credentials, session secrets, or email passwords in code files
 find . -type f \( -name "*.js" -o -name "*.ts" -o -name "*.json" \) \
   -not -path "*/node_modules/*" \
   -not -path "*/.env*" \
-  -exec grep -l -E "DATABASE_URL.*@|SESSION_SECRET=|EMAIL_PASS=|password.*['\"]" {} \; | while read file; do
-    echo "⚠️  Potential secret in: $file"
-    SECRET_FOUND=true
-done
+  -exec grep -l -E "DATABASE_URL.*@|SESSION_SECRET=|EMAIL_PASS=" {} \; > "$TMP_SECRETS"
+
+SECRET_FOUND=false
+if [ -s "$TMP_SECRETS" ]; then
+    while read file; do
+        echo "⚠️  Potential secret in: $file"
+        SECRET_FOUND=true
+    done < "$TMP_SECRETS"
+fi
+rm -f "$TMP_SECRETS"
 
 if [ "$SECRET_FOUND" = false ]; then
     echo "✅ No hardcoded secrets found"

@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "scripts": {
     "start": "node backend/server.js",
-    "verify": "node verify_railway_files.mjs"
+    "verify": "node verify_frontend.mjs"
   },
   "engines": {
     "node": "20.x"
@@ -12,14 +12,25 @@
     "@emailjs/browser": "^4.4.1",
     "bcryptjs": "^3.0.3",
     "compression": "^1.8.1",
+    "connect-pg-simple": "^10.0.0",
+    "cors": "^2.8.5",
+    "dotenv": "^16.3.1",
     "ejs": "^3.1.10",
+    "express": "^4.18.2",
+    "express-rate-limit": "^7.1.5",
+    "express-session": "^1.17.3",
     "helmet": "^8.1.0",
     "multer": "^2.0.2",
-    "nodemailer": "^7.0.10",
+    "node-fetch": "^3.3.2",
+    "nodemailer": "^7.0.11",
+    "pg": "^8.11.3",
     "redis": "^5.10.0",
     "resend": "^6.5.2",
     "sharp": "^0.34.2",
     "web-push": "^3.6.7",
     "ws": "^8.18.3"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.0"
   }
 }

@@ -196,7 +196,10 @@ app.use(
           "http://localhost:3001",
           "https://lovculator.com/uploads",
           "https://www.google-analytics.com",
-          "https://www.googletagmanager.com" // ✅ Already here, good!
+          "https://www.googletagmanager.com",
+          "https://pagead2.googlesyndication.com",
+          "https://adservice.google.com",
+          "https://googleads.g.doubleclick.net"
         ],
 
         scriptSrc: [
@@ -205,9 +208,13 @@ app.use(
           "https://lovculator.com",
           "https://www.lovculator.com",
           "http://localhost:3001",
-          "https://www.googletagmanager.com", // ✅ Already here, good!
+          "https://www.googletagmanager.com",
           "https://www.google-analytics.com",
           "https://cdn.jsdelivr.net",
+          "https://pagead2.googlesyndication.com",
+          "https://adservice.google.com",
+          "https://googleads.g.doubleclick.net",
+          "https://tpc.googlesyndication.com"
         ],
 
         scriptSrcAttr: ["'self'", "'unsafe-inline'"],
@@ -232,10 +239,18 @@ app.use(
           "https://cdn.jsdelivr.net",
           "https://www.google-analytics.com",
           "https://region1.google-analytics.com",
-          "https://www.googletagmanager.com" // ✅ ADD THIS - THIS IS WHAT'S MISSING!
+          "https://www.googletagmanager.com",
+          "https://pagead2.googlesyndication.com",
+          "https://adservice.google.com",
+          "https://googleads.g.doubleclick.net"
         ].filter(Boolean),
 
-        frameSrc: ["'self'"],
+        frameSrc: [
+          "'self'",
+          "https://googleads.g.doubleclick.net",
+          "https://tpc.googlesyndication.com",
+          "https://pagead2.googlesyndication.com"
+        ],
         objectSrc: ["'none'"],
       },
     },

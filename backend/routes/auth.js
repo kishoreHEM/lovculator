@@ -1,6 +1,7 @@
 import express from "express";
 import pool from "../db.js";
 import { calculateProfileCompletion } from "../utils/profileCompletion.js";
+import rateLimit from "express-rate-limit";
 
 import {
   signup,
@@ -17,6 +18,25 @@ import {
 const router = express.Router();
 
 /* ======================================================
+   🔒 RATE LIMITERS
+====================================================== */
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 15,
+  message: { error: "Too many authentication attempts. Please try again after 15 minutes." },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+const forgotPasswordLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000, // 1 hour
+  max: 5,
+  message: { error: "Too many password reset requests. Please try again after an hour." },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+/* ======================================================
    🔒 AUTH MIDDLEWARE
 ====================================================== */
 const requireAuth = (req, res, next) => {
@@ -31,10 +51,10 @@ const requireAuth = (req, res, next) => {
    AUTH ROUTES
 ====================================================== */
 
-router.post("/signup", signup);
-router.post("/login", login);
+router.post("/signup", authLimiter, signup);
+router.post("/login", authLimiter, login);
 router.post("/logout", logout);
-router.post("/forgot-password", forgotPassword);
+router.post("/forgot-password", forgotPasswordLimiter, forgotPassword);
 router.post("/reset-password", resetPassword);
 
 /* ======================================================
