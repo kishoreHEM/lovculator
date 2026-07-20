@@ -17,6 +17,9 @@
         z-index: 99999; padding: 20px;
         opacity: 0; visibility: hidden; transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
       }
+      .login-gate-overlay.hidden {
+        display: none !important;
+      }
       .login-gate-overlay.visible {
         opacity: 1; visibility: visible;
       }
@@ -95,7 +98,7 @@
 
     overlay = document.createElement("div");
     overlay.id = "loginGateOverlay";
-    overlay.className = "login-gate-overlay";
+    overlay.className = "login-gate-overlay hidden";
     overlay.setAttribute("aria-hidden", "true");
     overlay.innerHTML = `
       <div class="login-gate-modal" role="dialog" aria-modal="true">
@@ -153,12 +156,11 @@
         subtitle.textContent = "Create a free account to continue";
       }
 
-      // We use requestAnimationFrame to allow the DOM to render before adding the 'visible' class
-      // which triggers the CSS transition.
-      overlay.style.display = "flex";
-      requestAnimationFrame(() => {
-        overlay.classList.add("visible");
-      });
+      overlay.classList.remove("hidden");
+      // Force reflow to ensure CSS transition runs
+      void overlay.offsetWidth;
+      overlay.classList.add("visible");
+      
       overlay.setAttribute("aria-hidden", "false");
       document.body.style.overflow = "hidden";
     };
@@ -171,12 +173,11 @@
       overlay.setAttribute("aria-hidden", "true");
       document.body.style.overflow = "";
       
-      // Wait for the transition to finish before hiding it completely from the layout
       setTimeout(() => {
         if (!overlay.classList.contains("visible")) {
-          overlay.style.display = "none";
+          overlay.classList.add("hidden");
         }
-      }, 400); // Matches the 0.4s transition duration
+      }, 300);
     };
 
     closeBtn?.addEventListener("click", window.closeLoginModal);
