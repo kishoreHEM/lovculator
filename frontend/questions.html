@@ -1,3 +1,5 @@
+<!DOCTYPE html>
+<html lang="en">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -61,6 +63,11 @@
   }
   </script>
 
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+
   <link rel="stylesheet" href="/css/style.css" />
   <link rel="stylesheet" href="/css/qa.css" />
   <script src="/js/analytics.js"></script>
@@ -79,11 +86,43 @@
 
             <section class="questions-shell" aria-labelledby="questionsPageTitle">
                 <header class="questions-hero">
-                    <div class="questions-hero-copy">
-                        <span class="questions-hero-kicker">Community Q&amp;A</span>
-                        <h1 id="questionsPageTitle" class="page-title">Questions for you</h1>
-                        <p class="questions-hero-subtitle">Browse trending relationship questions, discover unanswered conversations, and share thoughtful advice.</p>
-                    </div>
+                  <!-- Decorative blobs -->
+                  <span class="qhero-blob qhero-blob-1" aria-hidden="true"></span>
+                  <span class="qhero-blob qhero-blob-2" aria-hidden="true"></span>
+
+                  <div class="questions-hero-copy">
+                    <span class="questions-hero-kicker">
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+                      Community Q&amp;A
+                    </span>
+                    <h1 id="questionsPageTitle" class="page-title">Questions for you</h1>
+                    <p class="questions-hero-subtitle">Browse trending relationship questions, discover unanswered conversations, and share thoughtful advice with the community.</p>
+                  </div>
+
+                  <div class="questions-hero-cta">
+                    <a href="/love-calculator" class="qhero-ask-btn" id="qheroAskBtn">
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                      Ask a Question
+                    </a>
+                  </div>
+
+                  <!-- Quick stats strip -->
+                  <div class="qhero-stats" aria-label="Community stats">
+                    <span class="qhero-stat">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                      Active Community
+                    </span>
+                    <span class="qhero-stat-divider" aria-hidden="true">·</span>
+                    <span class="qhero-stat">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                      Real Advice
+                    </span>
+                    <span class="qhero-stat-divider" aria-hidden="true">·</span>
+                    <span class="qhero-stat">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+                      Love &amp; Relationships
+                    </span>
+                  </div>
                 </header>
 
                 <div class="filter-container questions-toolbar" role="region" aria-label="Question filters">
@@ -103,27 +142,28 @@
                             <span class="toolbar-label">Category</span>
                             <select id="categorySelect" class="filter-btn toolbar-select">
                                 <option value="all">All Categories</option>
-                                <option value="love">Love</option>
-                                <option value="dating">Dating</option>
-                                <option value="marriage">Marriage</option>
-                                <option value="friendship">Friendship</option>
-                                <option value="communication">Communication</option>
-                                <option value="breakups">Breakups</option>
+                                <option value="love">💗 Love</option>
+                                <option value="dating">💘 Dating</option>
+                                <option value="marriage">💍 Marriage</option>
+                                <option value="friendship">🤝 Friendship</option>
+                                <option value="communication">💬 Communication</option>
+                                <option value="breakups">💔 Breakups</option>
                             </select>
                         </label>
 
                         <label class="toolbar-select-group">
                             <span class="toolbar-label">Sort</span>
                             <select id="sortSelect" class="filter-btn toolbar-select">
-                                <option value="newest">Newest First</option>
-                                <option value="popular">Most Popular</option>
-                                <option value="unanswered">Unanswered</option>
+                                <option value="newest">🕒 Newest First</option>
+                                <option value="popular">🔥 Most Popular</option>
+                                <option value="unanswered">❓ Unanswered</option>
                             </select>
                         </label>
                     </div>
 
                     <button id="applyFilterBtn" class="answer-btn toolbar-filter-btn">
-                        Apply Filters
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
+                      Apply
                     </button>
                 </div>
             </section>
@@ -138,6 +178,11 @@
             </section>
         </main>
     </div>
+
+    <!-- Floating Ask Button (mobile) -->
+    <a href="/love-calculator" class="qfab-ask" aria-label="Ask a Question" title="Ask a Question">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+    </a>
 
     <script src="/js/messages.js"></script>
     <script src="/js/notifications.js"></script>
