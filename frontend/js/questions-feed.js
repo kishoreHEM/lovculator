@@ -26,6 +26,8 @@ if (!window.API_BASE) {
 let currentOffset = 0;
 let currentCategory = "all";
 let currentSort = "newest"; // newest | popular | unanswered
+let currentTab = "for-you"; // for-you | latest | trending | unanswered | following | bookmarks
+let currentSearchQuery = "";
 const PAGE_LIMIT = 30;
 
 const SAVED_QUESTIONS_KEY = "lovculator_saved_questions";
@@ -95,6 +97,11 @@ function updateSaveButtonState(button, saved) {
   button.classList.toggle("is-saved", saved);
   button.setAttribute("aria-pressed", saved ? "true" : "false");
   button.setAttribute("aria-label", saved ? "Question saved" : "Save question");
+  const svg = button.querySelector("svg");
+  if (svg) {
+    svg.setAttribute("fill", saved ? "#ff4b8d" : "none");
+    svg.setAttribute("stroke", saved ? "#ff4b8d" : "currentColor");
+  }
   const label = button.querySelector("span");
   if (label) label.textContent = saved ? "Saved" : "Save";
 }
@@ -103,7 +110,7 @@ function closeQuestionMenus(exceptMenu = null) {
   document.querySelectorAll('.question-more-menu').forEach((menu) => {
     if (menu !== exceptMenu) {
       menu.hidden = true;
-      menu.closest('.question-card')?.querySelector('.question-more-btn')?.setAttribute('aria-expanded', 'false');
+      menu.closest('.question-card')?.querySelector('.question-more-btn, .question-report-btn')?.setAttribute('aria-expanded', 'false');
     }
   });
 }
@@ -114,15 +121,139 @@ function bindQuestionsPageActions() {
   window.__questionsPageActionsBound = true;
 
   document.addEventListener('click', async (event) => {
+    // 1. Save / Bookmark Button
     const saveBtn = event.target.closest('.question-card .save-btn');
     if (saveBtn) {
       event.preventDefault();
       const card = saveBtn.closest('.question-card');
-      const saved = toggleSavedQuestion(card?.dataset.questionId);
+      const questionId = saveBtn.dataset.questionId || card?.dataset.questionId;
+      const saved = toggleSavedQuestion(questionId);
       updateSaveButtonState(saveBtn, saved);
+      if (currentTab === 'bookmarks' && !saved) {
+        card?.classList.add('question-card-fade-out');
+        setTimeout(() => {
+          card?.remove();
+          const container = document.getElementById("questionsFeedContainer") || document.getElementById("storiesContainer");
+          if (container && !container.querySelectorAll('.question-card').length) {
+            window.loadQuestions(false);
+          }
+        }, 220);
+      }
       return;
     }
 
+    // 2. Like Question Button
+    const likeBtn = event.target.closest('.question-card .qa-like-btn');
+    if (likeBtn) {
+      event.preventDefault();
+      const card = likeBtn.closest('.question-card');
+      const questionId = likeBtn.dataset.questionId || card?.dataset.questionId;
+      if (!questionId) return;
+
+      if (!window.currentUserId) {
+        if (window.showLoginModal) {
+          window.showLoginModal('like this question');
+        } else {
+          alert('Please log in to like this question.');
+        }
+        return;
+      }
+
+      try {
+        const res = await fetch(`${window.API_BASE}/questions/${questionId}/like`, {
+          method: 'POST',
+          credentials: 'include',
+          headers: { 'Accept': 'application/json' }
+        });
+        if (res.ok) {
+          const data = await res.json();
+          const isLiked = Boolean(data.is_liked);
+          likeBtn.classList.toggle('liked', isLiked);
+          const svg = likeBtn.querySelector('svg');
+          if (svg) {
+            svg.setAttribute('fill', isLiked ? '#ff4b8d' : 'none');
+            svg.setAttribute('stroke', isLiked ? '#ff4b8d' : 'currentColor');
+          }
+          const countEl = likeBtn.querySelector('.like-count');
+          if (countEl && typeof data.likes_count !== 'undefined') {
+            countEl.textContent = data.likes_count;
+          }
+        }
+      } catch (err) {
+        console.error('Failed to like question:', err);
+      }
+      return;
+    }
+
+    // 3. Follow Author Button
+    const followBtn = event.target.closest('.question-card .qa-author-follow-btn');
+    if (followBtn) {
+      event.preventDefault();
+      const userId = followBtn.dataset.userId;
+      if (!userId) return;
+
+      if (!window.currentUserId) {
+        if (window.showLoginModal) {
+          window.showLoginModal('follow this member');
+        } else {
+          alert('Please log in to follow members.');
+        }
+        return;
+      }
+
+      try {
+        const res = await fetch(`${window.API_BASE}/users/${userId}/follow`, {
+          method: 'POST',
+          credentials: 'include',
+          headers: { 'Accept': 'application/json' }
+        });
+        if (res.ok) {
+          const data = await res.json();
+          const isFollowing = Boolean(data.following || data.is_following);
+          followBtn.classList.toggle('following', isFollowing);
+          followBtn.textContent = isFollowing ? 'Following' : '+ Follow';
+        }
+      } catch (err) {
+        console.error('Failed to toggle follow:', err);
+      }
+      return;
+    }
+
+    // 4. Share Question Button
+    const shareBtn = event.target.closest('.question-card .share-btn');
+    if (shareBtn) {
+      event.preventDefault();
+      const url = shareBtn.dataset.shareUrl || window.location.href;
+      const title = shareBtn.dataset.shareTitle || document.title;
+
+      if (navigator.share) {
+        try {
+          await navigator.share({ title, url });
+          return;
+        } catch (e) {
+          if (e.name === 'AbortError') return;
+        }
+      }
+
+      if (navigator.clipboard) {
+        try {
+          await navigator.clipboard.writeText(url);
+          const label = shareBtn.querySelector('span');
+          if (label) {
+            const original = label.textContent;
+            label.textContent = 'Copied!';
+            setTimeout(() => { label.textContent = original; }, 1400);
+          }
+        } catch {
+          window.prompt('Copy this link:', url);
+        }
+      } else {
+        window.prompt('Copy this link:', url);
+      }
+      return;
+    }
+
+    // 5. More Options Button
     const moreBtn = event.target.closest('.question-card .question-more-btn, .question-card .question-report-btn');
     if (moreBtn) {
       event.preventDefault();
@@ -136,6 +267,7 @@ function bindQuestionsPageActions() {
       return;
     }
 
+    // 6. More Options Menu Items
     const menuAction = event.target.closest('.question-more-menu-item');
     if (menuAction) {
       event.preventDefault();
@@ -147,13 +279,13 @@ function bindQuestionsPageActions() {
       if (action === 'copy-link' && questionUrl) {
         try {
           await navigator.clipboard.writeText(questionUrl);
-          menuAction.querySelector('.question-more-menu-text').textContent = 'Link copied';
-          setTimeout(() => {
-            const label = menuAction.querySelector('.question-more-menu-text');
-            if (label) label.textContent = 'Copy link';
-          }, 1400);
+          const label = menuAction.querySelector('.question-more-menu-text');
+          if (label) {
+            label.textContent = 'Link copied';
+            setTimeout(() => { label.textContent = 'Copy link'; }, 1400);
+          }
         } catch {
-          window.prompt('Copy this link', questionUrl);
+          window.prompt('Copy this link:', questionUrl);
         }
       }
 
@@ -170,16 +302,18 @@ function bindQuestionsPageActions() {
       return;
     }
 
+    // 7. Reset Filters Empty State Action
     const resetBtn = event.target.closest('.questions-empty-reset');
     if (resetBtn) {
       event.preventDefault();
       const categorySelect = document.getElementById('categorySelect');
-      const sortSelect = document.getElementById('sortSelect');
+      const searchInput = document.getElementById('questionSearchInput');
       if (categorySelect) categorySelect.value = 'all';
-      if (sortSelect) sortSelect.value = 'newest';
+      if (searchInput) searchInput.value = '';
       currentCategory = 'all';
+      currentSearchQuery = '';
       currentSort = 'newest';
-      window.loadQuestions(false);
+      window.switchTab('for-you');
       return;
     }
 
@@ -398,6 +532,158 @@ function processQuestions(list, sortType) {
 // ======================================================
 // 5️⃣ MAIN LOAD FUNCTION
 // ======================================================
+function buildAnswersPageCard(q) {
+  const title = escapeHtml(q.question);
+  const slug = escapeHtml(q.slug || q.id);
+  const date = formatRelativeTime(q.created_at);
+  const categoryLabel = escapeHtml((q.category || "General").replace(/^\w/, (m) => m.toUpperCase()));
+  const description = escapeHtml(q.description || "");
+  const answersCount = Number(q.answers_count || 0);
+  const likesCount = Number(q.likes_count || 0);
+  const viewsCount = Number(q.views_count || 0);
+  const isLiked = Boolean(q.user_liked);
+  const questionSaved = isQuestionSaved(q.id);
+  const questionUrl = `https://lovculator.com/question/${slug}`;
+
+  // Author details
+  const authorUserId = q.user_id || "";
+  const authorUsername = escapeHtml(q.username || "");
+  const authorName = escapeHtml(q.display_name || q.username || "Anonymous");
+  const authorAvatar = escapeHtml(q.avatar_url || "/images/default-avatar.png");
+  const authorLink = authorUsername ? `/profile/${encodeURIComponent(authorUsername)}` : "";
+  const isFollowing = Boolean(q.user_following);
+  const isSelfAuthor =
+    Number(authorUserId) > 0 &&
+    Number(window.currentUserId || 0) > 0 &&
+    Number(authorUserId) === Number(window.currentUserId);
+
+  // Top answer excerpt
+  let topAnswerSnippet = "";
+  if (q.top_answer_text || q.top_answer_html) {
+    const answerAuthor = escapeHtml(q.top_answer_display_name || q.top_answer_username || "Community Member");
+    const rawText = String(q.top_answer_text || "").replace(/^\s*×\s*/g, "");
+    const cleanExcerpt = escapeHtml(rawText.length > 200 ? rawText.slice(0, 200) + "..." : rawText);
+    topAnswerSnippet = `
+      <div class="qa-answer-preview">
+        <div class="qa-answer-preview-header">
+          <span>Answer by <strong>${answerAuthor}</strong>:</span>
+        </div>
+        <div class="qa-answer-preview-body">
+          ${cleanExcerpt}
+        </div>
+      </div>
+    `;
+  }
+
+  return `
+    <article class="question-card" data-question-id="${q.id}">
+      <div class="qa-card-author-row">
+        <div class="qa-author-info">
+          ${
+            authorLink
+              ? `
+            <a href="${authorLink}">
+              <img src="${authorAvatar}" alt="${authorName}" class="qa-author-avatar" onerror="this.src='/images/default-avatar.png'">
+            </a>
+          `
+              : `
+            <img src="${authorAvatar}" alt="${authorName}" class="qa-author-avatar" onerror="this.src='/images/default-avatar.png'">
+          `
+          }
+          <div class="qa-author-details">
+            <div class="qa-author-name-line">
+              ${authorLink ? `<a href="${authorLink}" class="qa-author-name">${authorName}</a>` : `<span class="qa-author-name">${authorName}</span>`}
+              <span class="qa-card-meta-dot">•</span>
+              <span class="qa-card-date">${date}</span>
+              ${categoryLabel ? `<span class="qa-card-meta-dot">•</span> <span class="qa-topic-badge">${categoryLabel}</span>` : ""}
+            </div>
+          </div>
+        </div>
+
+        <div class="qa-card-header-actions">
+          ${
+            isSelfAuthor || !authorUserId
+              ? ""
+              : `
+            <button class="qa-author-follow-btn ${isFollowing ? "following" : ""}" data-user-id="${authorUserId}">
+              ${isFollowing ? "Following" : "+ Follow"}
+            </button>
+          `
+          }
+        </div>
+      </div>
+
+      <a href="/question/${slug}" class="question-title">${title}</a>
+
+      ${description ? `<p class="qa-card-desc">${description}</p>` : ""}
+
+      ${topAnswerSnippet}
+
+      <div class="qa-card-footer">
+        <div class="qa-card-actions-left">
+          <a href="/question/${slug}" class="qa-action-btn" title="View answers">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path>
+            </svg>
+            <span>${answersCount} answers</span>
+          </a>
+
+          <button class="qa-action-btn qa-like-btn ${isLiked ? "liked" : ""}" data-question-id="${q.id}" type="button" aria-label="Like question">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="${isLiked ? "#ff4b8d" : "none"}" stroke="${isLiked ? "#ff4b8d" : "currentColor"}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
+            </svg>
+            <span class="like-count">${likesCount}</span>
+          </button>
+
+          <span class="qa-action-btn" title="Views">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+              <circle cx="12" cy="12" r="3"></circle>
+            </svg>
+            <span>${viewsCount}</span>
+          </span>
+        </div>
+
+        <div class="qa-card-actions-right">
+          <button class="qa-action-btn share-btn" data-share-url="${questionUrl}" data-share-title="${title}" type="button" aria-label="Share question">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="18" cy="5" r="3"></circle>
+              <circle cx="6" cy="12" r="3"></circle>
+              <circle cx="18" cy="19" r="3"></circle>
+              <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line>
+              <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line>
+            </svg>
+            <span>Share</span>
+          </button>
+
+          <button class="qa-action-btn save-btn ${questionSaved ? "is-saved" : ""}" data-question-id="${q.id}" type="button" aria-label="${questionSaved ? "Saved" : "Save"}">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="${questionSaved ? "#ff4b8d" : "none"}" stroke="${questionSaved ? "#ff4b8d" : "currentColor"}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path>
+            </svg>
+            <span>${questionSaved ? "Saved" : "Save"}</span>
+          </button>
+
+          <button class="qa-action-btn question-more-btn" type="button" aria-label="More options" aria-expanded="false">
+            <span>⋯</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="question-more-menu" hidden role="menu" aria-label="Question options">
+        <button class="question-more-menu-item" type="button" role="menuitem" data-action="copy-link" data-question-url="${questionUrl}" data-question-title="${title}">
+          <span class="question-more-menu-text">Copy link</span>
+        </button>
+        <button class="question-more-menu-item" type="button" role="menuitem" data-action="report" data-question-url="${questionUrl}" data-question-title="${title}">
+          <span class="question-more-menu-text">Report question</span>
+        </button>
+        <button class="question-more-menu-item question-more-menu-item-danger" type="button" role="menuitem" data-action="hide-card">
+          <span class="question-more-menu-text">Hide from feed</span>
+        </button>
+      </div>
+    </article>
+  `;
+}
+
 window.loadQuestions = async function (loadMore = false) {
   const container =
     document.getElementById("questionsFeedContainer") ||
@@ -419,20 +705,66 @@ window.loadQuestions = async function (loadMore = false) {
 
   document.getElementById("loadMoreContainer")?.remove();
 
+  // Handle Following Tab when user is not logged in
+  if (!isHomepage() && currentTab === "following" && !window.currentUserId) {
+    container.innerHTML = `
+      <section class="questions-empty-state" aria-live="polite">
+        <div class="questions-empty-icon" aria-hidden="true">👥</div>
+        <span class="questions-empty-eyebrow">Personalized Feed</span>
+        <h2>Questions from People You Follow</h2>
+        <p>Log in and follow people to see questions and answers from your favorite creators in this feed.</p>
+        <div class="questions-empty-actions">
+          <button type="button" class="question-primary-btn" onclick="window.showLoginModal ? window.showLoginModal('view following feed') : null">Log In</button>
+          <button type="button" class="question-secondary-btn" onclick="window.switchTab('for-you')">Browse For You</button>
+        </div>
+      </section>
+    `;
+    return;
+  }
+
+  // Handle Bookmarks Tab when no saved questions exist
+  if (!isHomepage() && currentTab === "bookmarks") {
+    const savedIds = getSavedQuestionIds();
+    if (!savedIds.length) {
+      container.innerHTML = `
+        <section class="questions-empty-state" aria-live="polite">
+          <div class="questions-empty-icon" aria-hidden="true">🔖</div>
+          <span class="questions-empty-eyebrow">Saved Questions</span>
+          <h2>No Bookmarked Questions Yet</h2>
+          <p>You haven’t saved any questions yet. Click the bookmark icon on any question to save it for reading later.</p>
+          <div class="questions-empty-actions">
+            <button type="button" class="question-primary-btn" onclick="window.switchTab('for-you')">Discover Questions</button>
+          </div>
+        </section>
+      `;
+      return;
+    }
+  }
+
   try {
     const categoryParam =
       currentCategory !== "all"
         ? `&category=${encodeURIComponent(currentCategory)}`
         : "";
-    const statusParam = isHomepage()
-      ? "&status=answered&sort=answered"
-      : currentSort === "unanswered"
-        ? "&status=unanswered&sort=unanswered"
-        : `&sort=${encodeURIComponent(currentSort)}`;
 
-    const url =
-      `${window.API_BASE}/questions/latest` +
-      `?limit=${PAGE_LIMIT}&offset=${currentOffset}${categoryParam}${statusParam}`;
+    let url = "";
+
+    if (isHomepage()) {
+      url = `${window.API_BASE}/questions/latest?limit=${PAGE_LIMIT}&offset=${currentOffset}${categoryParam}&status=answered&sort=answered`;
+    } else if (currentTab === "bookmarks") {
+      url = `${window.API_BASE}/questions/latest?limit=100&offset=0${categoryParam}`;
+    } else if (currentTab === "following") {
+      url = `${window.API_BASE}/questions/for-you?limit=${PAGE_LIMIT}&offset=${currentOffset}${categoryParam}`;
+    } else if (currentTab === "unanswered") {
+      url = `${window.API_BASE}/questions/latest?limit=${PAGE_LIMIT}&offset=${currentOffset}${categoryParam}&status=unanswered&sort=unanswered`;
+    } else if (currentTab === "trending") {
+      url = `${window.API_BASE}/questions/latest?limit=${PAGE_LIMIT}&offset=${currentOffset}${categoryParam}&sort=popular`;
+    } else if (currentTab === "latest") {
+      url = `${window.API_BASE}/questions/latest?limit=${PAGE_LIMIT}&offset=${currentOffset}${categoryParam}&sort=newest`;
+    } else {
+      // "for-you" default
+      url = `${window.API_BASE}/questions/latest?limit=${PAGE_LIMIT}&offset=${currentOffset}${categoryParam}&sort=popular`;
+    }
 
     const response = await fetch(url, {
       credentials: "include",
@@ -444,9 +776,26 @@ window.loadQuestions = async function (loadMore = false) {
     let apiQuestions = await response.json();
     let apiCount = apiQuestions.length;
 
-    let questions = processQuestions(apiQuestions, currentSort);
+    // Filter bookmarks locally if in bookmarks tab
+    if (!isHomepage() && currentTab === "bookmarks") {
+      const savedIds = getSavedQuestionIds();
+      apiQuestions = apiQuestions.filter((q) => savedIds.includes(String(q.id)));
+    }
 
-    // Safety net while older/cached backends roll over: homepage must not go blank.
+    let questions = processQuestions(
+      apiQuestions,
+      currentTab === "trending" ? "popular" : currentTab === "unanswered" ? "unanswered" : currentSort
+    );
+
+    // Apply real-time search filtering if search query exists
+    if (currentSearchQuery) {
+      questions = questions.filter((q) => {
+        const text = `${q.question || ""} ${q.description || ""} ${q.category || ""} ${q.tags || ""}`.toLowerCase();
+        return text.includes(currentSearchQuery);
+      });
+    }
+
+    // Safety net for homepage
     if (isHomepage() && !questions.length && !loadMore) {
       const fallbackUrl =
         `${window.API_BASE}/questions/latest` +
@@ -476,11 +825,11 @@ window.loadQuestions = async function (loadMore = false) {
           <section class="questions-empty-state" aria-live="polite">
             <div class="questions-empty-icon" aria-hidden="true">?</div>
             <span class="questions-empty-eyebrow">No matching questions</span>
-            <h2>We couldn’t find questions for this filter set.</h2>
-            <p>Try widening your search, switching categories, or resetting the filters to browse more community conversations.</p>
+            <h2>We couldn’t find questions for this filter.</h2>
+            <p>Try widening your search, choosing a different category, or resetting filters to browse more community conversations.</p>
             <div class="questions-empty-actions">
               <button type="button" class="question-primary-btn questions-empty-reset">Reset Filters</button>
-              <a href="/questions" class="question-secondary-btn">Browse All Questions</a>
+              <button type="button" class="question-secondary-btn" onclick="window.switchTab('for-you')">Browse All Questions</button>
             </div>
           </section>
         `;
@@ -488,250 +837,183 @@ window.loadQuestions = async function (loadMore = false) {
     }
 
     // ======================================================
-    // 6️⃣ RENDER
+    // 6️⃣ RENDER CARDS
     // ======================================================
-    const html = questions.map(q => {
-      const title = escapeHtml(q.question);
-      const slug = escapeHtml(q.slug || q.id);
-      const date = formatRelativeTime(q.created_at);
-      const categoryLabel = escapeHtml((q.category || "General").replace(/^\w/, (m) => m.toUpperCase()));
-      const isTrending = (q.views_count || 0) >= 25 || (q.answers_count || 0) >= 3;
-      const isUnanswered = (q.answers_count || 0) === 0;
-      const shareCount = q.share_count || q.shares_count || 0;
+    let html = "";
+    if (!isHomepage()) {
+      html = questions.map((q) => buildAnswersPageCard(q)).join("");
+    } else {
+      // Preserved Homepage Card Rendering
+      html = questions
+        .map((q) => {
+          const title = escapeHtml(q.question);
+          const slug = escapeHtml(q.slug || q.id);
+          const firstAnswerUserId = q.top_answer_user_id || "";
+          const firstAnswerUsername = escapeHtml(q.top_answer_username || "");
+          const firstAnswerName = escapeHtml(
+            q.top_answer_display_name || q.top_answer_username || "User"
+          );
+          const firstAnswerAvatar = escapeHtml(
+            q.top_answer_avatar_url || "/images/default-avatar.png"
+          );
+          const firstAnswerBio = escapeHtml(q.top_answer_bio || "");
+          const isFollowing = Boolean(q.top_answer_user_following);
+          const isSelfAnswerer =
+            Number(firstAnswerUserId) > 0 &&
+            Number(window.currentUserId || 0) > 0 &&
+            Number(firstAnswerUserId) === Number(window.currentUserId);
+          const answererProfileLink = firstAnswerUsername
+            ? `/profile/${encodeURIComponent(firstAnswerUsername)}`
+            : "";
 
-      const firstAnswerUserId = q.top_answer_user_id || "";
-      const firstAnswerUsername = escapeHtml(q.top_answer_username || "");
-      const firstAnswerName = escapeHtml(
-        q.top_answer_display_name || q.top_answer_username || "User"
-      );
-      const firstAnswerAvatar = escapeHtml(
-        q.top_answer_avatar_url || "/images/default-avatar.png"
-      );
-      const firstAnswerBio = escapeHtml(q.top_answer_bio || "");
-      const isFollowing = Boolean(q.top_answer_user_following);
-      const isSelfAnswerer =
-        Number(firstAnswerUserId) > 0 &&
-        Number(window.currentUserId || 0) > 0 &&
-        Number(firstAnswerUserId) === Number(window.currentUserId);
-      const answererProfileLink = firstAnswerUsername
-        ? `/profile/${encodeURIComponent(firstAnswerUsername)}`
-        : "";
-
-      const firstAnswerRow =
-        isHomepage() && (q.answers_count || 0) > 0 && firstAnswerUserId
-          ? `
-            <div class="question-first-answer" style="display:flex;align-items:center;gap:12px;margin:8px 0 12px 0;">
-              ${answererProfileLink ? `
-                <a href="${answererProfileLink}" style="display:inline-flex;">
+          const firstAnswerRow =
+            (q.answers_count || 0) > 0 && firstAnswerUserId
+              ? `
+              <div class="question-first-answer" style="display:flex;align-items:center;gap:12px;margin:8px 0 12px 0;">
+                ${
+                  answererProfileLink
+                    ? `
+                  <a href="${answererProfileLink}" style="display:inline-flex;">
+                    <img src="${firstAnswerAvatar}"
+                         alt="${firstAnswerName}"
+                         style="width:40px;height:40px;border-radius:50%;object-fit:cover;"
+                         onerror="this.src='/images/default-avatar.png'">
+                  </a>
+                `
+                    : `
                   <img src="${firstAnswerAvatar}"
                        alt="${firstAnswerName}"
                        style="width:40px;height:40px;border-radius:50%;object-fit:cover;"
                        onerror="this.src='/images/default-avatar.png'">
-                </a>
-              ` : `
-                <img src="${firstAnswerAvatar}"
-                     alt="${firstAnswerName}"
-                     style="width:40px;height:40px;border-radius:50%;object-fit:cover;"
-                     onerror="this.src='/images/default-avatar.png'">
-              `}
-              <div style="display:flex;flex-direction:column;gap:2px;min-width:0;">
-                <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
-                  ${
-                    answererProfileLink
-                      ? `<a href="${answererProfileLink}" style="font-weight:600;color:#1c1e21;text-decoration:none;">${firstAnswerName}</a>`
-                      : `<span style="font-weight:600;color:#1c1e21;">${firstAnswerName}</span>`
-                  }
-                  ${
-                    isSelfAnswerer
-                      ? ""
-                      : `<button class="follow-author-btn ${isFollowing ? "following" : ""}"
-                          data-user-id="${firstAnswerUserId}">
-                        ${isFollowing ? "Following" : "+ Follow"}
-                      </button>`
-                  }
+                `
+                }
+                <div style="display:flex;flex-direction:column;gap:2px;min-width:0;">
+                  <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+                    ${
+                      answererProfileLink
+                        ? `<a href="${answererProfileLink}" style="font-weight:600;color:#1c1e21;text-decoration:none;">${firstAnswerName}</a>`
+                        : `<span style="font-weight:600;color:#1c1e21;">${firstAnswerName}</span>`
+                    }
+                    ${
+                      isSelfAnswerer
+                        ? ""
+                        : `<button class="follow-author-btn ${isFollowing ? "following" : ""}"
+                            data-user-id="${firstAnswerUserId}">
+                          ${isFollowing ? "Following" : "+ Follow"}
+                        </button>`
+                    }
+                  </div>
+                  ${firstAnswerBio ? `<div style="color:#65676b;font-size:0.92rem;line-height:1.3;max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${firstAnswerBio}</div>` : ""}
                 </div>
-                ${firstAnswerBio ? `<div style="color:#65676b;font-size:0.92rem;line-height:1.3;max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${firstAnswerBio}</div>` : ""}
               </div>
-            </div>
-          `
-          : "";
+            `
+              : "";
 
-      const topAnswerImage = q.top_answer_image_url
-        ? (q.top_answer_image_url.startsWith("http")
-            ? q.top_answer_image_url
-            : (window.ASSET_BASE || "") + q.top_answer_image_url)
-        : "";
+          const topAnswerImage = q.top_answer_image_url
+            ? q.top_answer_image_url.startsWith("http")
+              ? q.top_answer_image_url
+              : (window.ASSET_BASE || "") + q.top_answer_image_url
+            : "";
 
-      let answerPreview = "";
-      if (isHomepage() && q.answers_count > 0 && (q.top_answer_html || q.top_answer_text)) {
-        const rawHtml = typeof q.top_answer_html === "string" ? q.top_answer_html.trim() : "";
-        const rawText = String(q.top_answer_text || "").replace(/^\s*×\s*/g, "");
-        const cleanPreviewMarkup = rawHtml
-          ? normalizeStoredAnswerMarkup(rawHtml)
-          : normalizeStoredAnswerMarkup(rawText);
-        const answerMarkupHasImage = /<img[\s>]/i.test(cleanPreviewMarkup);
+          let answerPreview = "";
+          if (q.answers_count > 0 && (q.top_answer_html || q.top_answer_text)) {
+            const rawHtml =
+              typeof q.top_answer_html === "string" ? q.top_answer_html.trim() : "";
+            const rawText = String(q.top_answer_text || "").replace(/^\s*×\s*/g, "");
+            const cleanPreviewMarkup = rawHtml
+              ? normalizeStoredAnswerMarkup(rawHtml)
+              : normalizeStoredAnswerMarkup(rawText);
+            const answerMarkupHasImage = /<img[\s>]/i.test(cleanPreviewMarkup);
 
-        answerPreview = `
-          ${topAnswerImage && !answerMarkupHasImage ? `
-            <div class="answer-preview-image">
-              <img src="${topAnswerImage}" alt="Answer image">
+            answerPreview = `
+            ${
+              topAnswerImage && !answerMarkupHasImage
+                ? `
+              <div class="answer-preview-image">
+                <img src="${topAnswerImage}" alt="Answer image">
+              </div>
+            `
+                : ""
+            }
+            <div class="answer-preview-wrap">
+              <div class="answer-preview answer-preview-collapsed" data-role="answer-preview">
+                ${cleanPreviewMarkup}
+              </div>
+              <button type="button" class="read-more read-more-toggle" data-role="answer-toggle">Read more</button>
             </div>
-          ` : ""}
-          <div class="answer-preview-wrap">
-            <div class="answer-preview answer-preview-collapsed" data-role="answer-preview">
-              ${cleanPreviewMarkup}
+          `;
+          }
+
+          return `
+          <div class="question-card" data-question-id="${q.id}" data-top-answer-id="${q.top_answer_id || ""}" data-answer-id="${q.top_answer_id || ""}">
+            ${firstAnswerRow}
+            <a href="/question/${slug}" class="question-title">${title}</a>
+            ${answerPreview}
+            <div class="post-actions home-answer-footer">
+              <button class="post-action view-action" type="button" aria-label="Views" title="Views">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                  <circle cx="12" cy="12" r="3"></circle>
+                </svg>
+                <span>${q.views_count || 0}</span>
+              </button>
+
+              <button class="post-action like-btn ${q.top_answer_user_liked ? "liked" : ""}"
+                type="button"
+                data-id="${q.top_answer_id || ""}"
+                data-answer-id="${q.top_answer_id || ""}"
+                data-type="answer"
+                aria-label="Like answer"
+                ${q.top_answer_id ? "" : "disabled"}>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="${q.top_answer_user_liked ? "#e91e63" : "none"}" stroke="${q.top_answer_user_liked ? "#e91e63" : "currentColor"}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
+                </svg>
+                <span class="like-count">${q.top_answer_likes_count || 0}</span>
+              </button>
+
+              <button class="post-action comment-toggle"
+                type="button"
+                data-id="${q.top_answer_id || ""}"
+                data-answer-id="${q.top_answer_id || ""}"
+                aria-label="Open comments"
+                ${q.top_answer_id ? "" : "disabled"}>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path>
+                </svg>
+                <span class="comment-count">${q.top_answer_comments_count || 0}</span>
+              </button>
+
+              <button class="post-action share-action-toggle"
+                type="button"
+                data-share-url="https://lovculator.com/question/${slug}"
+                data-share-title="${title}"
+                aria-label="Share question">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <circle cx="18" cy="5" r="3"></circle>
+                  <circle cx="6" cy="12" r="3"></circle>
+                  <circle cx="18" cy="19" r="3"></circle>
+                  <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line>
+                  <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line>
+                </svg>
+                <span class="share-label">Share</span>
+              </button>
             </div>
-            <button type="button" class="read-more read-more-toggle" data-role="answer-toggle">Read more</button>
+
+            <div id="comments-${q.top_answer_id || ""}" class="comments-section hidden">
+              <div class="comment-form">
+                <input type="text"
+                       class="comment-input"
+                       data-answer-id="${q.top_answer_id || ""}"
+                       placeholder="Write a comment...">
+                <button class="comment-submit" data-answer-id="${q.top_answer_id || ""}">Post</button>
+              </div>
+              <div class="comments-list" id="comments-list-${q.top_answer_id || ""}"></div>
+            </div>
           </div>
         `;
-      }
-
-      const questionUrl = `https://lovculator.com/question/${slug}`;
-      const questionSaved = isQuestionSaved(q.id);
-
-      return `
-        <div class="question-card" data-question-id="${q.id}" data-top-answer-id="${q.top_answer_id || ""}" data-answer-id="${q.top_answer_id || ""}">
-          ${
-            isHomepage()
-              ? ""
-              : `
-                <div class="question-header question-card-top">
-                  <div class="question-card-meta">
-                    <span class="category-badge">${categoryLabel}</span>
-                    ${isTrending ? `<span class="trend-badge">Trending</span>` : ""}
-                    ${isUnanswered ? `<span class="needs-answer-badge">Unanswered</span>` : ""}
-                    <span class="question-date">${date}</span>
-                  </div>
-                  <button class="question-report-btn" type="button" aria-label="Question actions" aria-expanded="false" title="Question actions">
-                    <span aria-hidden="true">⋯</span>
-                  </button>
-                </div>
-              `
-          }
-
-          ${isHomepage() ? firstAnswerRow : ""}
-
-          <a href="/question/${slug}" class="question-title">${title}</a>
-
-          ${answerPreview}
-
-          ${
-            isHomepage()
-              ? `
-                <div class="post-actions home-answer-footer">
-                  <button class="post-action view-action" type="button" aria-label="Views" title="Views">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
-                      <circle cx="12" cy="12" r="3"></circle>
-                    </svg>
-                    <span>${q.views_count || 0}</span>
-                  </button>
-
-                  <button class="post-action like-btn ${q.top_answer_user_liked ? "liked" : ""}"
-                    type="button"
-                    data-id="${q.top_answer_id || ""}"
-                    data-answer-id="${q.top_answer_id || ""}"
-                    data-type="answer"
-                    aria-label="Like answer"
-                    ${q.top_answer_id ? "" : "disabled"}>
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="${q.top_answer_user_liked ? "#e91e63" : "none"}" stroke="${q.top_answer_user_liked ? "#e91e63" : "currentColor"}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                      <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
-                    </svg>
-                    <span class="like-count">${q.top_answer_likes_count || 0}</span>
-                  </button>
-
-                  <button class="post-action comment-toggle"
-                    type="button"
-                    data-id="${q.top_answer_id || ""}"
-                    data-answer-id="${q.top_answer_id || ""}"
-                    aria-label="Open comments"
-                    ${q.top_answer_id ? "" : "disabled"}>
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                      <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path>
-                    </svg>
-                    <span class="comment-count">${q.top_answer_comments_count || 0}</span>
-                  </button>
-
-                  <button class="post-action share-action-toggle"
-                    type="button"
-                    data-share-url="https://lovculator.com/question/${slug}"
-                    data-share-title="${title}"
-                    aria-label="Share question">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                      <circle cx="18" cy="5" r="3"></circle>
-                      <circle cx="6" cy="12" r="3"></circle>
-                      <circle cx="18" cy="19" r="3"></circle>
-                      <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line>
-                      <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line>
-                    </svg>
-                    <span class="share-label">Share</span>
-                  </button>
-                </div>
-
-                <div id="comments-${q.top_answer_id || ""}" class="comments-section hidden">
-                  <div class="comment-form">
-                    <input type="text"
-                           class="comment-input"
-                           data-answer-id="${q.top_answer_id || ""}"
-                           placeholder="Write a comment...">
-                    <button class="comment-submit" data-answer-id="${q.top_answer_id || ""}">Post</button>
-                  </div>
-                  <div class="comments-list" id="comments-list-${q.top_answer_id || ""}"></div>
-                </div>
-              `
-              : `
-                <div class="question-stats" aria-label="Question statistics">
-                  <span class="stat-pill answer-count-pill">${q.answers_count || 0} answers</span>
-                  <span class="stat-item"><strong>${q.views_count || 0}</strong> views</span>
-                  <span class="stat-item"><strong>${shareCount}</strong> shares</span>
-                </div>
-
-                <div class="question-actions">
-                  <a class="answer-btn question-primary-btn" href="/question/${slug}">
-                    <span>View Answers</span>
-                  </a>
-
-                  <button class="share-btn question-secondary-btn"
-                    data-share-url="${questionUrl}"
-                    data-share-title="${title}">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                      <circle cx="18" cy="5" r="3"></circle>
-                      <circle cx="6" cy="12" r="3"></circle>
-                      <circle cx="18" cy="19" r="3"></circle>
-                      <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line>
-                      <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line>
-                    </svg>
-                    <span>Share</span>
-                  </button>
-
-                  <button class="save-btn question-secondary-btn ${questionSaved ? "is-saved" : ""}" type="button" aria-label="${questionSaved ? "Question saved" : "Save question"}" aria-pressed="${questionSaved ? "true" : "false"}">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                      <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path>
-                    </svg>
-                    <span>${questionSaved ? "Saved" : "Save"}</span>
-                  </button>
-
-                  <button class="question-more-btn" type="button" aria-label="Report or more options" aria-expanded="false" title="More options">
-                    <span aria-hidden="true">⋯</span>
-                  </button>
-                </div>
-
-                <div class="question-more-menu" hidden role="menu" aria-label="Question options">
-                  <button class="question-more-menu-item" type="button" role="menuitem" data-action="copy-link" data-question-url="${questionUrl}" data-question-title="${title}">
-                    <span class="question-more-menu-text">Copy link</span>
-                  </button>
-                  <button class="question-more-menu-item" type="button" role="menuitem" data-action="report" data-question-url="${questionUrl}" data-question-title="${title}">
-                    <span class="question-more-menu-text">Report question</span>
-                  </button>
-                  <button class="question-more-menu-item question-more-menu-item-danger" type="button" role="menuitem" data-action="hide-card">
-                    <span class="question-more-menu-text">Hide from feed</span>
-                  </button>
-                </div>
-              `
-          }
-        </div>
-      `;
-    }).join("");
+        })
+        .join("");
+    }
 
     if (loadMore) {
       container.insertAdjacentHTML("beforeend", html);
@@ -741,16 +1023,14 @@ window.loadQuestions = async function (loadMore = false) {
 
     currentOffset += apiCount;
 
-    // ======================================================
-    // 7️⃣ LOAD MORE (API-BASED)
-    // ======================================================
-    if (apiCount === PAGE_LIMIT) {
+    // Load More button (only when relevant and more items exist)
+    if (apiCount === PAGE_LIMIT && currentTab !== "bookmarks") {
       container.insertAdjacentHTML(
         "afterend",
         `
-        <div id="loadMoreContainer" style="text-align:center;margin:30px 0;">
+        <div id="loadMoreContainer" style="text-align:center;margin:24px 0 32px;">
           <button class="answer-btn" id="loadMoreBtn">
-            Load More
+            Load More Questions
           </button>
         </div>
         `
@@ -763,7 +1043,6 @@ window.loadQuestions = async function (loadMore = false) {
     bindAnswerPreviewToggles();
     bindHomeFooterActions();
     bindQuestionsPageActions();
-
   } catch (err) {
     console.error("❌ Load questions error:", err);
     if (!loadMore) {
@@ -777,15 +1056,33 @@ window.loadQuestions = async function (loadMore = false) {
         : `
           <section class="questions-empty-state questions-error-state" aria-live="polite">
             <div class="questions-empty-icon" aria-hidden="true">!</div>
-            <span class="questions-empty-eyebrow">Temporary issue</span>
+            <span class="questions-empty-eyebrow">Connection issue</span>
             <h2>We couldn’t load questions right now.</h2>
-            <p>Please retry in a moment. Your filters are still here, and the feed will reload when the connection stabilizes.</p>
+            <p>Please check your connection and retry. Your filters are preserved.</p>
             <div class="questions-empty-actions">
               <button type="button" class="question-primary-btn" onclick="window.loadQuestions()">Retry</button>
             </div>
           </section>
         `;
     }
+  }
+};
+
+window.switchTab = function (tabName) {
+  const tabBtn = document.querySelector(`.qa-tab[data-tab="${tabName}"]`);
+  if (tabBtn) {
+    tabBtn.click();
+  } else {
+    currentTab = tabName;
+    document.querySelectorAll(".qa-tab").forEach((t) => {
+      const match = t.dataset.tab === tabName;
+      t.classList.toggle("active", match);
+      t.setAttribute("aria-selected", match ? "true" : "false");
+    });
+    const url = new URL(window.location);
+    url.searchParams.set("tab", tabName);
+    window.history.replaceState({}, "", url);
+    window.loadQuestions(false);
   }
 };
 
@@ -825,7 +1122,9 @@ function bindHomeFooterActions() {
     window.__homeAnswerActivitySyncBound = true;
     window.addEventListener("storage", (e) => {
       if (e.key !== "lovculator_answer_activity" || !e.newValue) return;
-      try { applyAnswerActivityToHome(JSON.parse(e.newValue)); } catch {}
+      try {
+        applyAnswerActivityToHome(JSON.parse(e.newValue));
+      } catch {}
     });
     window.addEventListener("lovculator:answer-activity", (e) => {
       if (e?.detail) applyAnswerActivityToHome(e.detail);
@@ -851,32 +1150,122 @@ function applyAnswerActivityToHome(payload) {
 }
 
 // ======================================================
-// 9️⃣ FILTER BAR
+// 8️⃣ FILTER & TABS INITIALIZATION
 // ======================================================
-document.getElementById("applyFilterBtn")?.addEventListener("click", () => {
-  const categorySelect = document.getElementById("categorySelect");
-  const sortSelect = document.getElementById("sortSelect");
-
-  if (categorySelect) {
-    currentCategory = categorySelect.value || "all";
-  } else {
-    currentCategory = "all";
+function initQaFilters() {
+  const urlParams = new URLSearchParams(window.location.search);
+  const initialTab = urlParams.get("tab");
+  if (initialTab) {
+    currentTab = initialTab;
+    document.querySelectorAll(".qa-tab").forEach((t) => {
+      const active = t.dataset.tab === initialTab;
+      t.classList.toggle("active", active);
+      t.setAttribute("aria-selected", active ? "true" : "false");
+    });
   }
 
-  currentSort = sortSelect?.value || "newest";
+  const initialCat = urlParams.get("category");
+  if (initialCat) {
+    currentCategory = initialCat;
+    const catSelect = document.getElementById("categorySelect");
+    if (catSelect) catSelect.value = initialCat;
+    document.querySelectorAll(".topic-nav-link").forEach((link) => {
+      link.classList.toggle("active", link.dataset.topic === initialCat);
+    });
+  }
 
-  window.loadQuestions(false);
-});
+  // Wire Tab Buttons
+  document.querySelectorAll(".qa-tab").forEach((tab) => {
+    tab.addEventListener("click", () => {
+      const tabName = tab.dataset.tab;
+      if (!tabName) return;
+      document.querySelectorAll(".qa-tab").forEach((t) => {
+        t.classList.toggle("active", t === tab);
+        t.setAttribute("aria-selected", t === tab ? "true" : "false");
+      });
+      currentTab = tabName;
+      const url = new URL(window.location);
+      url.searchParams.set("tab", tabName);
+      window.history.replaceState({}, "", url);
+      window.loadQuestions(false);
+    });
+  });
+
+  // Wire Search Input
+  let searchTimer = null;
+  const searchInput = document.getElementById("questionSearchInput");
+  if (searchInput) {
+    searchInput.addEventListener("input", (e) => {
+      clearTimeout(searchTimer);
+      searchTimer = setTimeout(() => {
+        currentSearchQuery = e.target.value.trim().toLowerCase();
+        window.loadQuestions(false);
+      }, 250);
+    });
+  }
+
+  // Wire Category Select
+  const categorySelect = document.getElementById("categorySelect");
+  if (categorySelect) {
+    categorySelect.addEventListener("change", (e) => {
+      currentCategory = e.target.value || "all";
+      const url = new URL(window.location);
+      if (currentCategory === "all") {
+        url.searchParams.delete("category");
+      } else {
+        url.searchParams.set("category", currentCategory);
+      }
+      window.history.replaceState({}, "", url);
+
+      // Sync Left Sidebar Topic links
+      document.querySelectorAll(".topic-nav-link").forEach((link) => {
+        link.classList.toggle("active", link.dataset.topic === currentCategory);
+      });
+
+      window.loadQuestions(false);
+    });
+  }
+
+  // Wire Left Sidebar Topic Links when on /questions
+  document.addEventListener("click", (e) => {
+    const topicLink = e.target.closest(".topic-nav-link");
+    if (
+      topicLink &&
+      !isHomepage() &&
+      (window.location.pathname.startsWith("/questions") ||
+        document.body.classList.contains("answers-page"))
+    ) {
+      e.preventDefault();
+      const topic = topicLink.dataset.topic || "all";
+      currentCategory = topic;
+      const catSelect = document.getElementById("categorySelect");
+      if (catSelect) catSelect.value = topic;
+
+      document.querySelectorAll(".topic-nav-link").forEach((link) => {
+        link.classList.toggle("active", link.dataset.topic === topic);
+      });
+
+      const url = new URL(window.location);
+      if (topic === "all") {
+        url.searchParams.delete("category");
+      } else {
+        url.searchParams.set("category", topic);
+      }
+      window.history.replaceState({}, "", url);
+
+      window.loadQuestions(false);
+    }
+  });
+}
 
 // ======================================================
-// 🔟 INIT
+// 9️⃣ INIT
 // ======================================================
 document.addEventListener("DOMContentLoaded", () => {
-  // Homepage should never show unanswered sort
   if (isHomepage()) {
-    document
-      .querySelector('#sortSelect option[value="unanswered"]')
-      ?.remove();
+    document.querySelector('#sortSelect option[value="unanswered"]')?.remove();
+  } else {
+    initQaFilters();
   }
 
   if (
@@ -887,3 +1276,4 @@ document.addEventListener("DOMContentLoaded", () => {
     window.loadQuestions();
   }
 });
+

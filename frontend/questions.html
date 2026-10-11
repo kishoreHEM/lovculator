@@ -4,18 +4,15 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
-  <title>Relationship Questions | Lovculator</title>
-
-  <meta name="description" content="Browse relationship questions about love, dating, marriage, friendship, communication, and breakups on Lovculator." />
+  <title>Relationship Questions &amp; Answers | Lovculator</title>
+  <meta name="description" content="Ask relationship questions, share thoughtful advice, and explore real discussions on love, dating, marriage, crushes, and breakups." />
   <meta name="robots" content="index,follow" />
 
   <link rel="canonical" href="https://lovculator.com/questions" />
   <meta name="theme-color" content="#ff4b8d" />
   <link rel="manifest" href="/manifest.json" />
 
-  <!-- =====================================================
-       FAVICONS
-  ====================================================== -->
+  <!-- Favicons -->
   <link rel="icon" type="image/x-icon" href="/images/favicon.ico" />
   <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32.png" />
   <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16.png" />
@@ -23,22 +20,20 @@
   <link rel="icon" type="image/png" sizes="192x192" href="/images/android-chrome-192x192.png" />
   <link rel="icon" type="image/png" sizes="512x512" href="/images/android-chrome-512x512.png" />
 
-
   <!-- Open Graph -->
   <meta property="og:type" content="website" />
-  <meta property="og:title" content="Relationship Questions | Lovculator" />
-  <meta property="og:description" content="Browse relationship questions about love, dating, marriage, friendship, communication, and breakups on Lovculator." />
+  <meta property="og:title" content="Relationship Questions &amp; Answers | Lovculator" />
+  <meta property="og:description" content="Ask relationship questions, share thoughtful advice, and explore real discussions on love, dating, marriage, crushes, and breakups." />
   <meta property="og:url" content="https://lovculator.com/questions" />
   <meta property="og:image" content="https://lovculator.com/images/og-cover.jpg" />
-  <meta property="og:image:alt" content="Lovculator cover image" />
+  <meta property="og:image:alt" content="Lovculator Q&amp;A cover image" />
   <meta property="og:locale" content="en_US" />
 
   <!-- Twitter Card -->
   <meta name="twitter:card" content="summary_large_image" />
-  <meta name="twitter:title" content="Relationship Questions | Lovculator" />
-  <meta name="twitter:description" content="Browse relationship questions about love, dating, marriage, friendship, communication, and breakups on Lovculator." />
+  <meta name="twitter:title" content="Relationship Questions &amp; Answers | Lovculator" />
+  <meta name="twitter:description" content="Ask relationship questions, share thoughtful advice, and explore real discussions on love, dating, marriage, crushes, and breakups." />
   <meta name="twitter:image" content="https://lovculator.com/images/og-cover.jpg" />
-  <meta name="twitter:image:alt" content="Lovculator cover image" />
 
   <!-- Collection Page Schema -->
   <script type="application/ld+json">
@@ -46,8 +41,8 @@
     "@context": "https://schema.org",
     "@type": "CollectionPage",
     "name": "Relationship Questions & Answers",
-    "description": "A collection of community-driven relationship questions and answers.",
-    "url": "https://lovculator.com/answer"
+    "description": "A collection of community-driven relationship questions and answers on love, dating, marriage, and emotional challenges.",
+    "url": "https://lovculator.com/questions"
   }
   </script>
 
@@ -58,144 +53,152 @@
     "@type": "BreadcrumbList",
     "itemListElement": [
       { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://lovculator.com" },
-      { "@type": "ListItem", "position": 2, "name": "Answers", "item": "https://lovculator.com/answer" }
+      { "@type": "ListItem", "position": 2, "name": "Questions", "item": "https://lovculator.com/questions" }
     ]
   }
   </script>
-
-  <!-- Google Fonts -->
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
 
   <link rel="stylesheet" href="/css/style.css" />
   <link rel="stylesheet" href="/css/qa.css" />
   <script src="/js/analytics.js"></script>
 </head>
 
-
-
 <body class="app-layout answers-page">
-    <div id="global-header"></div>
+  <div id="global-header"></div>
 
-    <div class="app-container">
-        <!-- Column 1: Left Navigation -->
-        <div id="global-mobile-menu"></div>
+  <div class="app-container">
+    <!-- Column 1: Left Navigation & Topics -->
+    <div id="global-mobile-menu"></div>
 
-        <!-- Column 2: Main Questions Content -->
-        <main class="main-content-area">
-            
-            
+    <!-- Column 2: Main Questions Feed -->
+    <main class="main-content-area" id="mainContent">
 
-            <section class="questions-shell" aria-labelledby="questionsPageTitle">
-                <header class="questions-hero">
-                  <!-- Decorative blobs -->
-                  <span class="qhero-blob qhero-blob-1" aria-hidden="true"></span>
-                  <span class="qhero-blob qhero-blob-2" aria-hidden="true"></span>
+      <!-- Compact Community Introduction Card -->
+      <section class="qa-intro-card" aria-label="Community introduction">
+        <div class="qa-intro-text">
+          <h1 class="qa-intro-title">Ask. Share. Get Real Advice.</h1>
+          <p class="qa-intro-desc">Ask relationship questions, share experiences, and discover thoughtful advice from our community.</p>
+        </div>
+        <button type="button" class="qa-ask-btn" id="openAskQuestionBtn">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="12" y1="5" x2="12" y2="19"></line>
+            <line x1="5" y1="12" x2="19" y2="12"></line>
+          </svg>
+          <span>Ask a Question</span>
+        </button>
+      </section>
 
-                  <div class="questions-hero-copy">
-                    <span class="questions-hero-kicker">
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
-                      Community Q&amp;A
-                    </span>
-                    <h1 id="questionsPageTitle" class="page-title">Questions for you</h1>
-                    <p class="questions-hero-subtitle">Browse trending relationship questions, discover unanswered conversations, and share thoughtful advice with the community.</p>
-                  </div>
+      <!-- Feed Tabs and Filters Toolbar -->
+      <div class="qa-filter-bar" role="region" aria-label="Question filters">
+        <div class="qa-tabs-scroller">
+          <nav class="qa-tabs-list" role="tablist" aria-label="Feed filter tabs">
+            <button type="button" class="qa-tab active" data-tab="for-you" role="tab" aria-selected="true">For You</button>
+            <button type="button" class="qa-tab" data-tab="latest" role="tab" aria-selected="false">Latest</button>
+            <button type="button" class="qa-tab" data-tab="trending" role="tab" aria-selected="false">Trending</button>
+            <button type="button" class="qa-tab" data-tab="unanswered" role="tab" aria-selected="false">Unanswered</button>
+            <button type="button" class="qa-tab" data-tab="following" role="tab" aria-selected="false">Following</button>
+          </nav>
+        </div>
 
-                  <div class="questions-hero-cta">
-                    <a href="/love-calculator" class="qhero-ask-btn" id="qheroAskBtn">
-                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-                      Ask a Question
-                    </a>
-                  </div>
+        <div class="qa-subfilter-row">
+          <div class="qa-search-box">
+            <svg class="qa-search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+              <circle cx="11" cy="11" r="8"></circle>
+              <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+            </svg>
+            <input type="text" id="questionSearchInput" class="qa-search-input" placeholder="Search questions & topics..." aria-label="Search questions">
+          </div>
 
-                  <!-- Quick stats strip -->
-                  <div class="qhero-stats" aria-label="Community stats">
-                    <span class="qhero-stat">
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-                      Active Community
-                    </span>
-                    <span class="qhero-stat-divider" aria-hidden="true">·</span>
-                    <span class="qhero-stat">
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-                      Real Advice
-                    </span>
-                    <span class="qhero-stat-divider" aria-hidden="true">·</span>
-                    <span class="qhero-stat">
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
-                      Love &amp; Relationships
-                    </span>
-                  </div>
-                </header>
+          <div class="qa-select-wrapper">
+            <select id="categorySelect" class="qa-category-select" aria-label="Filter by category">
+              <option value="all">All Topics</option>
+              <option value="advice">Relationship Advice</option>
+              <option value="dating">Dating</option>
+              <option value="crushes">Crushes</option>
+              <option value="longdistance">Long Distance</option>
+              <option value="marriage">Marriage</option>
+              <option value="communication">Communication</option>
+              <option value="breakups">Breakups</option>
+              <option value="selflove">Self Love</option>
+              <option value="proposals">Proposals</option>
+            </select>
+          </div>
+        </div>
+      </div>
 
-                <div class="filter-container questions-toolbar" role="region" aria-label="Question filters">
-                    <div class="search-box toolbar-search">
-                        <span class="toolbar-search-icon" aria-hidden="true">
-                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                <circle cx="11" cy="11" r="8"></circle>
-                                <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-                            </svg>
-                        </span>
-                        <input type="text" id="questionSearchInput" class="comment-input toolbar-search-input"
-                               placeholder="Search questions, topics, and advice..." aria-label="Search questions">
-                    </div>
+      <!-- Feed Container -->
+      <section class="questions-section">
+        <div id="storiesContainer">
+          <div class="loading-stories">
+            <div class="loading-spinner"></div>
+            <p>Loading questions...</p>
+          </div>
+        </div>
+      </section>
 
-                    <div class="toolbar-selects">
-                        <label class="toolbar-select-group">
-                            <span class="toolbar-label">Category</span>
-                            <select id="categorySelect" class="filter-btn toolbar-select">
-                                <option value="all">All Categories</option>
-                                <option value="love">💗 Love</option>
-                                <option value="dating">💘 Dating</option>
-                                <option value="marriage">💍 Marriage</option>
-                                <option value="friendship">🤝 Friendship</option>
-                                <option value="communication">💬 Communication</option>
-                                <option value="breakups">💔 Breakups</option>
-                            </select>
-                        </label>
+    </main>
 
-                        <label class="toolbar-select-group">
-                            <span class="toolbar-label">Sort</span>
-                            <select id="sortSelect" class="filter-btn toolbar-select">
-                                <option value="newest">🕒 Newest First</option>
-                                <option value="popular">🔥 Most Popular</option>
-                                <option value="unanswered">❓ Unanswered</option>
-                            </select>
-                        </label>
-                    </div>
+    <!-- Column 3: Right Sidebar -->
+    <div id="global-right-sidebar-container"></div>
+  </div>
 
-                    <button id="applyFilterBtn" class="answer-btn toolbar-filter-btn">
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
-                      Apply
-                    </button>
-                </div>
-            </section>
+  <!-- Floating Ask Button (Mobile) -->
+  <button type="button" class="qfab-ask" id="qfabAskBtn" aria-label="Ask a Question" title="Ask a Question">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+      <line x1="12" y1="5" x2="12" y2="19"></line>
+      <line x1="5" y1="12" x2="19" y2="12"></line>
+    </svg>
+  </button>
 
-            <section class="questions-section">
-                <div id="storiesContainer">
-                    <div class="loading-stories">
-                        <div class="loading-spinner"></div>
-                        <p>Loading questions...</p>
-                    </div>
-                </div>
-            </section>
-        </main>
-        <!-- Column 3: Right Sidebar -->
-        <div id="global-right-sidebar-container"></div>
+  <!-- 🌸 ASK QUESTION MODAL -->
+  <div id="askCreateModal" class="modal-overlay hidden" aria-hidden="true">
+    <div class="modal-box ask-modal" role="dialog" aria-modal="true" aria-labelledby="askModalHeading">
+      <div class="modal-header">
+        <h3 id="askModalHeading">Ask a Question</h3>
+        <button id="closeAskModal" class="close-btn" aria-label="Close modal">✕</button>
+      </div>
+
+      <div class="modal-body">
+        <div class="user-meta-row">
+          <img src="/images/default-avatar.png" class="ask-user-avatar" id="askUserAvatar" alt="User avatar">
+          <span id="askUserName">User</span>
+        </div>
+
+        <div class="tip-box">
+          <h4>Tips for getting great answers:</h4>
+          <ul>
+            <li>Be clear, respectful, and specific</li>
+            <li>Add context about your relationship situation</li>
+            <li>Avoid simple yes/no if looking for deep advice</li>
+          </ul>
+        </div>
+
+        <textarea id="questionText"
+          class="question-input"
+          placeholder="What's your relationship question? Be clear and specific..."
+          maxlength="300"></textarea>
+
+        <div class="ask-char-count" id="askCharCount">0 / 300</div>
+      </div>
+
+      <div class="modal-footer">
+        <button id="cancelAskCreate" class="cancel-btn">Cancel</button>
+        <button id="submitQuestion" class="answer-btn">Ask Question</button>
+      </div>
     </div>
+  </div>
 
-    <!-- Floating Ask Button (mobile) -->
-    <a href="/love-calculator" class="qfab-ask" aria-label="Ask a Question" title="Ask a Question">
-      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-    </a>
-
-    <script src="/js/messages.js"></script>
-    <script src="/js/notifications.js"></script>
-    <script src="/js/pwa-register.js"></script>
-    <script src="/js/global-header.js"></script>
-    <script src="/js/global-mobile-menu.js"></script>
-    <script src="/js/social-features.js"></script>
-    <script src="/js/questions-feed.js"></script>
-    <script src="/js/right-sidebar.js"></script>
+  <!-- SCRIPTS -->
+  <script src="/js/auth.js"></script>
+  <script src="/js/messages.js"></script>
+  <script src="/js/notifications.js"></script>
+  <script src="/js/pwa-register.js"></script>
+  <script src="/js/global-header.js"></script>
+  <script src="/js/global-mobile-menu.js"></script>
+  <script src="/js/global-login-gate.js"></script>
+  <script src="/js/social-features.js"></script>
+  <script src="/js/ask-modal.js"></script>
+  <script src="/js/questions-feed.js"></script>
+  <script src="/js/right-sidebar.js"></script>
 </body>
 </html>

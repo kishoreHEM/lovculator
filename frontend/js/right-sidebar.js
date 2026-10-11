@@ -9,9 +9,52 @@ async function loadRightSidebar() {
     if (!res.ok) return;
 
     container.innerHTML = await res.text();
+    fetchTrendingQuestionsForSidebar();
     fetchTrendingStoriesForSidebar();
   } catch (err) {
     console.warn("Could not load right sidebar:", err);
+  }
+}
+
+async function fetchTrendingQuestionsForSidebar() {
+  const listEl = document.getElementById("rightSidebarQuestionsList");
+  if (!listEl) return;
+
+  try {
+    const apiBase = window.API_BASE || (window.location.hostname.includes("localhost") ? "http://localhost:3001/api" : "https://lovculator.com/api");
+    const res = await fetch(`${apiBase}/questions/latest?sort=popular&limit=5`, { credentials: "include" });
+    if (!res.ok) throw new Error("Failed to fetch trending questions");
+
+    const questions = await res.json();
+    if (!Array.isArray(questions) || questions.length === 0) {
+      listEl.innerHTML = '<div class="widget-empty">No questions yet. Ask the first!</div>';
+      return;
+    }
+
+    listEl.innerHTML = questions.slice(0, 5).map(q => {
+      const title = escapeSidebarHTML(q.question || "Relationship question");
+      const slug = encodeURIComponent(q.slug || q.id);
+      const answersCount = Number(q.answers_count) || 0;
+      const viewsCount = Number(q.views_count) || 0;
+
+      return `
+        <a href="/question/${slug}" class="widget-story-item">
+          <div class="widget-story-title">${title}</div>
+          <div class="widget-story-meta">
+            <span class="widget-story-answers">💬 ${answersCount} answers</span>
+            ${viewsCount > 0 ? `<span class="widget-story-views">· 👁️ ${viewsCount}</span>` : ""}
+          </div>
+        </a>
+      `;
+    }).join("");
+
+  } catch (err) {
+    listEl.innerHTML = `
+      <a href="/questions" class="widget-story-item">
+        <div class="widget-story-title">Explore relationship questions</div>
+        <div class="widget-story-meta">Join community conversations &rarr;</div>
+      </a>
+    `;
   }
 }
 
@@ -30,7 +73,6 @@ async function fetchTrendingStoriesForSidebar() {
       return;
     }
 
-    // Sort by likes descending to show popular/trending stories
     const sorted = [...stories].sort((a, b) => (Number(b.likes_count) || 0) - (Number(a.likes_count) || 0)).slice(0, 4);
 
     listEl.innerHTML = sorted.map(s => {

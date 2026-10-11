@@ -294,6 +294,8 @@ class AskModalController {
         // --- Open Actions ---
         this.btnStory?.addEventListener("click", () => this.open(this.storyModal));
         this.btnAsk?.addEventListener("click", () => this.openAskModal());
+        document.getElementById("openAskQuestionBtn")?.addEventListener("click", () => this.openAskModal());
+        document.getElementById("qfabAskBtn")?.addEventListener("click", () => this.openAskModal());
         this.btnPost?.addEventListener("click", () => this.open(this.postModal));
         this.bigTextBar?.addEventListener("click", () => this.open(this.postModal));
 
@@ -329,5 +331,6 @@ class AskModalController {
 
 // AUTO INIT
 document.addEventListener("DOMContentLoaded", () => {
-    new AskModalController();
+    window.askModalController = new AskModalController();
 });
+
