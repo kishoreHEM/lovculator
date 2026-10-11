@@ -33,37 +33,63 @@ async function loadMobileMenu() {
     const container = document.getElementById("global-mobile-menu");
     if (!container) return;
 
-    // ✅ STEP 1: Check login status
-    let isLoggedIn = false;
-    try {
-        const me = await fetch(`${window.API_BASE}/auth/me`, {
-            credentials: 'include',
-            cache: 'no-store'
-        });
-        isLoggedIn = me.ok;
-    } catch (e) {
-        isLoggedIn = false;
-    }
-
-    // ❌ GUEST USERS: DO NOTHING
-    if (!isLoggedIn) {
-        container.innerHTML = ""; // ensure empty
-        return;
-    }
-
-    // ✅ STEP 2: Load menu ONLY for logged-in users
     try {
         const res = await fetch("/components/mobile-menu.html", { cache: "no-store" });
         if (!res.ok) throw new Error("Failed to load mobile menu");
 
         container.innerHTML = await res.text();
 
-        // Bind logic ONLY now
+        // Highlight active link based on current path
+        const currentPath = window.location.pathname.replace(/\/$/, "") || "/";
+        const navLinks = container.querySelectorAll(".sidebar-nav a");
+        navLinks.forEach(link => {
+            const linkPath = (link.getAttribute("href") || "").replace(/\/$/, "") || "/";
+            if (linkPath === currentPath) {
+                link.classList.add("active");
+            }
+        });
+
+        // Check login status
+        let isLoggedIn = false;
+        try {
+            const me = await fetch(`${window.API_BASE}/auth/me`, {
+                credentials: 'include',
+                cache: 'no-store'
+            });
+            isLoggedIn = me.ok;
+        } catch (e) {
+            isLoggedIn = false;
+        }
+
         bindInternalToggle();
-        bindInternalUserData();
-        bindInternalLogout();
-        bindInternalMessageBadge();
-        subscribeMobileMessagesRealtime();
+
+        if (isLoggedIn) {
+            const logoutBtn = document.getElementById("mobileLogoutBtn");
+            if (logoutBtn) logoutBtn.style.display = "flex";
+            bindInternalUserData();
+            bindInternalLogout();
+            bindInternalMessageBadge();
+            subscribeMobileMessagesRealtime();
+        } else {
+            const userNameEl = document.getElementById("sidebarUserNameMobile");
+            if (userNameEl) userNameEl.textContent = "Lovculator";
+            
+            // For guests, clicking personal/community links shows login modal
+            const protectedSelectors = ["#navFriends", "#navMyAnswers", "#navMyQuestions", "#navMessages", "#navProfile", "#navSettings"];
+            protectedSelectors.forEach(sel => {
+                const el = container.querySelector(sel);
+                if (el) {
+                    el.addEventListener("click", (e) => {
+                        e.preventDefault();
+                        if (typeof window.showLoginModal === "function") {
+                            window.showLoginModal("continue");
+                        } else {
+                            window.location.href = "/login";
+                        }
+                    });
+                }
+            });
+        }
 
         if (window.layoutManager?.bindSidebarData) {
             window.layoutManager.bindSidebarData();
@@ -73,7 +99,7 @@ async function loadMobileMenu() {
         }
 
     } catch (err) {
-        console.error("Mobile menu load failed:", err);
+        console.error("Sidebar menu load failed:", err);
     }
 }
 

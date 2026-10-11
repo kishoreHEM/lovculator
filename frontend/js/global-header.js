@@ -596,10 +596,9 @@ function adjustBodyForCurrentHeader(container) {
   const isGuestHeader = topHeader.classList.contains("guest-header");
 
   const apply = () => {
-    const headerHeight = `${topHeader.offsetHeight}px`;
-    // Use container offset only for logged-in fixed header. Guest header stays in normal flow.
+    const headerHeight = `${topHeader.offsetHeight || 60}px`;
     document.body.style.paddingTop = "0px";
-    if (appContainer) appContainer.style.marginTop = isGuestHeader ? "0px" : headerHeight;
+    if (appContainer) appContainer.style.marginTop = headerHeight;
     const hasMobileBottomNav = !!container.querySelector(".header-center");
     document.body.style.paddingBottom =
       window.innerWidth <= 768 && hasMobileBottomNav ? "70px" : "0px";
@@ -613,12 +612,11 @@ function adjustBodyForCurrentHeader(container) {
       if (!globalHeader) return;
       const activeHeader = globalHeader.querySelector(".main-header, .guest-header");
       if (!activeHeader) return;
-      const activeIsGuest = activeHeader.classList.contains("guest-header");
       const liveAppContainer = document.querySelector(".app-container");
       const hasMobileBottomNav = !!globalHeader.querySelector(".header-center");
       document.body.style.paddingTop = "0px";
       if (liveAppContainer) {
-        liveAppContainer.style.marginTop = activeIsGuest ? "0px" : `${activeHeader.offsetHeight}px`;
+        liveAppContainer.style.marginTop = `${activeHeader.offsetHeight || 60}px`;
       }
       document.body.style.paddingBottom =
         window.innerWidth <= 768 && hasMobileBottomNav ? "70px" : "0px";

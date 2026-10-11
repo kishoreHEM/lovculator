@@ -1,0 +1,56 @@
+<aside class="quora-col-right" id="globalRightSidebar" aria-label="Lovculator sidebar highlights">
+
+  <!-- Widget 1: Quick Love Compatibility Teaser -->
+  <div class="sidebar-widget compatibility-teaser-widget">
+    <div class="widget-header">
+      <span class="widget-icon">💖</span>
+      <h4>Love Compatibility</h4>
+    </div>
+    <p class="widget-desc">Test romantic compatibility with your partner in seconds.</p>
+    <form class="mini-calc-form" onsubmit="event.preventDefault(); const n1=encodeURIComponent(this.name1.value.trim()); const n2=encodeURIComponent(this.name2.value.trim()); if(n1&&n2){window.location.href='/love-calculator?name1='+n1+'&name2='+n2;}else{window.location.href='/love-calculator';}">
+      <input type="text" name="name1" placeholder="Your Name" class="mini-calc-input" autocomplete="off" required>
+      <input type="text" name="name2" placeholder="Partner's Name" class="mini-calc-input" autocomplete="off" required>
+      <button type="submit" class="mini-calc-btn">Calculate Love 💕</button>
+    </form>
+  </div>
+
+  <!-- Widget 2: Popular Love Stories -->
+  <div class="sidebar-widget popular-stories-widget">
+    <div class="widget-header">
+      <span class="widget-icon">✨</span>
+      <h4>Trending Stories</h4>
+      <a href="/love-stories" class="widget-link">See all</a>
+    </div>
+    <div id="rightSidebarStoriesList" class="widget-list">
+      <div class="widget-item-placeholder">Loading stories...</div>
+    </div>
+  </div>
+
+  <!-- Widget 3: Popular Topics -->
+  <div class="sidebar-widget topics-widget">
+    <div class="widget-header">
+      <span class="widget-icon">🏷️</span>
+      <h4>Explore Topics</h4>
+    </div>
+    <div class="topic-tags-grid">
+      <a href="/questions?topic=Advice" class="topic-tag">Advice</a>
+      <a href="/love-stories?category=romantic" class="topic-tag">Romantic</a>
+      <a href="/questions?topic=Crush" class="topic-tag">Crushes</a>
+      <a href="/love-stories?category=longdistance" class="topic-tag">Long Distance</a>
+      <a href="/questions?topic=Dating" class="topic-tag">Dating</a>
+      <a href="/love-stories?category=proposal" class="topic-tag">Proposals</a>
+    </div>
+  </div>
+
+  <!-- Widget 4: Compact Site Footer / Legal -->
+  <div class="sidebar-footer-widget">
+    <div class="footer-links-inline">
+      <a href="/about">About</a> ·
+      <a href="/privacy">Privacy</a> ·
+      <a href="/terms">Terms</a> ·
+      <a href="/contact">Contact</a>
+    </div>
+    <p class="footer-copy">&copy; 2026 Lovculator · Built with ❤️</p>
+  </div>
+
+</aside>

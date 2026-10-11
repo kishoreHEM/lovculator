@@ -509,16 +509,9 @@ body {
    --------------------------------------------------------- */
 
 .question-page .main-content-area {
-  max-width: 1180px;
-  margin-top: 56px;
-}
-
-/* Keep single-question content clear of fixed left sidebar when logged in */
-@media (min-width: 992px) {
-  .question-page .main-content-area:has(.main-sidebar) {
-    padding-left: 300px;
-    max-width: 1480px;
-  }
+  max-width: 100%;
+  width: 100%;
+  margin-top: 0;
 }
 
 .question-container {
@@ -559,9 +552,14 @@ body {
   padding-left: 10px;
 }
 
+.question-detail-layout .main-content-area {
+  flex: 1 1 auto;
+  max-width: 900px;
+}
+
 .question-page-grid {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 320px;
+  grid-template-columns: minmax(0, 1fr) 260px;
   gap: 20px;
   align-items: start;
 }

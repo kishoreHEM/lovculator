@@ -3402,119 +3402,262 @@ footer {
     min-height: 100vh;
 }
 
-/* Main Container */
+/* =====================================================
+   QUORA-STYLE RESPONSIVE 3-COLUMN LAYOUT
+   ===================================================== */
+
+/* Master Layout Container */
 .app-container {
     display: flex;
-    margin-top: 0px;
-    min-height: calc(100vh - 56px);
+    justify-content: center;
+    align-items: flex-start;
+    max-width: 1140px;
+    margin: 0 auto;
+    padding: 16px 16px 40px;
+    gap: 24px;
     position: relative;
-    z-index: 1;
+    width: 100%;
+    box-sizing: border-box;
+    min-height: calc(100vh - 60px);
 }
 
-/* Left Sidebar */
+/* Column 1: Left Navigation Sidebar */
+.quora-col-left,
 .main-sidebar {
-    width: 280px;
-    background: white;
-    border-right: 1px solid #dddfe2;
-    position: fixed;
-    left: 0;
-    top: 56px;
-    bottom: 0;
+    width: 190px;
+    flex-shrink: 0;
+    box-sizing: border-box;
+}
+
+@media (min-width: 769px) {
+    .quora-col-left,
+    .main-sidebar {
+        position: sticky;
+        top: 76px;
+        height: fit-content;
+        max-height: calc(100vh - 90px);
+        overflow-y: auto;
+        background: transparent;
+        border: none;
+        z-index: 10;
+    }
+}
+
+/* Column 2: Main Feed Column */
+.main-content-area,
+.quora-col-main {
+    flex: 1 1 580px;
+    max-width: 590px;
+    min-width: 0;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    box-sizing: border-box;
+}
+
+/* Column 3: Right Supporting Sidebar */
+.quora-col-right,
+.sidebar-right {
+    width: 260px;
+    flex-shrink: 0;
+    position: sticky;
+    top: 76px;
+    height: fit-content;
+    max-height: calc(100vh - 90px);
     overflow-y: auto;
-    height: calc(100vh - 56px);
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    box-sizing: border-box;
 }
 
-.user-card {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    padding: 12px;
+/* Right Sidebar Widgets */
+.sidebar-widget {
+    background: #fff;
+    border: 1px solid #e4e6eb;
     border-radius: 8px;
-    margin-bottom: 16px;
+    padding: 14px 16px;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.04);
 }
-
-.user-card:hover {
-    background: #f0f2f5;
-}
-
-.user-sidebar-avatar {
-    width: 40px;
-    height: 40px;
-    border-radius: 50%;
-}
-
-.user-info h4 {
-    margin: 0;
-    font-size: 15px;
-    color: #1c1e21;
-}
-
-.user-info p {
-    margin: 0;
-    font-size: 13px;
-    color: #65676b;
-}
-
-.sidebar-item {
+.widget-header {
     display: flex;
     align-items: center;
-    justify-content: space-between;
-    padding: 8px 12px;
+    gap: 8px;
+    margin-bottom: 8px;
+}
+.widget-header h4 {
+    margin: 0;
+    font-size: 14px;
+    font-weight: 700;
+    color: #1c1e21;
+    flex: 1;
+}
+.widget-header .widget-link {
+    font-size: 12px;
+    color: #ff4b8d;
     text-decoration: none;
-    color: #1c1e21;
-    border-radius: 8px;
-    transition: background 0.2s;
+    font-weight: 500;
 }
-
-.sidebar-item:hover {
-    background: #f0f2f5;
+.widget-header .widget-link:hover {
+    text-decoration: underline;
 }
-
-.sidebar-badge {
-    background: #ff4b8d;
-    color: white;
-    border-radius: 10px;
-    padding: 2px 6px;
-    font-size: 11px;
-    min-width: 18px;
-    text-align: center;
-}
-
-.shortcuts-section {
-    margin-top: 24px;
-    padding-top: 16px;
-    border-top: 1px solid #dddfe2;
-}
-
-.shortcuts-section h5 {
-    margin: 0 0 12px 0;
+.widget-desc {
+    font-size: 12px;
     color: #65676b;
+    margin: 0 0 10px 0;
+    line-height: 1.4;
+}
+.mini-calc-form {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+.mini-calc-input {
+    width: 100%;
+    height: 32px;
+    padding: 6px 10px;
+    border: 1px solid #dddfe2;
+    border-radius: 6px;
+    font-size: 13px;
+    background: #f0f2f5;
+    box-sizing: border-box;
+}
+.mini-calc-input:focus {
+    border-color: #ff4b8d;
+    outline: none;
+    background: #fff;
+}
+.mini-calc-btn {
+    width: 100%;
+    height: 32px;
+    background: #ff4b8d;
+    color: #fff;
+    border: none;
+    border-radius: 6px;
     font-size: 13px;
     font-weight: 600;
+    cursor: pointer;
+    transition: background 0.15s ease;
 }
-
-.shortcut-link {
-    display: block;
-    padding: 8px 12px;
-    text-decoration: none;
-    color: #1c1e21;
-    border-radius: 8px;
-    transition: background 0.2s;
+.mini-calc-btn:hover {
+    background: #e03a7a;
 }
-
-.shortcut-link:hover {
-    background: #f0f2f5;
-}
-
-/* Main Content Area */
-.main-content-area {
-    flex: 1;
-    /* margin-left: 280px; <--- REMOVE THIS if you want it centered */
-    padding: 20px;
-    width: 100%;
-    max-width: 800px;
-    margin: 0 auto; /* Keeps it perfectly centered */
+.widget-list {
+    display: flex;
     flex-direction: column;
+    gap: 8px;
+}
+.widget-item-placeholder,
+.widget-empty {
+    font-size: 12px;
+    color: #8e8e8e;
+    padding: 8px 0;
+}
+.widget-story-item {
+    display: block;
+    padding: 6px 0;
+    border-bottom: 1px solid #f0f2f5;
+    text-decoration: none;
+    color: inherit;
+    transition: color 0.15s ease;
+}
+.widget-story-item:last-child {
+    border-bottom: none;
+    padding-bottom: 0;
+}
+.widget-story-title {
+    font-size: 13px;
+    font-weight: 600;
+    color: #1c1e21;
+    line-height: 1.35;
+    margin-bottom: 3px;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+.widget-story-item:hover .widget-story-title {
+    color: #ff4b8d;
+}
+.widget-story-meta {
+    font-size: 11px;
+    color: #8e8e8e;
+    display: flex;
+    gap: 8px;
+}
+.topic-tags-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+.topic-tag {
+    display: inline-block;
+    padding: 4px 10px;
+    background: #f0f2f5;
+    color: #444;
+    border-radius: 14px;
+    font-size: 12px;
+    font-weight: 500;
+    text-decoration: none;
+    transition: background 0.15s, color 0.15s;
+}
+.topic-tag:hover {
+    background: #ffe3ed;
+    color: #ff4b8d;
+}
+.sidebar-footer-widget {
+    padding: 8px 4px;
+    font-size: 11px;
+    color: #8e8e8e;
+    line-height: 1.6;
+}
+.footer-links-inline a {
+    color: #8e8e8e;
+    text-decoration: none;
+}
+.footer-links-inline a:hover {
+    color: #ff4b8d;
+    text-decoration: underline;
+}
+.footer-copy {
+    margin: 4px 0 0;
+    font-size: 11px;
+    color: #a0a0a0;
+}
+
+/* Tablet (1024px and down): 2-column layout (hide right sidebar) */
+@media (max-width: 1024px) {
+    .quora-col-right,
+    .sidebar-right,
+    #global-right-sidebar-container {
+        display: none !important;
+    }
+    .app-container {
+        max-width: 860px;
+        gap: 20px;
+        padding: 16px;
+    }
+    .main-content-area,
+    .quora-col-main {
+        max-width: 620px;
+    }
+}
+
+/* Mobile (768px and down): 1-column layout */
+@media (max-width: 768px) {
+    .app-container {
+        padding: 8px 10px 80px;
+        gap: 0;
+        max-width: 100%;
+        width: 100%;
+    }
+    .main-content-area,
+    .quora-col-main {
+        max-width: 100%;
+        width: 100%;
+        padding: 0;
+    }
 }
 
 /* Content Sections */
@@ -3575,19 +3718,19 @@ footer {
     background: #e03a7a;
 }
 
-/* Update around Line 1804 in style.css */
 .create-story-bar {
     background: white;
-    border-radius: 10px; /* Slightly rounder looks more modern */
+    border-radius: 8px;
+    border: 1px solid #e4e6eb;
     padding: 12px 16px;
-    margin: 20px auto; /* Adds space above/below */
-    box-shadow: 0 1px 2px rgba(0,0,0,0.08);
-    max-width: 800px;
+    margin: 0 0 16px 0;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+    max-width: 100%;
     width: 100%;
     display: flex;
     flex-direction: column;
-    gap: 12px; /* Adds space between the input and the buttons below */
-    margin-top: 56px;
+    gap: 10px;
+    box-sizing: border-box;
 }
 
 /* Fix the Top Row (Avatar + Input) */
