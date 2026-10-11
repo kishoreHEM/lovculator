@@ -1,11 +1,11 @@
 import express from "express";
 import pool from "../db.js";
-import auth from "../middleware/auth.js";
+import { optionalAuth } from "../middleware/auth.js";
 
 const router = express.Router();
 
 // GET comments for a post
-router.get("/:postId/comments", auth, async (req, res) => {
+router.get("/:postId/comments", optionalAuth, async (req, res) => {
     try {
         const postId = req.params.postId;
 

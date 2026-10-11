@@ -2,15 +2,15 @@
 
 import express from "express";
 import pool from "../db.js"; 
-import auth from "../middleware/auth.js"; 
+import { optionalAuth, requireAuth } from "../middleware/auth.js"; 
 import { notifyLike, notifyComment, notifyAllUsers } from "./notifications.js"; 
 import multer from "multer";
 import fs from "fs";
 import { imageFileFilter, optimizeManyImageUploads } from "../utils/imageUpload.js";
 
 const router = express.Router();
-// Ensure req.user is populated for all question routes (guests allowed)
-router.use(auth);
+// Ensure req.user is populated for all question routes (guests allowed for public viewing)
+router.use(optionalAuth);
 
 // ======================================================
 // 📂 ANSWER IMAGE UPLOAD SETUP (Optional)
@@ -95,7 +95,7 @@ const createSlug = (text) => {
 // ======================================================
 // 1️⃣ POST /api/questions — Add new question
 // ======================================================
-router.post("/", auth, async (req, res) => {
+router.post("/", requireAuth, async (req, res) => {
   try {
     const { question, description, tags, category } = req.body;
     
@@ -393,7 +393,7 @@ router.get("/:slug/related", async (req, res) => {
 // ======================================================
 // 3️⃣ GET /api/questions/:slug — Fetch single question
 // ======================================================
-router.get("/:slug", auth, async (req, res) => {
+router.get("/:slug", optionalAuth, async (req, res) => {
   try {
     const { slug } = req.params;
     const userId = req.user ? req.user.id : null;
@@ -489,7 +489,7 @@ router.get("/:slug", auth, async (req, res) => {
 // ======================================================
 // 4️⃣ POST /api/questions/:id/answer — Add Answer
 // ======================================================
-router.post("/:id/answer", auth, answerUpload.array("images", 6), async (req, res) => {
+router.post("/:id/answer", requireAuth, answerUpload.array("images", 6), async (req, res) => {
   try {
     const { id } = req.params;
     const answer =
@@ -660,7 +660,7 @@ router.post("/:id/answer", auth, answerUpload.array("images", 6), async (req, re
 // ======================================================
 // 5️⃣ GET /api/questions/for-you
 // ======================================================
-router.get("/for-you", auth, async (req, res) => {
+router.get("/for-you", requireAuth, async (req, res) => {
   try {
     const userId = req.user.id;
     
@@ -704,7 +704,7 @@ router.get("/for-you", auth, async (req, res) => {
 // ======================================================
 // 6️⃣ GET /api/questions/my/questions
 // ======================================================
-router.get("/my/questions", auth, async (req, res) => {
+router.get("/my/questions", requireAuth, async (req, res) => {
   try {
     const userId = req.user.id;
     
@@ -741,7 +741,7 @@ router.get("/my/questions", auth, async (req, res) => {
 // ======================================================
 // 7️⃣ GET /api/questions/my/answers
 // ======================================================
-router.get("/my/answers", auth, async (req, res) => {
+router.get("/my/answers", requireAuth, async (req, res) => {
   try {
     const userId = req.user.id;
     
@@ -776,7 +776,7 @@ router.get("/my/answers", auth, async (req, res) => {
 // ======================================================
 // 8️⃣ POST /api/questions/:id/like — Like a question
 // ======================================================
-router.post("/:id/like", auth, async (req, res) => {
+router.post("/:id/like", requireAuth, async (req, res) => {
   try {
     const { id } = req.params;
     const userId = req.user.id;
@@ -818,7 +818,7 @@ router.post("/:id/like", auth, async (req, res) => {
 // ======================================================
 // 9️⃣ POST /api/questions/answers/:id/like — Like an answer
 // ======================================================
-router.post("/answers/:id/like", auth, async (req, res) => {
+router.post("/answers/:id/like", requireAuth, async (req, res) => {
   try {
     const { id } = req.params;
     const userId = req.user.id;
@@ -860,7 +860,7 @@ router.post("/answers/:id/like", auth, async (req, res) => {
 // ======================================================
 // 🔟 POST /api/questions/answers/:id/comments — Add comment to answer
 // ======================================================
-router.post("/answers/:id/comments", auth, async (req, res) => {
+router.post("/answers/:id/comments", requireAuth, async (req, res) => {
   try {
     const { id } = req.params; 
     const { content, text, comment } = req.body; 
@@ -929,7 +929,7 @@ router.get("/answers/:id/comments", async (req, res) => {
 // ======================================================
 // 1️⃣2️⃣ DELETE /api/questions/:id
 // ======================================================
-router.delete("/:id", auth, async (req, res) => {
+router.delete("/:id", requireAuth, async (req, res) => {
   try {
     const { id } = req.params;
     const userId = req.user.id;

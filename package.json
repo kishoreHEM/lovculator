@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "scripts": {
     "start": "node backend/server.js",
+    "test": "node tests/security_regression.test.mjs",
     "verify": "node verify_frontend.mjs"
   },
   "engines": {

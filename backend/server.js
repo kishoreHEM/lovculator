@@ -47,7 +47,7 @@ import followRoutes from "./routes/follow.js";
 import adminRoutes from "./routes/admin.js";
 import storyPage from "./pages/story.page.js";
 import sitemapRoutes from "./routes/sitemap.js";
-import optionalAuth from "./middleware/auth.js";
+import { optionalAuth } from "./middleware/auth.js";
 
 
 //
@@ -162,23 +162,42 @@ if (usePgSessionStore) {
   console.log("🗄️ Session store: memory (development mode)");
 }
 
+const isProduction = process.env.NODE_ENV === "production";
+const rawSessionSecret = process.env.SESSION_SECRET;
+
+if (isProduction) {
+  if (
+    !rawSessionSecret ||
+    rawSessionSecret === "lovculator_secret_key_change_in_production" ||
+    rawSessionSecret.trim().length < 32
+  ) {
+    console.error(
+      "❌ FATAL SECURITY ERROR: SESSION_SECRET must be set to a secure random string of at least 32 characters in production."
+    );
+    process.exit(1);
+  }
+}
+
+const sessionSecret =
+  rawSessionSecret ||
+  (isProduction ? undefined : "lovculator_dev_session_secret_local_only");
+
 const sessionMiddleware = session({
   ...(sessionStore ? { store: sessionStore } : {}),
-  secret:
-    process.env.SESSION_SECRET || "lovculator_secret_key_change_in_production",
+  secret: sessionSecret,
   resave: false,
   saveUninitialized: false,
   rolling: true, // reset maxAge on every request
   cookie: {
-    secure: process.env.NODE_ENV === "production",
+    secure: isProduction,
     httpOnly: true,
-    sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
-    domain:
-      process.env.NODE_ENV === "production" ? ".lovculator.com" : undefined,
+    sameSite: isProduction ? "none" : "lax",
+    domain: isProduction ? ".lovculator.com" : undefined,
     maxAge: 1000 * 60 * 60 * 24 * 7, // 7 days
   },
 });
 app.use(sessionMiddleware);
+app.use(optionalAuth);
 
 app.use(
   helmet({
@@ -433,7 +452,6 @@ app.use("/api/follow", followRoutes(pool));
 app.use(trackPageVisit);
 app.use("/admin", adminRoutes);
 app.use("/", sitemapRoutes);
-app.use(optionalAuth);
 
 //
 // 1️⃣2️⃣ FRONTEND PAGES (AUTO-MAPPED CLEAN URLS)

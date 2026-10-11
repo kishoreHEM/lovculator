@@ -2,7 +2,7 @@
 
 import express from "express";
 import pool from "../db.js";
-import auth from "../middleware/auth.js";
+import { requireAuth, optionalAuth } from "../middleware/auth.js";
 import multer from "multer";
 import fs from "fs";
 import { notifyLike, notifyComment } from "./notifications.js";
@@ -27,7 +27,7 @@ const upload = multer({
 /* ======================================================
    📝 CREATE POST
 ====================================================== */
-router.post("/", auth, upload.single("image"), async (req, res) => {
+router.post("/", requireAuth, upload.single("image"), async (req, res) => {
     try {
         const userId = req.user.id;
         const { content, privacy, feeling } = req.body;
@@ -66,7 +66,7 @@ router.post("/", auth, upload.single("image"), async (req, res) => {
 /* ======================================================
    ❤️ LIKE / UNLIKE POST + NOTIFY + REALTIME BROADCAST
 ====================================================== */
-router.post("/:postId/like", auth, async (req, res) => {
+router.post("/:postId/like", requireAuth, async (req, res) => {
     try {
         const postId = req.params.postId;
         const actorId = req.user.id;
@@ -136,7 +136,7 @@ router.post("/:postId/like", auth, async (req, res) => {
 /* ======================================================
    💬 ADD COMMENT + REALTIME + NOTIFICATION
 ====================================================== */
-router.post("/:postId/comments", auth, async (req, res) => {
+router.post("/:postId/comments", requireAuth, async (req, res) => {
     try {
         const postId = req.params.postId;
         const actorId = req.user.id;   // 👈 correct name
@@ -195,7 +195,7 @@ router.post("/:postId/comments", auth, async (req, res) => {
 /* ======================================================
    📘 GET COMMENTS ONLY
 ====================================================== */
-router.get("/:postId/comments", auth, async (req, res) => {
+router.get("/:postId/comments", optionalAuth, async (req, res) => {
     try {
         const postId = req.params.postId;
 
@@ -226,10 +226,10 @@ router.get("/:postId/comments", auth, async (req, res) => {
 /* ======================================================
    🔍 GET SINGLE POST (For Popup / Shared Links)
 ====================================================== */
-router.get("/:id", auth, async (req, res) => {
+router.get("/:id", optionalAuth, async (req, res) => {
     try {
         const postId = parseInt(req.params.id);
-        const userId = req.user.id; // From 'auth' middleware
+        const userId = req.user?.id || null; // Optional user context for guest link sharing
 
         if (isNaN(postId)) {
             return res.status(400).json({ error: "Invalid post ID" });

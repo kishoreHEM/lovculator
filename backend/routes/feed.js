@@ -2,14 +2,14 @@
 
 import express from "express";
 import pool from "../db.js";
-import auth from "../middleware/auth.js";
+import { requireAuth } from "../middleware/auth.js";
 
 const router = express.Router();
 
 /* ======================================================
    GET /api/posts/feed
 ====================================================== */
-router.get("/", auth, async (req, res) => {
+router.get("/", requireAuth, async (req, res) => {
     try {
         const userId = req.user.id;
 

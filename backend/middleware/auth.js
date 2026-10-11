@@ -3,14 +3,17 @@
 /**
  * OPTIONAL AUTH
  * -----------------
- * Use this globally (app.use)
- * - Allows guests
+ * Use globally (app.use) or on endpoints with optional user context.
+ * - Allows guests (req.user = null)
  * - Attaches req.user if logged in
- * - NEVER blocks or redirects
+ * - Never blocks or redirects
  */
 export function optionalAuth(req, res, next) {
-  if (req.session?.user && req.session.user.id) {
-    req.user = req.session.user;
+  const user = req.session?.user;
+  const userId = user?.id || req.session?.userId;
+
+  if (userId) {
+    req.user = user && user.id ? user : { id: userId };
   } else {
     req.user = null;
   }
@@ -20,29 +23,27 @@ export function optionalAuth(req, res, next) {
 /**
  * REQUIRED AUTH
  * -----------------
- * Use ONLY on protected APIs
- * - Blocks guests
- * - Returns 401 (JSON)
- * - NEVER calls next() on failure
+ * Use on protected API endpoints.
+ * - Blocks guests with 401 Unauthorized JSON
+ * - Populates req.user on success
+ * - Never calls next() on failure
  */
 export function requireAuth(req, res, next) {
   const user = req.session?.user;
+  const userId = user?.id || req.session?.userId;
 
-  if (!user || !user.id) {
+  if (!userId) {
     return res.status(401).json({
       error: "Unauthorized",
       message: "Please log in to perform this action"
     });
   }
 
-  req.user = user;
+  req.user = user && user.id ? user : { id: userId };
   next();
 }
 
-/**
- * DEFAULT EXPORT (BACKWARD COMPAT)
- * -----------------
- * Acts as optionalAuth
- * So existing imports don’t break
- */
-export default optionalAuth;
+// Aliases for compatibility
+export const auth = requireAuth;
+export default requireAuth;
+

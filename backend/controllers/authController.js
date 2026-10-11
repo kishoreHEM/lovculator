@@ -102,7 +102,7 @@ export const login = async (req, res) => {
     email = email.trim().toLowerCase();
 
     const result = await pool.query(
-      `SELECT id, username, email, password_hash, email_verified,
+      `SELECT id, username, email, password_hash, email_verified, is_admin,
               EXTRACT(DAY FROM NOW() - created_at) as days_since_signup
        FROM users
        WHERE LOWER(email) = LOWER($1) OR LOWER(username) = LOWER($1)
@@ -120,56 +120,64 @@ export const login = async (req, res) => {
       return res.status(401).json({ error: "Invalid credentials." });
     }
     
-    req.session.user = {
-      id: user.id,
-      username: user.username,
-      email: user.email,
-      email_verified: user.email_verified,
-      is_admin: user.is_admin,
-    };
+    // Regenerate session ID upon login to prevent session fixation
+    req.session.regenerate((regenErr) => {
+      if (regenErr) {
+        console.error("❌ Session regenerate failed:", regenErr.message);
+        return res.status(500).json({ error: "Failed to initialize secure session." });
+      }
 
-    req.session.save((err) => {
-      if (err) {
-        console.error("❌ Session save failed:", err);
-        return res.status(500).json({ error: "Failed to save session." });
-      }
-      
-      // ✅ GRACE PERIOD: 7 days to verify email
-      const GRACE_PERIOD_DAYS = 7;
-      const daysLeft = GRACE_PERIOD_DAYS - user.days_since_signup;
-      
-      if (!user.email_verified) {
-        if (user.days_since_signup > GRACE_PERIOD_DAYS) {
-          // ❌ GRACE PERIOD EXPIRED - REQUIRE VERIFICATION
-          return res.status(200).json({
-            success: true,
-            message: "Email verification required to continue.",
-            user: req.session.user,
-            verification_required: true,
-            reason: `Your ${GRACE_PERIOD_DAYS}-day grace period has ended.`,
-            can_resend: true
-          });
-        } else {
-          // ⚠️ IN GRACE PERIOD - GENTLE REMINDER
-          return res.status(200).json({
-            success: true,
-            message: `Welcome back! Please verify your email within ${Math.ceil(daysLeft)} day(s) for full access.`,
-            user: req.session.user,
-            email_verified: false,
-            grace_period: true,
-            days_left: Math.ceil(daysLeft),
-            can_access: true  // Allow access during grace period
-          });
+      req.session.user = {
+        id: user.id,
+        username: user.username,
+        email: user.email,
+        email_verified: Boolean(user.email_verified),
+        is_admin: Boolean(user.is_admin),
+      };
+
+      req.session.save((err) => {
+        if (err) {
+          console.error("❌ Session save failed:", err.message);
+          return res.status(500).json({ error: "Failed to save session." });
         }
-      }
-      
-      // ✅ FULLY VERIFIED
-      res.status(200).json({
-        success: true,
-        message: "Login successful ✅",
-        user: req.session.user,
-        email_verified: true,
-        full_access: true
+        
+        // ✅ GRACE PERIOD: 7 days to verify email
+        const GRACE_PERIOD_DAYS = 7;
+        const daysLeft = GRACE_PERIOD_DAYS - user.days_since_signup;
+        
+        if (!user.email_verified) {
+          if (user.days_since_signup > GRACE_PERIOD_DAYS) {
+            // ❌ GRACE PERIOD EXPIRED - REQUIRE VERIFICATION
+            return res.status(200).json({
+              success: true,
+              message: "Email verification required to continue.",
+              user: req.session.user,
+              verification_required: true,
+              reason: `Your ${GRACE_PERIOD_DAYS}-day grace period has ended.`,
+              can_resend: true
+            });
+          } else {
+            // ⚠️ IN GRACE PERIOD - GENTLE REMINDER
+            return res.status(200).json({
+              success: true,
+              message: `Welcome back! Please verify your email within ${Math.ceil(daysLeft)} day(s) for full access.`,
+              user: req.session.user,
+              email_verified: false,
+              grace_period: true,
+              days_left: Math.ceil(daysLeft),
+              can_access: true  // Allow access during grace period
+            });
+          }
+        }
+        
+        // ✅ FULLY VERIFIED
+        res.status(200).json({
+          success: true,
+          message: "Login successful ✅",
+          user: req.session.user,
+          email_verified: true,
+          full_access: true
+        });
       });
     });
 
@@ -235,15 +243,18 @@ export const getMe = async (req, res) => {
 export const logout = (req, res) => {
   req.session.destroy((err) => {
     if (err) {
-      console.error("❌ Logout failed:", err);
+      console.error("❌ Logout failed:", err.message);
       return res.status(500).json({ error: "Logout failed." });
     }
 
-    // Clear session cookie correctly
+    const isProduction = process.env.NODE_ENV === "production";
+
+    // Clear session cookie correctly matching session options
     res.clearCookie("connect.sid", {
       httpOnly: true,
-      sameSite: "lax",
-      secure: process.env.NODE_ENV === "production"
+      sameSite: isProduction ? "none" : "lax",
+      secure: isProduction,
+      domain: isProduction ? ".lovculator.com" : undefined,
     });
 
     return res.status(200).json({
@@ -294,33 +305,53 @@ export const forgotPassword = async (req, res) => {
 export const resetPassword = async (req, res) => {
   const { token, newPassword } = req.body;
 
-  if (!token || !newPassword || newPassword.length < 6) {
+  if (!token || !newPassword || typeof newPassword !== "string" || newPassword.length < 6) {
     return res.status(400).json({ error: "Invalid request or password too short." });
   }
 
+  let client;
   try {
-    const resetResult = await pool.query(
-      "SELECT user_id FROM password_resets WHERE token = $1 AND expires_at > NOW()",
+    client = await pool.connect();
+    await client.query("BEGIN");
+
+    const resetResult = await client.query(
+      "SELECT user_id FROM password_resets WHERE token = $1 AND expires_at > NOW() FOR UPDATE",
       [token]
     );
     const resetEntry = resetResult.rows[0];
 
     if (!resetEntry) {
+      await client.query("ROLLBACK");
       return res.status(400).json({ error: "Invalid or expired reset token." });
     }
 
     const hashedPassword = await bcrypt.hash(newPassword, 10);
 
-    await pool.query("BEGIN");
-    await pool.query("UPDATE users SET password_hash = $1 WHERE id = $2", [hashedPassword, resetEntry.user_id]);
-    await pool.query("DELETE FROM password_resets WHERE user_id = $1", [resetEntry.user_id]);
-    await pool.query("COMMIT");
+    await client.query(
+      "UPDATE users SET password_hash = $1 WHERE id = $2",
+      [hashedPassword, resetEntry.user_id]
+    );
+    await client.query(
+      "DELETE FROM password_resets WHERE user_id = $1",
+      [resetEntry.user_id]
+    );
+    await client.query("COMMIT");
 
-    res.status(200).json({ message: "Password successfully reset. You can now log in." });
+    return res.status(200).json({ message: "Password successfully reset. You can now log in." });
   } catch (err) {
-    await pool.query("ROLLBACK");
-    console.error("❌ Reset password error:", err);
-    res.status(500).json({ error: "Failed to reset password." });
+    if (client) {
+      try {
+        await client.query("ROLLBACK");
+      } catch (rollbackErr) {
+        console.error("❌ Rollback error in resetPassword:", rollbackErr.message);
+      }
+    }
+    console.error("❌ Reset password error:", err.message);
+    return res.status(500).json({ error: "Failed to reset password." });
+  } finally {
+    if (client) {
+      client.release();
+    }
   }
 };
 

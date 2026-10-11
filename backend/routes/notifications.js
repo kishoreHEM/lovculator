@@ -1,10 +1,12 @@
 import express from "express";
 import pool from "../db.js";
-import auth from "../middleware/auth.js";
+import { requireAuth, auth } from "../middleware/auth.js";
 import webpush from "../config/push.js";
 
-
 const router = express.Router();
+
+// Enforce authentication across all notification endpoints
+router.use(requireAuth);
 
 /* ======================================================
    📨 1️⃣ Get notifications (pagination + filters)

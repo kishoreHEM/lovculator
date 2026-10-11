@@ -1,12 +1,15 @@
 import express from "express";
 import pool from "../db.js";
-import auth from "../middleware/auth.js";
+import { requireAuth, auth } from "../middleware/auth.js";
 import rateLimit from "express-rate-limit";
 import multer from "multer";
 import path from "path";
 import fs from "fs";
 
 const router = express.Router();
+
+// Enforce authentication across all direct messaging endpoints
+router.use(requireAuth);
 
 // --- Configure Image Upload Storage ---
 const storage = multer.diskStorage({
