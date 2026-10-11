@@ -4,11 +4,11 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-  <!-- Title (JS can replace username later) -->
+  <!-- Title (JS can replace with user's name) -->
   <title>User Profile • Lovculator</title>
 
   <!-- Description -->
-  <meta name="description" content="View user profile on Lovculator — love stories, followers, connections, and activity in the love community." />
+  <meta name="description" content="View user profile on Lovculator — love stories, questions, answers, followers, connections, and activity in the relationship community." />
   <meta name="robots" content="noindex,nofollow" />
 
   <!-- Theme -->
@@ -19,7 +19,7 @@
 
   <!-- Open Graph -->
   <meta property="og:title" content="User Profile • Lovculator">
-  <meta property="og:description" content="Explore love stories, followers, and activity on Lovculator user profiles.">
+  <meta property="og:description" content="Explore love stories, questions, answers, and connections on Lovculator user profiles.">
   <meta property="og:type" content="profile">
   <meta property="og:url" content="https://lovculator.com/profile">
   <meta property="og:image" content="https://lovculator.com/images/og-profile.png">
@@ -29,7 +29,7 @@
   <!-- Twitter -->
   <meta name="twitter:card" content="summary">
   <meta name="twitter:title" content="User Profile • Lovculator">
-  <meta name="twitter:description" content="View love stories, followers, and connections on Lovculator.">
+  <meta name="twitter:description" content="View love stories, questions, answers, and followers on Lovculator.">
   <meta name="twitter:image" content="https://lovculator.com/images/og-profile.png">
   <meta name="twitter:image:alt" content="Lovculator cover image" />
 
@@ -40,568 +40,103 @@
 
   <!-- CSS -->
   <link rel="stylesheet" href="/css/style.css">
-  
-  <style>
-    /* =========================================
-       👤 MODERN PROFILE STYLES (FIXED)
-       ========================================= */
+  <link rel="stylesheet" href="/css/profile.css">
 
-    :root {
-      --primary-color: #ff4b8d;
-      --bg-gray: #f0f2f5;
-      --card-bg: #ffffff;
-      --text-dark: #1f2937;
-      --text-muted: #65676b;
-      --border-color: #e5e7eb;
-    }
-
-    body {
-        background-color: var(--bg-gray);
-        margin: 0;
-        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-        overflow-x: hidden; /* Prevent horizontal scroll */
-    }
-
-    .main-content {
-      padding: 24px 0 40px 0;
-      max-width: 1100px;
-      margin: 0 auto;
-      width: 100%;
-    }
-
-    /* --- 1. COVER PHOTO --- */
-    .profile-cover {
-        height: 220px;
-        background:
-          radial-gradient(circle at top right, rgba(255,255,255,0.22), transparent 28%),
-          linear-gradient(135deg, #ff8fb7 0%, #ff4b8d 55%, #ff6f91 100%);
-        background-size: cover;
-        background-position: center;
-        border-radius: 28px;
-        position: relative;
-        margin-bottom: 24px; 
-        overflow: hidden;
-        box-shadow: 0 14px 40px rgba(255, 75, 141, 0.16);
-        isolation: isolate;
-    }
-
-    .profile-cover::after {
-      content: "";
-      position: absolute;
-      inset: 0;
-      background: linear-gradient(to top, rgba(14, 18, 28, 0.18), rgba(14, 18, 28, 0.02) 45%, transparent);
-      z-index: 0;
-      pointer-events: none;
-    }
-
-    /* --- 2. HEADER USER INFO --- */
-    .profile-header-user {
-        position: relative;
-        display: flex;
-        align-items: flex-end; /* Aligns Avatar bottom with Text bottom */
-        padding: 20px 28px 26px 28px;
-        gap: 22px;
-        z-index: 2;
-        height: 100%;
-    }
-
-    /* Avatar Circle */
-    .profile-avatar-wrapper {
-        position: relative;
-        flex-shrink: 0;
-    }
-
-    .profile-avatar-large {
-        width: 136px;
-        height: 136px;
-        border-radius: 50%;
-        border: 5px solid #fff;
-        background: #fff;
-        object-fit: cover;
-        box-shadow: 0 14px 30px rgba(0,0,0,0.14);
-        display: block;
-    }
-
-    /* Text Info (Name/Username) */
-    .profile-header-text {
-        flex: 1;
-        align-self: flex-end;
-        padding-bottom: 6px;
-        min-width: 0; 
-    }
-
-    .profile-header-text h1 {
-        margin: 0;
-        font-size: 2.2rem;
-        color: #fff;
-        font-weight: 800;
-        line-height: 1.1;
-        word-wrap: break-word;
-        letter-spacing: -0.03em;
-        text-shadow: 0 10px 30px rgba(0,0,0,0.14);
-    }
-
-    .profile-header-text .username {
-        color: rgba(255,255,255,0.86);
-        font-size: 1rem;
-        font-weight: 600;
-        margin-top: 8px;
-        display: block;
-    }
-
-    .profile-header-actions {
-        align-self: flex-end;
-        padding-bottom: 6px;
-        display: flex;
-        gap: 10px;
-        flex-shrink: 0;
-    }
-
-    /* --- 3. GRID LAYOUT --- */
-    .profile-grid-container {
-        display: grid;
-        grid-template-columns: 320px 1fr; /* Sidebar | Content */
-        gap: 24px;
-        align-items: start;
-    }
-
-    /* Content Area */
-    .profile-content-area {
-        min-width: 0;
-    }
-
-    .profile-intro-card {
-        background: var(--card-bg);
-        border-radius: 24px;
-        padding: 24px;
-        box-shadow: 0 12px 30px rgba(15, 23, 42, 0.06);
-        border: 1px solid var(--border-color);
-        position: sticky;
-        top: 80px; 
-    }
-
-    .intro-header {
-        font-size: 1.15rem;
-        font-weight: 700;
-        margin-bottom: 16px;
-        color: var(--text-dark);
-        display: flex; justify-content: space-between;
-    }
-
-    .intro-bio {
-        font-size: 0.95rem;
-        color: #374151;
-        margin-bottom: 20px;
-        line-height: 1.7;
-        white-space: pre-wrap;
-        word-break: break-word;
-    }
-
-    .intro-bio.empty {
-      color: #9ca3af;
-      font-style: italic;
-    }
-
-    .intro-item {
-        display: flex;
-        align-items: flex-start;
-        gap: 12px;
-        color: #4b5563;
-        font-size: 0.95rem;
-        line-height: 1.4;
-        margin-bottom: 12px;
-    }
-
-    .intro-icon { width: 20px; text-align: center; margin-top: 2px; color: var(--text-muted); }
-
-    .intro-stats {
-      margin-top: 18px;
-      padding-top: 18px;
-      border-top: 1px solid var(--border-color);
-      display: grid;
-      grid-template-columns: repeat(2, 1fr);
-      gap: 12px;
-    }
-
-    .intro-stat {
-      background: linear-gradient(180deg, #fff8fb 0%, #fff 100%);
-      border: 1px solid #f3d4e1;
-      border-radius: 18px;
-      padding: 14px 12px;
-      text-align: center;
-    }
-
-    .intro-stat-value {
-      display: block;
-      font-size: 1.15rem;
-      font-weight: 800;
-      color: var(--text-dark);
-      line-height: 1.1;
-    }
-
-    .intro-stat-label {
-      display: block;
-      margin-top: 6px;
-      font-size: 0.78rem;
-      letter-spacing: 0.02em;
-      color: #6b7280;
-      text-transform: uppercase;
-    }
-
-
-
-    .profile-tabs {
-        display: flex;
-        border-bottom: 1px solid var(--border-color);
-        background: var(--card-bg);
-        border-radius: 24px 24px 0 0;
-        overflow: hidden;
-    }
-
-    .profile-tabs-wrapper {
-      background: var(--card-bg);
-      border: 1px solid var(--border-color);
-      border-radius: 24px;
-      box-shadow: 0 12px 30px rgba(15, 23, 42, 0.06);
-      overflow: hidden;
-    }
-
-    .tab-btn {
-        flex: 1;
-        padding: 16px;
-        background: none;
-        border: none;
-        font-size: 0.95rem;
-        font-weight: 600;
-        color: var(--text-muted);
-        cursor: pointer;
-        transition: all 0.2s;
-        border-bottom: 3px solid transparent;
-        white-space: nowrap;
-    }
-
-    .tab-btn.active {
-        color: var(--primary-color);
-        border-bottom-color: var(--primary-color);
-        background: linear-gradient(180deg, rgba(255, 75, 141, 0.08), rgba(255, 75, 141, 0.02));
-    }
-
-    .tab-content { padding: 0px; }
-    .tab-pane { display: none; }
-    .tab-pane.active { display: block; animation: fadeIn 0.3s ease; }
-
-    /* Buttons */
-    .btn-secondary, .btn-primary {
-        padding: 10px 18px;
-        border-radius: 50px; /* Pill shape */
-        font-weight: 600;
-        font-size: 0.9rem;
-        cursor: pointer;
-        display: inline-flex; align-items: center; justify-content: center; gap: 6px;
-        transition: transform 0.1s, background 0.2s;
-        text-decoration: none;
-    }
-
-    .btn-secondary { background: rgba(255,255,255,0.92); color: #111827; border: 1px solid rgba(255,255,255,0.45); backdrop-filter: blur(8px); }
-    .btn-secondary:hover { background: #ffffff; }
-
-    .btn-primary { background: var(--primary-color); color: white; border: 1px solid transparent; box-shadow: 0 2px 5px rgba(255, 75, 141, 0.3); }
-    .btn-primary:hover { background: #e33675; }
-
-    .btn-small { padding: 10px 16px; border-radius: 999px; } /* Override for modal buttons */
-
-    .avatar-upload-label {
-    position: absolute;
-    bottom: 10px;
-    right: 10px;
-    background: rgba(0, 0, 0, 0.6);
-    color: white;
-    padding: 6px;
-    border-radius: 50%;
-    cursor: pointer;
-    transition: background 0.2s;
-  }
-
-  .avatar-upload-label:hover {
-  background: rgba(0, 0, 0, 0.8);
-}
-
-  .profile-avatar-wrapper {
-  position: relative;
-  display: inline-block;
-}
-
-/* Activity Feed Styles */
-.activity-item {
-  display: flex;
-  padding: 16px;
-  border-bottom: 1px solid var(--border-color);
-  transition: background 0.2s;
-}
-
-.activity-item:hover {
-  background: rgba(0, 0, 0, 0.02);
-}
-
-.activity-avatar {
-  margin-right: 12px;
-  flex-shrink: 0;
-}
-
-.activity-avatar-img {
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
-  object-fit: cover;
-  border: 2px solid white;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-}
-
-.activity-content {
-  flex: 1;
-  min-width: 0; /* Prevent overflow */
-}
-
-.activity-message {
-  margin-bottom: 6px;
-  line-height: 1.4;
-  color: var(--text-dark);
-  word-wrap: break-word;
-}
-
-.activity-message a {
-  color: var(--primary-color);
-  text-decoration: none;
-  font-weight: 500;
-}
-
-.activity-message a:hover {
-  text-decoration: underline;
-}
-
-.activity-meta {
-  font-size: 0.85rem;
-  color: var(--text-muted);
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 4px;
-}
-
-.activity-link {
-  color: var(--primary-color);
-  text-decoration: none;
-  font-weight: 500;
-}
-
-.activity-link:hover {
-  text-decoration: underline;
-}
-
-.activity-profile-link {
-  color: var(--primary-color);
-  font-weight: 600;
-  text-decoration: none;
-}
-
-.activity-profile-link:hover {
-  text-decoration: underline;
-}
-
-.activity-time {
-  font-size: 0.8rem;
-  opacity: 0.8;
-}
-
-.empty-state {
-  text-align: center;
-  padding: 40px 20px;
-  color: var(--text-muted);
-}
-
-.empty-state-subtext {
-  margin-top: 8px;
-  font-size: 0.9rem;
-  opacity: 0.7;
-}
-
-    /* =========================================
-       📱 MOBILE RESPONSIVE FIXES
-       ========================================= */
-    @media (max-width: 850px) {
-        .main-content { padding-bottom: 60px; }
-
-        .profile-cover { 
-            height: auto; 
-            min-height: 0;
-            border-radius: 0 0 24px 24px;
-            margin-bottom: 0px;
-        }
-        
-        /* Stack Sidebar & Content Vertically */
-        .profile-grid-container {
-            grid-template-columns: 1fr !important;
-            gap: 20px;
-        }
-
-        /* Center Header Info */
-        .profile-header-user {
-            flex-direction: column; /* Stack Avatar -> Text -> Buttons */
-            align-items: center;
-            text-align: center;
-            margin-top: 0px; 
-            margin-bottom: 10px;
-            padding: 22px 18px 20px 18px;
-        }
-
-        .profile-avatar-large {
-            width: 100px;
-            height: 100px;
-        }
-
-        /* Fix Text Padding on Mobile */
-        .profile-header-text {
-            padding-top: 10px;
-            padding-bottom: 15px;
-            width: 100%;
-        }
-        
-        .profile-header-text h1 { font-size: 1.65rem; }
-
-        /* Center Actions */
-        .profile-header-actions {
-            width: 100%;
-            justify-content: center;
-            flex-wrap: wrap;
-            padding-bottom: 5px;
-        }
-
-        /* Tabs Scrollable */
-        .profile-tabs {
-            overflow-x: auto;
-            -webkit-overflow-scrolling: touch;
-            justify-content: flex-start;
-        }
-        
-        .tab-btn {
-            flex: 0 0 auto;
-            padding: 14px 20px;
-            font-size: 0.70rem;
-            font-weight: 600;
-        }
-
-        .profile-intro-card,
-        .profile-tabs-wrapper {
-          border-radius: 20px;
-        }
-
-        .intro-stats {
-          grid-template-columns: 1fr 1fr;
-        }
-
-        
-        .tab-content { padding: 0px; }
-
-        /* Skeleton Mobile Fixes */
-        .skeleton-grid { grid-template-columns: 1fr !important; padding: 20px 15px; }
-        .skeleton-header { flex-direction: column; align-items: center; margin-top: -60px; }
-        .skeleton-text { width: 100%; margin-top: 15px; align-items: center; }
-        .skeleton-avatar { width: 130px; height: 130px; }
-    }
-
-    /* Modal Styles */
-    .modal {
-        display: none; 
-        position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; 
-        background-color: rgba(0,0,0,0.5);
-        align-items: center; justify-content: center;
-    }
-    .modal.show { display: flex; }
-
-    .modal-dialog {
-        background: #fff; border-radius: 12px; width: 90%; max-width: 500px;
-        max-height: 90vh; overflow-y: auto; box-shadow: 0 5px 15px rgba(0,0,0,0.2);
-    }
-    .modal-header { padding: 15px 20px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; }
-    .modal-form { padding: 20px; }
-    .form-group { margin-bottom: 15px; }
-    .form-group label { display: block; margin-bottom: 5px; font-weight: 600; font-size: 0.9rem; }
-    .form-group input, .form-group textarea, .form-group select {
-        width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 6px; font-size: 1rem; box-sizing: border-box;
-    }
-    .modal-footer { display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px; }
-    .close-btn { background:none; border:none; font-size:1.5rem; cursor:pointer;}
-
-    @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
-
-    /* Skeleton Loading Classes */
-    .skeleton-cover { height: 250px; background: #e0e0e0; border-radius: 0 0 12px 12px; }
-    .skeleton-header { padding: 0 30px; display: flex; gap: 20px; margin-top: -50px; position: relative; z-index: 5;}
-    .skeleton-avatar { width: 168px; height: 168px; border-radius: 50%; background: #ccc; border: 5px solid white; flex-shrink: 0; }
-    .skeleton-text { flex: 1; margin-top: 60px; }
-    .skeleton-line-lg { width: 60%; height: 24px; background: #ddd; margin-bottom: 10px; border-radius: 4px; }
-    .skeleton-line-sm { width: 40%; height: 16px; background: #eee; border-radius: 4px; }
-    .skeleton-grid { display: grid; grid-template-columns: 340px 1fr; gap: 24px; padding: 20px 30px; }
-    .skeleton-sidebar { height: 300px; background: white; border-radius: 12px; border: 1px solid #e5e7eb; }
-    .skeleton-content { height: 400px; background: white; border-radius: 12px; border: 1px solid #e5e7eb; }
-  </style>
-    <script src="/js/analytics.js"></script>
+  <script src="/js/analytics.js"></script>
   <script src="/js/pwa-register.js"></script>
 </head>
 
-<body>
+<body class="app-layout profile-page">
   <div id="global-header"></div>
 
-  <div class="container">
-    <main class="main-content">
-      
-      <section id="profileInfoContainer">
-        <div class="skeleton-cover"></div>
-        <div class="skeleton-header">
-            <div class="skeleton-avatar"></div>
-            <div class="skeleton-text">
-                <div class="skeleton-line-lg"></div>
-                <div class="skeleton-line-sm"></div>
-            </div>
-        </div>
-        <div class="skeleton-grid">
-            <div class="skeleton-sidebar"></div>
-            <div class="skeleton-content"></div>
-        </div>
-      </section>
-
-      <div class="profile-tabs-wrapper" id="profileTabsContainer" style="display:none;"> 
-        <div class="profile-tabs">
-          <button class="tab-btn active" data-tab="stories">Love Stories</button>
-          <button class="tab-btn" data-tab="followers">Followers</button>
-          <button class="tab-btn" data-tab="following">Following</button>
-          <button class="tab-btn" data-tab="activity">Activity</button>
-        </div>
-        
-        <div class="tab-content">
-          <div id="stories-tab" class="tab-pane active">
-            <div class="stories-grid" id="userStoriesContainer"></div>
-          </div>
-          <div id="followers-tab" class="tab-pane">
-            <div class="users-list" id="followersContainer"></div>
-          </div>
-          <div id="following-tab" class="tab-pane">
-            <div class="users-list" id="followingContainer"></div>
-          </div>
-          <div id="activity-tab" class="tab-pane">
-            <div class="activity-feed" id="userActivityContainer"></div>
-          </div>
+  <div class="profile-container">
+    <!-- Profile Header Card (Injected dynamically) -->
+    <div id="profileInfoContainer">
+      <div class="profile-skeleton-header">
+        <div class="skeleton-pulse profile-skeleton-avatar"></div>
+        <div class="profile-skeleton-text-wrap">
+          <div class="skeleton-pulse profile-skeleton-line-title"></div>
+          <div class="skeleton-pulse profile-skeleton-line-handle"></div>
+          <div class="skeleton-pulse profile-skeleton-line-bio"></div>
         </div>
       </div>
+    </div>
 
-    </main>
+    <!-- Compact Horizontal Tabs Bar -->
+    <nav class="profile-tabs-bar" id="profileTabsNav" aria-label="Profile navigation tabs" style="display: none;">
+      <button type="button" class="profile-tab active" data-tab="stories" role="tab" aria-selected="true">
+        <span>Love Stories</span>
+        <span class="profile-tab-count" id="tabStoriesCount">0</span>
+      </button>
+      <button type="button" class="profile-tab" data-tab="questions" role="tab" aria-selected="false">
+        <span>Questions</span>
+        <span class="profile-tab-count" id="tabQuestionsCount">0</span>
+      </button>
+      <button type="button" class="profile-tab" data-tab="answers" role="tab" aria-selected="false">
+        <span>Answers</span>
+        <span class="profile-tab-count" id="tabAnswersCount">0</span>
+      </button>
+      <button type="button" class="profile-tab" data-tab="followers" role="tab" aria-selected="false">
+        <span>Followers</span>
+        <span class="profile-tab-count" id="tabFollowersCount">0</span>
+      </button>
+      <button type="button" class="profile-tab" data-tab="following" role="tab" aria-selected="false">
+        <span>Following</span>
+        <span class="profile-tab-count" id="tabFollowingCount">0</span>
+      </button>
+      <button type="button" class="profile-tab" data-tab="activity" role="tab" aria-selected="false">
+        <span>Activity</span>
+      </button>
+    </nav>
+
+    <!-- Two-Column Grid: Main Feed + Right Sidebar -->
+    <div class="profile-grid" id="profileGrid" style="display: none;">
+      <!-- Main Content Feed Column -->
+      <main class="profile-feed-column" id="profileFeed">
+        <!-- Stories Tab Pane -->
+        <div id="stories-tab" class="profile-tab-pane active" role="tabpanel" aria-labelledby="tab-stories">
+          <div class="stories-feed" id="userStoriesContainer"></div>
+        </div>
+
+        <!-- Questions Tab Pane -->
+        <div id="questions-tab" class="profile-tab-pane" role="tabpanel" aria-labelledby="tab-questions">
+          <div class="questions-feed" id="userQuestionsContainer"></div>
+        </div>
+
+        <!-- Answers Tab Pane -->
+        <div id="answers-tab" class="profile-tab-pane" role="tabpanel" aria-labelledby="tab-answers">
+          <div class="answers-feed" id="userAnswersContainer"></div>
+        </div>
+
+        <!-- Followers Tab Pane -->
+        <div id="followers-tab" class="profile-tab-pane" role="tabpanel" aria-labelledby="tab-followers">
+          <div class="users-list" id="followersContainer"></div>
+        </div>
+
+        <!-- Following Tab Pane -->
+        <div id="following-tab" class="profile-tab-pane" role="tabpanel" aria-labelledby="tab-following">
+          <div class="users-list" id="followingContainer"></div>
+        </div>
+
+        <!-- Activity Tab Pane -->
+        <div id="activity-tab" class="profile-tab-pane" role="tabpanel" aria-labelledby="tab-activity">
+          <div class="activity-feed" id="userActivityContainer"></div>
+        </div>
+      </main>
+
+      <!-- Right Sidebar Column -->
+      <aside class="profile-sidebar-column" id="profileSidebar">
+        <!-- Sidebar cards dynamically rendered by profile.js -->
+      </aside>
+    </div>
   </div>
 
-  <div id="editProfileModal" class="modal">
+  <!-- Edit Profile Modal -->
+  <div id="editProfileModal" class="modal" aria-hidden="true" role="dialog" aria-labelledby="editProfileTitle">
     <div class="modal-dialog">
       <div class="modal-header">
-        <h3>Edit Profile</h3>
-        <button class="close-btn" id="closeModalBtn">&times;</button>
+        <h3 id="editProfileTitle">Edit Profile</h3>
+        <button type="button" class="close-btn" id="closeModalBtn" aria-label="Close modal">&times;</button>
       </div>
 
       <form id="editProfileForm" class="modal-form">
@@ -612,65 +147,63 @@
 
         <div class="form-group">
           <label for="editBio">Bio</label>
-          <textarea id="editBio" name="bio" rows="3" maxlength="300"></textarea>
+          <textarea id="editBio" name="bio" rows="3" maxlength="300" placeholder="Tell the community about yourself..."></textarea>
         </div>
 
         <div class="form-group">
           <label for="editLocation">Location</label>
-          <input type="text" id="editLocation" name="location" maxlength="50" />
+          <input type="text" id="editLocation" name="location" maxlength="50" placeholder="e.g. New York, USA" />
         </div>
 
         <div class="form-group">
-            <label for="editWork">Work / Education</label>
-            <input type="text" id="editWork" name="work_and_education" placeholder="Job or School" />
+          <label for="editWork">Work / Education</label>
+          <input type="text" id="editWork" name="work_education" placeholder="e.g. Designer, Harvard" />
         </div>
 
         <div class="form-group">
-            <label for="editRelationshipStatus">Relationship Status</label>
-            <select id="editRelationshipStatus" name="relationship_status">
-              <option value="">Select...</option>
-              <option value="Single">Single</option>
-              <option value="In a Relationship">In a Relationship</option>
-              <option value="Engaged">Engaged</option>
-              <option value="Married">Married</option>
-              <option value="It's Complicated">It's Complicated</option>
-            </select>
+          <label for="editRelationshipStatus">Relationship Status</label>
+          <select id="editRelationshipStatus" name="relationship_status">
+            <option value="">Select status...</option>
+            <option value="Single">Single</option>
+            <option value="In a Relationship">In a Relationship</option>
+            <option value="Engaged">Engaged</option>
+            <option value="Married">Married</option>
+            <option value="It's Complicated">It's Complicated</option>
+          </select>
         </div>
 
         <div class="form-group">
-            <label for="editGender">Gender</label>
-            <select id="editGender" name="gender">
-              <option value="">Select...</option>
-              <option value="Male">Male</option>
-              <option value="Female">Female</option>
-              <option value="Other">Other</option>
-            </select>
+          <label for="editGender">Gender</label>
+          <select id="editGender" name="gender">
+            <option value="">Select gender...</option>
+            <option value="Male">Male</option>
+            <option value="Female">Female</option>
+            <option value="Other">Other</option>
+          </select>
         </div>
 
         <div class="form-group">
-            <label for="editDOB">Date of Birth</label>
-            <input type="date" id="editDOB" name="date_of_birth" />
+          <label for="editDOB">Date of Birth</label>
+          <input type="date" id="editDOB" name="date_of_birth" />
         </div>
 
         <div class="modal-footer">
-          <button type="button" class="btn-secondary btn-small" id="cancelEditBtn">Cancel</button>
-          <button type="submit" class="btn-primary btn-small" id="saveProfileBtn">Save</button>
+          <button type="button" class="btn-profile-action btn-profile-secondary" id="cancelEditBtn">Cancel</button>
+          <button type="submit" class="btn-profile-action btn-profile-primary" id="saveProfileBtn">Save Changes</button>
         </div>
-        <p id="editProfileMessage" class="edit-message"></p>
+        <p id="editProfileMessage" class="edit-message" style="margin-top: 10px; font-weight: 500; font-size: 0.9rem;"></p>
       </form>
     </div>
   </div>
 
-  <script src="/js/layout-manager.js" defer></script>
+  <!-- SCRIPTS -->
   <script src="/js/auth.js" defer></script>
   <script src="/js/global-header.js"></script>
   <script src="/js/messages.js" defer></script>
   <script src="/js/notifications.js"></script>
-  
   <script src="/js/profile.js" defer></script>
   <script src="/js/love-stories.js" defer></script>
   <script src="/js/social-features.js" defer></script>
   <script src="/js/pwa.js" defer></script>
-  
 </body>
 </html>

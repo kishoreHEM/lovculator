@@ -97,10 +97,12 @@ router.get("/profile/:username", async (req, res) => {
       SELECT 
         u.id, u.username, u.display_name, u.bio, u.location,
         u.work_education, u.gender, u.relationship_status,
-        u.avatar_url, u.created_at,
+        u.avatar_url, u.created_at, u.date_of_birth,
         (SELECT COUNT(*) FROM follows WHERE target_id = u.id) AS follower_count,
         (SELECT COUNT(*) FROM follows WHERE follower_id = u.id) AS following_count,
-        (SELECT COUNT(*) FROM stories WHERE user_id = u.id) AS stories_count
+        (SELECT COUNT(*) FROM stories WHERE user_id = u.id) AS stories_count,
+        (SELECT COUNT(*) FROM questions WHERE user_id = u.id) AS questions_count,
+        (SELECT COUNT(*) FROM answers WHERE user_id = u.id) AS answers_count
       FROM users u
       WHERE LOWER(u.username) = LOWER($1)
       LIMIT 1
@@ -637,7 +639,10 @@ router.get("/:id", async (req, res) => {
         u.work_education,
         u.created_at,
         (SELECT COUNT(*) FROM follows WHERE target_id = u.id) AS follower_count,
-        (SELECT COUNT(*) FROM follows WHERE follower_id = u.id) AS following_count
+        (SELECT COUNT(*) FROM follows WHERE follower_id = u.id) AS following_count,
+        (SELECT COUNT(*) FROM stories WHERE user_id = u.id) AS stories_count,
+        (SELECT COUNT(*) FROM questions WHERE user_id = u.id) AS questions_count,
+        (SELECT COUNT(*) FROM answers WHERE user_id = u.id) AS answers_count
       FROM users u
       WHERE u.id = $1
       LIMIT 1

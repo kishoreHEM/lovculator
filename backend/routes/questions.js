@@ -774,6 +774,84 @@ router.get("/my/answers", requireAuth, async (req, res) => {
 });
 
 // ======================================================
+// 7️⃣b GET /api/questions/user/:userId — Questions by specific user
+// ======================================================
+router.get("/user/:userId", async (req, res) => {
+  try {
+    const userId = Number(req.params.userId);
+    if (!Number.isInteger(userId)) {
+      return res.status(400).json({ error: "Invalid user id" });
+    }
+
+    const questionsRes = await pool.query(
+      `
+      SELECT 
+        q.id, 
+        q.question, 
+        q.slug, 
+        q.category,
+        q.description, 
+        q.tags, 
+        q.created_at,
+        COUNT(DISTINCT a.id) as answers_count,
+        COUNT(DISTINCT l.id) as likes_count,
+        COUNT(DISTINCT v.id) as views_count
+      FROM questions q
+      LEFT JOIN answers a ON q.id = a.question_id
+      LEFT JOIN question_likes l ON q.id = l.question_id
+      LEFT JOIN question_views v ON q.id = v.question_id
+      WHERE q.user_id = $1
+      GROUP BY q.id
+      ORDER BY q.created_at DESC;
+      `,
+      [userId]
+    );
+
+    res.json(questionsRes.rows);
+  } catch (err) {
+    res.status(500).json({ error: "Failed to load questions." });
+  }
+});
+
+// ======================================================
+// 7️⃣c GET /api/questions/user/:userId/answers — Answers by specific user
+// ======================================================
+router.get("/user/:userId/answers", async (req, res) => {
+  try {
+    const userId = Number(req.params.userId);
+    if (!Number.isInteger(userId)) {
+      return res.status(400).json({ error: "Invalid user id" });
+    }
+
+    const answersRes = await pool.query(
+      `
+      SELECT 
+        a.id,
+        a.answer_text as answer,
+        a.created_at,
+        q.id as question_id,
+        q.question,
+        q.slug,
+        COUNT(DISTINCT al.id) as likes_count,
+        COUNT(DISTINCT ac.id) as comments_count
+      FROM answers a
+      JOIN questions q ON a.question_id = q.id
+      LEFT JOIN answer_likes al ON a.id = al.answer_id
+      LEFT JOIN answer_comments ac ON a.id = ac.answer_id
+      WHERE a.user_id = $1
+      GROUP BY a.id, q.id
+      ORDER BY a.created_at DESC;
+      `,
+      [userId]
+    );
+
+    res.json(answersRes.rows);
+  } catch (err) {
+    res.status(500).json({ error: "Failed to load answers." });
+  }
+});
+
+// ======================================================
 // 8️⃣ POST /api/questions/:id/like — Like a question
 // ======================================================
 router.post("/:id/like", requireAuth, async (req, res) => {
