@@ -59,15 +59,6 @@
         @keyframes spin { to { transform: rotate(360deg); } }
         .btn-loading { display: none; }
         .hidden { display: none !important; }
-        
-        /* Ensure filter bar looks good on mobile */
-        .stories-filter-bar {
-            background: #fff;
-            padding: 15px;
-            border-radius: 0px;
-            margin-bottom: 0px;
-            border-bottom: 1px solid #dddfe2;
-        }
     </style>
       <script src="/js/analytics.js"></script>
 </head>
@@ -90,14 +81,13 @@
             </div>
         </div>
 
-        <div class="stories-filter-bar" style="margin: 0px 0; display: flex; gap: 10px; flex-wrap: wrap;">
-            <div class="search-wrapper" style="flex: 1; min-width: 200px;">
-                <input type="text" id="storySearchInput" placeholder="Search stories..." 
-                       style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 8px;">
+        <div class="stories-filter-bar">
+            <div class="search-wrapper">
+                <input type="text" id="storySearchInput" placeholder="Search stories...">
             </div>
             
             <div class="filter-wrapper">
-                <select id="categoryFilterSelect" style="padding: 10px; border: 1px solid #ddd; border-radius: 8px; background: white;">
+                <select id="categoryFilterSelect">
                     <option value="all">All Categories</option>
                     <option value="romantic">Romantic</option>
                     <option value="proposal">Proposal</option>
@@ -107,13 +97,13 @@
             </div>
             
             <div class="sort-wrapper">
-                <select id="sortStories" style="padding: 10px; border: 1px solid #ddd; border-radius: 8px; background: white;">
+                <select id="sortStories">
                     <option value="newest">Newest First</option>
                     <option value="popular">Most Popular</option>
                 </select>
             </div>
             
-            <button id="applyFiltersBtn" style="padding: 10px 20px; background: #ff4b8d; color: white; border: none; border-radius: 8px; cursor: pointer;">
+            <button id="applyFiltersBtn" class="filter-btn">
                 Filter
             </button>
         </div>

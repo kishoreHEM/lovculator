@@ -1420,7 +1420,7 @@ body {
    MOBILE VERSION - ALL ORIGINAL VALUES PRESERVED
    ========================================================= */
 
-@media (max-width: 1200px) {
+@media (max-width: 992px) {
   .question-page-grid {
     grid-template-columns: 1fr;
   }

@@ -43,19 +43,13 @@
             margin: 0;
         }
 
-        .main-content-area {
-            /* Fallback padding if JS doesn't calculate header height immediately */
-            padding-top: 100px; 
-            max-width: 600px;
-            margin: 0 auto;
-            min-height: 100vh;
-        }
-
         .notifications-page {
             background-color: #fff;
-            min-height: 100vh;
-            border-left: 1px solid #eee;
-            border-right: 1px solid #eee;
+            border-radius: 10px;
+            border: 1px solid #e4e6eb;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+            overflow: hidden;
+            min-height: calc(100vh - 120px);
         }
 
         /* 2. Header Section */
@@ -231,8 +225,10 @@
 
         /* Mobile Optimization */
         @media (max-width: 768px) {
-            .main-content-area {
-                padding-top: 56px; /* Ensure clearance for mobile header + nav */
+            .notifications-page {
+                border-radius: 0;
+                border-left: none;
+                border-right: none;
             }
             .page-header {
                 padding: 12px 15px;
@@ -250,7 +246,12 @@
     
     <div id="global-header"></div>
 
-     <main class="main-content-area">
+    <div class="app-container">
+        <!-- Column 1: Left Navigation -->
+        <div id="global-mobile-menu"></div>
+
+        <!-- Column 2: Notifications Content -->
+        <main class="main-content-area">
             <div class="notifications-page">
                 <div class="page-header">
                     <h1>Notifications</h1>
@@ -273,7 +274,7 @@
                         <div class="loading-spinner"></div>
                         <p>Loading...</p>
                     </div>
-                    </div>
+                </div>
 
                 <div class="empty-state hidden" id="emptyState">
                     <div class="empty-icon">🔔</div>
@@ -288,11 +289,16 @@
             </div>
         </main>
 
+        <!-- Column 3: Right Sidebar -->
+        <div id="global-right-sidebar-container"></div>
+    </div>
+
     <script src="/js/auth.js"></script>
     <script src="/js/messages.js"></script>       
     <script src="/js/notifications.js"></script>  
     <script src="/js/layout-manager.js"></script>
     <script src="/js/global-header.js"></script>
+    <script src="/js/global-mobile-menu.js"></script>
     <script src="/js/notifications-page.js"></script> 
 </body>
 </html>

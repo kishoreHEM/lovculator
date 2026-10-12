@@ -10,18 +10,23 @@ body {
 
 /* --- Layout Containers --- */
 .app-container {
-    max-width: 1200px;
-    margin: 0 auto;
-    /* Sufficient padding to clear fixed header */
-    padding-top: 80px; 
-    padding-bottom: 60px;
-    box-sizing: border-box;
+    max-width: 1140px;
 }
 
 .main-content-area {
-    width: 100%;
-    padding: 0 20px;
+    flex: 1 1 auto;
+    max-width: 920px;
+    min-width: 0;
+    padding: 0 16px;
     box-sizing: border-box;
+}
+
+/* --- User List Grid --- */
+.user-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 16px;
+    width: 100%;
 }
 
 .page-title {
@@ -57,7 +62,7 @@ body {
 }
 
 .tab.active {
-    background: #e91e63; /* Lovculator Pink */
+    background: var(--lov-pink, #ff4b8d);
     color: #fff;
 }
 
@@ -155,10 +160,10 @@ body {
 }
 
 .follow-btn {
-    background-color: #e91e63; /* Pink */
+    background-color: var(--lov-pink, #ff4b8d);
     color: white;
 }
-.follow-btn:hover { background-color: #d81b60; }
+.follow-btn:hover { background-color: var(--lov-pink-hover, #e03b7b); }
 
 .unfollow-btn {
     background-color: #e4e6eb; /* Light Gray */
